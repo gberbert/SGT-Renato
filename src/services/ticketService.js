@@ -58,6 +58,7 @@ export const createTicket = async (ticketData) => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
+    await logTicketAction(docRef.id, 'Criou o ticket', ticketData.assignee || 'Sistema');
     return docRef.id;
   } catch (error) {
     console.error("Erro ao criar ticket:", error);
@@ -65,26 +66,29 @@ export const createTicket = async (ticketData) => {
   }
 };
 
-export const updateTicketStatus = async (ticketId, newStatusId) => {
+export const updateTicketStatus = async (ticketId, newStatusId, userName = 'Sistema') => {
   try {
     const ticketRef = doc(db, COLLECTION_NAME, ticketId);
     await updateDoc(ticketRef, {
       columnId: newStatusId,
       updatedAt: new Date()
     });
+    await logTicketAction(ticketId, `Moveu o ticket para ${newStatusId}`, userName);
   } catch (error) {
     console.error("Erro ao atualizar status:", error);
     throw error;
   }
 };
 
-export const updateTicket = async (ticketId, updates) => {
+export const updateTicket = async (ticketId, updates, userName = 'Sistema') => {
   try {
     const ticketRef = doc(db, COLLECTION_NAME, ticketId);
     await updateDoc(ticketRef, {
       ...updates,
       updatedAt: new Date()
     });
+    // For simplicity, we just say it was updated, but we could diff the updates
+    await logTicketAction(ticketId, 'Atualizou os detalhes do ticket', userName);
   } catch (error) {
     console.error("Erro ao atualizar ticket:", error);
     throw error;
@@ -162,5 +166,33 @@ export const subscribeToAttachments = (ticketId, callback) => {
       ...doc.data()
     }));
     callback(attachments);
+  });
+};
+
+export const logTicketAction = async (ticketId, actionMessage, userName) => {
+  try {
+    const historyRef = collection(db, `${COLLECTION_NAME}/${ticketId}/history`);
+    await addDoc(historyRef, {
+      action: actionMessage,
+      userName: userName,
+      createdAt: new Date()
+    });
+  } catch (error) {
+    console.error("Erro ao logar ação:", error);
+  }
+};
+
+export const subscribeToHistory = (ticketId, callback) => {
+  const q = query(
+    collection(db, `${COLLECTION_NAME}/${ticketId}/history`),
+    orderBy('createdAt', 'desc')
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const history = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(history);
   });
 };

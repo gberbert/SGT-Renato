@@ -624,3 +624,23 @@ ul {
     transform: translateY(0);
   }
 }
+
+@keyframes borderPulse {
+  0% {
+    border-color: rgba(239, 68, 68, 1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+  }
+  100% {
+    border-color: rgba(239, 68, 68, 1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.blocked-ticket {
+  animation: borderPulse 2s infinite;
+  border-width: 2px !important;
+}

@@ -12,36 +12,93 @@ import {
 import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
-import { subscribeToTickets, updateTicketStatus } from '../services/ticketService';
-import { Loader2 } from 'lucide-react';
+import { subscribeToTickets, updateTicketStatus, updateTicket } from '../services/ticketService';
+import { subscribeToWorkflows } from '../services/settingsService';
+import { subscribeToProjects } from '../services/projectService';
+import { auth } from '../firebase';
+import { Loader2, LayoutList } from 'lucide-react';
+import { Button, Flex, Select, Text, Card } from '@radix-ui/themes';
 
-const COLUMNS = [
-  { id: 'col-backlog', title: 'Backlog' },
-  { id: 'col-todo', title: 'A Fazer' },
-  { id: 'col-in-progress', title: 'Em Andamento' },
-  { id: 'col-review', title: 'Em Validação' },
-  { id: 'col-done', title: 'Concluído' }
+const DEFAULT_COLUMNS = [
+  { id: 'col-backlog', title: 'Backlog', statusId: 'col-backlog' },
+  { id: 'col-todo', title: 'A Fazer', statusId: 'col-todo' },
+  { id: 'col-in-progress', title: 'Em Andamento', statusId: 'col-in-progress' },
+  { id: 'col-review', title: 'Em Validação', statusId: 'col-review' },
+  { id: 'col-done', title: 'Concluído', statusId: 'col-done' }
 ];
+
 
 const KanbanBoard = ({ onCardClick }) => {
   const [tickets, setTickets] = useState([]);
+  const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
+  const [useSwimlanes, setUseSwimlanes] = useState(false);
+
+  const [projects, setProjects] = useState([]);
+  const [workflows, setWorkflows] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('all');
 
   useEffect(() => {
-    const unsubscribe = subscribeToTickets((data) => {
+    let ticketsLoaded = false;
+    let colsLoaded = false;
+    const checkLoading = () => {
+      if (ticketsLoaded && colsLoaded) setLoading(false);
+    };
+
+    const unsubscribeTickets = subscribeToTickets((data) => {
       setTickets(data);
-      setLoading(false);
+      ticketsLoaded = true;
       setError(null);
+      checkLoading();
     }, (err) => {
       console.error(err);
       setError(err.message);
-      setLoading(false);
+      ticketsLoaded = true;
+      checkLoading();
     });
 
-    return () => unsubscribe();
+    const unsubscribeCols = subscribeToWorkflows((data) => {
+      setWorkflows(data);
+      colsLoaded = true;
+      checkLoading();
+    });
+
+    const unsubscribeProjects = subscribeToProjects((data) => {
+      setProjects(data);
+      if (data.length > 0) {
+        setSelectedProjectId(data[0].id);
+      }
+    });
+
+    return () => {
+      unsubscribeTickets();
+      unsubscribeCols();
+      unsubscribeProjects();
+    };
   }, []);
+
+  // Update columns when project changes
+  useEffect(() => {
+    if (selectedProjectId === 'all') {
+      setColumns(DEFAULT_COLUMNS);
+      return;
+    }
+
+    const proj = projects.find(p => p.id === selectedProjectId);
+    if (!proj || !proj.workflowId) {
+      setColumns(DEFAULT_COLUMNS);
+      return;
+    }
+
+    const wf = workflows.find(w => w.id === proj.workflowId);
+    if (wf && wf.columns) {
+      setColumns(wf.columns.map(c => ({ id: c.id, title: c.title, statusId: c.id })));
+    } else {
+      setColumns(DEFAULT_COLUMNS);
+    }
+  }, [selectedProjectId, projects, workflows]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -128,11 +185,28 @@ const KanbanBoard = ({ onCardClick }) => {
     }
 
     if (targetColumnId) {
-      // Atualizar no banco de dados se a coluna mudou
       const activeTicketOriginal = tickets.find(t => t.id === activeId);
-      if (activeTicketOriginal && activeTicketOriginal.columnId !== targetColumnId) {
+      
+      // If using swimlanes, targetColumnId might be "col-todo___Renato"
+      let finalColumnId = targetColumnId;
+      let finalAssignee = null;
+      if (targetColumnId.includes('___')) {
+        const parts = targetColumnId.split('___');
+        finalColumnId = parts[0];
+        finalAssignee = parts[1];
+      }
+
+      if (activeTicketOriginal) {
          try {
-           await updateTicketStatus(activeId, targetColumnId);
+           const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuário SGT';
+           
+           if (activeTicketOriginal.columnId !== finalColumnId) {
+             await updateTicketStatus(activeId, finalColumnId, userName);
+           }
+           
+           if (finalAssignee && activeTicketOriginal.assignee !== finalAssignee) {
+             await updateTicket(activeId, { assignee: finalAssignee === 'Sem responsável' ? '' : finalAssignee }, userName);
+           }
          } catch (e) {
            console.error("Falha ao atualizar na nuvem:", e);
          }
@@ -173,13 +247,40 @@ const KanbanBoard = ({ onCardClick }) => {
     );
   }
 
+  const filteredTickets = selectedProjectId === 'all' 
+    ? tickets 
+    : tickets.filter(t => t.projectId === selectedProjectId);
+
+  const assignees = useSwimlanes 
+    ? [...new Set(filteredTickets.map(t => t.assignee || 'Sem responsável'))] 
+    : [null];
+
   return (
     <div className="kanban-wrapper">
-      <div className="kanban-header">
-        <h2>Quadro Kanban</h2>
+      <div className="kanban-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <Flex align="center" gap="4">
+          <h2>Quadro Kanban</h2>
+          <Select.Root value={selectedProjectId} onValueChange={setSelectedProjectId}>
+            <Select.Trigger style={{ width: '250px' }} />
+            <Select.Content>
+              <Select.Item value="all">Ver Todos os Tickets</Select.Item>
+              {projects.map(p => (
+                <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+
+        <Button 
+          variant={useSwimlanes ? 'solid' : 'soft'} 
+          onClick={() => setUseSwimlanes(!useSwimlanes)}
+        >
+          <LayoutList size={16} /> 
+          {useSwimlanes ? 'Agrupar por Coluna' : 'Agrupar por Responsável (Swimlanes)'}
+        </Button>
       </div>
 
-      <div className="kanban-board">
+      <div className="kanban-board" style={{ display: 'flex', flexDirection: 'column', gap: '32px', overflowX: 'auto' }}>
         <DndContext 
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -187,14 +288,38 @@ const KanbanBoard = ({ onCardClick }) => {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          {COLUMNS.map(col => (
-            <KanbanColumn 
-              key={col.id} 
-              column={col} 
-              tickets={tickets.filter(t => t.columnId === col.id && !t.parentId)} 
-              allTickets={tickets}
-              onCardClick={onCardClick}
-            />
+          {assignees.map(assignee => (
+            <div key={assignee || 'all'} className="swimlane-container" style={{ minWidth: 'max-content' }}>
+              {useSwimlanes && (
+                <div style={{ padding: '8px 16px', background: 'var(--surface)', borderRadius: '8px', marginBottom: '16px', fontWeight: 'bold' }}>
+                  Responsável: <span style={{ color: 'var(--primary)' }}>{assignee}</span>
+                </div>
+              )}
+              <Flex gap="4">
+                {columns.map(col => {
+                  const filteredTicketsForCol = filteredTickets.filter(t => {
+                    if (t.columnId !== col.statusId || t.parentId) return false;
+                    if (useSwimlanes) {
+                      const tAssignee = t.assignee || 'Sem responsável';
+                      return tAssignee === assignee;
+                    }
+                    return true;
+                  });
+
+                  const colId = useSwimlanes ? `${col.statusId}___${assignee}` : col.statusId;
+
+                  return (
+                    <KanbanColumn 
+                      key={colId} 
+                      column={{ ...col, id: colId }} 
+                      tickets={filteredTicketsForCol} 
+                      allTickets={filteredTickets}
+                      onCardClick={onCardClick}
+                    />
+                  );
+                })}
+              </Flex>
+            </div>
           ))}
 
           <DragOverlay dropAnimation={dropAnimation}>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Button, Flex, Text, TextArea, Badge, Tabs, Box, TextField, ScrollArea, Card } from '@radix-ui/themes';
-import { updateTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments } from '../services/ticketService';
+import { Dialog, Button, Flex, Text, TextArea, Badge, Tabs, Box, TextField, ScrollArea, Card, Switch, Grid, Select } from '@radix-ui/themes';
+import { updateTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory } from '../services/ticketService';
+import { subscribeToProjects } from '../services/projectService';
+import { subscribeToWorkflows } from '../services/settingsService';
 import { auth } from '../firebase';
-import { Loader2, Send, Plus, Paperclip, File, Download } from 'lucide-react';
+import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles } from 'lucide-react';
 import NewTicketModal from './NewTicketModal';
 
 const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
@@ -13,6 +15,19 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
   const [comments, setComments] = useState([]);
   const [subtasks, setSubtasks] = useState([]);
   const [attachments, setAttachments] = useState([]);
+  const [history, setHistory] = useState([]);
+  
+  // Advanced fields
+  const [sprint, setSprint] = useState('');
+  const [storyPoints, setStoryPoints] = useState('');
+  const [labels, setLabels] = useState('');
+  const [dependsOn, setDependsOn] = useState('');
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [customData, setCustomData] = useState({});
+
+  const [projects, setProjects] = useState([]);
+  const [workflows, setWorkflows] = useState([]);
+
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -22,6 +37,13 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
       setDescription(ticket.description || '');
       setStartDate(ticket.startDate || '');
       setDeadline(ticket.deadline || '');
+      setSprint(ticket.sprint || '');
+      setStoryPoints(ticket.storyPoints || '');
+      setLabels(ticket.labels || '');
+      setDependsOn(ticket.dependsOn || '');
+      setIsBlocked(ticket.isBlocked || false);
+      setCustomData(ticket.customData || {});
+
       const unsubscribeComments = subscribeToComments(ticket.id, (data) => {
         setComments(data);
       });
@@ -31,10 +53,22 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
       const unsubscribeAttachments = subscribeToAttachments(ticket.id, (data) => {
         setAttachments(data);
       });
+      const unsubscribeHistory = subscribeToHistory(ticket.id, (data) => {
+        setHistory(data);
+      });
+      const unsubscribeProjects = subscribeToProjects((data) => {
+        setProjects(data);
+      });
+      const unsubscribeWorkflows = subscribeToWorkflows((data) => {
+        setWorkflows(data);
+      });
       return () => {
         unsubscribeComments();
         unsubscribeSubtasks();
         unsubscribeAttachments();
+        unsubscribeHistory();
+        unsubscribeProjects();
+        unsubscribeWorkflows();
       };
     }
   }, [ticket]);
@@ -44,11 +78,28 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
   const handleUpdateField = async (field, value) => {
     if (ticket[field] === value) return;
     try {
-      await updateTicket(ticket.id, { [field]: value });
+      const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuário SGT';
+      await updateTicket(ticket.id, { [field]: value }, userName);
     } catch (err) {
       console.error(err);
     }
   };
+
+  const handleUpdateCustomField = async (fieldName, value) => {
+    const updatedCustomData = { ...customData, [fieldName]: value };
+    setCustomData(updatedCustomData);
+    try {
+      const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuário SGT';
+      await updateTicket(ticket.id, { customData: updatedCustomData }, userName);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const currentProject = projects.find(p => p.id === ticket.projectId);
+  const currentWorkflow = workflows.find(w => w.id === currentProject?.workflowId);
+  const currentColumn = currentWorkflow?.columns?.find(c => c.id === ticket.columnId);
+  const customFields = currentColumn?.customFields || [];
 
   const handleSendComment = async (e) => {
     e.preventDefault();
@@ -105,6 +156,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
             <Tabs.Trigger value="subtasks">Sub-tarefas ({subtasks.length})</Tabs.Trigger>
             <Tabs.Trigger value="attachments">Anexos ({attachments.length})</Tabs.Trigger>
             <Tabs.Trigger value="comments">Comentários ({comments.length})</Tabs.Trigger>
+            <Tabs.Trigger value="history">Histórico</Tabs.Trigger>
           </Tabs.List>
 
           <Box pt="4" style={{ flexGrow: 1, overflow: 'hidden' }}>
@@ -122,6 +174,56 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
                       style={{ minHeight: '150px' }}
                     />
                   </Box>
+
+                  {customFields.length > 0 && (
+                    <Card variant="surface" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                      <Flex align="center" gap="2" mb="3">
+                        <Sparkles size={16} color="var(--primary)" />
+                        <Text weight="bold" color="indigo">Campos Exclusivos: {currentColumn.title}</Text>
+                      </Flex>
+                      <Grid columns="2" gap="4">
+                        {customFields.map((field, idx) => {
+                          const optionsArray = field.type === 'select' && field.options 
+                            ? field.options.split(',').map(o => o.trim()).filter(Boolean) 
+                            : [];
+
+                          return (
+                            <Box key={idx} style={{ gridColumn: field.type === 'textarea' ? 'span 2' : 'span 1' }}>
+                              <Text as="div" size="2" weight="bold" mb="1" color="gray">{field.name}</Text>
+                              {field.type === 'textarea' ? (
+                                <TextArea 
+                                  placeholder="..."
+                                  value={customData[field.name] || ''}
+                                  onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                                  onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
+                                />
+                              ) : field.type === 'select' ? (
+                                <Select.Root 
+                                  value={customData[field.name] || ''}
+                                  onValueChange={(val) => handleUpdateCustomField(field.name, val)}
+                                >
+                                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                                  <Select.Content>
+                                    {optionsArray.map((opt, i) => (
+                                      <Select.Item key={i} value={opt}>{opt}</Select.Item>
+                                    ))}
+                                  </Select.Content>
+                                </Select.Root>
+                              ) : (
+                                <TextField.Root 
+                                  type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                  placeholder="..."
+                                  value={customData[field.name] || ''}
+                                  onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                                  onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
+                                />
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Grid>
+                    </Card>
+                  )}
 
                   <Grid columns="2" gap="4">
                     <Box>
@@ -142,13 +244,64 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
                       />
                     </Box>
                     <Box>
-                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Prazo de Entrega (Deadline)</Text>
+                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Prazo (Deadline)</Text>
                       <TextField.Root 
                         type="date" 
                         value={deadline} 
                         onChange={(e) => setDeadline(e.target.value)}
                         onBlur={() => handleUpdateField('deadline', deadline)}
                       />
+                    </Box>
+                    <Box>
+                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Sprint</Text>
+                      <TextField.Root 
+                        placeholder="Ex: Sprint 4"
+                        value={sprint} 
+                        onChange={(e) => setSprint(e.target.value)}
+                        onBlur={() => handleUpdateField('sprint', sprint)}
+                      />
+                    </Box>
+                    <Box>
+                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Story Points</Text>
+                      <TextField.Root 
+                        type="number"
+                        placeholder="Esforço (ex: 5)"
+                        value={storyPoints} 
+                        onChange={(e) => setStoryPoints(e.target.value)}
+                        onBlur={() => handleUpdateField('storyPoints', storyPoints)}
+                      />
+                    </Box>
+                    <Box>
+                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Tags / Labels</Text>
+                      <TextField.Root 
+                        placeholder="frontend, ui, bug..."
+                        value={labels} 
+                        onChange={(e) => setLabels(e.target.value)}
+                        onBlur={() => handleUpdateField('labels', labels)}
+                      />
+                    </Box>
+                    <Box>
+                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Depende de (ID do Ticket)</Text>
+                      <TextField.Root 
+                        placeholder="Ex: TCK-123"
+                        value={dependsOn} 
+                        onChange={(e) => setDependsOn(e.target.value)}
+                        onBlur={() => handleUpdateField('dependsOn', dependsOn)}
+                      />
+                    </Box>
+                    <Box>
+                      <Flex align="center" gap="2" mt="4">
+                        <Switch 
+                          checked={isBlocked} 
+                          onCheckedChange={(checked) => {
+                            setIsBlocked(checked);
+                            handleUpdateField('isBlocked', checked);
+                          }} 
+                        />
+                        <Text size="2" weight="bold" color={isBlocked ? "red" : "gray"}>
+                          {isBlocked ? "Ticket Bloqueado" : "Marcar como Bloqueado"}
+                        </Text>
+                      </Flex>
                     </Box>
                   </Grid>
                 </Flex>
@@ -267,6 +420,30 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
                   </Button>
                 </Flex>
               </form>
+            </Tabs.Content>
+
+            <Tabs.Content value="history" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <ScrollArea style={{ flexGrow: 1, height: '300px', paddingRight: '16px' }}>
+                <Flex direction="column" gap="3">
+                  {history.length === 0 ? (
+                    <Text color="gray" align="center" mt="5">Nenhum log de auditoria encontrado.</Text>
+                  ) : (
+                    history.map(log => (
+                      <Card key={log.id} size="1" style={{ borderLeft: '3px solid var(--gray-7)' }}>
+                        <Flex direction="column" gap="1">
+                          <Flex justify="between">
+                            <Text size="2" weight="bold" color="indigo">{log.userName}</Text>
+                            <Text size="1" color="gray">
+                              {log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : 'Agora'}
+                            </Text>
+                          </Flex>
+                          <Text size="2">{log.action}</Text>
+                        </Flex>
+                      </Card>
+                    ))
+                  )}
+                </Flex>
+              </ScrollArea>
             </Tabs.Content>
           </Box>
         </Tabs.Root>

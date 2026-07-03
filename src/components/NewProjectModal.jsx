@@ -1,16 +1,38 @@
-import React, { useState } from 'react';
-import { Dialog, Button, Flex, Text, TextField, TextArea } from '@radix-ui/themes';
-import { createProject } from '../services/projectService';
+import React, { useState, useEffect } from 'react';
+import { Dialog, Button, Flex, Text, TextField, TextArea, Select } from '@radix-ui/themes';
+import { createProject, updateProject } from '../services/projectService';
+import { subscribeToWorkflows } from '../services/settingsService';
 import { auth } from '../firebase';
 import { Loader2 } from 'lucide-react';
 
-const NewProjectModal = ({ isOpen, onClose }) => {
+const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
   const [loading, setLoading] = useState(false);
+  const [workflows, setWorkflows] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     key: '',
+    workflowId: ''
   });
+
+  useEffect(() => {
+    if (editingProject) {
+      setFormData({
+        name: editingProject.name,
+        description: editingProject.description,
+        key: editingProject.key,
+        workflowId: editingProject.workflowId || ''
+      });
+    } else {
+      setFormData({ name: '', description: '', key: '', workflowId: '' });
+    }
+
+    const unsubscribeWorkflows = subscribeToWorkflows((data) => {
+      setWorkflows(data);
+    });
+
+    return () => unsubscribeWorkflows();
+  }, [editingProject, isOpen]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -22,14 +44,24 @@ const NewProjectModal = ({ isOpen, onClose }) => {
 
     setLoading(true);
     try {
-      await createProject({
-        name: formData.name,
-        description: formData.description,
-        key: formData.key.toUpperCase(),
-        createdBy: auth.currentUser?.uid || 'unknown',
-        leaderName: auth.currentUser?.displayName || auth.currentUser?.email || 'Admin',
-      });
-      setFormData({ name: '', description: '', key: '' });
+      if (editingProject) {
+        await updateProject(editingProject.id, {
+          name: formData.name,
+          description: formData.description,
+          key: formData.key.toUpperCase(),
+          workflowId: formData.workflowId,
+        });
+      } else {
+        await createProject({
+          name: formData.name,
+          description: formData.description,
+          key: formData.key.toUpperCase(),
+          workflowId: formData.workflowId,
+          createdBy: auth.currentUser?.uid || 'unknown',
+          leaderName: auth.currentUser?.displayName || auth.currentUser?.email || 'Admin',
+        });
+      }
+      setFormData({ name: '', description: '', key: '', workflowId: '' });
       onClose();
     } catch (error) {
       console.error(error);
@@ -42,9 +74,9 @@ const NewProjectModal = ({ isOpen, onClose }) => {
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Content maxWidth="450px">
-        <Dialog.Title>Novo Projeto</Dialog.Title>
+        <Dialog.Title>{editingProject ? 'Editar Projeto' : 'Novo Projeto'}</Dialog.Title>
         <Dialog.Description size="2" mb="4" color="gray">
-          Crie um novo espaço de trabalho para isolar suas demandas.
+          {editingProject ? 'Atualize as informações do seu projeto.' : 'Crie um novo espaço de trabalho para isolar suas demandas.'}
         </Dialog.Description>
 
         <form onSubmit={handleSubmit}>
@@ -77,6 +109,24 @@ const NewProjectModal = ({ isOpen, onClose }) => {
             </label>
 
             <label>
+              <Text as="div" size="2" mb="1" weight="bold">Workflow do Projeto</Text>
+              <Select.Root 
+                value={formData.workflowId} 
+                onValueChange={(val) => setFormData({...formData, workflowId: val})}
+              >
+                <Select.Trigger placeholder="Selecione um workflow..." style={{ width: '100%' }} />
+                <Select.Content>
+                  {workflows.map(wf => (
+                    <Select.Item key={wf.id} value={wf.id}>{wf.name}</Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+              <Text as="div" size="1" color="gray" mt="1">
+                Define as colunas que aparecerão no Kanban deste projeto.
+              </Text>
+            </label>
+
+            <label>
               <Text as="div" size="2" mb="1" weight="bold">Descrição</Text>
               <TextArea
                 name="description"
@@ -95,7 +145,7 @@ const NewProjectModal = ({ isOpen, onClose }) => {
               </Button>
             </Dialog.Close>
             <Button type="submit" disabled={loading || !formData.name || !formData.key}>
-              {loading ? <Loader2 size={16} className="spinner-icon" /> : 'Criar Projeto'}
+              {loading ? <Loader2 size={16} className="spinner-icon" /> : (editingProject ? 'Salvar Alterações' : 'Criar Projeto')}
             </Button>
           </Flex>
         </form>

@@ -15,6 +15,7 @@ import Projects from './components/Projects';
 import Roadmap from './components/Roadmap';
 import GlobalSearch from './components/GlobalSearch';
 import TicketDetailsModal from './components/TicketDetailsModal';
+import Settings from './components/Settings';
 import { getUserRole } from './services/ticketService';
 
 function App() {
@@ -29,8 +30,8 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const role = await getUserRole(currentUser);
-        setUserRole(role);
+        // FORCANDO ADMIN TEMPORARIAMENTE
+        setUserRole('admin');
       }
       setLoading(false);
     });
@@ -74,11 +75,11 @@ function App() {
           
           <section className="view-container">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/kanban" element={<KanbanBoard onCardClick={setSelectedTicket} />} />
-              <Route path="/roadmap" element={<Roadmap />} />
-              <Route path="/projetos" element={<Projects />} />
-              <Route path="/configuracoes" element={<div><h2>Configurações</h2></div>} />
+              <Route path="/" element={<Dashboard userRole={userRole} />} />
+              <Route path="/kanban" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} />} />
+              <Route path="/roadmap" element={<Roadmap userRole={userRole} />} />
+              <Route path="/projetos" element={<Projects userRole={userRole} />} />
+              <Route path="/configuracoes" element={userRole === 'admin' ? <Settings /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </section>

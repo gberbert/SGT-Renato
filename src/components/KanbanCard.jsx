@@ -50,7 +50,7 @@ const KanbanCard = ({ ticket, subtasksCount = 0, onCardClick }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="kanban-card glass-panel"
+      className={`kanban-card glass-panel ${ticket.isBlocked ? 'blocked-ticket' : ''}`}
       onClick={() => onCardClick && onCardClick(ticket)}
     >
       <div className="card-header">

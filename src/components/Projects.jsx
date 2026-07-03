@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { subscribeToProjects } from '../services/projectService';
-import { Loader2, Plus, FolderGit2, Users } from 'lucide-react';
-import { Button, Card, Flex, Text, Badge, Grid } from '@radix-ui/themes';
+import { subscribeToProjects, deleteProject, updateProject } from '../services/projectService';
+import { Loader2, Plus, FolderGit2, Users, MoreVertical, Trash2, Edit2 } from 'lucide-react';
+import { Button, Card, Flex, Text, Badge, Grid, DropdownMenu } from '@radix-ui/themes';
 import NewProjectModal from './NewProjectModal';
 
-const Projects = () => {
+const Projects = ({ userRole }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
 
   useEffect(() => {
     const unsubscribe = subscribeToProjects((data) => {
@@ -19,6 +20,19 @@ const Projects = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    if (confirm("Deseja realmente excluir este projeto e todos os seus vínculos?")) {
+      await deleteProject(id);
+    }
+  };
+
+  const handleEdit = (e, project) => {
+    e.stopPropagation();
+    setEditingProject(project);
+    setIsModalOpen(true);
+  };
 
   if (loading) {
     return (
@@ -36,9 +50,11 @@ const Projects = () => {
           <Text as="h1" size="6" weight="bold">Gestão de Projetos</Text>
           <Text as="p" size="3" color="gray">Organize seus tickets e times em workspaces separados.</Text>
         </div>
-        <Button size="3" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} /> Novo Projeto
-        </Button>
+        {userRole === 'admin' && (
+          <Button size="3" onClick={() => setIsModalOpen(true)}>
+            <Plus size={18} /> Novo Projeto
+          </Button>
+        )}
       </div>
 
       {projects.length === 0 ? (
@@ -46,7 +62,9 @@ const Projects = () => {
           <FolderGit2 size={48} color="var(--text-muted)" />
           <Text as="h2" size="5" weight="bold">Nenhum projeto encontrado</Text>
           <Text color="gray">Comece criando seu primeiro projeto para agrupar as demandas.</Text>
-          <Button mt="3" onClick={() => setIsModalOpen(true)}>Criar Projeto</Button>
+          {userRole === 'admin' && (
+            <Button mt="3" onClick={() => setIsModalOpen(true)}>Criar Projeto</Button>
+          )}
         </Card>
       ) : (
         <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="4">
@@ -60,7 +78,26 @@ const Projects = () => {
                     </Flex>
                     <Text as="h3" size="4" weight="bold">{project.name}</Text>
                   </Flex>
-                  <Badge color="green" radius="full">{project.status}</Badge>
+                  <Flex align="center" gap="2">
+                    <Badge color="green" radius="full">{project.status}</Badge>
+                    {userRole === 'admin' && (
+                      <DropdownMenu.Root>
+                        <DropdownMenu.Trigger onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="1">
+                            <MoreVertical size={16} />
+                          </Button>
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Content>
+                          <DropdownMenu.Item onClick={(e) => handleEdit(e, project)}>
+                            <Edit2 size={14} /> Editar Projeto
+                          </DropdownMenu.Item>
+                          <DropdownMenu.Item color="red" onClick={(e) => handleDelete(e, project.id)}>
+                            <Trash2 size={14} /> Excluir Projeto
+                          </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Root>
+                    )}
+                  </Flex>
                 </Flex>
                 
                 <Text color="gray" size="2" style={{ flexGrow: 1 }}>
@@ -77,7 +114,14 @@ const Projects = () => {
         </Grid>
       )}
 
-      <NewProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <NewProjectModal 
+        isOpen={isModalOpen} 
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingProject(null);
+        }} 
+        editingProject={editingProject}
+      />
     </div>
   );
 };

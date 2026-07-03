@@ -1,4 +1,4 @@
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const projectsCollection = collection(db, 'projects');
@@ -27,4 +27,27 @@ export const subscribeToProjects = (callback, onError) => {
     }));
     callback(projects);
   }, onError);
+};
+
+export const updateProject = async (projectId, updates) => {
+  try {
+    const projectRef = doc(db, 'projects', projectId);
+    await updateDoc(projectRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar projeto:", error);
+    throw error;
+  }
+};
+
+export const deleteProject = async (projectId) => {
+  try {
+    const projectRef = doc(db, 'projects', projectId);
+    await deleteDoc(projectRef);
+  } catch (error) {
+    console.error("Erro ao excluir projeto:", error);
+    throw error;
+  }
 };

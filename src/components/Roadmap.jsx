@@ -1,24 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { subscribeToTickets } from '../services/ticketService';
-import { Loader2 } from 'lucide-react';
-import { Text, Box, Flex } from '@radix-ui/themes';
+import { subscribeToProjects } from '../services/projectService';
+import { Loader2, Printer } from 'lucide-react';
+import { Text, Box, Flex, Button, Select } from '@radix-ui/themes';
 import { Gantt, ViewMode } from 'gantt-task-react';
 import "gantt-task-react/dist/index.css";
 
 const Roadmap = () => {
   const [tickets, setTickets] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('all');
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState(ViewMode.Day);
 
   useEffect(() => {
-    const unsubscribe = subscribeToTickets((data) => {
+    let ticketsLoaded = false;
+    let projLoaded = false;
+    
+    const unsubscribeTickets = subscribeToTickets((data) => {
       setTickets(data);
-      setLoading(false);
+      ticketsLoaded = true;
+      if (projLoaded) setLoading(false);
     }, (err) => {
       console.error(err);
-      setLoading(false);
+      ticketsLoaded = true;
+      if (projLoaded) setLoading(false);
     });
-    return () => unsubscribe();
+
+    const unsubscribeProjects = subscribeToProjects((data) => {
+      setProjects(data);
+      if (data.length > 0) {
+        setSelectedProjectId(data[0].id);
+      }
+      projLoaded = true;
+      if (ticketsLoaded) setLoading(false);
+    });
+
+    return () => {
+      unsubscribeTickets();
+      unsubscribeProjects();
+    };
   }, []);
 
   if (loading) {
@@ -30,7 +51,11 @@ const Roadmap = () => {
   }
 
   // Transform tickets into Gantt Task format
-  const tasks = tickets.map(t => {
+  const filteredTickets = selectedProjectId === 'all' 
+    ? tickets 
+    : tickets.filter(t => t.projectId === selectedProjectId);
+
+  const tasks = filteredTickets.map(t => {
     const start = t.startDate ? new Date(t.startDate) : new Date();
     const end = t.deadline ? new Date(t.deadline) : new Date(start.getTime() + 24 * 60 * 60 * 1000); // Defaults to 1 day duration
     
@@ -41,6 +66,15 @@ const Roadmap = () => {
     if (t.columnId === 'col-review') progress = 90;
     if (t.columnId === 'col-done') progress = 100;
 
+    const dependencies = [];
+    if (t.dependsOn) {
+      // Find the ticket ID that matches the dependsOn code (e.g. SGT-5)
+      const depTicket = tickets.find(ticket => ticket.code === t.dependsOn.trim());
+      if (depTicket) {
+        dependencies.push(depTicket.id);
+      }
+    }
+
     return {
       start,
       end,
@@ -48,6 +82,7 @@ const Roadmap = () => {
       id: t.id,
       type: 'task',
       progress,
+      dependencies,
       isDisabled: true, // For now, read-only Gantt
       styles: { progressColor: 'var(--primary)', progressSelectedColor: 'var(--primary-hover)' }
     };
@@ -55,11 +90,23 @@ const Roadmap = () => {
 
   return (
     <Box p="6" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Flex justify="between" align="center" mb="5">
-        <Box>
-          <Text as="h1" size="6" weight="bold">Roadmap (Gantt)</Text>
-          <Text as="p" size="3" color="gray">Visão temporal e planejamento de entregas do projeto.</Text>
-        </Box>
+      <Flex justify="between" align="center" mb="5" wrap="wrap" gap="4">
+        <Flex align="center" gap="4">
+          <Box>
+            <Text as="h1" size="6" weight="bold">Roadmap (Gantt)</Text>
+            <Text as="p" size="3" color="gray">Visão temporal e planejamento de entregas do projeto.</Text>
+          </Box>
+          <Select.Root value={selectedProjectId} onValueChange={setSelectedProjectId}>
+            <Select.Trigger style={{ width: '250px' }} />
+            <Select.Content>
+              <Select.Item value="all">Ver Todos os Projetos</Select.Item>
+              {projects.map(p => (
+                <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+        
         <Flex gap="2">
           <select 
             value={viewMode} 
@@ -70,6 +117,9 @@ const Roadmap = () => {
             <option value={ViewMode.Week}>Semanal</option>
             <option value={ViewMode.Month}>Mensal</option>
           </select>
+          <Button variant="soft" onClick={() => window.print()}>
+            <Printer size={16} /> Exportar
+          </Button>
         </Flex>
       </Flex>
 
