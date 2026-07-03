@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Box, Text, Card, Flex, Button, Table, Badge, Dialog, TextField, Select, IconButton } from '@radix-ui/themes';
 import { subscribeToTicketTypes, saveTicketType, deleteTicketType, subscribeToWorkflows, saveWorkflow, deleteWorkflow, subscribeToUsers, updateUserRole } from '../services/settingsService';
-import { Loader2, Trash2, Settings2 } from 'lucide-react';
+import { Loader2, Trash2, Settings2, Database } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
+import { db } from '../firebase';
+import { writeBatch, doc } from 'firebase/firestore';
 
 const Settings = () => {
   const [ticketTypes, setTicketTypes] = useState([]);
@@ -98,6 +100,44 @@ const Settings = () => {
       await updateUserRole(userId, newRole);
     } catch (e) {
       alert("Erro ao atualizar o papel do usuário.");
+    }
+  };
+
+  const handleInjectHolidays = async () => {
+    try {
+      if(!confirm("Atenção! Isso vai gravar 5570 municípios no Firebase. Deseja continuar?")) return;
+      alert("Iniciando injeção... Por favor, não feche a janela até o aviso de Sucesso.");
+      
+      const response = await fetch('/feriados_brasil_completo.json');
+      const data = await response.json();
+      
+      let batch = writeBatch(db);
+      let count = 0;
+      let total = 0;
+
+      for (const city of data) {
+        const ref = doc(db, 'municipios', city.ibge_id.toString());
+        batch.set(ref, city);
+        count++;
+        total++;
+
+        // O Firestore limita batches a 500 operações
+        if (count >= 400) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+          console.log(`Lote gravado: ${total}/${data.length}`);
+        }
+      }
+      
+      if (count > 0) {
+        await batch.commit();
+      }
+
+      alert(`Sucesso! ${total} municípios injetados no banco de dados.`);
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao injetar feriados: " + e.message);
     }
   };
 
@@ -328,6 +368,14 @@ const Settings = () => {
         </Tabs.Root>
       </Card>
       
+      <Card size="4">
+        <Text as="h2" size="4" weight="bold" mb="2">Manutenção do Sistema (Avançado)</Text>
+        <Text color="gray" mb="4" as="p">Utilize esta área apenas com orientação técnica.</Text>
+        <Button color="orange" variant="soft" onClick={handleInjectHolidays}>
+          <Database size={16} /> Injetar Feriados no Banco (JSON)
+        </Button>
+      </Card>
+
       <WorkflowStagesModal 
         isOpen={!!selectedWorkflowForStages} 
         onClose={() => setSelectedWorkflowForStages(null)} 

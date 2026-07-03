@@ -5,14 +5,14 @@ import { getFirestore, doc, setDoc } from 'firebase/firestore';
 
 // COLE SUAS CREDENCIAIS DO FIREBASE AQUI
 const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI",
-  projectId: "COLE_AQUI"
+  apiKey: "AIzaSyBfX9ytpF-hXsLjvu8RFWd4qUIyRC1FiRs",
+  authDomain: "sgt-renato.firebaseapp.com",
+  projectId: "sgt-renato"
 };
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
-const dbFirestore = getFirestore(app);
+const dbFirestore = getFirestore(app, "default");
 
 // Função auxiliar com delay (se necessário)
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
