@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { KanbanSquare, Loader2 } from 'lucide-react';
