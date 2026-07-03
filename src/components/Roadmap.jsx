@@ -143,10 +143,7 @@ const Roadmap = () => {
 
     const highlightTimer = setTimeout(() => {
       const svgs = document.querySelectorAll('#gantt-container svg');
-      if (svgs.length < 2) {
-        console.warn("Gantt SVGs not found. Length:", svgs.length);
-        return;
-      }
+      if (svgs.length < 2) return;
       
       const gridSvg = svgs[1]; // The second SVG contains the grid/tasks
 
@@ -191,17 +188,17 @@ const Roadmap = () => {
         const isHoliday = natHoliday || isEstadual || isMunicipal;
 
         if (isWeekend || isHoliday) {
-          let bgColor = 'rgba(0,0,0,0.05)'; // Default weekend (grey)
+          let bgColor = 'rgba(255, 255, 255, 0.05)'; // Default weekend (visible on dark)
           let titleText = 'Fim de Semana';
 
           if (natHoliday) {
-            bgColor = 'rgba(255, 99, 132, 0.2)'; // National (Red)
+            bgColor = 'rgba(255, 50, 50, 0.3)'; // National (Red)
             titleText = `Feriado Nacional: ${natHoliday.name}`;
           } else if (isEstadual) {
-            bgColor = 'rgba(54, 162, 235, 0.2)'; // Estadual (Blue)
+            bgColor = 'rgba(50, 150, 255, 0.3)'; // Estadual (Blue)
             titleText = `Feriado Estadual`;
           } else if (isMunicipal) {
-            bgColor = 'rgba(75, 192, 192, 0.2)'; // Municipal (Green)
+            bgColor = 'rgba(50, 200, 50, 0.3)'; // Municipal (Green)
             titleText = `Feriado Municipal`;
           }
 
@@ -225,10 +222,15 @@ const Roadmap = () => {
         }
       }
 
-      // Prepend to the grid SVG so it stays behind lines and tasks
-      gridSvg.insertBefore(fragment, gridSvg.firstChild);
+      // Insert the fragment between Grid and TaskGanttContent for correct layering
+      const contentGroup = gridSvg.querySelector('g.content');
+      if (contentGroup) {
+        gridSvg.insertBefore(fragment, contentGroup);
+      } else {
+        gridSvg.appendChild(fragment);
+      }
 
-    }, 600); // Wait for Gantt to render
+    }, 800); // Wait for Gantt to render fully
 
     return () => clearTimeout(highlightTimer);
   }, [viewMode, tasks, holidays, localHolidays]);

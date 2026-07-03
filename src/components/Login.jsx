@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { KanbanSquare, Loader2 } from 'lucide-react';
 
 const Login = () => {
@@ -26,7 +27,13 @@ const Login = () => {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email: userCredential.user.email,
+          displayName: userCredential.user.email.split('@')[0],
+          role: 'user',
+          createdAt: serverTimestamp()
+        });
       }
     } catch (err) {
       console.error(err);
