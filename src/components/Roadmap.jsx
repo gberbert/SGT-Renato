@@ -55,9 +55,17 @@ const Roadmap = () => {
     ? tickets 
     : tickets.filter(t => t.projectId === selectedProjectId);
 
-  const tasks = filteredTickets.map(t => {
-    const start = t.startDate ? new Date(t.startDate) : new Date();
-    const end = t.deadline ? new Date(t.deadline) : new Date(start.getTime() + 24 * 60 * 60 * 1000); // Defaults to 1 day duration
+  // Filter tickets that actually have dates defined
+  const ticketsWithDates = filteredTickets.filter(t => t.startDate && t.deadline);
+
+  const tasks = ticketsWithDates.map(t => {
+    const start = new Date(t.startDate);
+    const end = new Date(t.deadline); 
+    
+    // Ensure end date is at least the same as start date for the chart
+    if (end < start) {
+      end.setTime(start.getTime() + 24 * 60 * 60 * 1000);
+    }
     
     // Determine progress based on column
     let progress = 0;
