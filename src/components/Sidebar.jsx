@@ -1,0 +1,83 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu } from 'lucide-react';
+
+const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const menuItems = [
+    { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
+    { name: 'Kanban', icon: <KanbanSquare size={20} />, path: '/kanban' },
+    { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap' },
+    { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' },
+  ];
+
+  return (
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar-header">
+        <div className="logo">
+          <KanbanSquare className="logo-icon" size={24} />
+          <span className="logo-text">SGT</span>
+        </div>
+        <button className="menu-toggle" onClick={toggleSidebar}>
+          <Menu size={24} />
+        </button>
+      </div>
+
+      <nav className="sidebar-nav">
+        <ul>
+          {menuItems.map((item, index) => (
+            <li key={index}>
+              <NavLink 
+                to={item.path} 
+                className={({ isActive }) => isActive ? "active-link" : ""}
+                style={({ isActive }) => ({
+                  backgroundColor: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                  color: isActive ? 'var(--primary)' : 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderRadius: 'var(--border-radius)',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                  textDecoration: 'none'
+                })}
+              >
+                {item.icon} {item.name}
+              </NavLink>
+            </li>
+          ))}
+          <li className="divider"></li>
+          <li>
+            <NavLink 
+              to="/configuracoes"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: 'var(--border-radius)',
+                color: 'var(--text-muted)',
+                fontWeight: 500,
+                textDecoration: 'none'
+              }}
+            >
+              <Settings size={20} /> Configurações
+            </NavLink>
+          </li>
+        </ul>
+      </nav>
+
+      <div className="sidebar-footer">
+        <div className="user-profile">
+          <div className="avatar">US</div>
+          <div className="user-info">
+            <span className="name">Usuário SGT</span>
+            <span className="role">Admin</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;

@@ -1,0 +1,70 @@
+export const initialColumns = [
+  { id: 'col-backlog', title: 'Backlog' },
+  { id: 'col-todo', title: 'A Fazer' },
+  { id: 'col-in-progress', title: 'Em Andamento' },
+  { id: 'col-review', title: 'Em Validação' },
+  { id: 'col-done', title: 'Concluído' }
+];
+
+export const initialTickets = [
+  {
+    id: 'ticket-1',
+    code: 'SGT-01',
+    title: 'Criar esquema do Banco de Dados no Firestore',
+    type: 'Task',
+    priority: 'high',
+    columnId: 'col-done',
+    assignee: 'Renato',
+    comments: 2,
+  },
+  {
+    id: 'ticket-2',
+    code: 'SGT-02',
+    title: 'Desenvolver Autenticação com E-mail e Senha',
+    type: 'Story',
+    priority: 'critical',
+    columnId: 'col-in-progress',
+    assignee: 'Gabriel',
+    comments: 5,
+  },
+  {
+    id: 'ticket-3',
+    code: 'SGT-03',
+    title: 'Configurar PWA e Service Worker',
+    type: 'Task',
+    priority: 'medium',
+    columnId: 'col-done',
+    assignee: 'Gabriel',
+    comments: 0,
+  },
+  {
+    id: 'ticket-4',
+    code: 'SGT-04',
+    title: 'Layout do Quadro Kanban e Cards',
+    type: 'Story',
+    priority: 'high',
+    columnId: 'col-todo',
+    assignee: 'Renato',
+    comments: 1,
+  },
+  {
+    id: 'ticket-5',
+    code: 'SGT-05',
+    title: 'Testar Drag and Drop em Dispositivos Móveis',
+    type: 'Subtask',
+    priority: 'medium',
+    columnId: 'col-backlog',
+    assignee: null,
+    comments: 0,
+  },
+  {
+    id: 'ticket-6',
+    code: 'SGT-06',
+    title: 'Tela de Roadmap (Linha do Tempo)',
+    type: 'Epic',
+    priority: 'low',
+    columnId: 'col-backlog',
+    assignee: null,
+    comments: 3,
+  }
+];
