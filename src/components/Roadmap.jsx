@@ -142,8 +142,13 @@ const Roadmap = () => {
     if (viewMode !== ViewMode.Day || tasks.length === 0) return;
 
     const highlightTimer = setTimeout(() => {
-      const grid = document.querySelector('#gantt-container g.grid');
-      if (!grid) return;
+      const svgs = document.querySelectorAll('#gantt-container svg');
+      if (svgs.length < 2) {
+        console.warn("Gantt SVGs not found. Length:", svgs.length);
+        return;
+      }
+      
+      const gridSvg = svgs[1]; // The second SVG contains the grid/tasks
 
       // Clean up previous custom markers
       const existing = document.querySelectorAll('#gantt-container .custom-holiday-marker');
@@ -220,10 +225,10 @@ const Roadmap = () => {
         }
       }
 
-      // Prepend to grid so it stays behind lines and tasks
-      grid.prepend(fragment);
+      // Prepend to the grid SVG so it stays behind lines and tasks
+      gridSvg.insertBefore(fragment, gridSvg.firstChild);
 
-    }, 300); // Wait for Gantt to render
+    }, 600); // Wait for Gantt to render
 
     return () => clearTimeout(highlightTimer);
   }, [viewMode, tasks, holidays, localHolidays]);
