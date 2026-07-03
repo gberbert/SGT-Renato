@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, initializeFirestore } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -15,11 +15,8 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services with Long Polling to prevent 1-minute WebSocket timeouts
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-  useFetchStreams: false
-});
+// Conectar explicitamente ao banco de dados nomeado como "default" (sem parênteses)
+export const db = getFirestore(app, "default");
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
