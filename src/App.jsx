@@ -4,6 +4,7 @@ import { Theme } from '@radix-ui/themes';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { Menu, Plus, LogOut } from 'lucide-react';
 import { auth, db } from './firebase';
 
 import Sidebar from './components/Sidebar';
@@ -79,14 +80,22 @@ function App() {
       <Router>
         <div className="app-layout">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} userRole={userRole} user={user} />
+        {isSidebarOpen && (
+          <div className="sidebar-overlay" onClick={toggleSidebar}></div>
+        )}
         
         <main className="main-content">
           <header className="topbar">
+             <button className="mobile-menu-toggle" onClick={toggleSidebar}>
+               <Menu size={24} />
+             </button>
              <GlobalSearch onSelectTicket={setSelectedTicket} />
              <div className="topbar-actions">
-               <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>Novo Ticket</button>
+               <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+                 <Plus size={18} /> <span className="hide-on-mobile">Novo Ticket</span>
+               </button>
                <button className="btn-icon" onClick={handleLogout} title="Sair">
-                 <span style={{ fontSize: '0.8rem' }}>Sair</span>
+                 <LogOut size={20} />
                </button>
              </div>
           </header>
