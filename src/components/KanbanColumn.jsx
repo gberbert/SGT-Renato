@@ -3,7 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import KanbanCard from './KanbanCard';
 
-const KanbanColumn = ({ column, tickets }) => {
+const KanbanColumn = ({ column, tickets, allTickets, onCardClick }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
     data: {
@@ -27,9 +27,17 @@ const KanbanColumn = ({ column, tickets }) => {
           items={tickets.map(t => t.id)} 
           strategy={verticalListSortingStrategy}
         >
-          {tickets.map(ticket => (
-            <KanbanCard key={ticket.id} ticket={ticket} />
-          ))}
+          {tickets.map(ticket => {
+            const subtasksCount = allTickets ? allTickets.filter(t => t.parentId === ticket.id).length : 0;
+            return (
+              <KanbanCard 
+                key={ticket.id} 
+                ticket={ticket} 
+                subtasksCount={subtasksCount}
+                onCardClick={onCardClick} 
+              />
+            );
+          })}
         </SortableContext>
         
         {/* Placeholder para colunas vazias */}

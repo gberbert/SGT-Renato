@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { subscribeToTickets } from '../services/ticketService';
 import { Loader2, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Box, Flex, Text, Grid, Card } from '@radix-ui/themes';
 
 const Dashboard = () => {
   const [tickets, setTickets] = useState([]);
@@ -20,9 +21,9 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="view-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+      <Flex align="center" justify="center" style={{ height: '100%' }}>
         <Loader2 className="spinner-icon" size={40} color="var(--primary)" />
-      </div>
+      </Flex>
     );
   }
 
@@ -62,48 +63,54 @@ const Dashboard = () => {
   }));
 
   return (
-    <div className="view-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <Box p="6" style={{ height: '100%', overflowY: 'auto' }}>
       
-      <div className="welcome-banner" style={{ marginBottom: 0 }}>
-        <h1>Visão Geral do Projeto</h1>
-        <p>Métricas em tempo real alimentadas pelo Firestore.</p>
-      </div>
+      <Box mb="6">
+        <Text as="h1" size="6" weight="bold">Visão Geral do Projeto</Text>
+        <Text as="p" size="3" color="gray">Métricas em tempo real alimentadas pelo Firestore.</Text>
+      </Box>
 
-      <div className="stats-grid">
-        <div className="stat-card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)' }}>
-            <TrendingUp size={20} />
-            <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-muted)' }}>Em Andamento</h3>
-          </div>
-          <div className="value">{inProgressCount}</div>
-        </div>
+      <Grid columns={{ initial: '1', sm: '3' }} gap="4" mb="6">
+        <Card size="2">
+          <Flex direction="column" gap="2">
+            <Flex align="center" gap="2" style={{ color: 'var(--primary)' }}>
+              <TrendingUp size={20} />
+              <Text weight="medium" color="gray">Em Andamento</Text>
+            </Flex>
+            <Text size="8" weight="bold">{inProgressCount}</Text>
+          </Flex>
+        </Card>
         
-        <div className="stat-card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
-            <AlertCircle size={20} />
-            <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-muted)' }}>Críticos Pendentes</h3>
-          </div>
-          <div className="value danger">{priorityCounts['Crítica']}</div>
-        </div>
+        <Card size="2">
+          <Flex direction="column" gap="2">
+            <Flex align="center" gap="2" style={{ color: 'var(--danger)' }}>
+              <AlertCircle size={20} />
+              <Text weight="medium" color="gray">Críticos Pendentes</Text>
+            </Flex>
+            <Text size="8" weight="bold" style={{ color: 'var(--danger)' }}>{priorityCounts['Crítica'] || 0}</Text>
+          </Flex>
+        </Card>
         
-        <div className="stat-card glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)' }}>
-            <CheckCircle size={20} />
-            <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-muted)' }}>Concluídos (Total)</h3>
-          </div>
-          <div className="value success">{doneCount}</div>
-        </div>
-      </div>
+        <Card size="2">
+          <Flex direction="column" gap="2">
+            <Flex align="center" gap="2" style={{ color: 'var(--success)' }}>
+              <CheckCircle size={20} />
+              <Text weight="medium" color="gray">Concluídos (Total)</Text>
+            </Flex>
+            <Text size="8" weight="bold" style={{ color: 'var(--success)' }}>{doneCount}</Text>
+          </Flex>
+        </Card>
+      </Grid>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <Grid columns={{ initial: '1', md: '2' }} gap="4">
         
         {/* Gráfico de Distribuição por Status */}
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-          <h3 style={{ marginBottom: '24px', color: 'var(--text-main)', fontSize: '1.1rem' }}>Distribuição de Status</h3>
+        <Card size="3">
+          <Text as="div" size="4" weight="bold" mb="4">Distribuição de Status</Text>
           {tickets.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Nenhum ticket encontrado.</p>
+            <Text color="gray" align="center" as="div">Nenhum ticket encontrado.</Text>
           ) : (
-            <div style={{ height: '300px', width: '100%' }}>
+            <Box style={{ height: '300px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -125,25 +132,25 @@ const Dashboard = () => {
                   />
                 </PieChart>
               </ResponsiveContainer>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '16px' }}>
+              <Flex justify="center" gap="4" wrap="wrap" mt="4">
                 {pieData.map((entry, index) => (
-                  <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: COLORS[index % COLORS.length] }}></div>
-                    {entry.name} ({entry.value})
-                  </div>
+                  <Flex key={entry.name} align="center" gap="2">
+                    <Box style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: COLORS[index % COLORS.length] }} />
+                    <Text size="2" color="gray">{entry.name} ({entry.value})</Text>
+                  </Flex>
                 ))}
-              </div>
-            </div>
+              </Flex>
+            </Box>
           )}
-        </div>
+        </Card>
 
         {/* Gráfico de Prioridades */}
-        <div className="glass-panel" style={{ padding: '24px', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-          <h3 style={{ marginBottom: '24px', color: 'var(--text-main)', fontSize: '1.1rem' }}>Tickets por Prioridade</h3>
+        <Card size="3">
+          <Text as="div" size="4" weight="bold" mb="4">Tickets por Prioridade</Text>
           {tickets.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Nenhum ticket encontrado.</p>
+            <Text color="gray" align="center" as="div">Nenhum ticket encontrado.</Text>
           ) : (
-            <div style={{ height: '300px', width: '100%' }}>
+            <Box style={{ height: '300px', width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData} margin={{ top: 20, right: 30, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -156,12 +163,12 @@ const Dashboard = () => {
                   <Bar dataKey="Quantidade" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </Box>
           )}
-        </div>
+        </Card>
 
-      </div>
-    </div>
+      </Grid>
+    </Box>
   );
 };
 

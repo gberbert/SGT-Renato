@@ -23,7 +23,7 @@ const COLUMNS = [
   { id: 'col-done', title: 'Concluído' }
 ];
 
-const KanbanBoard = () => {
+const KanbanBoard = ({ onCardClick }) => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -191,7 +191,9 @@ const KanbanBoard = () => {
             <KanbanColumn 
               key={col.id} 
               column={col} 
-              tickets={tickets.filter(t => t.columnId === col.id)} 
+              tickets={tickets.filter(t => t.columnId === col.id && !t.parentId)} 
+              allTickets={tickets}
+              onCardClick={onCardClick}
             />
           ))}
 

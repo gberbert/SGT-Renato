@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import '@radix-ui/themes/styles.css';
+import { Theme } from '@radix-ui/themes';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
@@ -9,16 +11,27 @@ import Login from './components/Login';
 import KanbanBoard from './components/KanbanBoard';
 import NewTicketModal from './components/NewTicketModal';
 import Dashboard from './components/Dashboard';
+import Projects from './components/Projects';
+import Roadmap from './components/Roadmap';
+import GlobalSearch from './components/GlobalSearch';
+import TicketDetailsModal from './components/TicketDetailsModal';
+import { getUserRole } from './services/ticketService';
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState('user');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const role = await getUserRole(currentUser);
+        setUserRole(role);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -43,16 +56,14 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="app-layout">
-        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+    <Theme appearance="dark" accentColor="iris" panelBackground="translucent">
+      <Router>
+        <div className="app-layout">
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} userRole={userRole} user={user} />
         
         <main className="main-content">
           <header className="topbar">
-             <div className="topbar-search">
-               <span className="material-symbols-outlined">search</span>
-               <input type="text" placeholder="Buscar tickets, projetos..." />
-             </div>
+             <GlobalSearch onSelectTicket={setSelectedTicket} />
              <div className="topbar-actions">
                <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>Novo Ticket</button>
                <button className="btn-icon" onClick={handleLogout} title="Sair">
@@ -64,9 +75,9 @@ function App() {
           <section className="view-container">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/kanban" element={<KanbanBoard />} />
-              <Route path="/roadmap" element={<div><h2>Roadmap</h2><p>Em breve integrado ao Firestore.</p></div>} />
-              <Route path="/projetos" element={<div><h2>Projetos</h2></div>} />
+              <Route path="/kanban" element={<KanbanBoard onCardClick={setSelectedTicket} />} />
+              <Route path="/roadmap" element={<Roadmap />} />
+              <Route path="/projetos" element={<Projects />} />
               <Route path="/configuracoes" element={<div><h2>Configurações</h2></div>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
@@ -74,8 +85,16 @@ function App() {
         </main>
         
         <NewTicketModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      </div>
-    </Router>
+        {selectedTicket && (
+          <TicketDetailsModal 
+            isOpen={!!selectedTicket} 
+            onClose={() => setSelectedTicket(null)} 
+            ticket={selectedTicket} 
+          />
+        )}
+        </div>
+      </Router>
+    </Theme>
   );
 }
 

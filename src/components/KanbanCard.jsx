@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MessageSquare, User } from 'lucide-react';
+import { MessageSquare, User, GitMerge } from 'lucide-react';
 
-const KanbanCard = ({ ticket }) => {
+const KanbanCard = ({ ticket, subtasksCount = 0, onCardClick }) => {
   const {
     attributes,
     listeners,
@@ -51,6 +51,7 @@ const KanbanCard = ({ ticket }) => {
       {...attributes}
       {...listeners}
       className="kanban-card glass-panel"
+      onClick={() => onCardClick && onCardClick(ticket)}
     >
       <div className="card-header">
         <span className="ticket-code">{ticket.code}</span>
@@ -66,6 +67,11 @@ const KanbanCard = ({ ticket }) => {
             style={{ backgroundColor: getPriorityColor(ticket.priority) }} 
             title={`Prioridade: ${ticket.priority}`}
           />
+          {subtasksCount > 0 && (
+            <span className="comments-count" style={{ color: 'var(--primary)', fontWeight: 'bold' }} title={`${subtasksCount} sub-tarefas`}>
+              <GitMerge size={14} /> {subtasksCount}
+            </span>
+          )}
           {ticket.comments > 0 && (
             <span className="comments-count">
               <MessageSquare size={14} /> {ticket.comments}

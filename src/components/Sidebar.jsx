@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu } from 'lucide-react';
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: 'Kanban', icon: <KanbanSquare size={20} />, path: '/kanban' },
@@ -46,33 +46,41 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               </NavLink>
             </li>
           ))}
-          <li className="divider"></li>
-          <li>
-            <NavLink 
-              to="/configuracoes"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: 'var(--border-radius)',
-                color: 'var(--text-muted)',
-                fontWeight: 500,
-                textDecoration: 'none'
-              }}
-            >
-              <Settings size={20} /> Configurações
-            </NavLink>
-          </li>
+          {userRole === 'admin' && (
+            <>
+              <li className="divider"></li>
+              <li>
+                <NavLink 
+                  to="/configuracoes"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    borderRadius: 'var(--border-radius)',
+                    color: 'var(--text-muted)',
+                    fontWeight: 500,
+                    textDecoration: 'none'
+                  }}
+                >
+                  <Settings size={20} /> Configurações
+                </NavLink>
+              </li>
+            </>
+          )}
         </ul>
       </nav>
 
       <div className="sidebar-footer">
         <div className="user-profile">
-          <div className="avatar">US</div>
+          <div className="avatar">
+            {user?.email?.charAt(0).toUpperCase() || 'U'}
+          </div>
           <div className="user-info">
-            <span className="name">Usuário SGT</span>
-            <span className="role">Admin</span>
+            <span className="name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+              {user?.displayName || user?.email || 'Usuário SGT'}
+            </span>
+            <span className="role" style={{ textTransform: 'capitalize' }}>{userRole}</span>
           </div>
         </div>
       </div>
