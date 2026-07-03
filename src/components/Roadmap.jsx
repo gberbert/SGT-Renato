@@ -145,6 +145,7 @@ const Roadmap = () => {
       const svgs = document.querySelectorAll('#gantt-container svg');
       if (svgs.length < 2) return;
       
+      const headerSvg = svgs[0]; // The first SVG is the calendar header
       const gridSvg = svgs[1]; // The second SVG contains the grid/tasks
 
       // Clean up previous custom markers
@@ -166,11 +167,13 @@ const Roadmap = () => {
       const totalDays = Math.ceil((ganttEndDate.getTime() - ganttStartDate.getTime()) / (1000 * 3600 * 24));
       const colWidth = 60; // our columnWidth prop
       
-      // We don't need headerHeight because the grid is in its own SVG without the header
+      // We need to know the height of the grid and header.
+      const headerHeight = 50;
       const rowHeight = 50;
       const totalHeight = tasks.length * rowHeight;
 
-      const fragment = document.createDocumentFragment();
+      const gridFragment = document.createDocumentFragment();
+      const headerFragment = document.createDocumentFragment();
 
       for (let i = 0; i <= totalDays; i++) {
         const currentDate = new Date(ganttStartDate);
@@ -188,7 +191,7 @@ const Roadmap = () => {
         const isHoliday = natHoliday || isEstadual || isMunicipal;
 
         if (isWeekend || isHoliday) {
-          let bgColor = 'rgba(255, 255, 255, 0.05)'; // Default weekend (visible on dark)
+          let bgColor = 'rgba(0, 0, 0, 0.08)'; // Default weekend (visible on white bg)
           let titleText = 'Fim de Semana';
 
           if (natHoliday) {
@@ -202,32 +205,56 @@ const Roadmap = () => {
             titleText = `Feriado Municipal`;
           }
 
-          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          rect.setAttribute('x', String(i * colWidth));
-          rect.setAttribute('y', "0");
-          rect.setAttribute('width', String(colWidth));
-          rect.setAttribute('height', String(totalHeight));
-          rect.setAttribute('fill', bgColor);
-          rect.setAttribute('class', 'custom-holiday-marker');
-          rect.style.pointerEvents = 'none'; // Don't block clicks
+          // Grid Rect
+          const gridRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          gridRect.setAttribute('x', String(i * colWidth));
+          gridRect.setAttribute('y', "0");
+          gridRect.setAttribute('width', String(colWidth));
+          gridRect.setAttribute('height', String(totalHeight));
+          gridRect.setAttribute('fill', bgColor);
+          gridRect.setAttribute('class', 'custom-holiday-marker');
+          gridRect.style.pointerEvents = 'none'; // Don't block clicks
           
           if (isHoliday) {
-            // Add a title tooltip for the holiday
             const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
             title.textContent = titleText;
-            rect.appendChild(title);
+            gridRect.appendChild(title);
           }
+          gridFragment.appendChild(gridRect);
+
+          // Header Rect
+          const headerRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          headerRect.setAttribute('x', String(i * colWidth));
+          headerRect.setAttribute('y', "0");
+          headerRect.setAttribute('width', String(colWidth));
+          headerRect.setAttribute('height', String(headerHeight));
+          headerRect.setAttribute('fill', bgColor);
+          headerRect.setAttribute('class', 'custom-holiday-marker');
+          headerRect.style.pointerEvents = 'none';
           
-          fragment.appendChild(rect);
+          if (isHoliday) {
+            const title2 = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title2.textContent = titleText;
+            headerRect.appendChild(title2);
+          }
+          headerFragment.appendChild(headerRect);
         }
       }
 
-      // Insert the fragment between Grid and TaskGanttContent for correct layering
+      // Insert the grid fragment between Grid and TaskGanttContent for correct layering
       const contentGroup = gridSvg.querySelector('g.content');
       if (contentGroup) {
-        gridSvg.insertBefore(fragment, contentGroup);
+        gridSvg.insertBefore(gridFragment, contentGroup);
       } else {
-        gridSvg.appendChild(fragment);
+        gridSvg.appendChild(gridFragment);
+      }
+
+      // Insert the header fragment right after the calendar background rect
+      const headerBg = headerSvg.querySelector('rect');
+      if (headerBg && headerBg.nextSibling) {
+        headerSvg.insertBefore(headerFragment, headerBg.nextSibling);
+      } else {
+        headerSvg.appendChild(headerFragment);
       }
 
     }, 800); // Wait for Gantt to render fully
