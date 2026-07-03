@@ -12,6 +12,19 @@ const Roadmap = () => {
   const [selectedProjectId, setSelectedProjectId] = useState('all');
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState(ViewMode.Day);
+  const [holidays, setHolidays] = useState([]);
+
+  useEffect(() => {
+    // Fetch national holidays
+    const year = new Date().getFullYear();
+    fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`)
+      .then(res => res.json())
+      .then(data => {
+        // data: [{ date: '2020-01-01', name: 'Confraternização Universal', type: 'national' }]
+        setHolidays(data || []);
+      })
+      .catch(err => console.error("Erro ao buscar feriados nacionais:", err));
+  }, []);
 
   useEffect(() => {
     let ticketsLoaded = false;
@@ -96,6 +109,84 @@ const Roadmap = () => {
     };
   });
 
+  // DOM manipulation to highlight weekends and holidays
+  useEffect(() => {
+    if (viewMode !== ViewMode.Day || tasks.length === 0) return;
+
+    const highlightTimer = setTimeout(() => {
+      const svg = document.querySelector('.gantt svg');
+      if (!svg) return;
+
+      const grid = svg.querySelector('.grid');
+      if (!grid) return;
+
+      // Clean up previous custom markers
+      const existing = svg.querySelectorAll('.custom-holiday-marker');
+      existing.forEach(e => e.remove());
+
+      // Calculate Gantt internal start date for ViewMode.Day
+      // gantt-task-react sets start date to earliest task start - 1 day
+      const minDate = new Date(Math.min(...tasks.map(t => t.start.getTime())));
+      minDate.setHours(0, 0, 0, 0);
+      const ganttStartDate = new Date(minDate);
+      ganttStartDate.setDate(ganttStartDate.getDate() - 1);
+
+      const maxDate = new Date(Math.max(...tasks.map(t => t.end.getTime())));
+      maxDate.setHours(0, 0, 0, 0);
+      const ganttEndDate = new Date(maxDate);
+      ganttEndDate.setDate(ganttEndDate.getDate() + 2); // default postStepsCount is usually 1, but let's be safe
+
+      const totalDays = Math.ceil((ganttEndDate.getTime() - ganttStartDate.getTime()) / (1000 * 3600 * 24));
+      const colWidth = 60; // our columnWidth prop
+      
+      // We need to know the height of the grid. 
+      // The gantt renders the calendar header (default 50px) + tasks rows (50px each)
+      const headerHeight = 50; 
+      const rowHeight = 50;
+      const totalHeight = headerHeight + (tasks.length * rowHeight);
+
+      const fragment = document.createDocumentFragment();
+
+      for (let i = 0; i <= totalDays; i++) {
+        const currentDate = new Date(ganttStartDate);
+        currentDate.setDate(currentDate.getDate() + i);
+        
+        const dayOfWeek = currentDate.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        
+        // Format to YYYY-MM-DD for matching holidays
+        const dateString = currentDate.toISOString().split('T')[0];
+        const holiday = holidays.find(h => h.date === dateString);
+
+        if (isWeekend || holiday) {
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', String(i * colWidth));
+          rect.setAttribute('y', String(headerHeight));
+          rect.setAttribute('width', String(colWidth));
+          rect.setAttribute('height', String(tasks.length * rowHeight));
+          rect.setAttribute('fill', isWeekend ? 'rgba(0,0,0,0.05)' : 'rgba(255,50,50,0.1)');
+          rect.setAttribute('class', 'custom-holiday-marker');
+          rect.style.pointerEvents = 'none'; // Don't block clicks
+          
+          if (holiday) {
+            // Add a title tooltip for the holiday
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title.textContent = holiday.name;
+            rect.appendChild(title);
+          }
+          
+          fragment.appendChild(rect);
+        }
+      }
+
+      // Prepend to grid so it stays behind lines and tasks
+      grid.prepend(fragment);
+
+    }, 300); // Wait for Gantt to render
+
+    return () => clearTimeout(highlightTimer);
+  }, [viewMode, tasks, holidays]);
+
   return (
     <Box p="6" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Flex justify="between" align="center" mb="5" wrap="wrap" gap="4">
@@ -136,6 +227,7 @@ const Roadmap = () => {
           <Gantt
             tasks={tasks}
             viewMode={viewMode}
+            locale="pt-BR"
             listCellWidth={155}
             columnWidth={60}
             rowHeight={50}

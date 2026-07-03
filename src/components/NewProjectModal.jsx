@@ -8,11 +8,15 @@ import { Loader2 } from 'lucide-react';
 const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
   const [loading, setLoading] = useState(false);
   const [workflows, setWorkflows] = useState([]);
+  const [estados, setEstados] = useState([]);
+  const [municipios, setMunicipios] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     key: '',
-    workflowId: ''
+    workflowId: '',
+    estado: '',
+    municipio: ''
   });
 
   useEffect(() => {
@@ -21,11 +25,19 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
         name: editingProject.name,
         description: editingProject.description,
         key: editingProject.key,
-        workflowId: editingProject.workflowId || ''
+        workflowId: editingProject.workflowId || '',
+        estado: editingProject.estado || '',
+        municipio: editingProject.municipio || ''
       });
     } else {
-      setFormData({ name: '', description: '', key: '', workflowId: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '' });
     }
+
+    // Load Estados
+    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
+      .then(res => res.json())
+      .then(data => setEstados(data))
+      .catch(err => console.error(err));
 
     const unsubscribeWorkflows = subscribeToWorkflows((data) => {
       setWorkflows(data);
@@ -33,6 +45,18 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
 
     return () => unsubscribeWorkflows();
   }, [editingProject, isOpen]);
+
+  // Load Municipios when Estado changes
+  useEffect(() => {
+    if (formData.estado) {
+      fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${formData.estado}/municipios?orderBy=nome`)
+        .then(res => res.json())
+        .then(data => setMunicipios(data))
+        .catch(err => console.error(err));
+    } else {
+      setMunicipios([]);
+    }
+  }, [formData.estado]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -50,6 +74,8 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           description: formData.description,
           key: formData.key.toUpperCase(),
           workflowId: formData.workflowId,
+          estado: formData.estado,
+          municipio: formData.municipio
         });
       } else {
         await createProject({
@@ -57,11 +83,13 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           description: formData.description,
           key: formData.key.toUpperCase(),
           workflowId: formData.workflowId,
+          estado: formData.estado,
+          municipio: formData.municipio,
           createdBy: auth.currentUser?.uid || 'unknown',
           leaderName: auth.currentUser?.displayName || auth.currentUser?.email || 'Admin',
         });
       }
-      setFormData({ name: '', description: '', key: '', workflowId: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '' });
       onClose();
     } catch (error) {
       console.error(error);
@@ -125,6 +153,39 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
                 Define as colunas que aparecerão no Kanban deste projeto.
               </Text>
             </label>
+
+            <Flex gap="4">
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Estado (UF)</Text>
+                <Select.Root 
+                  value={formData.estado} 
+                  onValueChange={(val) => setFormData({...formData, estado: val, municipio: ''})}
+                >
+                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    {estados.map(est => (
+                      <Select.Item key={est.id} value={est.sigla}>{est.nome}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Município</Text>
+                <Select.Root 
+                  value={formData.municipio} 
+                  onValueChange={(val) => setFormData({...formData, municipio: val})}
+                  disabled={!formData.estado}
+                >
+                  <Select.Trigger placeholder={formData.estado ? "Selecione..." : "Selecione um Estado primeiro"} style={{ width: '100%' }} />
+                  <Select.Content>
+                    {municipios.map(mun => (
+                      <Select.Item key={mun.id} value={mun.nome}>{mun.nome}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+            </Flex>
 
             <label>
               <Text as="div" size="2" mb="1" weight="bold">Descrição</Text>
