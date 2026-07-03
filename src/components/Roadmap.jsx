@@ -55,14 +55,6 @@ const Roadmap = () => {
     };
   }, []);
 
-  if (loading) {
-    return (
-      <Flex align="center" justify="center" style={{ height: '100%' }}>
-        <Loader2 className="spinner-icon" size={40} color="var(--primary)" />
-      </Flex>
-    );
-  }
-
   // Transform tickets into Gantt Task format
   const filteredTickets = selectedProjectId === 'all' 
     ? tickets 
@@ -186,6 +178,14 @@ const Roadmap = () => {
 
     return () => clearTimeout(highlightTimer);
   }, [viewMode, tasks, holidays]);
+
+  if (loading) {
+    return (
+      <Flex align="center" justify="center" style={{ height: '100%' }}>
+        <Loader2 className="spinner-icon" size={40} color="var(--primary)" />
+      </Flex>
+    );
+  }
 
   return (
     <Box p="6" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
