@@ -98,8 +98,12 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
 
   const currentProject = projects.find(p => p.id === ticket.projectId);
   const currentWorkflow = workflows.find(w => w.id === currentProject?.workflowId);
-  const currentColumn = currentWorkflow?.columns?.find(c => c.id === ticket.columnId);
-  const customFields = currentColumn?.customFields || [];
+  const currentColumnIndex = currentWorkflow?.columns?.findIndex(c => c.id === ticket.columnId) ?? -1;
+  
+  // Get all columns from start up to current column
+  const activeColumns = currentColumnIndex >= 0 
+    ? currentWorkflow.columns.slice(0, currentColumnIndex + 1) 
+    : [];
 
   const handleSendComment = async (e) => {
     e.preventDefault();
@@ -175,55 +179,60 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
                     />
                   </Box>
 
-                  {customFields.length > 0 && (
-                    <Card variant="surface" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                      <Flex align="center" gap="2" mb="3">
-                        <Sparkles size={16} color="var(--primary)" />
-                        <Text weight="bold" color="indigo">Campos Exclusivos: {currentColumn.title}</Text>
-                      </Flex>
-                      <Grid columns="2" gap="4">
-                        {customFields.map((field, idx) => {
-                          const optionsArray = field.type === 'select' && field.options 
-                            ? field.options.split(',').map(o => o.trim()).filter(Boolean) 
-                            : [];
+                  {activeColumns.map((col, colIdx) => {
+                    const fields = col.customFields || [];
+                    if (fields.length === 0) return null;
 
-                          return (
-                            <Box key={idx} style={{ gridColumn: field.type === 'textarea' ? 'span 2' : 'span 1' }}>
-                              <Text as="div" size="2" weight="bold" mb="1" color="gray">{field.name}</Text>
-                              {field.type === 'textarea' ? (
-                                <TextArea 
-                                  placeholder="..."
-                                  value={customData[field.name] || ''}
-                                  onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
-                                  onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
-                                />
-                              ) : field.type === 'select' ? (
-                                <Select.Root 
-                                  value={customData[field.name] || ''}
-                                  onValueChange={(val) => handleUpdateCustomField(field.name, val)}
-                                >
-                                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
-                                  <Select.Content>
-                                    {optionsArray.map((opt, i) => (
-                                      <Select.Item key={i} value={opt}>{opt}</Select.Item>
-                                    ))}
-                                  </Select.Content>
-                                </Select.Root>
-                              ) : (
-                                <TextField.Root 
-                                  type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                                  placeholder="..."
-                                  value={customData[field.name] || ''}
-                                  onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
-                                  onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
-                                />
-                              )}
-                            </Box>
-                          );
-                        })}
-                      </Grid>
-                    </Card>
-                  )}
+                    return (
+                      <Card key={col.id} variant="surface" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)', marginBottom: '16px' }}>
+                        <Flex align="center" gap="2" mb="3">
+                          <Sparkles size={16} color="var(--primary)" />
+                          <Text weight="bold" color="indigo">Campos Exclusivos: {col.title}</Text>
+                        </Flex>
+                        <Grid columns="2" gap="4">
+                          {fields.map((field, idx) => {
+                            const optionsArray = field.type === 'select' && field.options 
+                              ? field.options.split(',').map(o => o.trim()).filter(Boolean) 
+                              : [];
+
+                            return (
+                              <Box key={idx} style={{ gridColumn: field.type === 'textarea' ? 'span 2' : 'span 1' }}>
+                                <Text as="div" size="2" weight="bold" mb="1" color="gray">{field.name}</Text>
+                                {field.type === 'textarea' ? (
+                                  <TextArea 
+                                    placeholder="..."
+                                    value={customData[field.name] || ''}
+                                    onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                                    onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
+                                  />
+                                ) : field.type === 'select' ? (
+                                  <Select.Root 
+                                    value={customData[field.name] || ''}
+                                    onValueChange={(val) => handleUpdateCustomField(field.name, val)}
+                                  >
+                                    <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                                    <Select.Content>
+                                      {optionsArray.map((opt, i) => (
+                                        <Select.Item key={i} value={opt}>{opt}</Select.Item>
+                                      ))}
+                                    </Select.Content>
+                                  </Select.Root>
+                                ) : (
+                                  <TextField.Root 
+                                    type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                    placeholder="..."
+                                    value={customData[field.name] || ''}
+                                    onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                                    onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
+                                  />
+                                )}
+                              </Box>
+                            );
+                          })}
+                        </Grid>
+                      </Card>
+                    );
+                  })}
 
                   <Grid columns="2" gap="4">
                     <Box>
