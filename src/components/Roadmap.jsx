@@ -142,14 +142,11 @@ const Roadmap = () => {
     if (viewMode !== ViewMode.Day || tasks.length === 0) return;
 
     const highlightTimer = setTimeout(() => {
-      const svg = document.querySelector('.gantt svg');
-      if (!svg) return;
-
-      const grid = svg.querySelector('.grid');
+      const grid = document.querySelector('#gantt-container g.grid');
       if (!grid) return;
 
       // Clean up previous custom markers
-      const existing = svg.querySelectorAll('.custom-holiday-marker');
+      const existing = document.querySelectorAll('#gantt-container .custom-holiday-marker');
       existing.forEach(e => e.remove());
 
       // Calculate Gantt internal start date for ViewMode.Day
@@ -167,11 +164,9 @@ const Roadmap = () => {
       const totalDays = Math.ceil((ganttEndDate.getTime() - ganttStartDate.getTime()) / (1000 * 3600 * 24));
       const colWidth = 60; // our columnWidth prop
       
-      // We need to know the height of the grid. 
-      // The gantt renders the calendar header (default 50px) + tasks rows (50px each)
-      const headerHeight = 50; 
+      // We don't need headerHeight because the grid is in its own SVG without the header
       const rowHeight = 50;
-      const totalHeight = headerHeight + (tasks.length * rowHeight);
+      const totalHeight = tasks.length * rowHeight;
 
       const fragment = document.createDocumentFragment();
 
@@ -207,9 +202,9 @@ const Roadmap = () => {
 
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
           rect.setAttribute('x', String(i * colWidth));
-          rect.setAttribute('y', String(headerHeight));
+          rect.setAttribute('y', "0");
           rect.setAttribute('width', String(colWidth));
-          rect.setAttribute('height', String(tasks.length * rowHeight));
+          rect.setAttribute('height', String(totalHeight));
           rect.setAttribute('fill', bgColor);
           rect.setAttribute('class', 'custom-holiday-marker');
           rect.style.pointerEvents = 'none'; // Don't block clicks
@@ -276,7 +271,7 @@ const Roadmap = () => {
         </Flex>
       </Flex>
 
-      <Box style={{ flexGrow: 1, background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', overflowX: 'auto', border: '1px solid var(--glass-border)' }}>
+      <Box id="gantt-container" style={{ flexGrow: 1, background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', overflowX: 'auto', border: '1px solid var(--glass-border)' }}>
         {tasks.length > 0 ? (
           <Gantt
             tasks={tasks}
