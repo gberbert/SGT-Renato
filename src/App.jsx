@@ -3,7 +3,8 @@ import '@radix-ui/themes/styles.css';
 import { Theme } from '@radix-ui/themes';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -30,6 +31,23 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Garantir que todos os usuários logados existam no Firestore (mesmo os antigos "fantasmas")
+        try {
+          const userRef = doc(db, 'users', currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              email: currentUser.email,
+              displayName: currentUser.email.split('@')[0],
+              role: 'user',
+              createdAt: serverTimestamp()
+            });
+          }
+        } catch (error) {
+          console.error("Erro ao sincronizar usuário no Firestore:", error);
+        }
+
         // FORCANDO ADMIN TEMPORARIAMENTE
         setUserRole('admin');
       }
