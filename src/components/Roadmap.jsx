@@ -227,13 +227,12 @@ const Roadmap = () => {
   useEffect(() => {
     if (viewMode !== ViewMode.Day || tasks.length === 0) return;
 
-    const highlightTimer = setTimeout(() => {
+    const highlightInterval = setInterval(() => {
       const svg = document.querySelector('#gantt-container svg');
       if (!svg) return;
 
-      // Clean up previous custom markers
-      const existing = svg.querySelectorAll('.custom-holiday-marker');
-      existing.forEach(e => e.remove());
+      // If already injected, don't inject again
+      if (svg.querySelectorAll('.custom-holiday-marker').length > 0) return;
 
       const minDate = new Date(Math.min(...tasks.map(t => t.start.getTime())));
       minDate.setHours(0, 0, 0, 0);
@@ -248,10 +247,12 @@ const Roadmap = () => {
       const totalDays = Math.ceil((ganttEndDate.getTime() - ganttStartDate.getTime()) / (1000 * 3600 * 24));
       const colWidth = 60; 
       const headerHeight = 50; 
-      const rowHeight = 50;
+      
+      const svgHeight = svg.getAttribute('height') || (tasks.length * 50 + headerHeight + 50);
 
       const fragment = document.createDocumentFragment();
 
+      let added = false;
       for (let i = 0; i <= totalDays; i++) {
         const currentDate = new Date(ganttStartDate);
         currentDate.setDate(currentDate.getDate() + i);
@@ -270,17 +271,18 @@ const Roadmap = () => {
         const isHoliday = natHoliday || isEstadual || isMunicipal;
 
         if (isWeekend || isHoliday) {
-          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
+          added = true;
+          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
           let titleText = 'Fim de Semana';
 
           if (natHoliday) {
-            bgColor = 'rgba(255, 99, 132, 0.3)'; 
+            bgColor = 'rgba(255, 99, 132, 0.2)'; 
             titleText = `Feriado Nacional: ${natHoliday.name}`;
           } else if (isEstadual) {
-            bgColor = 'rgba(54, 162, 235, 0.3)'; 
+            bgColor = 'rgba(54, 162, 235, 0.2)'; 
             titleText = `Feriado Estadual`;
           } else if (isMunicipal) {
-            bgColor = 'rgba(75, 192, 192, 0.3)'; 
+            bgColor = 'rgba(75, 192, 192, 0.2)'; 
             titleText = `Feriado Municipal`;
           }
 
@@ -288,7 +290,7 @@ const Roadmap = () => {
           rect.setAttribute('x', String(i * colWidth));
           rect.setAttribute('y', String(headerHeight));
           rect.setAttribute('width', String(colWidth));
-          rect.setAttribute('height', String(tasks.length * rowHeight));
+          rect.setAttribute('height', String(svgHeight));
           rect.setAttribute('fill', bgColor);
           rect.setAttribute('class', 'custom-holiday-marker');
           rect.style.pointerEvents = 'none';
@@ -303,16 +305,18 @@ const Roadmap = () => {
         }
       }
 
-      // Gantt-task-react structure: svg > g (Grid), g (Calendar), g (Tasks)
-      // The first child of SVG is the Grid group. 
-      // Appending to it puts our rects over the grid background, but behind tasks.
-      const gridGroup = svg.children[0];
-      if (gridGroup && gridGroup.tagName === 'g') {
-        gridGroup.appendChild(fragment);
-      } else {
-        svg.appendChild(fragment);
+      if (added) {
+        // The first child of Gantt SVG is the Grid group.
+        const gridGroup = svg.querySelector('g') || svg.children[0];
+        if (gridGroup && gridGroup.tagName === 'g') {
+          gridGroup.appendChild(fragment);
+        } else {
+          svg.appendChild(fragment);
+        }
       }
-    }, 500); // Give it a bit more time to render fully
+    }, 200);
+
+    return () => clearInterval(highlightInterval);
 
     return () => clearTimeout(highlightTimer);
   }, [viewMode, tasks, holidays, localHolidays]);
