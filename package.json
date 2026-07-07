@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "fetch-holidays": "node scripts/fetchHolidays.js",
-    "import-holidays-git": "node scripts/importHolidaysGit.js"
+    "import-holidays-git": "node scripts/importHolidaysGit.js",
+    "release": "npm version patch -m \"Bump version to %s\" && npm run build && firebase deploy --only hosting && git push --follow-tags"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

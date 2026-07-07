@@ -86,7 +86,9 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
             <span className="name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
               {user?.displayName || user?.email || 'Usuário SGT'}
             </span>
-            <span className="role" style={{ textTransform: 'capitalize' }}>{userRole}</span>
+            <span className="role" style={{ textTransform: 'capitalize' }}>
+              {userRole} • v{__APP_VERSION__}
+            </span>
           </div>
         </div>
       </div>
