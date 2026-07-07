@@ -303,9 +303,12 @@ const Roadmap = () => {
         }
       }
 
-      // Prepend directly to SVG so it stays at the back
-      if (svg.firstChild) {
-        svg.insertBefore(fragment, svg.firstChild);
+      // Gantt-task-react structure: svg > g (Grid), g (Calendar), g (Tasks)
+      // The first child of SVG is the Grid group. 
+      // Appending to it puts our rects over the grid background, but behind tasks.
+      const gridGroup = svg.children[0];
+      if (gridGroup && gridGroup.tagName === 'g') {
+        gridGroup.appendChild(fragment);
       } else {
         svg.appendChild(fragment);
       }

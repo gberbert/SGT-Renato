@@ -133,7 +133,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         <form onSubmit={handleSubmit}>
           <Flex direction="column" gap="4">
             <Flex gap="4">
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Projeto</Text>
                 <Select.Root value={formData.projectId} onValueChange={(v) => handleSelectChange('projectId', v)}>
                   <Select.Trigger placeholder="Selecione um projeto..." style={{ width: '100%' }} />
@@ -143,9 +143,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                     ))}
                   </Select.Content>
                 </Select.Root>
-              </label>
+              </Box>
 
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Ticket Externo</Text>
                 <TextField.Root 
                   name="externalTicket" 
@@ -153,10 +153,10 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                   value={formData.externalTicket}
                   onChange={handleChange}
                 />
-              </label>
+              </Box>
             </Flex>
 
-            <label>
+            <Box>
               <Text as="div" size="2" mb="1" weight="bold">Título do Ticket</Text>
               <TextField.Root 
                 name="title" 
@@ -165,10 +165,10 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                 value={formData.title}
                 onChange={handleChange}
               />
-            </label>
+            </Box>
             
             <Flex gap="4">
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Tipo</Text>
                 <Select.Root value={formData.type} onValueChange={(v) => handleSelectChange('type', v)}>
                   <Select.Trigger style={{ width: '100%' }} />
@@ -183,9 +183,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                     )}
                   </Select.Content>
                 </Select.Root>
-              </label>
+              </Box>
 
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Prioridade</Text>
                 <Select.Root value={formData.priority} onValueChange={(v) => handleSelectChange('priority', v)}>
                   <Select.Trigger style={{ width: '100%' }} />
@@ -196,11 +196,11 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                     <Select.Item value="critical">Crítica</Select.Item>
                   </Select.Content>
                 </Select.Root>
-              </label>
+              </Box>
             </Flex>
 
             <Flex gap="4">
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Sistema</Text>
                 <Select.Root value={formData.system} onValueChange={(v) => handleSelectChange('system', v)}>
                   <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
@@ -211,9 +211,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                     {systems.length === 0 && <Select.Item value="none" disabled>Nenhum cadastrado</Select.Item>}
                   </Select.Content>
                 </Select.Root>
-              </label>
+              </Box>
 
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Componente (Tag)</Text>
                 <Select.Root value={formData.component} onValueChange={(v) => handleSelectChange('component', v)}>
                   <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
@@ -224,10 +224,10 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                     {components.length === 0 && <Select.Item value="none" disabled>Nenhum cadastrado</Select.Item>}
                   </Select.Content>
                 </Select.Root>
-              </label>
+              </Box>
             </Flex>
 
-            <label>
+            <Box>
               <Text as="div" size="2" mb="1" weight="bold">Responsável</Text>
               <Select.Root value={formData.assignee} onValueChange={(v) => handleSelectChange('assignee', v)}>
                 <Select.Trigger placeholder="Selecione o responsável..." style={{ width: '100%' }} />
@@ -239,10 +239,10 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                   })}
                 </Select.Content>
               </Select.Root>
-            </label>
+            </Box>
 
             <Flex gap="4">
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Data Início</Text>
                 <TextField.Root 
                   type="date"
@@ -250,9 +250,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                   value={formData.startDate}
                   onChange={handleChange}
                 />
-              </label>
+              </Box>
 
-              <label style={{ flex: 1 }}>
+              <Box style={{ flex: 1 }}>
                 <Text as="div" size="2" mb="1" weight="bold">Data Fim</Text>
                 <TextField.Root 
                   type="date"
@@ -260,7 +260,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                   value={formData.endDate}
                   onChange={handleChange}
                 />
-              </label>
+              </Box>
             </Flex>
             
             <Box>
