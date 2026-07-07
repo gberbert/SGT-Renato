@@ -36,7 +36,7 @@ export default function getSuggestionConfig() {
 
           popup = tippy('body', {
             getReferenceClientRect: props.clientRect,
-            appendTo: () => document.body,
+            appendTo: () => document.querySelector('[role="dialog"]') || document.body,
             content: component.element,
             showOnCreate: true,
             interactive: true,

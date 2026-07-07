@@ -77,6 +77,7 @@ export default forwardRef((props, ref) => {
           className="mention-item-btn"
           onClick={() => selectItem(index)}
           onMouseEnter={() => setSelectedIndex(index)}
+          onMouseDown={(e) => e.preventDefault()}
           style={{
             display: 'block',
             width: '100%',
