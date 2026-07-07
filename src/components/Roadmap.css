@@ -12,58 +12,74 @@
 }
 
 /* Custom Holiday Marker - Rendered underneath */
+/* Custom Holiday Marker - Rendered underneath */
 .custom-holiday-marker {
-    fill: var(--gray-a4);
+    fill: var(--gray-a3);
 }
 
-/* Base Bar Styling */
+/* Grid Lines */
+.gantt .tick {
+    stroke: var(--gray-a4) !important;
+}
+.gantt .row-line {
+    stroke: var(--gray-a4) !important;
+}
+
+/* Header Text */
+.gantt-container .lower-text, .gantt-container .upper-text {
+    fill: var(--gray-11) !important;
+    color: var(--gray-11) !important;
+    font-weight: 500;
+}
+
+/* Base Bar Styling (Backlog/Default) */
 .gantt .bar-wrapper .bar {
-    fill: var(--gray-8);
+    fill: #8b5cf6; /* Vibrant Purple */
     rx: 6px;
     ry: 6px;
     stroke: none;
 }
 
 .gantt .bar-wrapper .bar-progress {
-    fill: var(--gray-10);
+    fill: #7c3aed; /* Darker Purple */
     rx: 6px;
     ry: 6px;
 }
 
 /* Text inside bars */
 .gantt .bar-wrapper .bar-label {
-    fill: white !important;
+    fill: #ffffff !important;
     font-weight: 600;
     font-size: 12px;
+    text-shadow: 0px 1px 3px rgba(0,0,0,0.5);
 }
 
 /* Status: Done */
 .gantt .gantt-ticket-task.status-done .bar {
-    fill: var(--grass-9);
+    fill: #10b981; /* Vibrant Emerald */
 }
 .gantt .gantt-ticket-task.status-done .bar-progress {
-    fill: var(--grass-10);
+    fill: #059669; /* Darker Emerald */
 }
 
 /* Status: In Progress */
 .gantt .gantt-ticket-task.status-in-progress .bar {
-    fill: var(--blue-9);
+    fill: #3b82f6; /* Vibrant Blue */
 }
 .gantt .gantt-ticket-task.status-in-progress .bar-progress {
-    fill: var(--blue-10);
+    fill: #2563eb; /* Darker Blue */
 }
 
 /* Group Tasks (Projects) */
 .gantt .gantt-group-task .bar {
-    fill: var(--gray-4);
-    stroke: var(--gray-7);
-    stroke-width: 1px;
+    fill: #475569; /* Slate 600 */
+    stroke: none;
 }
 .gantt .gantt-group-task .bar-progress {
-    fill: var(--gray-6);
+    fill: #334155; /* Slate 700 */
 }
 .gantt .gantt-group-task .bar-label {
-    fill: var(--gray-12) !important;
+    fill: #ffffff !important;
 }
 
 /* Popup styling */
