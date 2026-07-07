@@ -72,23 +72,29 @@ export default forwardRef((props, ref) => {
       minWidth: '200px'
     }}>
       {props.items.map((item, index) => (
-        <Box
+        <button
           key={item.id}
-          onMouseEnter={() => setSelectedIndex(index)}
-          onMouseDown={(e) => e.preventDefault()}
+          className="mention-item-btn"
           onClick={() => selectItem(index)}
+          onMouseEnter={() => setSelectedIndex(index)}
           style={{
+            display: 'block',
+            width: '100%',
+            textAlign: 'left',
             padding: '8px 12px',
             cursor: 'pointer',
+            border: 'none',
+            outline: 'none',
             borderRadius: 'var(--radius-2)',
             backgroundColor: index === selectedIndex ? 'var(--accent-4)' : 'transparent',
             color: index === selectedIndex ? 'var(--accent-11)' : 'var(--gray-12)',
+            fontFamily: 'inherit',
           }}
         >
           <Text size="2" weight={index === selectedIndex ? "bold" : "regular"}>
             {item.shortName || item.displayName || item.email}
           </Text>
-        </Box>
+        </button>
       ))}
     </Box>
   );

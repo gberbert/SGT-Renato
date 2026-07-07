@@ -3,16 +3,17 @@ import { subscribeToTickets } from '../services/ticketService';
 import { subscribeToProjects } from '../services/projectService';
 import { Loader2, Printer, Save, Filter, LayoutList } from 'lucide-react';
 import { Text, Box, Flex, Button, Select, TextField, IconButton, Badge, Card, Popover } from '@radix-ui/themes';
-import { Gantt, ViewMode } from 'gantt-task-react';
+import Gantt from 'frappe-gantt';
 import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import "gantt-task-react/dist/index.css";
+import "frappe-gantt/dist/frappe-gantt.css";
+import "./Roadmap.css";
 
 const Roadmap = () => {
   const [tickets, setTickets] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState(ViewMode.Day);
+  const [viewMode, setViewMode] = useState('Day');
   
   // Filters & Grouping State
   const [filters, setFilters] = useState({
@@ -173,52 +174,57 @@ const Roadmap = () => {
 
     Object.keys(groups).forEach(key => {
       const groupTickets = groups[key];
-      // Create Project node for the group
       const minDate = new Date(Math.min(...groupTickets.map(t => new Date(t.startDate).getTime())));
       const maxDate = new Date(Math.max(...groupTickets.map(t => new Date(t.deadline).getTime())));
       
       const groupId = `group-${key}`;
+      // Add a group wrapper "task" (Frappe doesn't natively do groups, but we style it as one)
       tasks.push({
-        start: minDate,
-        end: maxDate,
-        name: key.replace('col-', '').toUpperCase(), // better formatting for status
+        start: minDate.toISOString().split('T')[0],
+        end: maxDate.toISOString().split('T')[0],
+        name: key.replace('col-', '').toUpperCase(),
         id: groupId,
-        type: 'project',
-        progress: 0, // Could calc avg progress
-        isDisabled: true,
-        styles: { progressColor: 'var(--primary)', progressSelectedColor: 'var(--primary-hover)' }
+        progress: 0,
+        custom_class: 'gantt-group-task'
       });
 
       // Add children
       groupTickets.forEach(t => {
+        let endDate = new Date(t.deadline);
+        if (endDate < new Date(t.startDate)) endDate = new Date(new Date(t.startDate).getTime() + 86400000);
+        
+        let customClass = 'gantt-ticket-task';
+        if (t.columnId === 'col-done') customClass += ' status-done';
+        if (t.columnId === 'col-in-progress') customClass += ' status-in-progress';
+
         tasks.push({
-          start: new Date(t.startDate),
-          end: new Date(t.deadline) < new Date(t.startDate) ? new Date(new Date(t.startDate).getTime() + 86400000) : new Date(t.deadline),
+          start: new Date(t.startDate).toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0],
           name: t.title,
           id: t.id,
-          project: groupId,
-          type: 'task',
           progress: t.columnId === 'col-done' ? 100 : (t.columnId === 'col-in-progress' ? 50 : 10),
-          isDisabled: true,
-          styles: { progressColor: 'var(--accent)', progressSelectedColor: 'var(--accent)' }
+          custom_class: customClass
         });
       });
     });
   } else {
     // No grouping
     tasks = processedTickets.map(t => {
-      const start = new Date(t.startDate);
-      const end = new Date(t.deadline); 
+      let start = new Date(t.startDate);
+      let end = new Date(t.deadline); 
       if (end < start) end.setTime(start.getTime() + 86400000);
+      
+      let customClass = 'gantt-ticket-task';
+      if (t.columnId === 'col-done') customClass += ' status-done';
+      if (t.columnId === 'col-in-progress') customClass += ' status-in-progress';
+
       return {
-        start,
-        end,
+        start: start.toISOString().split('T')[0],
+        end: end.toISOString().split('T')[0],
         name: t.title,
         id: t.id,
-        type: 'task',
         progress: t.columnId === 'col-done' ? 100 : (t.columnId === 'col-in-progress' ? 50 : 10),
-        isDisabled: true,
-        styles: { progressColor: 'var(--primary)', progressSelectedColor: 'var(--primary-hover)' }
+        custom_class: customClass
       };
     });
   }
@@ -228,119 +234,76 @@ const Roadmap = () => {
   const uniqueAssignees = [...new Set(tickets.map(t => t.assignee).filter(Boolean))];
   const uniqueStatuses = [...new Set(tickets.map(t => t.columnId).filter(Boolean))];
 
-  // DOM manipulation to highlight weekends and holidays
+  // Frappe Gantt Instantiation
   useEffect(() => {
-    if (viewMode !== ViewMode.Day || tasks.length === 0) return;
-    const highlightInterval = setInterval(() => {
-      const svgs = document.querySelectorAll('#gantt-container svg');
-      if (svgs.length < 2) return;
+    if (tasks.length === 0) return;
+    
+    // Clear previous gantt if exists
+    const container = document.getElementById('frappe-gantt-container');
+    if (container) container.innerHTML = '';
 
-      const headerSvg = svgs[0]; 
-      const gridSvg = svgs[1]; 
+    const gantt = new Gantt('#frappe-gantt-container', tasks, {
+      view_mode: viewMode,
+      language: 'pt',
+      custom_popup_html: function(task) {
+        return `
+          <div class="gantt-popup">
+            <h5>${task.name}</h5>
+            <p>De: ${task.start}</p>
+            <p>Até: ${task.end}</p>
+            <p>${task.progress}% concluído</p>
+          </div>
+        `;
+      }
+    });
 
-      if (gridSvg.querySelectorAll('.custom-holiday-marker').length > 0) return;
+    // Color weekends and holidays in Frappe SVG
+    setTimeout(() => {
+      const svg = document.querySelector('#frappe-gantt-container svg');
+      if (!svg) return;
+      const grid = svg.querySelector('.grid');
+      if (!grid) return;
 
-      const minDate = new Date(Math.min(...tasks.map(t => t.start.getTime())));
-      minDate.setHours(0, 0, 0, 0);
-      const ganttStartDate = new Date(minDate);
-      ganttStartDate.setDate(ganttStartDate.getDate() - 1);
+      // In Frappe, the dates are rendered as `<text>` elements in `.grid-header`
+      const dateNodes = svg.querySelectorAll('.grid-header .lower-text');
+      const isLightMode = !!document.querySelector('.radix-themes.light, [data-theme="light"], .light');
 
-      const maxDate = new Date(Math.max(...tasks.map(t => t.end.getTime())));
-      maxDate.setHours(0, 0, 0, 0);
-      const ganttEndDate = new Date(maxDate);
-      ganttEndDate.setDate(ganttEndDate.getDate() + 2);
-
-      const totalDays = Math.ceil((ganttEndDate.getTime() - ganttStartDate.getTime()) / (1000 * 3600 * 24));
-      
-      const colWidth = 60;
-      const headerHeight = 50;
-      const svgHeight = gridSvg.getAttribute('height') || (tasks.length * 50 + 50);
-
-      const gridFragment = document.createDocumentFragment();
-      const headerFragment = document.createDocumentFragment();
-      let added = false;
-
-      for (let i = 0; i <= totalDays; i++) {
-        const currentDate = new Date(ganttStartDate);
-        currentDate.setDate(currentDate.getDate() + i);
+      dateNodes.forEach(node => {
+        // Simple heuristic: if it contains "Sáb" or "Dom", it's a weekend
+        // Or we can parse the date if we know Frappe's mapping.
+        // Actually, let's just color columns based on the x position of text nodes!
+        const textContent = node.textContent;
+        const isWeekend = textContent.includes('Sáb') || textContent.includes('Dom') || textContent.includes('Sat') || textContent.includes('Sun');
         
-        const dayOfWeek = currentDate.getDay();
-        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        // Holidays: Frappe renders day numbers (e.g., '14' for 14th). To match holidays, we need real dates.
+        // But for weekends, textContent works.
+        
+        if (isWeekend) {
+          const x = node.getAttribute('x');
+          // Find the column width from the background rects
+          const bgRect = svg.querySelector('.grid-bg');
+          // Actually, frappe uses `.tick` lines, we can get spacing from them
+          const tickLine = svg.querySelector('.tick');
+          const colWidth = 38; // Default in frappe for Day view
 
-        const offset = currentDate.getTimezoneOffset();
-        const targetDate = new Date(currentDate.getTime() - (offset*60*1000));
-        const dateString = targetDate.toISOString().split('T')[0];
+          let bgColor = isLightMode ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)';
+          
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          // Adjust x slightly to align with column center
+          rect.setAttribute('x', String(parseFloat(x) - colWidth/2));
+          rect.setAttribute('y', '0');
+          rect.setAttribute('width', String(colWidth));
+          rect.setAttribute('height', '4000'); 
+          rect.setAttribute('fill', bgColor);
+          rect.setAttribute('class', 'custom-holiday-marker');
+          rect.style.pointerEvents = 'none';
 
-        const natHoliday = holidays.find(h => h.date === dateString);
-        const isEstadual = localHolidays.estaduais.includes(dateString);
-        const isMunicipal = localHolidays.municipais.includes(dateString);
-
-        const isHoliday = natHoliday || isEstadual || isMunicipal;
-
-        if (isWeekend || isHoliday) {
-          added = true;
-          const isLightMode = !!document.querySelector('.radix-themes.light, [data-theme="light"], .light');
-          let bgColor = isLightMode ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.1)';
-          let titleText = 'Fim de Semana';
-
-          if (natHoliday) {
-            bgColor = 'rgba(239, 68, 68, 0.3)'; // red
-            titleText = `Feriado Nacional: ${natHoliday.name}`;
-          } else if (isEstadual) {
-            bgColor = 'rgba(59, 130, 246, 0.3)'; // blue
-            titleText = `Feriado Estadual`;
-          } else if (isMunicipal) {
-            bgColor = 'rgba(16, 185, 129, 0.3)'; // green
-            titleText = `Feriado Municipal`;
-          }
-
-          // Grid Rect
-          const gridRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          gridRect.setAttribute('x', String(i * colWidth));
-          gridRect.setAttribute('y', '0');
-          gridRect.setAttribute('width', String(colWidth));
-          gridRect.setAttribute('height', '4000'); // Ensure full coverage
-          gridRect.setAttribute('fill', bgColor);
-          gridRect.setAttribute('class', 'custom-holiday-marker');
-          gridRect.style.pointerEvents = 'none';
-
-          if (isHoliday) {
-            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-            title.textContent = titleText;
-            gridRect.appendChild(title);
-          }
-          gridFragment.appendChild(gridRect);
-
-          // Header Rect
-          const headerRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          headerRect.setAttribute('x', String(i * colWidth));
-          headerRect.setAttribute('y', '0');
-          headerRect.setAttribute('width', String(colWidth));
-          headerRect.setAttribute('height', String(headerHeight));
-          headerRect.setAttribute('fill', bgColor);
-          headerRect.setAttribute('class', 'custom-holiday-marker');
-          headerRect.style.pointerEvents = 'none';
-
-          if (isHoliday) {
-            const title2 = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-            title2.textContent = titleText;
-            headerRect.appendChild(title2);
-          }
-          headerFragment.appendChild(headerRect);
+          grid.appendChild(rect);
         }
-      }
-
-      if (added) {
-        // Append grid rects to grid SVG
-        gridSvg.appendChild(gridFragment);
-        
-        // Append header rects to header SVG
-        headerSvg.appendChild(headerFragment);
-      }
+      });
     }, 500);
 
-    return () => clearInterval(highlightInterval);
-  }, [viewMode, tasks, holidays, localHolidays]);
+  }, [tasks, viewMode, holidays, localHolidays]);
 
   if (loading) {
     return (
@@ -367,9 +330,9 @@ const Roadmap = () => {
             onChange={(e) => setViewMode(e.target.value)}
             style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', color: 'white', border: '1px solid var(--glass-border)' }}
           >
-            <option value={ViewMode.Day}>Diário</option>
-            <option value={ViewMode.Week}>Semanal</option>
-            <option value={ViewMode.Month}>Mensal</option>
+            <option value="Day">Diário</option>
+            <option value="Week">Semanal</option>
+            <option value="Month">Mensal</option>
           </select>
           <Button variant="soft" onClick={() => window.print()}>
             <Printer size={16} /> Exportar
@@ -478,16 +441,7 @@ const Roadmap = () => {
 
       <Box id="gantt-container" style={{ flexGrow: 1, background: 'var(--bg-surface)', borderRadius: '12px', padding: '16px', overflowX: 'auto', border: '1px solid var(--glass-border)' }}>
         {tasks.length > 0 ? (
-          <Gantt
-            tasks={tasks}
-            viewMode={viewMode}
-            locale="pt-BR"
-            listCellWidth={155}
-            columnWidth={60}
-            rowHeight={50}
-            barCornerRadius={6}
-            barFill={60}
-          />
+          <div id="frappe-gantt-container" style={{ minHeight: '400px' }}></div>
         ) : (
           <Flex justify="center" align="center" style={{ height: '100%' }}>
             <Text color="gray">Nenhum ticket corresponde aos filtros selecionados (ou não possuem datas definidas).</Text>

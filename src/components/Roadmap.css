@@ -1,0 +1,91 @@
+/* Frappe Gantt Customizations for SGT */
+
+/* Remove frappe default white background if necessary */
+.gantt .grid-bg {
+    fill: transparent !important;
+}
+
+.gantt .grid-row {
+    fill: transparent !important;
+}
+
+/* Custom Holiday Marker - Rendered underneath */
+.custom-holiday-marker {
+    mix-blend-mode: overlay;
+}
+
+/* Base Bar Styling */
+.gantt .bar-wrapper .bar {
+    fill: var(--accent-3);
+    rx: 6px;
+    ry: 6px;
+    stroke: var(--accent-8);
+    stroke-width: 1px;
+}
+
+.gantt .bar-wrapper .bar-progress {
+    fill: var(--accent-9);
+    rx: 6px;
+    ry: 6px;
+}
+
+/* Text inside bars */
+.gantt .bar-wrapper .bar-label {
+    fill: var(--gray-12);
+    font-weight: 500;
+    font-size: 12px;
+}
+
+/* Status: Done */
+.gantt .gantt-ticket-task.status-done .bar {
+    fill: var(--grass-3);
+    stroke: var(--grass-8);
+}
+.gantt .gantt-ticket-task.status-done .bar-progress {
+    fill: var(--grass-9);
+}
+
+/* Status: In Progress */
+.gantt .gantt-ticket-task.status-in-progress .bar {
+    fill: var(--blue-3);
+    stroke: var(--blue-8);
+}
+.gantt .gantt-ticket-task.status-in-progress .bar-progress {
+    fill: var(--blue-9);
+}
+
+/* Group Tasks (Projects) */
+.gantt .gantt-group-task .bar {
+    fill: var(--gray-4);
+    stroke: var(--gray-8);
+    stroke-width: 2px;
+}
+.gantt .gantt-group-task .bar-progress {
+    fill: var(--gray-10);
+}
+.gantt .gantt-group-task .bar-label {
+    font-weight: bold;
+    fill: var(--gray-12);
+}
+
+/* Popup styling */
+.gantt-popup {
+    background: var(--color-panel-solid);
+    border: 1px solid var(--gray-6);
+    border-radius: var(--radius-3);
+    padding: 12px;
+    color: var(--gray-12);
+    box-shadow: var(--shadow-4);
+}
+
+.gantt-popup h5 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--accent-11);
+}
+
+.gantt-popup p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--gray-11);
+}
