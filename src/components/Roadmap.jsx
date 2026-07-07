@@ -55,29 +55,34 @@ const Roadmap = () => {
   // Fetch Local Holidays based on selected project filter
   useEffect(() => {
     const fetchLocal = async () => {
-      if (filters.project && filters.project !== 'all') {
-        try {
+      try {
+        const snap = await getDocs(collection(db, 'holidays'));
+        const allHolidays = snap.docs.map(d => d.data());
+        
+        let targetMunicipios = [];
+        if (filters.project && filters.project !== 'all') {
           const proj = projects.find(p => p.id === filters.project);
-          if (!proj || !proj.municipio) return setLocalHolidays({ estaduais: [], municipais: [] });
-
-          const q = query(
-            collection(db, 'holidays'),
-            where("nome", "==", proj.municipio)
-          );
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            const data = snap.docs[0].data();
-            setLocalHolidays({
-              estaduais: data.feriados_estaduais || [],
-              municipais: data.feriados_municipais || []
-            });
-          } else {
-            setLocalHolidays({ estaduais: [], municipais: [] });
-          }
-        } catch (e) {
-          console.error("Erro ao buscar feriados locais:", e);
+          if (proj && proj.municipio) targetMunicipios.push(proj.municipio);
+        } else {
+          targetMunicipios = [...new Set(projects.map(p => p.municipio).filter(Boolean))];
         }
-      } else {
+
+        let estaduais = [];
+        let municipais = [];
+
+        allHolidays.forEach(h => {
+          if (targetMunicipios.includes(h.nome)) {
+            estaduais = [...estaduais, ...(h.feriados_estaduais || [])];
+            municipais = [...municipais, ...(h.feriados_municipais || [])];
+          }
+        });
+
+        setLocalHolidays({
+          estaduais: [...new Set(estaduais)],
+          municipais: [...new Set(municipais)]
+        });
+      } catch (e) {
+        console.error("Erro ao buscar feriados locais:", e);
         setLocalHolidays({ estaduais: [], municipais: [] });
       }
     };
@@ -272,17 +277,17 @@ const Roadmap = () => {
 
         if (isWeekend || isHoliday) {
           added = true;
-          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)';
+          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
           let titleText = 'Fim de Semana';
 
           if (natHoliday) {
-            bgColor = 'rgba(255, 99, 132, 0.2)'; 
+            bgColor = 'rgba(255, 99, 132, 0.3)'; 
             titleText = `Feriado Nacional: ${natHoliday.name}`;
           } else if (isEstadual) {
-            bgColor = 'rgba(54, 162, 235, 0.2)'; 
+            bgColor = 'rgba(54, 162, 235, 0.3)'; 
             titleText = `Feriado Estadual`;
           } else if (isMunicipal) {
-            bgColor = 'rgba(75, 192, 192, 0.2)'; 
+            bgColor = 'rgba(75, 192, 192, 0.3)'; 
             titleText = `Feriado Municipal`;
           }
 
