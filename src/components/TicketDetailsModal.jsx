@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, Badge, Tabs, Box, TextField, ScrollArea, Card, Switch, Grid, Select } from '@radix-ui/themes';
-import { updateTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory } from '../services/ticketService';
+import { updateTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory, addWorkLog, subscribeToWorkLogs } from '../services/ticketService';
 import { subscribeToProjects } from '../services/projectService';
-import { subscribeToWorkflows } from '../services/settingsService';
+import { subscribeToWorkflows, subscribeToCustomFields, subscribeToTicketTypes } from '../services/settingsService';
 import { auth } from '../firebase';
-import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles } from 'lucide-react';
+import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles, Clock } from 'lucide-react';
 import NewTicketModal from './NewTicketModal';
+import RichTextEditor from './RichTextEditor';
 
-const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
+const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   const [description, setDescription] = useState('');
   const [commentText, setCommentText] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -16,6 +17,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
   const [subtasks, setSubtasks] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [history, setHistory] = useState([]);
+  const [workLogs, setWorkLogs] = useState([]);
   
   // Advanced fields
   const [sprint, setSprint] = useState('');
@@ -25,8 +27,13 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [customData, setCustomData] = useState({});
 
+  const [timeSpent, setTimeSpent] = useState('');
+  const [timeDesc, setTimeDesc] = useState('');
+
   const [projects, setProjects] = useState([]);
   const [workflows, setWorkflows] = useState([]);
+  const [customFields, setCustomFields] = useState([]);
+  const [ticketTypes, setTicketTypes] = useState([]);
 
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,19 +63,31 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
       const unsubscribeHistory = subscribeToHistory(ticket.id, (data) => {
         setHistory(data);
       });
+      const unsubscribeWorkLogs = subscribeToWorkLogs(ticket.id, (data) => {
+        setWorkLogs(data);
+      });
       const unsubscribeProjects = subscribeToProjects((data) => {
         setProjects(data);
       });
       const unsubscribeWorkflows = subscribeToWorkflows((data) => {
         setWorkflows(data);
       });
+      const unsubscribeCustomFields = subscribeToCustomFields((data) => {
+        setCustomFields(data);
+      });
+      const unsubscribeTicketTypes = subscribeToTicketTypes((data) => {
+        setTicketTypes(data);
+      });
       return () => {
         unsubscribeComments();
         unsubscribeSubtasks();
         unsubscribeAttachments();
         unsubscribeHistory();
+        unsubscribeWorkLogs();
         unsubscribeProjects();
         unsubscribeWorkflows();
+        unsubscribeCustomFields();
+        unsubscribeTicketTypes();
       };
     }
   }, [ticket]);
@@ -143,6 +162,22 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
     }
   };
 
+  const handleAddWorkLog = async (e) => {
+    e.preventDefault();
+    if (!timeSpent || isNaN(timeSpent) || Number(timeSpent) <= 0) return;
+    setLoading(true);
+    try {
+      const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuário SGT';
+      await addWorkLog(ticket.id, Number(timeSpent), timeDesc, userName);
+      setTimeSpent('');
+      setTimeDesc('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Content maxWidth="700px" style={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
@@ -161,6 +196,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
             <Tabs.Trigger value="attachments">Anexos ({attachments.length})</Tabs.Trigger>
             <Tabs.Trigger value="comments">Comentários ({comments.length})</Tabs.Trigger>
             <Tabs.Trigger value="history">Histórico</Tabs.Trigger>
+            {userRole === 'admin' && <Tabs.Trigger value="time">Tempo (Admin)</Tabs.Trigger>}
           </Tabs.List>
 
           <Box pt="4" style={{ flexGrow: 1, overflow: 'hidden' }}>
@@ -169,13 +205,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
                 <Flex direction="column" gap="4">
                   <Box>
                     <Text as="div" size="2" weight="bold" mb="2">Descrição</Text>
-                    <TextArea 
-                      size="3" 
-                      placeholder="Adicione uma descrição rica aqui..." 
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                    <RichTextEditor 
+                      content={description}
+                      onChange={(val) => setDescription(val)}
                       onBlur={() => handleUpdateField('description', description)}
-                      style={{ minHeight: '150px' }}
                     />
                   </Box>
 
@@ -233,6 +266,61 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
                       </Card>
                     );
                   })}
+
+                  {/* GLOBAL CUSTOM FIELDS */}
+                  {customFields.length > 0 && (
+                    <Card variant="surface" style={{ background: 'rgba(255, 165, 0, 0.05)', border: '1px solid rgba(255, 165, 0, 0.2)', marginBottom: '16px' }}>
+                      <Flex align="center" gap="2" mb="3">
+                        <Sparkles size={16} color="orange" />
+                        <Text weight="bold" color="orange">Campos Customizados (Globais)</Text>
+                      </Flex>
+                      <Grid columns="2" gap="4">
+                        {customFields.map(field => {
+                          const currentTypeObj = ticketTypes.find(t => t.name === ticket.type);
+                          if (field.ticketTypeId !== 'all' && field.ticketTypeId !== currentTypeObj?.id) {
+                            return null;
+                          }
+                          const optionsArray = field.type === 'select' && field.options 
+                            ? field.options.split(',').map(o => o.trim()).filter(Boolean) 
+                            : [];
+
+                          return (
+                            <Box key={field.id} style={{ gridColumn: field.type === 'textarea' ? 'span 2' : 'span 1' }}>
+                              <Text as="div" size="2" weight="bold" mb="1" color="gray">{field.name}</Text>
+                              {field.type === 'textarea' ? (
+                                <TextArea 
+                                  placeholder="..."
+                                  value={customData[field.name] || ''}
+                                  onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                                  onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
+                                />
+                              ) : field.type === 'select' ? (
+                                <Select.Root 
+                                  value={customData[field.name] || ''}
+                                  onValueChange={(val) => handleUpdateCustomField(field.name, val)}
+                                >
+                                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                                  <Select.Content>
+                                    {optionsArray.map((opt, i) => (
+                                      <Select.Item key={i} value={opt}>{opt}</Select.Item>
+                                    ))}
+                                  </Select.Content>
+                                </Select.Root>
+                              ) : (
+                                <TextField.Root 
+                                  type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                  placeholder="..."
+                                  value={customData[field.name] || ''}
+                                  onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                                  onBlur={() => handleUpdateCustomField(field.name, customData[field.name])}
+                                />
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Grid>
+                    </Card>
+                  )}
 
                   <Grid columns="2" gap="4">
                     <Box>
@@ -454,6 +542,66 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket }) => {
                 </Flex>
               </ScrollArea>
             </Tabs.Content>
+
+            {userRole === 'admin' && (
+              <Tabs.Content value="time" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Card variant="surface" mb="4" style={{ background: 'var(--surface)', padding: '16px' }}>
+                  <Text as="div" size="2" weight="bold" mb="2">Apontar Horas</Text>
+                  <form onSubmit={handleAddWorkLog}>
+                    <Flex gap="3" align="end">
+                      <Box>
+                        <Text as="div" size="1" color="gray" mb="1">Minutos</Text>
+                        <TextField.Root 
+                          type="number"
+                          placeholder="Ex: 120"
+                          value={timeSpent}
+                          onChange={(e) => setTimeSpent(e.target.value)}
+                          style={{ width: '100px' }}
+                        />
+                      </Box>
+                      <Box style={{ flexGrow: 1 }}>
+                        <Text as="div" size="1" color="gray" mb="1">Descrição / O que foi feito?</Text>
+                        <TextField.Root 
+                          placeholder="Desenvolvimento da tela XYZ..."
+                          value={timeDesc}
+                          onChange={(e) => setTimeDesc(e.target.value)}
+                        />
+                      </Box>
+                      <Button type="submit" disabled={loading || !timeSpent}>
+                        {loading ? <Loader2 size={16} className="spinner-icon" /> : <Clock size={16} />} 
+                        Apontar
+                      </Button>
+                    </Flex>
+                  </form>
+                </Card>
+
+                <ScrollArea style={{ flexGrow: 1, height: '200px', paddingRight: '16px' }}>
+                  <Flex direction="column" gap="3">
+                    {workLogs.length === 0 ? (
+                      <Text color="gray" align="center" mt="5">Nenhum apontamento registrado.</Text>
+                    ) : (
+                      workLogs.map(log => (
+                        <Card key={log.id} size="1">
+                          <Flex justify="between" align="start">
+                            <Box>
+                              <Text size="2" weight="bold" color="indigo">{log.userName}</Text>
+                              <Text as="div" size="2" mt="1">{log.description || 'Sem descrição'}</Text>
+                            </Box>
+                            <Box style={{ textAlign: 'right' }}>
+                              <Badge color="orange">{log.timeSpentMinutes} min</Badge>
+                              <Text as="div" size="1" color="gray" mt="1">
+                                {log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString() : 'Agora'}
+                              </Text>
+                            </Box>
+                          </Flex>
+                        </Card>
+                      ))
+                    )}
+                  </Flex>
+                </ScrollArea>
+              </Tabs.Content>
+            )}
+
           </Box>
         </Tabs.Root>
 

@@ -5,12 +5,15 @@ import {
   subscribeToWorkflows, saveWorkflow, deleteWorkflow, 
   subscribeToUsers, updateUserRole, updateUser,
   subscribeToSystems, saveSystem, deleteSystem,
-  subscribeToComponents, saveComponent, deleteComponent 
+  subscribeToComponents, saveComponent, deleteComponent,
+  subscribeToCustomFields, saveCustomField, deleteCustomField,
+  subscribeToAutomations, saveAutomation, deleteAutomation
 } from '../services/settingsService';
-import { Loader2, Trash2, Settings2, Database, Edit2 } from 'lucide-react';
+import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import { db } from '../firebase';
 import { writeBatch, doc } from 'firebase/firestore';
+import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
 
 const Settings = () => {
   const [ticketTypes, setTicketTypes] = useState([]);
@@ -27,6 +30,17 @@ const Settings = () => {
 
   const [components, setComponents] = useState([]);
   const [loadingComponents, setLoadingComponents] = useState(true);
+
+  const [customFields, setCustomFields] = useState([]);
+  const [loadingCustomFields, setLoadingCustomFields] = useState(true);
+
+  const [automations, setAutomations] = useState([]);
+  const [loadingAutomations, setLoadingAutomations] = useState(true);
+
+  const [projects, setProjects] = useState([]);
+  const [selectedRbacProject, setSelectedRbacProject] = useState('');
+  const [rbacMembers, setRbacMembers] = useState({});
+  const [savingRbac, setSavingRbac] = useState(false);
 
   // New/Edit Type Modal State
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
@@ -55,6 +69,16 @@ const Settings = () => {
   const [editingUserData, setEditingUserData] = useState({ id: '', shortName: '' });
   const [savingUser, setSavingUser] = useState(false);
 
+  // Custom Field Modal State
+  const [isCustomFieldModalOpen, setIsCustomFieldModalOpen] = useState(false);
+  const [customFieldData, setCustomFieldData] = useState({ name: '', type: 'text', options: '', ticketTypeId: 'all' });
+  const [savingCustomField, setSavingCustomField] = useState(false);
+
+  // Automation Modal State
+  const [isAutomationModalOpen, setIsAutomationModalOpen] = useState(false);
+  const [automationData, setAutomationData] = useState({ name: '', trigger: 'on_create', action: 'send_webhook', target: '' });
+  const [savingAutomation, setSavingAutomation] = useState(false);
+
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
       setTicketTypes(data);
@@ -76,12 +100,26 @@ const Settings = () => {
       setComponents(data);
       setLoadingComponents(false);
     });
+    const unsubscribeCustomFields = subscribeToCustomFields((data) => {
+      setCustomFields(data);
+      setLoadingCustomFields(false);
+    });
+    const unsubscribeAutomations = subscribeToAutomations((data) => {
+      setAutomations(data);
+      setLoadingAutomations(false);
+    });
+    const unsubscribeProjects = subscribeToProjects((data) => {
+      setProjects(data);
+    });
     return () => {
       unsubscribeTypes();
       unsubscribeWorkflows();
       unsubscribeUsers();
       unsubscribeSystems();
       unsubscribeComponents();
+      unsubscribeCustomFields();
+      unsubscribeAutomations();
+      unsubscribeProjects();
     };
   }, []);
 
@@ -223,6 +261,79 @@ const Settings = () => {
     if (confirm("Deseja realmente excluir este componente?")) await deleteComponent(id);
   };
 
+  const openNewCustomFieldModal = () => {
+    setCustomFieldData({ name: '', type: 'text', options: '', ticketTypeId: 'all' });
+    setIsCustomFieldModalOpen(true);
+  };
+
+  const openEditCustomFieldModal = (field) => {
+    setCustomFieldData(field);
+    setIsCustomFieldModalOpen(true);
+  };
+
+  const handleSaveCustomField = async (e) => {
+    e.preventDefault();
+    if (!customFieldData.name.trim()) return;
+    setSavingCustomField(true);
+    try {
+      await saveCustomField(customFieldData);
+      setIsCustomFieldModalOpen(false);
+    } catch (err) {
+      alert("Erro ao salvar campo customizado.");
+    } finally {
+      setSavingCustomField(false);
+    }
+  };
+
+  const handleDeleteCustomField = async (id) => {
+    if (confirm("Deseja realmente excluir este campo customizado?")) await deleteCustomField(id);
+  };
+
+  const openNewAutomationModal = () => {
+    setAutomationData({ name: '', trigger: 'on_create', action: 'send_webhook', target: '' });
+    setIsAutomationModalOpen(true);
+  };
+
+  const handleSaveAutomation = async (e) => {
+    e.preventDefault();
+    setSavingAutomation(true);
+    try {
+      await saveAutomation(automationData);
+      setIsAutomationModalOpen(false);
+    } catch (err) {
+      alert("Erro ao salvar automação.");
+    } finally {
+      setSavingAutomation(false);
+    }
+  };
+
+  const handleDeleteAutomation = async (id) => {
+    if (confirm("Deseja realmente excluir esta automação?")) await deleteAutomation(id);
+  };
+
+  const handleProjectSelectForRbac = (projectId) => {
+    setSelectedRbacProject(projectId);
+    const proj = projects.find(p => p.id === projectId);
+    if (proj && proj.members) {
+      setRbacMembers(proj.members);
+    } else {
+      setRbacMembers({});
+    }
+  };
+
+  const handleSaveRbac = async () => {
+    if (!selectedRbacProject) return;
+    setSavingRbac(true);
+    try {
+      await updateProjectMembers(selectedRbacProject, rbacMembers);
+      alert("Acessos salvos com sucesso!");
+    } catch (err) {
+      alert("Erro ao salvar acessos.");
+    } finally {
+      setSavingRbac(false);
+    }
+  };
+
   const handleInjectHolidays = async () => {
     try {
       if(!confirm("Atenção! Isso vai gravar 5570 municípios no Firebase. Deseja continuar?")) return;
@@ -274,7 +385,10 @@ const Settings = () => {
             <Tabs.Trigger value="systems">Sistemas</Tabs.Trigger>
             <Tabs.Trigger value="components">Componentes (Tags)</Tabs.Trigger>
             <Tabs.Trigger value="ticketTypes">Tipos de Ticket</Tabs.Trigger>
+            <Tabs.Trigger value="customFields">Campos Custom</Tabs.Trigger>
             <Tabs.Trigger value="workflows">Workflows</Tabs.Trigger>
+            <Tabs.Trigger value="automations">Automações</Tabs.Trigger>
+            <Tabs.Trigger value="rbac"><Shield size={14} style={{ display: 'inline', marginRight: 4 }}/> RBAC</Tabs.Trigger>
           </Tabs.List>
 
           <Box pt="4">
@@ -435,6 +549,52 @@ const Settings = () => {
               )}
             </Tabs.Content>
 
+            {/* CUSTOM FIELDS TAB */}
+            <Tabs.Content value="customFields">
+              <Flex justify="between" align="center" mb="4">
+                <Text as="h2" size="4" weight="bold">Campos Customizados</Text>
+                <Button size="2" onClick={openNewCustomFieldModal}>Novo Campo</Button>
+              </Flex>
+              
+              {loadingCustomFields ? <Loader2 className="spinner-icon" /> : (
+                <Table.Root variant="surface">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Tipo</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Vínculo (Tipo de Ticket)</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {customFields.map(field => {
+                      const typeName = field.ticketTypeId === 'all' 
+                        ? 'Todos' 
+                        : ticketTypes.find(t => t.id === field.ticketTypeId)?.name || 'Desconhecido';
+                      
+                      return (
+                        <Table.Row key={field.id} align="center">
+                          <Table.Cell><Text weight="bold">{field.name}</Text></Table.Cell>
+                          <Table.Cell><Badge color="gray">{field.type}</Badge></Table.Cell>
+                          <Table.Cell><Badge color={field.ticketTypeId === 'all' ? 'green' : 'blue'}>{typeName}</Badge></Table.Cell>
+                          <Table.Cell justify="end">
+                            <Flex gap="2" justify="end">
+                              <Button size="1" variant="soft" onClick={() => openEditCustomFieldModal(field)}>
+                                <Edit2 size={14} /> Editar
+                              </Button>
+                              <Button size="1" color="red" variant="soft" onClick={() => handleDeleteCustomField(field.id)}>
+                                <Trash2 size={14} /> Excluir
+                              </Button>
+                            </Flex>
+                          </Table.Cell>
+                        </Table.Row>
+                      );
+                    })}
+                  </Table.Body>
+                </Table.Root>
+              )}
+            </Tabs.Content>
+
             {/* WORKFLOWS TAB */}
             <Tabs.Content value="workflows">
               <Flex justify="between" align="center" mb="4">
@@ -511,6 +671,111 @@ const Settings = () => {
                     ))}
                   </Table.Body>
                 </Table.Root>
+              )}
+            </Tabs.Content>
+
+            {/* AUTOMATIONS TAB */}
+            <Tabs.Content value="automations">
+              <Flex justify="between" align="center" mb="4">
+                <Box>
+                  <Text as="h2" size="4" weight="bold">Automações e Webhooks</Text>
+                  <Text color="gray" size="2">Configure regras de negócio automatizadas.</Text>
+                </Box>
+                <Button size="2" onClick={openNewAutomationModal}>Nova Automação</Button>
+              </Flex>
+              
+              {loadingAutomations ? <Loader2 className="spinner-icon" /> : (
+                <Table.Root variant="surface">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Gatilho</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Ação</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {automations.map(auto => (
+                      <Table.Row key={auto.id} align="center">
+                        <Table.Cell><Text weight="bold">{auto.name}</Text></Table.Cell>
+                        <Table.Cell><Badge color="indigo">{auto.trigger}</Badge></Table.Cell>
+                        <Table.Cell><Badge color="orange">{auto.action}</Badge> <Text size="1" color="gray">{auto.target}</Text></Table.Cell>
+                        <Table.Cell justify="end">
+                          <Flex gap="2" justify="end">
+                            <Button size="1" color="red" variant="soft" onClick={() => handleDeleteAutomation(auto.id)}>
+                              <Trash2 size={14} /> Excluir
+                            </Button>
+                          </Flex>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              )}
+            </Tabs.Content>
+
+            {/* RBAC TAB */}
+            <Tabs.Content value="rbac">
+              <Text as="h2" size="4" weight="bold" mb="2">Controle de Acesso por Projeto (RBAC)</Text>
+              <Text color="gray" size="2" mb="4" as="p">Defina quem pode acessar, editar ou administrar os tickets de cada projeto.</Text>
+              
+              <Flex gap="4" align="end" mb="4">
+                <label style={{ flexGrow: 1, maxWidth: '400px' }}>
+                  <Text as="div" size="2" mb="1" weight="bold">Selecione o Projeto</Text>
+                  <Select.Root value={selectedRbacProject} onValueChange={handleProjectSelectForRbac}>
+                    <Select.Trigger style={{ width: '100%' }} placeholder="Escolha um projeto..." />
+                    <Select.Content>
+                      {projects.map(p => (
+                        <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </label>
+                <Button disabled={!selectedRbacProject || savingRbac} onClick={handleSaveRbac}>
+                  {savingRbac ? <Loader2 size={16} className="spinner-icon" /> : 'Salvar Acessos'}
+                </Button>
+              </Flex>
+
+              {selectedRbacProject ? (
+                <Table.Root variant="surface">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Usuário</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>E-mail</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell align="right">Papel no Projeto</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {users.map(u => {
+                      const currentRole = rbacMembers[u.id] || 'none';
+                      return (
+                        <Table.Row key={u.id} align="center">
+                          <Table.Cell><Text weight="bold">{u.displayName}</Text></Table.Cell>
+                          <Table.Cell><Text color="gray">{u.email}</Text></Table.Cell>
+                          <Table.Cell justify="end">
+                            <Select.Root 
+                              value={currentRole} 
+                              onValueChange={(val) => setRbacMembers(prev => ({ ...prev, [u.id]: val }))}
+                            >
+                              <Select.Trigger />
+                              <Select.Content>
+                                <Select.Item value="none">Sem Acesso</Select.Item>
+                                <Select.Item value="viewer">Visualizador</Select.Item>
+                                <Select.Item value="developer">Desenvolvedor (Edita)</Select.Item>
+                                <Select.Item value="admin">Administrador (Tudo)</Select.Item>
+                              </Select.Content>
+                            </Select.Root>
+                          </Table.Cell>
+                        </Table.Row>
+                      );
+                    })}
+                  </Table.Body>
+                </Table.Root>
+              ) : (
+                <Card size="2" style={{ textAlign: 'center', padding: '40px' }}>
+                  <Shield size={32} color="var(--gray-8)" style={{ margin: '0 auto 16px' }} />
+                  <Text color="gray">Selecione um projeto acima para gerenciar os acessos.</Text>
+                </Card>
               )}
             </Tabs.Content>
           </Box>
@@ -635,6 +900,134 @@ const Settings = () => {
               </Dialog.Close>
               <Button type="submit" disabled={savingComponent}>
                 {savingComponent ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* Edit/New Custom Field Modal */}
+      <Dialog.Root open={isCustomFieldModalOpen} onOpenChange={setIsCustomFieldModalOpen}>
+        <Dialog.Content maxWidth="450px">
+          <Dialog.Title>{customFieldData.id ? 'Editar Campo Customizado' : 'Criar Campo Customizado'}</Dialog.Title>
+          <form onSubmit={handleSaveCustomField}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome do Campo</Text>
+                <TextField.Root 
+                  value={customFieldData.name} 
+                  onChange={(e) => setCustomFieldData({...customFieldData, name: e.target.value})} 
+                  placeholder="Ex: Versão Afetada, Link do Figma..."
+                  required 
+                />
+              </label>
+              
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Tipo de Dado</Text>
+                <Select.Root value={customFieldData.type} onValueChange={(val) => setCustomFieldData({...customFieldData, type: val})}>
+                  <Select.Trigger style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="text">Texto Simples</Select.Item>
+                    <Select.Item value="textarea">Texto Longo</Select.Item>
+                    <Select.Item value="number">Número</Select.Item>
+                    <Select.Item value="date">Data</Select.Item>
+                    <Select.Item value="select">Lista de Seleção (Dropdown)</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </label>
+
+              {customFieldData.type === 'select' && (
+                <label>
+                  <Text as="div" size="2" mb="1" weight="bold">Opções da Lista (separadas por vírgula)</Text>
+                  <TextField.Root 
+                    value={customFieldData.options} 
+                    onChange={(e) => setCustomFieldData({...customFieldData, options: e.target.value})} 
+                    placeholder="Opção 1, Opção 2, Opção 3"
+                    required 
+                  />
+                </label>
+              )}
+
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Exibir apenas para o Tipo de Ticket:</Text>
+                <Select.Root value={customFieldData.ticketTypeId} onValueChange={(val) => setCustomFieldData({...customFieldData, ticketTypeId: val})}>
+                  <Select.Trigger style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="all">Exibir em Todos</Select.Item>
+                    {ticketTypes.map(t => (
+                      <Select.Item key={t.id} value={t.id}>{t.name}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingCustomField}>
+                {savingCustomField ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* New Automation Modal */}
+      <Dialog.Root open={isAutomationModalOpen} onOpenChange={setIsAutomationModalOpen}>
+        <Dialog.Content maxWidth="450px">
+          <Dialog.Title>Criar Automação</Dialog.Title>
+          <form onSubmit={handleSaveAutomation}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome da Regra</Text>
+                <TextField.Root 
+                  value={automationData.name} 
+                  onChange={(e) => setAutomationData({...automationData, name: e.target.value})} 
+                  placeholder="Ex: Notificar Slack ao criar bug"
+                  required 
+                />
+              </label>
+              
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Gatilho (Quando...)</Text>
+                <Select.Root value={automationData.trigger} onValueChange={(val) => setAutomationData({...automationData, trigger: val})}>
+                  <Select.Trigger style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="on_create">Ticket Criado</Select.Item>
+                    <Select.Item value="on_status_change">Status Alterado</Select.Item>
+                    <Select.Item value="on_comment">Novo Comentário</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </label>
+
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Ação (Então...)</Text>
+                <Select.Root value={automationData.action} onValueChange={(val) => setAutomationData({...automationData, action: val})}>
+                  <Select.Trigger style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="send_webhook">Disparar Webhook (POST)</Select.Item>
+                    <Select.Item value="send_email">Enviar E-mail</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </label>
+
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Alvo (URL ou Email)</Text>
+                <TextField.Root 
+                  value={automationData.target} 
+                  onChange={(e) => setAutomationData({...automationData, target: e.target.value})} 
+                  placeholder="https://hooks.slack.com/services/..."
+                  required 
+                />
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingAutomation}>
+                {savingAutomation ? <Loader2 size={14} className="spinner-icon"/> : "Salvar Regra"}
               </Button>
             </Flex>
           </form>

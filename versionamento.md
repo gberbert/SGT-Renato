@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.2] - 2026-07-06
+- **Features:** Enterprise Evolution Phases 1, 2, and 3 completed (Rich text, Dark mode, RBAC, Automations, Dashboard Analytics, Subtasks).
+
 ## [0.1.1] - 2026-07-06
 - **Features:** Expose dynamic App Version in Sidebar footer (`__APP_VERSION__`).
 ## [0.1.0] - 2026-07-06

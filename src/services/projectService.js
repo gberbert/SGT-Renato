@@ -42,6 +42,19 @@ export const updateProject = async (projectId, updates) => {
   }
 };
 
+export const updateProjectMembers = async (projectId, membersMap) => {
+  try {
+    const projectRef = doc(db, 'projects', projectId);
+    await updateDoc(projectRef, {
+      members: membersMap,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar acessos do projeto:", error);
+    throw error;
+  }
+};
+
 export const deleteProject = async (projectId) => {
   try {
     const projectRef = doc(db, 'projects', projectId);

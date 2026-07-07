@@ -196,3 +196,35 @@ export const subscribeToHistory = (ticketId, callback) => {
     callback(history);
   });
 };
+
+export const addWorkLog = async (ticketId, timeSpentMinutes, description, userName) => {
+  try {
+    const workLogsRef = collection(db, `${COLLECTION_NAME}/${ticketId}/workLogs`);
+    await addDoc(workLogsRef, {
+      timeSpentMinutes,
+      description,
+      userName,
+      createdAt: new Date()
+    });
+    await logTicketAction(ticketId, `Apontou ${timeSpentMinutes} minutos de trabalho`, userName);
+  } catch (error) {
+    console.error("Erro ao apontar horas:", error);
+    throw error;
+  }
+};
+
+export const subscribeToWorkLogs = (ticketId, callback) => {
+  const q = query(
+    collection(db, `${COLLECTION_NAME}/${ticketId}/workLogs`),
+    orderBy('createdAt', 'desc')
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const logs = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(logs);
+  });
+};
+

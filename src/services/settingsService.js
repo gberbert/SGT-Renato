@@ -167,3 +167,67 @@ export const deleteComponent = async (compId) => {
     throw error;
   }
 };
+
+export const subscribeToCustomFields = (callback) => {
+  const q = query(collection(db, 'customFields'), orderBy('createdAt', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const fields = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(fields);
+  });
+};
+
+export const saveCustomField = async (fieldData) => {
+  try {
+    if (fieldData.id) {
+      const docRef = doc(db, 'customFields', fieldData.id);
+      await updateDoc(docRef, { ...fieldData, updatedAt: serverTimestamp() });
+    } else {
+      await addDoc(collection(db, 'customFields'), { ...fieldData, createdAt: serverTimestamp() });
+    }
+  } catch (error) {
+    console.error("Erro ao salvar campo customizado:", error);
+    throw error;
+  }
+};
+
+export const deleteCustomField = async (fieldId) => {
+  try {
+    await deleteDoc(doc(db, 'customFields', fieldId));
+  } catch (error) {
+    console.error("Erro ao excluir campo customizado:", error);
+    throw error;
+  }
+};
+
+export const subscribeToAutomations = (callback) => {
+  const q = query(collection(db, 'automations'), orderBy('createdAt', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const autos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(autos);
+  });
+};
+
+export const saveAutomation = async (automationData) => {
+  try {
+    if (automationData.id) {
+      const docRef = doc(db, 'automations', automationData.id);
+      await updateDoc(docRef, { ...automationData, updatedAt: serverTimestamp() });
+    } else {
+      await addDoc(collection(db, 'automations'), { ...automationData, createdAt: serverTimestamp() });
+    }
+  } catch (error) {
+    console.error("Erro ao salvar automação:", error);
+    throw error;
+  }
+};
+
+export const deleteAutomation = async (autoId) => {
+  try {
+    await deleteDoc(doc(db, 'automations', autoId));
+  } catch (error) {
+    console.error("Erro ao excluir automação:", error);
+    throw error;
+  }
+};
+
+

@@ -4,7 +4,6 @@ import { Theme } from '@radix-ui/themes';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { Menu, Plus, LogOut } from 'lucide-react';
 import { auth, db } from './firebase';
 
 import Sidebar from './components/Sidebar';
@@ -27,6 +26,18 @@ function App() {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState('user');
   const [loading, setLoading] = useState(true);
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('sgt_theme') || 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sgt_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -76,29 +87,21 @@ function App() {
   }
 
   return (
-    <Theme appearance="dark" accentColor="iris" panelBackground="translucent">
+    <Theme appearance={theme} accentColor="iris" panelBackground="translucent">
       <Router>
         <div className="app-layout">
-        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} userRole={userRole} user={user} />
+        <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} userRole={userRole} user={user} theme={theme} toggleTheme={toggleTheme} />
         {isSidebarOpen && (
           <div className="sidebar-overlay" onClick={toggleSidebar}></div>
         )}
         
         <main className="main-content">
-          <header className="topbar">
-             <button className="mobile-menu-toggle" onClick={toggleSidebar}>
-               <Menu size={24} />
-             </button>
-             <GlobalSearch onSelectTicket={setSelectedTicket} />
-             <div className="topbar-actions">
-               <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-                 <Plus size={18} /> <span className="hide-on-mobile">Novo Ticket</span>
-               </button>
-               <button className="btn-icon" onClick={handleLogout} title="Sair">
-                 <LogOut size={20} />
-               </button>
-             </div>
-          </header>
+          <Topbar 
+            toggleSidebar={toggleSidebar} 
+            setIsModalOpen={setIsModalOpen} 
+            setSelectedTicket={setSelectedTicket}
+            handleLogout={handleLogout}
+          />
           
           <section className="view-container">
             <Routes>
@@ -118,6 +121,7 @@ function App() {
             isOpen={!!selectedTicket} 
             onClose={() => setSelectedTicket(null)} 
             ticket={selectedTicket} 
+            userRole={userRole}
           />
         )}
         </div>

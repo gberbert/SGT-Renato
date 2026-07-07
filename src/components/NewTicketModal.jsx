@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Button, Flex, Text, TextField, TextArea, Select } from '@radix-ui/themes';
+import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid } from '@radix-ui/themes';
 import { createTicket } from '../services/ticketService';
-import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents } from '../services/settingsService';
+import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { auth } from '../firebase';
+import RichTextEditor from './RichTextEditor';
 import { Loader2 } from 'lucide-react';
 
 const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   const [loading, setLoading] = useState(false);
+  const [description, setDescription] = useState('');
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
     type: 'Task',
     priority: 'medium',
     projectId: '',
@@ -23,10 +24,12 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   });
 
   const [ticketTypes, setTicketTypes] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [systems, setSystems] = useState([]);
   const [components, setComponents] = useState([]);
+  const [customFields, setCustomFields] = useState([]);
+  const [customData, setCustomData] = useState({});
 
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
@@ -37,15 +40,17 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     });
     const unsubscribeProjects = subscribeToProjects(setProjects);
     const unsubscribeUsers = subscribeToUsers(setUsers);
-    const unsubscribeSystems = subscribeToSystems(setSystems);
-    const unsubscribeComponents = subscribeToComponents(setComponents);
+    const unsubscribeSystems = subscribeToSystems((data) => setSystems(data));
+    const unsubscribeComponents = subscribeToComponents((data) => setComponents(data));
+    const unsubscribeCustomFields = subscribeToCustomFields((data) => setCustomFields(data));
 
     return () => {
       unsubscribeTypes();
-      unsubscribeProjects();
       unsubscribeUsers();
+      unsubscribeProjects();
       unsubscribeSystems();
       unsubscribeComponents();
+      unsubscribeCustomFields();
     };
   }, []);
 
@@ -67,16 +72,15 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
       const proj = projects.find(p => p.id === formData.projectId);
       const projKey = proj ? proj.key : 'SGT';
 
-      // Padrão: Todo novo ticket entra na coluna Backlog
       const DEFAULT_COLUMN_ID = 'col-backlog';
 
       const ticketData = {
         code: `${projKey}-${Math.floor(Math.random() * 9000) + 1000}`,
         title: formData.title,
-        description: formData.description,
+        description: description,
         type: formData.type,
         priority: formData.priority,
-        columnId: DEFAULT_COLUMN_ID, // Fixado como Backlog
+        columnId: DEFAULT_COLUMN_ID,
         projectId: formData.projectId,
         assignee: formData.assignee || 'Sem responsável',
         externalTicket: formData.externalTicket,
@@ -84,6 +88,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         component: formData.component,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        customData: customData,
+        parentId: parentId,
         comments: 0
       };
       
@@ -95,7 +101,6 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
       
       setFormData({
         title: '',
-        description: '',
         type: 'Task',
         priority: 'medium',
         projectId: '',
@@ -106,6 +111,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         startDate: '',
         endDate: ''
       });
+      setDescription('');
+      setCustomData({});
       onClose();
     } catch (error) {
       console.error("Erro ao salvar:", error);
@@ -256,16 +263,56 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
               </label>
             </Flex>
             
-            <label>
+            <Box>
               <Text as="div" size="2" mb="1" weight="bold">Descrição (Opcional)</Text>
-              <TextArea 
-                name="description" 
-                placeholder="Detalhes adicionais sobre o ticket..."
-                value={formData.description}
-                onChange={handleChange}
-                rows={3}
+              <RichTextEditor 
+                content={description}
+                onChange={setDescription}
               />
-            </label>
+            </Box>
+            
+            {/* Dynamic Custom Fields */}
+            {customFields.map(field => {
+              const currentTypeObj = ticketTypes.find(t => t.name === formData.type);
+              if (field.ticketTypeId !== 'all' && field.ticketTypeId !== currentTypeObj?.id) {
+                return null;
+              }
+              const optionsArray = field.type === 'select' && field.options 
+                ? field.options.split(',').map(o => o.trim()).filter(Boolean) 
+                : [];
+                
+              return (
+                <Box key={field.id} style={{ width: '100%' }}>
+                  <Text as="div" size="2" mb="1" weight="bold">{field.name}</Text>
+                  {field.type === 'textarea' ? (
+                    <TextField.Root 
+                      placeholder="..."
+                      value={customData[field.name] || ''}
+                      onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                    />
+                  ) : field.type === 'select' ? (
+                    <Select.Root 
+                      value={customData[field.name] || ''}
+                      onValueChange={(val) => setCustomData({ ...customData, [field.name]: val })}
+                    >
+                      <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                      <Select.Content>
+                        {optionsArray.map((opt, i) => (
+                          <Select.Item key={i} value={opt}>{opt}</Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Root>
+                  ) : (
+                    <TextField.Root 
+                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      placeholder="..."
+                      value={customData[field.name] || ''}
+                      onChange={(e) => setCustomData({ ...customData, [field.name]: e.target.value })}
+                    />
+                  )}
+                </Box>
+              );
+            })}
           </Flex>
           
           <Flex gap="3" mt="5" justify="end">

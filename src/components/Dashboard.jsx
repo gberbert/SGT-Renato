@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { subscribeToTickets } from '../services/ticketService';
 import { Loader2, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area, LineChart, Line, Legend } from 'recharts';
 import { Box, Flex, Text, Grid, Card } from '@radix-ui/themes';
 
 const Dashboard = () => {
@@ -61,6 +61,31 @@ const Dashboard = () => {
     name: key,
     Quantidade: priorityCounts[key]
   }));
+
+  // MOCK DATA: Cumulative Flow Diagram (CFD)
+  const cfdData = [
+    { name: 'Seg', Backlog: 20, Andamento: 5, Concluido: 10 },
+    { name: 'Ter', Backlog: 18, Andamento: 7, Concluido: 12 },
+    { name: 'Qua', Backlog: 15, Andamento: 8, Concluido: 15 },
+    { name: 'Qui', Backlog: 10, Andamento: 10, Concluido: 20 },
+    { name: 'Sex', Backlog: 5, Andamento: 6, Concluido: 28 },
+    { name: 'Sab', Backlog: 5, Andamento: 4, Concluido: 30 },
+    { name: 'Dom', Backlog: 5, Andamento: 2, Concluido: 32 },
+  ];
+
+  // MOCK DATA: Burndown Chart (Sprint Atual)
+  const burndownData = [
+    { day: 'Dia 1', Ideal: 50, Real: 50 },
+    { day: 'Dia 2', Ideal: 45, Real: 48 },
+    { day: 'Dia 3', Ideal: 40, Real: 42 },
+    { day: 'Dia 4', Ideal: 35, Real: 38 },
+    { day: 'Dia 5', Ideal: 30, Real: 30 },
+    { day: 'Dia 6', Ideal: 25, Real: 28 },
+    { day: 'Dia 7', Ideal: 20, Real: 22 },
+    { day: 'Dia 8', Ideal: 15, Real: null },
+    { day: 'Dia 9', Ideal: 10, Real: null },
+    { day: 'Dia 10', Ideal: 0, Real: null },
+  ];
 
   return (
     <Box p="6" style={{ height: '100%', overflowY: 'auto' }}>
@@ -165,6 +190,43 @@ const Dashboard = () => {
               </ResponsiveContainer>
             </Box>
           )}
+        </Card>
+
+        {/* Cumulative Flow Diagram */}
+        <Card size="3" style={{ gridColumn: '1 / -1' }}>
+          <Text as="div" size="4" weight="bold" mb="4">Cumulative Flow Diagram (CFD)</Text>
+          <Box style={{ height: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={cfdData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-main)' }} />
+                <Legend />
+                <Area type="monotone" dataKey="Concluido" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="Andamento" stackId="1" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="Backlog" stackId="1" stroke="#6366f1" fill="#6366f1" fillOpacity={0.6} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Box>
+        </Card>
+
+        {/* Burndown Chart */}
+        <Card size="3" style={{ gridColumn: '1 / -1' }}>
+          <Text as="div" size="4" weight="bold" mb="4">Burndown da Sprint (Story Points)</Text>
+          <Box style={{ height: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={burndownData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="day" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'var(--text-main)' }} />
+                <Legend />
+                <Line type="monotone" dataKey="Ideal" stroke="var(--gray-8)" strokeDasharray="5 5" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="Real" stroke="var(--danger)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Box>
         </Card>
 
       </Grid>

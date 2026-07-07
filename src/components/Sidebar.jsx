@@ -1,8 +1,9 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X } from 'lucide-react';
+import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X, Moon, Sun } from 'lucide-react';
+import { IconButton } from '@radix-ui/themes';
 
-const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
+const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) => {
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: 'Kanban', icon: <KanbanSquare size={20} />, path: '/kanban' },
@@ -76,6 +77,15 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
           )}
         </ul>
       </nav>
+
+      <div style={{ padding: '0 16px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderRadius: 'var(--border-radius)', border: '1px solid var(--gray-5)' }}>
+          <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-main)' }}>Modo Noturno</span>
+          <IconButton variant="soft" radius="full" onClick={toggleTheme} style={{ cursor: 'pointer' }}>
+            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+          </IconButton>
+        </div>
+      </div>
 
       <div className="sidebar-footer">
         <div className="user-profile">

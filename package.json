@@ -17,6 +17,10 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@radix-ui/themes": "^3.3.0",
+    "@tiptap/extension-image": "^3.27.2",
+    "@tiptap/extension-link": "^3.27.2",
+    "@tiptap/react": "^3.27.2",
+    "@tiptap/starter-kit": "^3.27.2",
     "axios": "^1.18.1",
     "cheerio": "^1.2.0",
     "firebase": "^12.15.0",
@@ -26,7 +30,7 @@
     "react-dom": "^19.2.7",
     "react-is": "^19.2.7",
     "react-router-dom": "^7.18.1",
-    "recharts": "^3.9.1",
+    "recharts": "^3.9.2",
     "slugify": "^1.6.9"
   },
   "devDependencies": {
