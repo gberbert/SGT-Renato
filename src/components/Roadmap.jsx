@@ -277,17 +277,17 @@ const Roadmap = () => {
 
         if (isWeekend || isHoliday) {
           added = true;
-          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
+          let fillVar = 'var(--holiday-weekend)';
           let titleText = 'Fim de Semana';
 
           if (natHoliday) {
-            bgColor = 'rgba(255, 99, 132, 0.3)'; 
+            fillVar = 'var(--holiday-nacional)';
             titleText = `Feriado Nacional: ${natHoliday.name}`;
           } else if (isEstadual) {
-            bgColor = 'rgba(54, 162, 235, 0.3)'; 
+            fillVar = 'var(--holiday-estadual)';
             titleText = `Feriado Estadual`;
           } else if (isMunicipal) {
-            bgColor = 'rgba(75, 192, 192, 0.3)'; 
+            fillVar = 'var(--holiday-municipal)';
             titleText = `Feriado Municipal`;
           }
 
@@ -295,8 +295,8 @@ const Roadmap = () => {
           rect.setAttribute('x', String(i * colWidth));
           rect.setAttribute('y', String(headerHeight));
           rect.setAttribute('width', String(colWidth));
-          rect.setAttribute('height', String(svgHeight));
-          rect.setAttribute('fill', bgColor);
+          rect.setAttribute('height', '4000'); // Force cover full height, clipped by SVG
+          rect.setAttribute('fill', fillVar);
           rect.setAttribute('class', 'custom-holiday-marker');
           rect.style.pointerEvents = 'none';
           

@@ -28,6 +28,12 @@
     
     /* Typography */
     --font-family: 'Inter', sans-serif;
+    
+    /* Holidays/Weekends */
+    --holiday-weekend: rgba(255,255,255,0.08);
+    --holiday-nacional: rgba(255, 99, 132, 0.3);
+    --holiday-estadual: rgba(54, 162, 235, 0.3);
+    --holiday-municipal: rgba(75, 192, 192, 0.3);
 }
 
 /* Light Theme Overrides */
@@ -44,6 +50,8 @@
     
     --glass-border: rgba(0, 0, 0, 0.1);
     --glass-bg: rgba(255, 255, 255, 0.8);
+    
+    --holiday-weekend: rgba(0,0,0,0.12);
 }
 
 /* ==========================================================================
