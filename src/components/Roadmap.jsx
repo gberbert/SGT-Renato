@@ -228,11 +228,8 @@ const Roadmap = () => {
     if (viewMode !== ViewMode.Day || tasks.length === 0) return;
 
     const highlightTimer = setTimeout(() => {
-      const svg = document.querySelector('.gantt svg');
+      const svg = document.querySelector('#gantt-container svg');
       if (!svg) return;
-
-      const grid = svg.querySelector('.grid');
-      if (!grid) return;
 
       // Clean up previous custom markers
       const existing = svg.querySelectorAll('.custom-holiday-marker');
@@ -273,17 +270,17 @@ const Roadmap = () => {
         const isHoliday = natHoliday || isEstadual || isMunicipal;
 
         if (isWeekend || isHoliday) {
-          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
           let titleText = 'Fim de Semana';
 
           if (natHoliday) {
-            bgColor = 'rgba(255, 99, 132, 0.2)'; 
+            bgColor = 'rgba(255, 99, 132, 0.3)'; 
             titleText = `Feriado Nacional: ${natHoliday.name}`;
           } else if (isEstadual) {
-            bgColor = 'rgba(54, 162, 235, 0.2)'; 
+            bgColor = 'rgba(54, 162, 235, 0.3)'; 
             titleText = `Feriado Estadual`;
           } else if (isMunicipal) {
-            bgColor = 'rgba(75, 192, 192, 0.2)'; 
+            bgColor = 'rgba(75, 192, 192, 0.3)'; 
             titleText = `Feriado Municipal`;
           }
 
@@ -306,8 +303,13 @@ const Roadmap = () => {
         }
       }
 
-      grid.prepend(fragment);
-    }, 300);
+      // Prepend directly to SVG so it stays at the back
+      if (svg.firstChild) {
+        svg.insertBefore(fragment, svg.firstChild);
+      } else {
+        svg.appendChild(fragment);
+      }
+    }, 500); // Give it a bit more time to render fully
 
     return () => clearTimeout(highlightTimer);
   }, [viewMode, tasks, holidays, localHolidays]);
