@@ -33,6 +33,11 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('sgt_theme', theme);
+    if (theme === 'light') {
+      document.body.classList.add('light');
+    } else {
+      document.body.classList.remove('light');
+    }
   }, [theme]);
 
   const toggleTheme = () => {
