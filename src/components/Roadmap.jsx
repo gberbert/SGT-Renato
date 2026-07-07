@@ -6,7 +6,6 @@ import { Text, Box, Flex, Button, Select, TextField, IconButton, Badge, Card, Po
 import Gantt from 'frappe-gantt';
 import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import "frappe-gantt/dist/frappe-gantt.css";
 import "./Roadmap.css";
 
 const Roadmap = () => {
