@@ -231,13 +231,14 @@ const Roadmap = () => {
   // DOM manipulation to highlight weekends and holidays
   useEffect(() => {
     if (viewMode !== ViewMode.Day || tasks.length === 0) return;
-
     const highlightInterval = setInterval(() => {
-      const svg = document.querySelector('#gantt-container svg');
-      if (!svg) return;
+      const svgs = document.querySelectorAll('#gantt-container svg');
+      if (svgs.length < 2) return;
 
-      // If already injected, don't inject again
-      if (svg.querySelectorAll('.custom-holiday-marker').length > 0) return;
+      const headerSvg = svgs[0]; 
+      const gridSvg = svgs[1]; 
+
+      if (gridSvg.querySelectorAll('.custom-holiday-marker').length > 0) return;
 
       const minDate = new Date(Math.min(...tasks.map(t => t.start.getTime())));
       minDate.setHours(0, 0, 0, 0);
@@ -250,21 +251,22 @@ const Roadmap = () => {
       ganttEndDate.setDate(ganttEndDate.getDate() + 2);
 
       const totalDays = Math.ceil((ganttEndDate.getTime() - ganttStartDate.getTime()) / (1000 * 3600 * 24));
-      const colWidth = 60; 
-      const headerHeight = 50; 
       
-      const svgHeight = svg.getAttribute('height') || (tasks.length * 50 + headerHeight + 50);
+      const colWidth = 60;
+      const headerHeight = 50;
+      const svgHeight = gridSvg.getAttribute('height') || (tasks.length * 50 + 50);
 
-      const fragment = document.createDocumentFragment();
-
+      const gridFragment = document.createDocumentFragment();
+      const headerFragment = document.createDocumentFragment();
       let added = false;
+
       for (let i = 0; i <= totalDays; i++) {
         const currentDate = new Date(ganttStartDate);
         currentDate.setDate(currentDate.getDate() + i);
         
         const dayOfWeek = currentDate.getDay();
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        
+
         const offset = currentDate.getTimezoneOffset();
         const targetDate = new Date(currentDate.getTime() - (offset*60*1000));
         const dateString = targetDate.toISOString().split('T')[0];
@@ -272,7 +274,7 @@ const Roadmap = () => {
         const natHoliday = holidays.find(h => h.date === dateString);
         const isEstadual = localHolidays.estaduais.includes(dateString);
         const isMunicipal = localHolidays.municipais.includes(dateString);
-        
+
         const isHoliday = natHoliday || isEstadual || isMunicipal;
 
         if (isWeekend || isHoliday) {
@@ -292,35 +294,52 @@ const Roadmap = () => {
             titleText = `Feriado Municipal`;
           }
 
-          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          rect.setAttribute('x', String(i * colWidth));
-          rect.setAttribute('y', String(headerHeight));
-          rect.setAttribute('width', String(colWidth));
-          rect.setAttribute('height', '4000'); // Force cover full height, clipped by SVG
-          rect.setAttribute('fill', bgColor);
-          rect.setAttribute('class', 'custom-holiday-marker');
-          rect.style.pointerEvents = 'none';
-          
+          // Grid Rect
+          const gridRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          gridRect.setAttribute('x', String(i * colWidth));
+          gridRect.setAttribute('y', '0');
+          gridRect.setAttribute('width', String(colWidth));
+          gridRect.setAttribute('height', '4000'); // Ensure full coverage
+          gridRect.setAttribute('fill', bgColor);
+          gridRect.setAttribute('class', 'custom-holiday-marker');
+          gridRect.style.pointerEvents = 'none';
+
           if (isHoliday) {
             const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
             title.textContent = titleText;
-            rect.appendChild(title);
+            gridRect.appendChild(title);
           }
-          
-          fragment.appendChild(rect);
+          gridFragment.appendChild(gridRect);
+
+          // Header Rect
+          const headerRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          headerRect.setAttribute('x', String(i * colWidth));
+          headerRect.setAttribute('y', '0');
+          headerRect.setAttribute('width', String(colWidth));
+          headerRect.setAttribute('height', String(headerHeight));
+          headerRect.setAttribute('fill', bgColor);
+          headerRect.setAttribute('class', 'custom-holiday-marker');
+          headerRect.style.pointerEvents = 'none';
+
+          if (isHoliday) {
+            const title2 = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title2.textContent = titleText;
+            headerRect.appendChild(title2);
+          }
+          headerFragment.appendChild(headerRect);
         }
       }
 
       if (added) {
-        // Append directly to the SVG root so it renders on top of ALL internal gantt groups
-        // Since we use pointer-events: none and translucency, it tints the whole column safely.
-        svg.appendChild(fragment);
+        // Append grid rects to grid SVG
+        gridSvg.appendChild(gridFragment);
+        
+        // Append header rects to header SVG
+        headerSvg.appendChild(headerFragment);
       }
     }, 500);
 
     return () => clearInterval(highlightInterval);
-
-    return () => clearTimeout(highlightTimer);
   }, [viewMode, tasks, holidays, localHolidays]);
 
   if (loading) {
