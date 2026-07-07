@@ -204,9 +204,19 @@ ul {
     justify-content: space-between;
     padding: 0 32px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    background-color: rgba(18, 18, 28, 0.8);
+    background-color: rgba(18, 18, 28, 0.8) !important;
     backdrop-filter: blur(10px);
-    color: #f8fafc;
+    color: #f8fafc !important;
+}
+
+/* Force Radix elements inside Topbar to be light */
+.topbar * {
+    --text-main: #f8fafc !important;
+    --text-muted: #94a3b8 !important;
+}
+
+.topbar .rt-IconButton, .topbar svg {
+    color: #f8fafc !important;
 }
 
 .topbar-search {
