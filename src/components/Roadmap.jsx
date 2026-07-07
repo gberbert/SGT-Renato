@@ -258,6 +258,8 @@ const Roadmap = () => {
 
     // Color weekends and holidays in Frappe SVG
     setTimeout(() => {
+      if (viewMode !== 'Day') return; // Apenas colore no modo Diário
+
       const svg = document.querySelector('#frappe-gantt-container svg');
       if (!svg) return;
       const grid = svg.querySelector('.grid');
@@ -266,14 +268,28 @@ const Roadmap = () => {
       // Clear existing markers to prevent overlapping opacities
       grid.querySelectorAll('.custom-holiday-marker').forEach(el => el.remove());
 
-      // In Frappe, the dates are rendered as `<text>` elements in `.grid-header`
       const dateNodes = svg.querySelectorAll('.grid-header .lower-text');
+      if (!dateNodes || dateNodes.length === 0 || !gantt.gantt_start) return;
 
-      dateNodes.forEach(node => {
-        const textContent = node.textContent;
-        const isWeekend = textContent.includes('Sáb') || textContent.includes('Dom') || textContent.includes('Sat') || textContent.includes('Sun');
+      let currentDate = new Date(gantt.gantt_start.getTime());
+
+      // Prepara o Set de feriados para busca rápida YYYY-MM-DD
+      const allHolidays = new Set();
+      holidays.forEach(h => allHolidays.add(h.date));
+      if (localHolidays.estaduais) localHolidays.estaduais.forEach(h => allHolidays.add(h.date));
+      if (localHolidays.municipais) localHolidays.municipais.forEach(h => allHolidays.add(h.date));
+
+      dateNodes.forEach((node, i) => {
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        const dayOfWeek = currentDate.getDay(); // 0 = Dom, 6 = Sáb
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+        const isHoliday = allHolidays.has(dateStr);
         
-        if (isWeekend) {
+        if (isWeekend || isHoliday) {
           const x = node.getAttribute('x');
           const colWidth = 38; // Default in frappe for Day view
           
@@ -287,6 +303,9 @@ const Roadmap = () => {
 
           grid.appendChild(rect);
         }
+
+        // Incrementa 1 dia para a próxima coluna
+        currentDate.setDate(currentDate.getDate() + 1);
       });
     }, 500);
 

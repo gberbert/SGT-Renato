@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.33] - 2026-07-07
+- **Features:** Improved Roadmap UI contrast and weekend/holiday highlighting logic.
+
 ## [0.1.2] - 2026-07-06
 - **Features:** Enterprise Evolution Phases 1, 2, and 3 completed (Rich text, Dark mode, RBAC, Automations, Dashboard Analytics, Subtasks).
 

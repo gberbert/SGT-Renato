@@ -50,11 +50,11 @@ body:not(.light) {
 
 /* Custom Holiday Marker - Rendered underneath */
 .custom-holiday-marker {
-    fill: rgba(0, 0, 0, 0.04) !important;
+    fill: var(--gray-3) !important;
 }
 
 body:not(.light) .custom-holiday-marker {
-    fill: rgba(0, 0, 0, 0.3) !important;
+    fill: var(--gray-4) !important;
 }
 
 /* Fix Date Range Highlight on Hover */
@@ -86,7 +86,7 @@ body:not(.light) .custom-holiday-marker {
 }
 
 .gantt .bar-wrapper .bar-progress {
-    fill: #7c3aed !important; /* Darker Purple */
+    fill: #4c1d95 !important; /* Muito mais escuro para maior contraste */
     rx: 6px;
     ry: 6px;
 }
