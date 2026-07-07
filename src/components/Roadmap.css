@@ -12,16 +12,12 @@
 }
 
 /* Custom Holiday Marker - Rendered underneath */
-/* Custom Holiday Marker - Rendered underneath */
 .custom-holiday-marker {
-    fill: rgba(0, 0, 0, 0.06);
+    fill: rgba(0, 0, 0, 0.06) !important;
 }
 
-[data-theme="dark"] .custom-holiday-marker,
-.dark .custom-holiday-marker,
-.radix-themes.dark .custom-holiday-marker,
-.radix-themes[class*="dark"] .custom-holiday-marker {
-    fill: rgba(0, 0, 0, 0.3);
+body:not(.light) .custom-holiday-marker {
+    fill: rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Grid Lines */
