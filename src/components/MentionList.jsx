@@ -73,6 +73,7 @@ export default forwardRef((props, ref) => {
     }}>
       {props.items.map((item, index) => (
         <button
+          type="button"
           key={item.id}
           className="mention-item-btn"
           onClick={() => selectItem(index)}

@@ -62,9 +62,9 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
                   <DropdownMenu.Item 
                     key={n.id} 
                     onClick={() => handleNotificationClick(n)}
-                    style={{ background: n.read ? 'transparent' : 'var(--indigo-2)', padding: '12px', cursor: 'pointer' }}
+                    style={{ background: n.read ? 'transparent' : 'var(--indigo-2)', padding: '12px', cursor: 'pointer', height: 'auto', display: 'block' }}
                   >
-                    <Flex direction="column" gap="1">
+                    <Flex direction="column" gap="1" style={{ width: '100%' }}>
                       <Flex justify="between" align="start">
                         <Text weight="bold" size="2">{n.title}</Text>
                         {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--indigo-9)', flexShrink: 0 }} />}
