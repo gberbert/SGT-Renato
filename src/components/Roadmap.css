@@ -50,11 +50,16 @@ body:not(.light) {
 
 /* Custom Holiday Marker - Rendered underneath */
 .custom-holiday-marker {
-    fill: var(--black-a2) !important;
+    fill: rgba(0, 0, 0, 0.04) !important;
 }
 
 body:not(.light) .custom-holiday-marker {
-    fill: var(--black-a6) !important;
+    fill: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Fix Date Range Highlight on Hover */
+.gantt-container .date-range-highlight {
+    background-color: rgba(139, 92, 246, 0.15) !important; /* Faint translucent purple */
 }
 
 /* Grid Lines */
