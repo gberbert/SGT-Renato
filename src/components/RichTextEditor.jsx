@@ -5,7 +5,9 @@ import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Flex, IconButton, Box } from '@radix-ui/themes';
 import { Bold, Italic, Strikethrough, List, ListOrdered, Link as LinkIcon, Image as ImageIcon, Heading1, Heading2, Code } from 'lucide-react';
-import './RichTextEditor.css'; // We will define this later or use inline styles
+import Mention from '@tiptap/extension-mention';
+import getSuggestionConfig from './suggestion';
+import './RichTextEditor.css'; 
 
 const MenuBar = ({ editor }) => {
   if (!editor) {
@@ -112,12 +114,18 @@ const MenuBar = ({ editor }) => {
   );
 };
 
-const RichTextEditor = ({ content, onChange, onBlur }) => {
+const RichTextEditor = ({ content, onChange, onBlur, users = [] }) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
       Link.configure({ openOnClick: false }),
       Image,
+      Mention.configure({
+        HTMLAttributes: {
+          class: 'mention',
+        },
+        suggestion: getSuggestionConfig(users),
+      }),
     ],
     content: content,
     onUpdate: ({ editor }) => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, Badge, Tabs, Box, TextField, ScrollArea, Card, Switch, Grid, Select } from '@radix-ui/themes';
 import { updateTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory, addWorkLog, subscribeToWorkLogs } from '../services/ticketService';
 import { subscribeToProjects } from '../services/projectService';
-import { subscribeToWorkflows, subscribeToCustomFields, subscribeToTicketTypes } from '../services/settingsService';
+import { subscribeToWorkflows, subscribeToCustomFields, subscribeToTicketTypes, subscribeToUsers } from '../services/settingsService';
 import { auth } from '../firebase';
 import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles, Clock } from 'lucide-react';
 import NewTicketModal from './NewTicketModal';
@@ -34,6 +34,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   const [workflows, setWorkflows] = useState([]);
   const [customFields, setCustomFields] = useState([]);
   const [ticketTypes, setTicketTypes] = useState([]);
+  const [users, setUsers] = useState([]);
 
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -78,6 +79,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
       const unsubscribeTicketTypes = subscribeToTicketTypes((data) => {
         setTicketTypes(data);
       });
+      const unsubscribeUsers = subscribeToUsers((data) => {
+        setUsers(data);
+      });
+
       return () => {
         unsubscribeComments();
         unsubscribeSubtasks();
@@ -88,9 +93,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
         unsubscribeWorkflows();
         unsubscribeCustomFields();
         unsubscribeTicketTypes();
+        unsubscribeUsers();
       };
     }
-  }, [ticket]);
+  }, [isOpen, ticket]);
 
   if (!isOpen || !ticket) return null;
 
@@ -209,6 +215,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                       content={description}
                       onChange={(val) => setDescription(val)}
                       onBlur={() => handleUpdateField('description', description)}
+                      users={users}
                     />
                   </Box>
 

@@ -268,6 +268,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
               <RichTextEditor 
                 content={description}
                 onChange={setDescription}
+                users={users}
               />
             </Box>
             

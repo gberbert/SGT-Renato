@@ -56,3 +56,11 @@
   border-top: 2px solid rgba(13, 13, 13, 0.1);
   margin: 2rem 0;
 }
+
+.tiptap-content .ProseMirror .mention {
+  background-color: var(--accent-3);
+  color: var(--accent-11);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font-weight: 500;
+}
