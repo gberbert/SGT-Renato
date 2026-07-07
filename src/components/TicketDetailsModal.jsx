@@ -180,7 +180,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="700px" style={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+      <Dialog.Content maxWidth="900px" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Flex justify="between" align="start" mb="4">
           <Box>
             <Text as="div" size="2" color="indigo" weight="bold">{ticket.code}</Text>

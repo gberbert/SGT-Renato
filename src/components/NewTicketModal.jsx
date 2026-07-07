@@ -124,7 +124,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="600px">
+      <Dialog.Content maxWidth="600px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>Novo Ticket</Dialog.Title>
         <Dialog.Description size="2" mb="4" color="gray">
           Crie uma nova demanda (O status inicial será sempre 'Backlog').
