@@ -74,10 +74,9 @@ export default forwardRef((props, ref) => {
       {props.items.map((item, index) => (
         <Box
           key={item.id}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            selectItem(index);
-          }}
+          onMouseEnter={() => setSelectedIndex(index)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => selectItem(index)}
           style={{
             padding: '8px 12px',
             cursor: 'pointer',
