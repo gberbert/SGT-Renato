@@ -223,14 +223,6 @@ const Roadmap = () => {
   const uniqueAssignees = [...new Set(tickets.map(t => t.assignee).filter(Boolean))];
   const uniqueStatuses = [...new Set(tickets.map(t => t.columnId).filter(Boolean))];
 
-  if (loading) {
-    return (
-      <Flex align="center" justify="center" style={{ height: '100%' }}>
-        <Loader2 className="spinner-icon" size={40} color="var(--primary)" />
-      </Flex>
-    );
-  }
-
   // DOM manipulation to highlight weekends and holidays
   useEffect(() => {
     if (viewMode !== ViewMode.Day || tasks.length === 0) return;
@@ -319,6 +311,16 @@ const Roadmap = () => {
 
     return () => clearTimeout(highlightTimer);
   }, [viewMode, tasks, holidays, localHolidays]);
+
+  if (loading) {
+    return (
+      <Flex align="center" justify="center" style={{ height: '100%' }}>
+        <Loader2 className="spinner-icon" size={40} color="var(--primary)" />
+      </Flex>
+    );
+  }
+
+
 
   return (
     <Box p="6" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
