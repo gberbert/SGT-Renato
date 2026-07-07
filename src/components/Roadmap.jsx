@@ -277,17 +277,18 @@ const Roadmap = () => {
 
         if (isWeekend || isHoliday) {
           added = true;
-          let fillVar = 'var(--holiday-weekend)';
+          const isLightMode = !!document.querySelector('.radix-themes.light, [data-theme="light"], .light');
+          let bgColor = isLightMode ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.1)';
           let titleText = 'Fim de Semana';
 
           if (natHoliday) {
-            fillVar = 'var(--holiday-nacional)';
+            bgColor = 'rgba(239, 68, 68, 0.3)'; // red
             titleText = `Feriado Nacional: ${natHoliday.name}`;
           } else if (isEstadual) {
-            fillVar = 'var(--holiday-estadual)';
+            bgColor = 'rgba(59, 130, 246, 0.3)'; // blue
             titleText = `Feriado Estadual`;
           } else if (isMunicipal) {
-            fillVar = 'var(--holiday-municipal)';
+            bgColor = 'rgba(16, 185, 129, 0.3)'; // green
             titleText = `Feriado Municipal`;
           }
 
@@ -296,7 +297,7 @@ const Roadmap = () => {
           rect.setAttribute('y', String(headerHeight));
           rect.setAttribute('width', String(colWidth));
           rect.setAttribute('height', '4000'); // Force cover full height, clipped by SVG
-          rect.setAttribute('fill', fillVar);
+          rect.setAttribute('fill', bgColor);
           rect.setAttribute('class', 'custom-holiday-marker');
           rect.style.pointerEvents = 'none';
           
@@ -311,15 +312,11 @@ const Roadmap = () => {
       }
 
       if (added) {
-        // The first child of Gantt SVG is the Grid group.
-        const gridGroup = svg.querySelector('g') || svg.children[0];
-        if (gridGroup && gridGroup.tagName === 'g') {
-          gridGroup.appendChild(fragment);
-        } else {
-          svg.appendChild(fragment);
-        }
+        // Append directly to the SVG root so it renders on top of ALL internal gantt groups
+        // Since we use pointer-events: none and translucency, it tints the whole column safely.
+        svg.appendChild(fragment);
       }
-    }, 200);
+    }, 500);
 
     return () => clearInterval(highlightInterval);
 
