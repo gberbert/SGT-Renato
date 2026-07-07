@@ -43,6 +43,47 @@ const Roadmap = () => {
     }
   }, []);
 
+  // Fetch National Holidays
+  useEffect(() => {
+    const year = new Date().getFullYear();
+    fetch(`https://brasilapi.com.br/api/feriados/v1/${year}`)
+      .then(res => res.json())
+      .then(data => setHolidays(data || []))
+      .catch(err => console.error("Erro ao buscar feriados nacionais:", err));
+  }, []);
+
+  // Fetch Local Holidays based on selected project filter
+  useEffect(() => {
+    const fetchLocal = async () => {
+      if (filters.project && filters.project !== 'all') {
+        try {
+          const proj = projects.find(p => p.id === filters.project);
+          if (!proj || !proj.municipio) return setLocalHolidays({ estaduais: [], municipais: [] });
+
+          const q = query(
+            collection(db, 'holidays'),
+            where("nome", "==", proj.municipio)
+          );
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const data = snap.docs[0].data();
+            setLocalHolidays({
+              estaduais: data.feriados_estaduais || [],
+              municipais: data.feriados_municipais || []
+            });
+          } else {
+            setLocalHolidays({ estaduais: [], municipais: [] });
+          }
+        } catch (e) {
+          console.error("Erro ao buscar feriados locais:", e);
+        }
+      } else {
+        setLocalHolidays({ estaduais: [], municipais: [] });
+      }
+    };
+    fetchLocal();
+  }, [filters.project, projects]);
+
   // Fetch data
   useEffect(() => {
     let ticketsLoaded = false;
@@ -189,6 +230,95 @@ const Roadmap = () => {
       </Flex>
     );
   }
+
+  // DOM manipulation to highlight weekends and holidays
+  useEffect(() => {
+    if (viewMode !== ViewMode.Day || tasks.length === 0) return;
+
+    const highlightTimer = setTimeout(() => {
+      const svg = document.querySelector('.gantt svg');
+      if (!svg) return;
+
+      const grid = svg.querySelector('.grid');
+      if (!grid) return;
+
+      // Clean up previous custom markers
+      const existing = svg.querySelectorAll('.custom-holiday-marker');
+      existing.forEach(e => e.remove());
+
+      const minDate = new Date(Math.min(...tasks.map(t => t.start.getTime())));
+      minDate.setHours(0, 0, 0, 0);
+      const ganttStartDate = new Date(minDate);
+      ganttStartDate.setDate(ganttStartDate.getDate() - 1);
+
+      const maxDate = new Date(Math.max(...tasks.map(t => t.end.getTime())));
+      maxDate.setHours(0, 0, 0, 0);
+      const ganttEndDate = new Date(maxDate);
+      ganttEndDate.setDate(ganttEndDate.getDate() + 2);
+
+      const totalDays = Math.ceil((ganttEndDate.getTime() - ganttStartDate.getTime()) / (1000 * 3600 * 24));
+      const colWidth = 60; 
+      const headerHeight = 50; 
+      const rowHeight = 50;
+
+      const fragment = document.createDocumentFragment();
+
+      for (let i = 0; i <= totalDays; i++) {
+        const currentDate = new Date(ganttStartDate);
+        currentDate.setDate(currentDate.getDate() + i);
+        
+        const dayOfWeek = currentDate.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        
+        const offset = currentDate.getTimezoneOffset();
+        const targetDate = new Date(currentDate.getTime() - (offset*60*1000));
+        const dateString = targetDate.toISOString().split('T')[0];
+
+        const natHoliday = holidays.find(h => h.date === dateString);
+        const isEstadual = localHolidays.estaduais.includes(dateString);
+        const isMunicipal = localHolidays.municipais.includes(dateString);
+        
+        const isHoliday = natHoliday || isEstadual || isMunicipal;
+
+        if (isWeekend || isHoliday) {
+          let bgColor = document.body.classList.contains('light') ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)';
+          let titleText = 'Fim de Semana';
+
+          if (natHoliday) {
+            bgColor = 'rgba(255, 99, 132, 0.2)'; 
+            titleText = `Feriado Nacional: ${natHoliday.name}`;
+          } else if (isEstadual) {
+            bgColor = 'rgba(54, 162, 235, 0.2)'; 
+            titleText = `Feriado Estadual`;
+          } else if (isMunicipal) {
+            bgColor = 'rgba(75, 192, 192, 0.2)'; 
+            titleText = `Feriado Municipal`;
+          }
+
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', String(i * colWidth));
+          rect.setAttribute('y', String(headerHeight));
+          rect.setAttribute('width', String(colWidth));
+          rect.setAttribute('height', String(tasks.length * rowHeight));
+          rect.setAttribute('fill', bgColor);
+          rect.setAttribute('class', 'custom-holiday-marker');
+          rect.style.pointerEvents = 'none';
+          
+          if (isHoliday) {
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+            title.textContent = titleText;
+            rect.appendChild(title);
+          }
+          
+          fragment.appendChild(rect);
+        }
+      }
+
+      grid.prepend(fragment);
+    }, 300);
+
+    return () => clearTimeout(highlightTimer);
+  }, [viewMode, tasks, holidays, localHolidays]);
 
   return (
     <Box p="6" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
