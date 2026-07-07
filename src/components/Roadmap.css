@@ -13,61 +13,57 @@
 
 /* Custom Holiday Marker - Rendered underneath */
 .custom-holiday-marker {
-    mix-blend-mode: overlay;
+    fill: var(--gray-a4);
 }
 
 /* Base Bar Styling */
 .gantt .bar-wrapper .bar {
-    fill: var(--accent-3);
+    fill: var(--gray-8);
     rx: 6px;
     ry: 6px;
-    stroke: var(--accent-8);
-    stroke-width: 1px;
+    stroke: none;
 }
 
 .gantt .bar-wrapper .bar-progress {
-    fill: var(--accent-9);
+    fill: var(--gray-10);
     rx: 6px;
     ry: 6px;
 }
 
 /* Text inside bars */
 .gantt .bar-wrapper .bar-label {
-    fill: var(--gray-12);
-    font-weight: 500;
+    fill: white !important;
+    font-weight: 600;
     font-size: 12px;
 }
 
 /* Status: Done */
 .gantt .gantt-ticket-task.status-done .bar {
-    fill: var(--grass-3);
-    stroke: var(--grass-8);
+    fill: var(--grass-9);
 }
 .gantt .gantt-ticket-task.status-done .bar-progress {
-    fill: var(--grass-9);
+    fill: var(--grass-10);
 }
 
 /* Status: In Progress */
 .gantt .gantt-ticket-task.status-in-progress .bar {
-    fill: var(--blue-3);
-    stroke: var(--blue-8);
+    fill: var(--blue-9);
 }
 .gantt .gantt-ticket-task.status-in-progress .bar-progress {
-    fill: var(--blue-9);
+    fill: var(--blue-10);
 }
 
 /* Group Tasks (Projects) */
 .gantt .gantt-group-task .bar {
     fill: var(--gray-4);
-    stroke: var(--gray-8);
-    stroke-width: 2px;
+    stroke: var(--gray-7);
+    stroke-width: 1px;
 }
 .gantt .gantt-group-task .bar-progress {
-    fill: var(--gray-10);
+    fill: var(--gray-6);
 }
 .gantt .gantt-group-task .bar-label {
-    font-weight: bold;
-    fill: var(--gray-12);
+    fill: var(--gray-12) !important;
 }
 
 /* Popup styling */

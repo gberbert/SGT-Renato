@@ -1,9 +1,25 @@
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db, storage, auth } from '../firebase';
+import { createNotification } from './notificationService';
 
 const COLLECTION_NAME = 'tickets';
 const USERS_COLLECTION = 'users';
+
+export const extractMentionsAndNotify = async (htmlContent, title, message, link) => {
+  if (!htmlContent) return;
+  const regex = /data-type="mention" data-id="([^"]+)"/g;
+  const matches = [...htmlContent.matchAll(regex)];
+  const userIds = [...new Set(matches.map(m => m[1]))];
+  
+  const currentUserUid = auth?.currentUser?.uid;
+  
+  for (const uid of userIds) {
+    if (uid !== currentUserUid) {
+      await createNotification(uid, title, message, link);
+    }
+  }
+};
 
 export const getUserRole = async (user) => {
   if (!user) return 'user';
@@ -59,6 +75,15 @@ export const createTicket = async (ticketData) => {
       updatedAt: new Date()
     });
     await logTicketAction(docRef.id, 'Criou o ticket', ticketData.assignee || 'Sistema');
+    const userName = auth?.currentUser?.displayName || 'Sistema';
+    if (ticketData.description) {
+      await extractMentionsAndNotify(
+        ticketData.description,
+        'Mencionaram você!',
+        `${userName} mencionou você na descrição de um ticket.`,
+        null
+      );
+    }
     return docRef.id;
   } catch (error) {
     console.error("Erro ao criar ticket:", error);
@@ -89,6 +114,14 @@ export const updateTicket = async (ticketId, updates, userName = 'Sistema') => {
     });
     // For simplicity, we just say it was updated, but we could diff the updates
     await logTicketAction(ticketId, 'Atualizou os detalhes do ticket', userName);
+    if (updates.description) {
+      await extractMentionsAndNotify(
+        updates.description,
+        'Mencionaram você!',
+        `${userName} mencionou você ao editar um ticket.`,
+        null
+      );
+    }
   } catch (error) {
     console.error("Erro ao atualizar ticket:", error);
     throw error;
@@ -102,6 +135,14 @@ export const addComment = async (ticketId, commentData) => {
       ...commentData,
       createdAt: new Date()
     });
+    if (commentData.text) {
+      await extractMentionsAndNotify(
+        commentData.text,
+        'Nova menção!',
+        `${commentData.userName || 'Alguém'} mencionou você em um comentário de ticket.`,
+        null
+      );
+    }
   } catch (error) {
     console.error("Erro ao adicionar comentário:", error);
     throw error;

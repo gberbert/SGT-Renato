@@ -263,37 +263,25 @@ const Roadmap = () => {
       const grid = svg.querySelector('.grid');
       if (!grid) return;
 
+      // Clear existing markers to prevent overlapping opacities
+      grid.querySelectorAll('.custom-holiday-marker').forEach(el => el.remove());
+
       // In Frappe, the dates are rendered as `<text>` elements in `.grid-header`
       const dateNodes = svg.querySelectorAll('.grid-header .lower-text');
-      const isLightMode = !!document.querySelector('.radix-themes.light, [data-theme="light"], .light');
 
       dateNodes.forEach(node => {
-        // Simple heuristic: if it contains "Sáb" or "Dom", it's a weekend
-        // Or we can parse the date if we know Frappe's mapping.
-        // Actually, let's just color columns based on the x position of text nodes!
         const textContent = node.textContent;
         const isWeekend = textContent.includes('Sáb') || textContent.includes('Dom') || textContent.includes('Sat') || textContent.includes('Sun');
         
-        // Holidays: Frappe renders day numbers (e.g., '14' for 14th). To match holidays, we need real dates.
-        // But for weekends, textContent works.
-        
         if (isWeekend) {
           const x = node.getAttribute('x');
-          // Find the column width from the background rects
-          const bgRect = svg.querySelector('.grid-bg');
-          // Actually, frappe uses `.tick` lines, we can get spacing from them
-          const tickLine = svg.querySelector('.tick');
           const colWidth = 38; // Default in frappe for Day view
-
-          let bgColor = isLightMode ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)';
           
           const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-          // Adjust x slightly to align with column center
           rect.setAttribute('x', String(parseFloat(x) - colWidth/2));
           rect.setAttribute('y', '0');
           rect.setAttribute('width', String(colWidth));
           rect.setAttribute('height', '4000'); 
-          rect.setAttribute('fill', bgColor);
           rect.setAttribute('class', 'custom-holiday-marker');
           rect.style.pointerEvents = 'none';
 
