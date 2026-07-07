@@ -16,8 +16,8 @@ import { subscribeToTickets, updateTicketStatus, updateTicket } from '../service
 import { subscribeToWorkflows } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { auth } from '../firebase';
-import { Loader2, LayoutList } from 'lucide-react';
-import { Button, Flex, Select, Text, Card } from '@radix-ui/themes';
+import { Loader2, LayoutList, List, LayoutGrid } from 'lucide-react';
+import { Button, Flex, Select, Text, Table, Badge, Card } from '@radix-ui/themes';
 
 const DEFAULT_COLUMNS = [
   { id: 'col-backlog', title: 'Backlog', statusId: 'col-backlog' },
@@ -27,7 +27,6 @@ const DEFAULT_COLUMNS = [
   { id: 'col-done', title: 'Concluído', statusId: 'col-done' }
 ];
 
-
 const KanbanBoard = ({ onCardClick }) => {
   const [tickets, setTickets] = useState([]);
   const [columns, setColumns] = useState([]);
@@ -35,6 +34,7 @@ const KanbanBoard = ({ onCardClick }) => {
   const [error, setError] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
   const [useSwimlanes, setUseSwimlanes] = useState(false);
+  const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'list'
 
   const [projects, setProjects] = useState([]);
   const [workflows, setWorkflows] = useState([]);
@@ -79,7 +79,6 @@ const KanbanBoard = ({ onCardClick }) => {
     };
   }, []);
 
-  // Update columns when project changes
   useEffect(() => {
     if (selectedProjectId === 'all') {
       setColumns(DEFAULT_COLUMNS);
@@ -123,7 +122,6 @@ const KanbanBoard = ({ onCardClick }) => {
 
     const activeId = active.id;
     const overId = over.id;
-
     if (activeId === overId) return;
 
     const isActiveTicket = active.data.current?.type === 'Ticket';
@@ -132,7 +130,6 @@ const KanbanBoard = ({ onCardClick }) => {
 
     if (!isActiveTicket) return;
 
-    // Movendo ticket sobre outro ticket
     if (isOverTicket) {
       const activeIndex = tickets.findIndex(t => t.id === activeId);
       const overIndex = tickets.findIndex(t => t.id === overId);
@@ -149,7 +146,6 @@ const KanbanBoard = ({ onCardClick }) => {
       }
     }
 
-    // Movendo ticket sobre uma coluna vazia
     if (isOverColumn) {
       const activeIndex = tickets.findIndex(t => t.id === activeId);
       if (tickets[activeIndex].columnId !== overId) {
@@ -187,7 +183,6 @@ const KanbanBoard = ({ onCardClick }) => {
     if (targetColumnId) {
       const activeTicketOriginal = tickets.find(t => t.id === activeId);
       
-      // If using swimlanes, targetColumnId might be "col-todo___Renato"
       let finalColumnId = targetColumnId;
       let finalAssignee = null;
       if (targetColumnId.includes('___')) {
@@ -217,9 +212,7 @@ const KanbanBoard = ({ onCardClick }) => {
   const dropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({
       styles: {
-        active: {
-          opacity: '0.5',
-        },
+        active: { opacity: '0.5' },
       },
     }),
   };
@@ -230,11 +223,8 @@ const KanbanBoard = ({ onCardClick }) => {
         <div style={{ color: 'var(--danger)', fontSize: '48px' }}>⚠️</div>
         <h3 style={{ color: 'var(--text-main)' }}>Erro de Conexão com o Firebase</h3>
         <p style={{ color: 'var(--text-muted)', maxWidth: '600px', textAlign: 'center' }}>
-          Ocorreu um erro ao tentar ler os dados. Isso geralmente acontece se o banco de dados <b>Firestore</b> ainda não foi criado ou se as <b>Regras de Segurança</b> estão bloqueando a leitura.
-        </p>
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '16px', borderRadius: '8px', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
           {error}
-        </div>
+        </p>
       </div>
     );
   }
@@ -256,14 +246,14 @@ const KanbanBoard = ({ onCardClick }) => {
     : [null];
 
   return (
-    <div className="kanban-wrapper">
-      <div className="kanban-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+    <div className="kanban-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="kanban-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <Flex align="center" gap="4">
-          <h2>Quadro Kanban</h2>
+          <h2>Demandas</h2>
           <Select.Root value={selectedProjectId} onValueChange={setSelectedProjectId}>
             <Select.Trigger style={{ width: '250px' }} />
             <Select.Content>
-              <Select.Item value="all">Ver Todos os Tickets</Select.Item>
+              <Select.Item value="all">Ver Todos os Projetos</Select.Item>
               {projects.map(p => (
                 <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
               ))}
@@ -271,61 +261,127 @@ const KanbanBoard = ({ onCardClick }) => {
           </Select.Root>
         </Flex>
 
-        <Button 
-          variant={useSwimlanes ? 'solid' : 'soft'} 
-          onClick={() => setUseSwimlanes(!useSwimlanes)}
-        >
-          <LayoutList size={16} /> 
-          {useSwimlanes ? 'Agrupar por Coluna' : 'Agrupar por Responsável (Swimlanes)'}
-        </Button>
+        <Flex gap="3">
+          {viewMode === 'kanban' && (
+            <Button 
+              variant={useSwimlanes ? 'solid' : 'soft'} 
+              onClick={() => setUseSwimlanes(!useSwimlanes)}
+            >
+              <LayoutList size={16} /> 
+              {useSwimlanes ? 'Agrupar por Coluna' : 'Swimlanes (Responsável)'}
+            </Button>
+          )}
+
+          <Button 
+            variant={viewMode === 'kanban' ? 'solid' : 'soft'} 
+            onClick={() => setViewMode('kanban')}
+          >
+            <LayoutGrid size={16} /> Kanban
+          </Button>
+
+          <Button 
+            variant={viewMode === 'list' ? 'solid' : 'soft'} 
+            onClick={() => setViewMode('list')}
+          >
+            <List size={16} /> Lista
+          </Button>
+        </Flex>
       </div>
 
-      <div className="kanban-board" style={{ display: 'flex', flexDirection: 'column', gap: '32px', overflowX: 'auto' }}>
-        <DndContext 
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          {assignees.map(assignee => (
-            <div key={assignee || 'all'} className="swimlane-container" style={{ minWidth: 'max-content' }}>
-              {useSwimlanes && (
-                <div style={{ padding: '8px 16px', background: 'var(--surface)', borderRadius: '8px', marginBottom: '16px', fontWeight: 'bold' }}>
-                  Responsável: <span style={{ color: 'var(--primary)' }}>{assignee}</span>
-                </div>
-              )}
-              <Flex gap="4">
-                {columns.map(col => {
-                  const filteredTicketsForCol = filteredTickets.filter(t => {
-                    if (t.columnId !== col.statusId || t.parentId) return false;
-                    if (useSwimlanes) {
-                      const tAssignee = t.assignee || 'Sem responsável';
-                      return tAssignee === assignee;
-                    }
-                    return true;
-                  });
-
-                  const colId = useSwimlanes ? `${col.statusId}___${assignee}` : col.statusId;
-
-                  return (
-                    <KanbanColumn 
-                      key={colId} 
-                      column={{ ...col, id: colId }} 
-                      tickets={filteredTicketsForCol} 
-                      allTickets={filteredTickets}
-                      onCardClick={onCardClick}
-                    />
-                  );
-                })}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        {viewMode === 'list' ? (
+          <div style={{ paddingRight: '16px' }}>
+            {columns.map(col => {
+              const colTickets = filteredTickets.filter(t => t.columnId === col.statusId && !t.parentId);
+              if (colTickets.length === 0) return null; // Esconde colunas vazias na lista para ser mais limpo
+              
+              return (
+                <Card key={col.id} mb="4" size="3">
+                  <Text as="h3" size="4" weight="bold" mb="3">{col.title} <Badge ml="2" radius="full">{colTickets.length}</Badge></Text>
+                  <Table.Root variant="surface">
+                    <Table.Header>
+                      <Table.Row>
+                        <Table.ColumnHeaderCell>Código</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Título</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Sistema</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Responsável</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Criação</Table.ColumnHeaderCell>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                      {colTickets.map(t => (
+                        <Table.Row key={t.id} align="center" style={{ cursor: 'pointer' }} onClick={() => onCardClick(t.id)}>
+                          <Table.Cell><Text weight="bold" color="indigo">{t.code}</Text></Table.Cell>
+                          <Table.Cell>{t.title}</Table.Cell>
+                          <Table.Cell>
+                            {t.system ? <Badge color="blue" variant="soft">{t.system}</Badge> : '-'}
+                          </Table.Cell>
+                          <Table.Cell>{t.assignee || 'Sem responsável'}</Table.Cell>
+                          <Table.Cell>
+                            {t.createdAt ? new Date(t.createdAt.toDate()).toLocaleDateString() : '-'}
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table.Root>
+                </Card>
+              );
+            })}
+            {filteredTickets.length === 0 && (
+              <Flex justify="center" align="center" style={{ padding: '40px', background: 'var(--surface)', borderRadius: '8px' }}>
+                <Text color="gray">Nenhuma demanda encontrada.</Text>
               </Flex>
-            </div>
-          ))}
+            )}
+          </div>
+        ) : (
+          <div className="kanban-board" style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '32px' }}>
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+            >
+              {assignees.map(assignee => (
+                <div key={assignee || 'all'} className="swimlane-container" style={{ minWidth: 'max-content' }}>
+                  {useSwimlanes && (
+                    <div style={{ padding: '8px 16px', background: 'var(--surface)', borderRadius: '8px', marginBottom: '16px', fontWeight: 'bold' }}>
+                      Responsável: <span style={{ color: 'var(--primary)' }}>{assignee}</span>
+                    </div>
+                  )}
+                  <Flex gap="4">
+                    {columns.map(col => {
+                      const filteredTicketsForCol = filteredTickets.filter(t => {
+                        if (t.columnId !== col.statusId || t.parentId) return false;
+                        if (useSwimlanes) {
+                          const tAssignee = t.assignee || 'Sem responsável';
+                          return tAssignee === assignee;
+                        }
+                        return true;
+                      });
 
-          <DragOverlay dropAnimation={dropAnimation}>
-            {activeTicket ? <KanbanCard ticket={activeTicket} /> : null}
-          </DragOverlay>
-        </DndContext>
+                      const colId = useSwimlanes ? `${col.statusId}___${assignee}` : col.statusId;
+
+                      return (
+                        <KanbanColumn 
+                          key={colId} 
+                          column={{ ...col, id: colId }} 
+                          tickets={filteredTicketsForCol} 
+                          allTickets={filteredTickets}
+                          onCardClick={onCardClick}
+                        />
+                      );
+                    })}
+                  </Flex>
+                </div>
+              ))}
+
+              <DragOverlay dropAnimation={dropAnimation}>
+                {activeTicket ? <KanbanCard ticket={activeTicket} /> : null}
+              </DragOverlay>
+            </DndContext>
+          </div>
+        )}
       </div>
     </div>
   );

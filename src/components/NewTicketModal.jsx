@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextField, TextArea, Select } from '@radix-ui/themes';
 import { createTicket } from '../services/ticketService';
-import { subscribeToTicketTypes, subscribeToWorkflows } from '../services/settingsService';
+import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { auth } from '../firebase';
 import { Loader2 } from 'lucide-react';
-
-const DEFAULT_COLUMNS = [
-  { id: 'col-backlog', title: 'Backlog', statusId: 'col-backlog' },
-  { id: 'col-todo', title: 'A Fazer', statusId: 'col-todo' },
-  { id: 'col-in-progress', title: 'Em Andamento', statusId: 'col-in-progress' },
-  { id: 'col-review', title: 'Em Validação', statusId: 'col-review' },
-  { id: 'col-done', title: 'Concluído', statusId: 'col-done' }
-];
 
 const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   const [loading, setLoading] = useState(false);
@@ -21,12 +13,20 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     description: '',
     type: 'Task',
     priority: 'medium',
-    columnId: '',
-    projectId: ''
+    projectId: '',
+    externalTicket: '',
+    system: '',
+    component: '',
+    assignee: '',
+    startDate: '',
+    endDate: ''
   });
+
   const [ticketTypes, setTicketTypes] = useState([]);
-  const [workflows, setWorkflows] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [systems, setSystems] = useState([]);
+  const [components, setComponents] = useState([]);
 
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
@@ -35,16 +35,17 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         setFormData(prev => ({ ...prev, type: data[0].name }));
       }
     });
-    const unsubscribeWorkflows = subscribeToWorkflows((data) => {
-      setWorkflows(data);
-    });
-    const unsubscribeProjects = subscribeToProjects((data) => {
-      setProjects(data);
-    });
+    const unsubscribeProjects = subscribeToProjects(setProjects);
+    const unsubscribeUsers = subscribeToUsers(setUsers);
+    const unsubscribeSystems = subscribeToSystems(setSystems);
+    const unsubscribeComponents = subscribeToComponents(setComponents);
+
     return () => {
       unsubscribeTypes();
-      unsubscribeWorkflows();
       unsubscribeProjects();
+      unsubscribeUsers();
+      unsubscribeSystems();
+      unsubscribeComponents();
     };
   }, []);
 
@@ -66,17 +67,26 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
       const proj = projects.find(p => p.id === formData.projectId);
       const projKey = proj ? proj.key : 'SGT';
 
+      // Padrão: Todo novo ticket entra na coluna Backlog
+      const DEFAULT_COLUMN_ID = 'col-backlog';
+
       const ticketData = {
         code: `${projKey}-${Math.floor(Math.random() * 9000) + 1000}`,
         title: formData.title,
         description: formData.description,
         type: formData.type,
         priority: formData.priority,
-        columnId: formData.columnId,
+        columnId: DEFAULT_COLUMN_ID, // Fixado como Backlog
         projectId: formData.projectId,
-        assignee: auth.currentUser?.email || 'Desconhecido',
+        assignee: formData.assignee || 'Sem responsável',
+        externalTicket: formData.externalTicket,
+        system: formData.system,
+        component: formData.component,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
         comments: 0
       };
+      
       if (parentId) {
         ticketData.parentId = parentId;
       }
@@ -88,8 +98,13 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         description: '',
         type: 'Task',
         priority: 'medium',
-        columnId: '',
-        projectId: ''
+        projectId: '',
+        externalTicket: '',
+        system: '',
+        component: '',
+        assignee: '',
+        startDate: '',
+        endDate: ''
       });
       onClose();
     } catch (error) {
@@ -100,44 +115,39 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     }
   };
 
-  const getAvailableColumns = () => {
-    if (!formData.projectId) return [];
-    const proj = projects.find(p => p.id === formData.projectId);
-    if (!proj || !proj.workflowId) return DEFAULT_COLUMNS;
-    const wf = workflows.find(w => w.id === proj.workflowId);
-    return wf && wf.columns && wf.columns.length > 0 ? wf.columns : DEFAULT_COLUMNS;
-  };
-
-  const availableColumns = getAvailableColumns();
-
-  // If selected column is not in available, reset it
-  useEffect(() => {
-    if (availableColumns.length > 0 && !availableColumns.find(c => c.id === formData.columnId)) {
-      setFormData(prev => ({ ...prev, columnId: availableColumns[0].id }));
-    }
-  }, [availableColumns, formData.columnId]);
-
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="500px">
+      <Dialog.Content maxWidth="600px">
         <Dialog.Title>Novo Ticket</Dialog.Title>
         <Dialog.Description size="2" mb="4" color="gray">
-          Crie uma nova demanda para sua equipe.
+          Crie uma nova demanda (O status inicial será sempre 'Backlog').
         </Dialog.Description>
         
         <form onSubmit={handleSubmit}>
           <Flex direction="column" gap="4">
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">Projeto</Text>
-              <Select.Root value={formData.projectId} onValueChange={(v) => handleSelectChange('projectId', v)}>
-                <Select.Trigger placeholder="Selecione um projeto..." style={{ width: '100%' }} />
-                <Select.Content>
-                  {projects.map(p => (
-                    <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </label>
+            <Flex gap="4">
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Projeto</Text>
+                <Select.Root value={formData.projectId} onValueChange={(v) => handleSelectChange('projectId', v)}>
+                  <Select.Trigger placeholder="Selecione um projeto..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    {projects.map(p => (
+                      <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Ticket Externo</Text>
+                <TextField.Root 
+                  name="externalTicket" 
+                  placeholder="Ex: DEMANDA-123"
+                  value={formData.externalTicket}
+                  onChange={handleChange}
+                />
+              </label>
+            </Flex>
 
             <label>
               <Text as="div" size="2" mb="1" weight="bold">Título do Ticket</Text>
@@ -162,8 +172,6 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                       <>
                         <Select.Item value="Task">Tarefa (Task)</Select.Item>
                         <Select.Item value="Bug">Bug (Erro)</Select.Item>
-                        <Select.Item value="Story">História (Story)</Select.Item>
-                        <Select.Item value="Epic">Épico (Epic)</Select.Item>
                       </>
                     )}
                   </Select.Content>
@@ -183,24 +191,70 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                 </Select.Root>
               </label>
             </Flex>
-            
+
+            <Flex gap="4">
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Sistema</Text>
+                <Select.Root value={formData.system} onValueChange={(v) => handleSelectChange('system', v)}>
+                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    {systems.map(s => (
+                      <Select.Item key={s.id} value={s.name}>{s.name}</Select.Item>
+                    ))}
+                    {systems.length === 0 && <Select.Item value="none" disabled>Nenhum cadastrado</Select.Item>}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Componente (Tag)</Text>
+                <Select.Root value={formData.component} onValueChange={(v) => handleSelectChange('component', v)}>
+                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    {components.map(c => (
+                      <Select.Item key={c.id} value={c.name}>{c.name}</Select.Item>
+                    ))}
+                    {components.length === 0 && <Select.Item value="none" disabled>Nenhum cadastrado</Select.Item>}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+            </Flex>
+
             <label>
-              <Text as="div" size="2" mb="1" weight="bold">Status Inicial</Text>
-              <Select.Root 
-                value={formData.columnId} 
-                onValueChange={(v) => handleSelectChange('columnId', v)}
-                disabled={!formData.projectId}
-              >
-                <Select.Trigger placeholder={formData.projectId ? "Selecione o status" : "Selecione um projeto primeiro"} style={{ width: '100%' }} />
+              <Text as="div" size="2" mb="1" weight="bold">Responsável</Text>
+              <Select.Root value={formData.assignee} onValueChange={(v) => handleSelectChange('assignee', v)}>
+                <Select.Trigger placeholder="Selecione o responsável..." style={{ width: '100%' }} />
                 <Select.Content>
-                  {availableColumns.length > 0 ? availableColumns.map(c => (
-                    <Select.Item key={c.id} value={c.id}>{c.title}</Select.Item>
-                  )) : (
-                    <Select.Item value="none" disabled>Nenhum status disponível</Select.Item>
-                  )}
+                  <Select.Item value="">Sem responsável</Select.Item>
+                  {users.map(u => {
+                    const label = u.shortName || u.displayName || u.email;
+                    return <Select.Item key={u.id} value={label}>{label}</Select.Item>
+                  })}
                 </Select.Content>
               </Select.Root>
             </label>
+
+            <Flex gap="4">
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Data Início</Text>
+                <TextField.Root 
+                  type="date"
+                  name="startDate" 
+                  value={formData.startDate}
+                  onChange={handleChange}
+                />
+              </label>
+
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Data Fim</Text>
+                <TextField.Root 
+                  type="date"
+                  name="endDate" 
+                  value={formData.endDate}
+                  onChange={handleChange}
+                />
+              </label>
+            </Flex>
             
             <label>
               <Text as="div" size="2" mb="1" weight="bold">Descrição (Opcional)</Text>
@@ -209,7 +263,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                 placeholder="Detalhes adicionais sobre o ticket..."
                 value={formData.description}
                 onChange={handleChange}
-                rows={4}
+                rows={3}
               />
             </label>
           </Flex>
@@ -220,7 +274,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                 Cancelar
               </Button>
             </Dialog.Close>
-            <Button type="submit" disabled={loading || !formData.title || !formData.projectId || !formData.columnId}>
+            <Button type="submit" disabled={loading || !formData.title || !formData.projectId}>
               {loading ? <Loader2 className="spinner-icon" size={16} /> : 'Salvar Ticket'}
             </Button>
           </Flex>

@@ -92,3 +92,78 @@ export const updateUserRole = async (userId, newRole) => {
     throw error;
   }
 };
+
+export const updateUser = async (userId, data) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      ...data,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar usuário:", error);
+    throw error;
+  }
+};
+
+export const subscribeToSystems = (callback) => {
+  const q = query(collection(db, 'systems'), orderBy('createdAt', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const systems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(systems);
+  });
+};
+
+export const saveSystem = async (systemData) => {
+  try {
+    if (systemData.id) {
+      const docRef = doc(db, 'systems', systemData.id);
+      await updateDoc(docRef, { ...systemData, updatedAt: serverTimestamp() });
+    } else {
+      await addDoc(collection(db, 'systems'), { ...systemData, createdAt: serverTimestamp() });
+    }
+  } catch (error) {
+    console.error("Erro ao salvar sistema:", error);
+    throw error;
+  }
+};
+
+export const deleteSystem = async (systemId) => {
+  try {
+    await deleteDoc(doc(db, 'systems', systemId));
+  } catch (error) {
+    console.error("Erro ao excluir sistema:", error);
+    throw error;
+  }
+};
+
+export const subscribeToComponents = (callback) => {
+  const q = query(collection(db, 'components'), orderBy('createdAt', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const comps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(comps);
+  });
+};
+
+export const saveComponent = async (compData) => {
+  try {
+    if (compData.id) {
+      const docRef = doc(db, 'components', compData.id);
+      await updateDoc(docRef, { ...compData, updatedAt: serverTimestamp() });
+    } else {
+      await addDoc(collection(db, 'components'), { ...compData, createdAt: serverTimestamp() });
+    }
+  } catch (error) {
+    console.error("Erro ao salvar componente:", error);
+    throw error;
+  }
+};
+
+export const deleteComponent = async (compId) => {
+  try {
+    await deleteDoc(doc(db, 'components', compId));
+  } catch (error) {
+    console.error("Erro ao excluir componente:", error);
+    throw error;
+  }
+};

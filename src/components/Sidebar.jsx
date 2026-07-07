@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu } from 'lucide-react';
+import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X } from 'lucide-react';
 
 const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
   const menuItems = [
@@ -18,7 +18,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
           <span className="logo-text">SGT</span>
         </div>
         <button className="menu-toggle" onClick={toggleSidebar}>
-          <Menu size={24} />
+          <X size={24} />
         </button>
       </div>
 
@@ -28,6 +28,9 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
             <li key={index}>
               <NavLink 
                 to={item.path} 
+                onClick={() => {
+                  if (isOpen) toggleSidebar();
+                }}
                 className={({ isActive }) => isActive ? "active-link" : ""}
                 style={({ isActive }) => ({
                   backgroundColor: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
@@ -52,6 +55,9 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user }) => {
               <li>
                 <NavLink 
                   to="/configuracoes"
+                  onClick={() => {
+                    if (isOpen) toggleSidebar();
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

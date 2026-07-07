@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Box, Text, Card, Flex, Button, Table, Badge, Dialog, TextField, Select, IconButton } from '@radix-ui/themes';
-import { subscribeToTicketTypes, saveTicketType, deleteTicketType, subscribeToWorkflows, saveWorkflow, deleteWorkflow, subscribeToUsers, updateUserRole } from '../services/settingsService';
-import { Loader2, Trash2, Settings2, Database } from 'lucide-react';
+import { 
+  subscribeToTicketTypes, saveTicketType, deleteTicketType, 
+  subscribeToWorkflows, saveWorkflow, deleteWorkflow, 
+  subscribeToUsers, updateUserRole, updateUser,
+  subscribeToSystems, saveSystem, deleteSystem,
+  subscribeToComponents, saveComponent, deleteComponent 
+} from '../services/settingsService';
+import { Loader2, Trash2, Settings2, Database, Edit2 } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import { db } from '../firebase';
 import { writeBatch, doc } from 'firebase/firestore';
@@ -16,9 +22,15 @@ const Settings = () => {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // New Type Modal State
-  const [isNewTypeModalOpen, setIsNewTypeModalOpen] = useState(false);
-  const [newTypeData, setNewTypeData] = useState({ name: '', color: 'blue', icon: 'Bug' });
+  const [systems, setSystems] = useState([]);
+  const [loadingSystems, setLoadingSystems] = useState(true);
+
+  const [components, setComponents] = useState([]);
+  const [loadingComponents, setLoadingComponents] = useState(true);
+
+  // New/Edit Type Modal State
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [typeData, setTypeData] = useState({ name: '', color: 'blue', icon: 'Bug' });
   const [savingType, setSavingType] = useState(false);
 
   // New Workflow Modal State
@@ -27,6 +39,21 @@ const Settings = () => {
   const [savingWorkflow, setSavingWorkflow] = useState(false);
   
   const [selectedWorkflowForStages, setSelectedWorkflowForStages] = useState(null);
+
+  // System Modal State
+  const [isSystemModalOpen, setIsSystemModalOpen] = useState(false);
+  const [systemData, setSystemData] = useState({ name: '' });
+  const [savingSystem, setSavingSystem] = useState(false);
+
+  // Component Modal State
+  const [isComponentModalOpen, setIsComponentModalOpen] = useState(false);
+  const [componentData, setComponentData] = useState({ name: '' });
+  const [savingComponent, setSavingComponent] = useState(false);
+
+  // User Edit Modal State
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUserData, setEditingUserData] = useState({ id: '', shortName: '' });
+  const [savingUser, setSavingUser] = useState(false);
 
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
@@ -41,21 +68,40 @@ const Settings = () => {
       setUsers(data);
       setLoadingUsers(false);
     });
+    const unsubscribeSystems = subscribeToSystems((data) => {
+      setSystems(data);
+      setLoadingSystems(false);
+    });
+    const unsubscribeComponents = subscribeToComponents((data) => {
+      setComponents(data);
+      setLoadingComponents(false);
+    });
     return () => {
       unsubscribeTypes();
       unsubscribeWorkflows();
       unsubscribeUsers();
+      unsubscribeSystems();
+      unsubscribeComponents();
     };
   }, []);
 
+  const openNewTypeModal = () => {
+    setTypeData({ name: '', color: 'blue', icon: 'Bug' });
+    setIsTypeModalOpen(true);
+  };
+
+  const openEditTypeModal = (type) => {
+    setTypeData(type);
+    setIsTypeModalOpen(true);
+  };
+
   const handleSaveType = async (e) => {
     e.preventDefault();
-    if (!newTypeData.name.trim()) return;
+    if (!typeData.name.trim()) return;
     setSavingType(true);
     try {
-      await saveTicketType(newTypeData);
-      setNewTypeData({ name: '', color: 'blue', icon: 'Bug' });
-      setIsNewTypeModalOpen(false);
+      await saveTicketType(typeData);
+      setIsTypeModalOpen(false);
     } catch (err) {
       alert("Erro ao salvar tipo.");
     } finally {
@@ -103,6 +149,80 @@ const Settings = () => {
     }
   };
 
+  const openEditUserModal = (user) => {
+    setEditingUserData({ id: user.id, shortName: user.shortName || '' });
+    setIsUserModalOpen(true);
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    setSavingUser(true);
+    try {
+      await updateUser(editingUserData.id, { shortName: editingUserData.shortName });
+      setIsUserModalOpen(false);
+    } catch (e) {
+      alert("Erro ao atualizar usuário.");
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const openNewSystemModal = () => {
+    setSystemData({ name: '' });
+    setIsSystemModalOpen(true);
+  };
+
+  const openEditSystemModal = (sys) => {
+    setSystemData(sys);
+    setIsSystemModalOpen(true);
+  };
+
+  const handleSaveSystem = async (e) => {
+    e.preventDefault();
+    if (!systemData.name.trim()) return;
+    setSavingSystem(true);
+    try {
+      await saveSystem(systemData);
+      setIsSystemModalOpen(false);
+    } catch (err) {
+      alert("Erro ao salvar sistema.");
+    } finally {
+      setSavingSystem(false);
+    }
+  };
+
+  const handleDeleteSystem = async (id) => {
+    if (confirm("Deseja realmente excluir este sistema?")) await deleteSystem(id);
+  };
+
+  const openNewComponentModal = () => {
+    setComponentData({ name: '' });
+    setIsComponentModalOpen(true);
+  };
+
+  const openEditComponentModal = (comp) => {
+    setComponentData(comp);
+    setIsComponentModalOpen(true);
+  };
+
+  const handleSaveComponent = async (e) => {
+    e.preventDefault();
+    if (!componentData.name.trim()) return;
+    setSavingComponent(true);
+    try {
+      await saveComponent(componentData);
+      setIsComponentModalOpen(false);
+    } catch (err) {
+      alert("Erro ao salvar componente.");
+    } finally {
+      setSavingComponent(false);
+    }
+  };
+
+  const handleDeleteComponent = async (id) => {
+    if (confirm("Deseja realmente excluir este componente?")) await deleteComponent(id);
+  };
+
   const handleInjectHolidays = async () => {
     try {
       if(!confirm("Atenção! Isso vai gravar 5570 municípios no Firebase. Deseja continuar?")) return;
@@ -121,7 +241,6 @@ const Settings = () => {
         count++;
         total++;
 
-        // O Firestore limita batches a 500 operações
         if (count >= 400) {
           await batch.commit();
           batch = writeBatch(db);
@@ -150,24 +269,28 @@ const Settings = () => {
 
       <Card size="4" style={{ flexGrow: 1 }}>
         <Tabs.Root defaultValue="users">
-          <Tabs.List>
-            <Tabs.Trigger value="users">Usuários e Permissões</Tabs.Trigger>
+          <Tabs.List style={{ flexWrap: 'wrap' }}>
+            <Tabs.Trigger value="users">Usuários</Tabs.Trigger>
+            <Tabs.Trigger value="systems">Sistemas</Tabs.Trigger>
+            <Tabs.Trigger value="components">Componentes (Tags)</Tabs.Trigger>
             <Tabs.Trigger value="ticketTypes">Tipos de Ticket</Tabs.Trigger>
-            <Tabs.Trigger value="workflows">Workflows e Status</Tabs.Trigger>
+            <Tabs.Trigger value="workflows">Workflows</Tabs.Trigger>
           </Tabs.List>
 
           <Box pt="4">
+            {/* USERS TAB */}
             <Tabs.Content value="users">
               <Text as="h2" size="4" weight="bold" mb="4">Gestão de Usuários</Text>
-              <Text color="gray" mb="4" as="p">Aqui listamos todos os usuários do sistema. Altere o papel (Role) para conceder privilégios administrativos.</Text>
+              <Text color="gray" mb="4" as="p">Gerencie papéis e os nomes resumidos exibidos na listagem.</Text>
               
               {loadingUsers ? <Loader2 className="spinner-icon" /> : (
                 <Table.Root variant="surface">
                   <Table.Header>
                     <Table.Row>
                       <Table.ColumnHeaderCell>Nome / E-mail</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Nome Resumido</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell>Data de Ingresso</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell align="right">Papel (Role)</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell align="right">Ações / Papel (Role)</Table.ColumnHeaderCell>
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
@@ -179,17 +302,23 @@ const Settings = () => {
                             <Text size="1" color="gray">{u.email}</Text>
                           </Flex>
                         </Table.Cell>
+                        <Table.Cell>{u.shortName || '-'}</Table.Cell>
                         <Table.Cell>
                           {u.createdAt ? new Date(u.createdAt.toDate()).toLocaleDateString() : 'N/A'}
                         </Table.Cell>
                         <Table.Cell justify="end">
-                          <Select.Root value={u.role} onValueChange={(val) => handleRoleChange(u.id, val)}>
-                            <Select.Trigger />
-                            <Select.Content>
-                              <Select.Item value="user">Membro (User)</Select.Item>
-                              <Select.Item value="admin">Administrador (Admin)</Select.Item>
-                            </Select.Content>
-                          </Select.Root>
+                          <Flex align="center" gap="2" justify="end">
+                            <IconButton size="1" variant="soft" onClick={() => openEditUserModal(u)}>
+                              <Edit2 size={14} />
+                            </IconButton>
+                            <Select.Root value={u.role} onValueChange={(val) => handleRoleChange(u.id, val)}>
+                              <Select.Trigger />
+                              <Select.Content>
+                                <Select.Item value="user">Membro (User)</Select.Item>
+                                <Select.Item value="admin">Admin</Select.Item>
+                              </Select.Content>
+                            </Select.Root>
+                          </Flex>
                         </Table.Cell>
                       </Table.Row>
                     ))}
@@ -198,54 +327,82 @@ const Settings = () => {
               )}
             </Tabs.Content>
 
+            {/* SYSTEMS TAB */}
+            <Tabs.Content value="systems">
+              <Flex justify="between" align="center" mb="4">
+                <Text as="h2" size="4" weight="bold">Sistemas</Text>
+                <Button size="2" onClick={openNewSystemModal}>Novo Sistema</Button>
+              </Flex>
+              {loadingSystems ? <Loader2 className="spinner-icon" /> : (
+                <Table.Root variant="surface">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {systems.map(sys => (
+                      <Table.Row key={sys.id} align="center">
+                        <Table.Cell><Text weight="bold">{sys.name}</Text></Table.Cell>
+                        <Table.Cell justify="end">
+                          <Flex gap="2" justify="end">
+                            <Button size="1" variant="soft" onClick={() => openEditSystemModal(sys)}>
+                              <Edit2 size={14} /> Editar
+                            </Button>
+                            <Button size="1" color="red" variant="soft" onClick={() => handleDeleteSystem(sys.id)}>
+                              <Trash2 size={14} /> Excluir
+                            </Button>
+                          </Flex>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              )}
+            </Tabs.Content>
+
+            {/* COMPONENTS TAB */}
+            <Tabs.Content value="components">
+              <Flex justify="between" align="center" mb="4">
+                <Text as="h2" size="4" weight="bold">Componentes (Tags)</Text>
+                <Button size="2" onClick={openNewComponentModal}>Novo Componente</Button>
+              </Flex>
+              {loadingComponents ? <Loader2 className="spinner-icon" /> : (
+                <Table.Root variant="surface">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {components.map(comp => (
+                      <Table.Row key={comp.id} align="center">
+                        <Table.Cell><Text weight="bold">{comp.name}</Text></Table.Cell>
+                        <Table.Cell justify="end">
+                          <Flex gap="2" justify="end">
+                            <Button size="1" variant="soft" onClick={() => openEditComponentModal(comp)}>
+                              <Edit2 size={14} /> Editar
+                            </Button>
+                            <Button size="1" color="red" variant="soft" onClick={() => handleDeleteComponent(comp.id)}>
+                              <Trash2 size={14} /> Excluir
+                            </Button>
+                          </Flex>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              )}
+            </Tabs.Content>
+
+            {/* TICKET TYPES TAB */}
             <Tabs.Content value="ticketTypes">
               <Flex justify="between" align="center" mb="4">
-                <Text as="h2" size="4" weight="bold">Tipos de Ticket Cadastrados</Text>
-                
-                <Dialog.Root open={isNewTypeModalOpen} onOpenChange={setIsNewTypeModalOpen}>
-                  <Dialog.Trigger>
-                    <Button size="2">Novo Tipo</Button>
-                  </Dialog.Trigger>
-                  <Dialog.Content maxWidth="400px">
-                    <Dialog.Title>Criar Novo Tipo</Dialog.Title>
-                    <form onSubmit={handleSaveType}>
-                      <Flex direction="column" gap="3">
-                        <label>
-                          <Text as="div" size="2" mb="1" weight="bold">Nome</Text>
-                          <TextField.Root 
-                            value={newTypeData.name} 
-                            onChange={(e) => setNewTypeData({...newTypeData, name: e.target.value})} 
-                            placeholder="Ex: Épico, Bug..." 
-                            required 
-                          />
-                        </label>
-                        <label>
-                          <Text as="div" size="2" mb="1" weight="bold">Cor</Text>
-                          <Select.Root value={newTypeData.color} onValueChange={(val) => setNewTypeData({...newTypeData, color: val})}>
-                            <Select.Trigger />
-                            <Select.Content>
-                              <Select.Item value="red">Vermelho</Select.Item>
-                              <Select.Item value="blue">Azul</Select.Item>
-                              <Select.Item value="green">Verde</Select.Item>
-                              <Select.Item value="orange">Laranja</Select.Item>
-                              <Select.Item value="purple">Roxo</Select.Item>
-                            </Select.Content>
-                          </Select.Root>
-                        </label>
-                      </Flex>
-                      <Flex gap="3" mt="4" justify="end">
-                        <Dialog.Close>
-                          <Button variant="soft" color="gray" type="button">Cancelar</Button>
-                        </Dialog.Close>
-                        <Button type="submit" disabled={savingType}>
-                          {savingType ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
-                        </Button>
-                      </Flex>
-                    </form>
-                  </Dialog.Content>
-                </Dialog.Root>
+                <Text as="h2" size="4" weight="bold">Tipos de Ticket</Text>
+                <Button size="2" onClick={openNewTypeModal}>Novo Tipo</Button>
               </Flex>
-              <Text color="gray" mb="4" as="p">Aqui o Admin poderá criar novos tipos e definir cores.</Text>
               
               {loadingTypes ? <Loader2 className="spinner-icon" /> : (
                 <Table.Root variant="surface">
@@ -262,26 +419,26 @@ const Settings = () => {
                         <Table.Cell><Text weight="bold">{type.name}</Text></Table.Cell>
                         <Table.Cell><Badge color={type.color}>{type.color}</Badge></Table.Cell>
                         <Table.Cell justify="end">
-                          <Button size="1" color="red" variant="soft" onClick={() => handleDeleteType(type.id)}>
-                            <Trash2 size={14} /> Excluir
-                          </Button>
+                          <Flex gap="2" justify="end">
+                            <Button size="1" variant="soft" onClick={() => openEditTypeModal(type)}>
+                              <Edit2 size={14} /> Editar
+                            </Button>
+                            <Button size="1" color="red" variant="soft" onClick={() => handleDeleteType(type.id)}>
+                              <Trash2 size={14} /> Excluir
+                            </Button>
+                          </Flex>
                         </Table.Cell>
                       </Table.Row>
                     ))}
-                    {ticketTypes.length === 0 && (
-                      <Table.Row>
-                        <Table.Cell colSpan={3} align="center">Nenhum tipo cadastrado.</Table.Cell>
-                      </Table.Row>
-                    )}
                   </Table.Body>
                 </Table.Root>
               )}
             </Tabs.Content>
 
+            {/* WORKFLOWS TAB */}
             <Tabs.Content value="workflows">
               <Flex justify="between" align="center" mb="4">
                 <Text as="h2" size="4" weight="bold">Workflows de Projetos</Text>
-                
                 <Dialog.Root open={isNewWorkflowModalOpen} onOpenChange={setIsNewWorkflowModalOpen}>
                   <Dialog.Trigger>
                     <Button size="2">Novo Workflow</Button>
@@ -295,7 +452,6 @@ const Settings = () => {
                           <TextField.Root 
                             value={newWorkflowData.name} 
                             onChange={(e) => setNewWorkflowData({...newWorkflowData, name: e.target.value})} 
-                            placeholder="Ex: Fluxo Ágil TI" 
                             required 
                           />
                         </label>
@@ -304,7 +460,6 @@ const Settings = () => {
                           <TextField.Root 
                             value={newWorkflowData.columnsStr} 
                             onChange={(e) => setNewWorkflowData({...newWorkflowData, columnsStr: e.target.value})} 
-                            placeholder="Ex: Backlog, Em Andamento, Concluído" 
                             required
                           />
                         </label>
@@ -321,7 +476,6 @@ const Settings = () => {
                   </Dialog.Content>
                 </Dialog.Root>
               </Flex>
-              <Text color="gray" mb="4" as="p">Configure os grupos de colunas (Workflows) que poderão ser utilizados pelos projetos.</Text>
               
               {loadingWorkflows ? <Loader2 className="spinner-icon" /> : (
                 <Table.Root variant="surface">
@@ -355,11 +509,6 @@ const Settings = () => {
                         </Table.Cell>
                       </Table.Row>
                     ))}
-                    {workflows.length === 0 && (
-                      <Table.Row>
-                        <Table.Cell colSpan={3} align="center">Nenhum workflow cadastrado.</Table.Cell>
-                      </Table.Row>
-                    )}
                   </Table.Body>
                 </Table.Root>
               )}
@@ -368,6 +517,130 @@ const Settings = () => {
         </Tabs.Root>
       </Card>
       
+      {/* MODALS */}
+      {/* Edit User Modal */}
+      <Dialog.Root open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>Editar Usuário</Dialog.Title>
+          <form onSubmit={handleSaveUser}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome Resumido</Text>
+                <TextField.Root 
+                  value={editingUserData.shortName} 
+                  onChange={(e) => setEditingUserData({...editingUserData, shortName: e.target.value})} 
+                  placeholder="Ex: João S." 
+                />
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingUser}>
+                {savingUser ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* Edit/New Type Modal */}
+      <Dialog.Root open={isTypeModalOpen} onOpenChange={setIsTypeModalOpen}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>{typeData.id ? 'Editar Tipo' : 'Criar Novo Tipo'}</Dialog.Title>
+          <form onSubmit={handleSaveType}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome</Text>
+                <TextField.Root 
+                  value={typeData.name} 
+                  onChange={(e) => setTypeData({...typeData, name: e.target.value})} 
+                  required 
+                />
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Cor</Text>
+                <Select.Root value={typeData.color} onValueChange={(val) => setTypeData({...typeData, color: val})}>
+                  <Select.Trigger />
+                  <Select.Content>
+                    <Select.Item value="red">Vermelho</Select.Item>
+                    <Select.Item value="blue">Azul</Select.Item>
+                    <Select.Item value="green">Verde</Select.Item>
+                    <Select.Item value="orange">Laranja</Select.Item>
+                    <Select.Item value="purple">Roxo</Select.Item>
+                  </Select.Content>
+                </Select.Root>
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingType}>
+                {savingType ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* Edit/New System Modal */}
+      <Dialog.Root open={isSystemModalOpen} onOpenChange={setIsSystemModalOpen}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>{systemData.id ? 'Editar Sistema' : 'Criar Novo Sistema'}</Dialog.Title>
+          <form onSubmit={handleSaveSystem}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome</Text>
+                <TextField.Root 
+                  value={systemData.name} 
+                  onChange={(e) => setSystemData({...systemData, name: e.target.value})} 
+                  placeholder="Ex: Totem, PP"
+                  required 
+                />
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingSystem}>
+                {savingSystem ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* Edit/New Component Modal */}
+      <Dialog.Root open={isComponentModalOpen} onOpenChange={setIsComponentModalOpen}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>{componentData.id ? 'Editar Componente' : 'Criar Novo Componente'}</Dialog.Title>
+          <form onSubmit={handleSaveComponent}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome</Text>
+                <TextField.Root 
+                  value={componentData.name} 
+                  onChange={(e) => setComponentData({...componentData, name: e.target.value})} 
+                  placeholder="Ex: API, Frontend"
+                  required 
+                />
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingComponent}>
+                {savingComponent ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
       <Card size="4">
         <Text as="h2" size="4" weight="bold" mb="2">Manutenção do Sistema (Avançado)</Text>
         <Text color="gray" mb="4" as="p">Utilize esta área apenas com orientação técnica.</Text>
