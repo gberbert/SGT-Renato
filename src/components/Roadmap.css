@@ -14,7 +14,14 @@
 /* Custom Holiday Marker - Rendered underneath */
 /* Custom Holiday Marker - Rendered underneath */
 .custom-holiday-marker {
-    fill: var(--gray-a3);
+    fill: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .custom-holiday-marker,
+.dark .custom-holiday-marker,
+.radix-themes.dark .custom-holiday-marker,
+.radix-themes[class*="dark"] .custom-holiday-marker {
+    fill: rgba(0, 0, 0, 0.3);
 }
 
 /* Grid Lines */
