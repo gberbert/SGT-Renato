@@ -1,11 +1,19 @@
 import { ReactRenderer } from '@tiptap/react';
 import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/themes/light-border.css';
 import MentionList from './MentionList';
 
-export default function getSuggestionConfig(users) {
+let currentUsers = [];
+
+export const setMentionUsers = (users) => {
+  currentUsers = users || [];
+};
+
+export default function getSuggestionConfig() {
   return {
     items: ({ query }) => {
-      return users.filter(item => {
+      return currentUsers.filter(item => {
         const name = item.shortName || item.displayName || item.email || '';
         return name.toLowerCase().includes(query.toLowerCase());
       }).slice(0, 5); // Limit to top 5 results
