@@ -491,26 +491,65 @@ ul {
         height: calc(100dvh - 120px) !important;
     }
     
+    .kanban-header {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-bottom: 8px;
+        gap: 12px;
+    }
+
+    .kanban-header::-webkit-scrollbar {
+        display: none;
+    }
+
+    .kanban-select {
+        width: 140px !important;
+        min-width: 140px !important;
+        font-size: 0.8rem;
+    }
+
+    .kanban-btn {
+        font-size: 0.8rem !important;
+        padding: 0 8px !important;
+    }
+
+    .show-on-mobile {
+        display: inline !important;
+    }
+    
     .modal-form .form-row {
         flex-direction: column;
         gap: 0;
     }
 }
 
-/* ==========================================================================
-   Kanban Board Styles
-   ========================================================================== */
-.kanban-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
 .kanban-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 24px;
+}
+
+.kanban-select {
+  width: 250px;
+}
+
+.show-on-mobile {
+  display: none;
+}
+
+/* ==========================================================================
+   Kanban Board Styles
+   ========================================================================== */
+
+.kanban-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .kanban-board {

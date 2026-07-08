@@ -273,10 +273,10 @@ const KanbanBoard = ({ onCardClick }) => {
 
   return (
     <div className="kanban-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div className="kanban-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
-        <Flex align="center" gap="4">
+      <div className="kanban-header">
+        <Flex align="center" gap="2" className="kanban-filters">
           <Select.Root value={selectedProjectId} onValueChange={setSelectedProjectId}>
-            <Select.Trigger style={{ width: '250px' }} />
+            <Select.Trigger className="kanban-select" style={{ minWidth: '140px' }} />
             <Select.Content>
               <Select.Item value="all">Ver Todos os Projetos</Select.Item>
               {projects.map(p => (
@@ -286,7 +286,7 @@ const KanbanBoard = ({ onCardClick }) => {
           </Select.Root>
           {selectedProjectId !== 'all' && squads.length > 0 && (
             <Select.Root value={selectedSquadId} onValueChange={setSelectedSquadId}>
-              <Select.Trigger style={{ width: '200px' }} />
+              <Select.Trigger className="kanban-select" style={{ minWidth: '140px' }} />
               <Select.Content>
                 <Select.Item value="all">Todas as Squads</Select.Item>
                 {squads.map(sq => (
@@ -297,20 +297,23 @@ const KanbanBoard = ({ onCardClick }) => {
           )}
         </Flex>
 
-        <Flex gap="3">
+        <Flex gap="2" className="kanban-actions">
           {viewMode === 'kanban' && (
             <Button 
               variant={useSwimlanes ? 'solid' : 'soft'} 
               onClick={() => setUseSwimlanes(!useSwimlanes)}
+              className="kanban-btn"
             >
               <LayoutList size={16} /> 
-              {useSwimlanes ? 'Agrupar por Coluna' : 'Swimlanes (Responsável)'}
+              <span className="hide-on-mobile">{useSwimlanes ? 'Agrupar por Coluna' : 'Swimlanes (Responsável)'}</span>
+              <span className="show-on-mobile">{useSwimlanes ? 'Por Coluna' : 'Swimlanes'}</span>
             </Button>
           )}
 
           <Button 
             variant={viewMode === 'kanban' ? 'solid' : 'soft'} 
             onClick={() => setViewMode('kanban')}
+            className="kanban-btn"
           >
             <LayoutGrid size={16} /> Kanban
           </Button>
@@ -318,6 +321,7 @@ const KanbanBoard = ({ onCardClick }) => {
           <Button 
             variant={viewMode === 'list' ? 'solid' : 'soft'} 
             onClick={() => setViewMode('list')}
+            className="kanban-btn"
           >
             <List size={16} /> Lista
           </Button>
