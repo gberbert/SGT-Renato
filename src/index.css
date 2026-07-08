@@ -459,6 +459,9 @@ ul {
     }
     
     .ticket-modal {
+        top: 0 !important;
+        left: 0 !important;
+        transform: none !important;
         height: 100dvh !important;
         max-height: 100dvh !important;
         width: 100% !important;
