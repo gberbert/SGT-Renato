@@ -290,7 +290,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
         </Flex>
 
         <Tabs.Root className="ticket-tabs" defaultValue="chat" style={{ height: 'calc(90vh - 100px)', display: 'flex', flexDirection: 'column' }}>
-          <Tabs.List>
+          <Tabs.List className="ticket-tabs-list">
             <Tabs.Trigger value="chat">Chat da Demanda</Tabs.Trigger>
             <Tabs.Trigger value="details">Detalhes</Tabs.Trigger>
             <Tabs.Trigger value="subtasks">Sub-tarefas ({subtasks.length})</Tabs.Trigger>
