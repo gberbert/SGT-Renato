@@ -3,7 +3,7 @@ import { Menu, Plus, LogOut, Bell, Check, Trash2 } from 'lucide-react';
 import { Flex, DropdownMenu, Button, IconButton, Badge, Box, Text, ScrollArea } from '@radix-ui/themes';
 import GlobalSearch from './GlobalSearch';
 import { auth } from '../firebase';
-import { subscribeToUserNotifications, markNotificationAsRead, markAllAsRead } from '../services/notificationService';
+import { subscribeToUserNotifications, markNotificationAsRead, markAllAsRead, deleteNotification } from '../services/notificationService';
 import { getTicketById } from '../services/ticketService';
 
 const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout }) => {
@@ -21,7 +21,8 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleNotificationClick = async (n) => {
-    if (!n.read) await markNotificationAsRead(n.id);
+    // Apaga a notificação (não precisa mais ficar na lista)
+    await deleteNotification(n.id);
     if (n.link && setSelectedTicket) {
       const ticket = await getTicketById(n.link);
       if (ticket) {

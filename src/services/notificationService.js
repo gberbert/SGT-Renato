@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const createNotification = async (userId, title, message, link = null, additionalData = {}) => {
@@ -41,6 +41,15 @@ export const markNotificationAsRead = async (notificationId) => {
     await updateDoc(notifRef, { read: true });
   } catch (error) {
     console.error("Erro ao marcar notificação como lida:", error);
+  }
+};
+
+export const deleteNotification = async (notificationId) => {
+  try {
+    const notifRef = doc(db, 'notifications', notificationId);
+    await deleteDoc(notifRef);
+  } catch (error) {
+    console.error("Erro ao apagar notificação:", error);
   }
 };
 

@@ -1,5 +1,9 @@
 # Versionamento do Projeto
 
+## [0.1.40] - 2026-07-08
+- **Notifications UX:** Clicking a notification now fully deletes it from the user's list (instead of merely marking it as read), cleaning up the inbox automatically as they navigate to the mentioned ticket.
+
+
 ## [0.1.39] - 2026-07-08
 - **UI Adjustments & Mobile Enhancements:** Multi-component UX optimizations.
   - **Squad Management:** Forced full-screen layout on mobile using the `.ticket-modal` rules, preventing viewport overflow and improving touch interactions.
