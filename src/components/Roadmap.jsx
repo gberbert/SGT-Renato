@@ -351,64 +351,76 @@ const Roadmap = () => {
         <Flex justify="between" align="end" wrap="wrap" gap="4">
           
           <Flex gap="4" wrap="wrap" style={{ flex: 1 }}>
-            {/* Filters */}
-            <label>
-              <Text as="div" size="1" mb="1" weight="bold">Projeto</Text>
-              <Select.Root value={filters.project} onValueChange={(v) => handleFilterChange('project', v)}>
-                <Select.Trigger style={{ width: '150px' }} />
-                <Select.Content>
-                  <Select.Item value="all">Todos</Select.Item>
-                  {projects.map(p => <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>)}
-                </Select.Content>
-              </Select.Root>
-            </label>
+            <Popover.Root>
+              <Popover.Trigger>
+                <Button variant="surface" color="gray">
+                  <Filter size={16} /> Filtros e Agrupamento
+                </Button>
+              </Popover.Trigger>
+              <Popover.Content width="300px">
+                <Flex direction="column" gap="3">
+                  <Text weight="bold" size="3">Filtros Avançados</Text>
+                  
+                  <label>
+                    <Text as="div" size="1" mb="1" weight="bold">Projeto</Text>
+                    <Select.Root value={filters.project} onValueChange={(v) => handleFilterChange('project', v)}>
+                      <Select.Trigger style={{ width: '100%' }} />
+                      <Select.Content>
+                        <Select.Item value="all">Todos</Select.Item>
+                        {projects.map(p => <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>)}
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
 
-            <label>
-              <Text as="div" size="1" mb="1" weight="bold">Sistema</Text>
-              <Select.Root value={filters.system} onValueChange={(v) => handleFilterChange('system', v)}>
-                <Select.Trigger style={{ width: '150px' }} />
-                <Select.Content>
-                  <Select.Item value="all">Todos</Select.Item>
-                  {uniqueSystems.map(s => <Select.Item key={s} value={s}>{s}</Select.Item>)}
-                </Select.Content>
-              </Select.Root>
-            </label>
+                  <label>
+                    <Text as="div" size="1" mb="1" weight="bold">Sistema</Text>
+                    <Select.Root value={filters.system} onValueChange={(v) => handleFilterChange('system', v)}>
+                      <Select.Trigger style={{ width: '100%' }} />
+                      <Select.Content>
+                        <Select.Item value="all">Todos</Select.Item>
+                        {uniqueSystems.map(s => <Select.Item key={s} value={s}>{s}</Select.Item>)}
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
 
-            <label>
-              <Text as="div" size="1" mb="1" weight="bold">Status</Text>
-              <Select.Root value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-                <Select.Trigger style={{ width: '150px' }} />
-                <Select.Content>
-                  <Select.Item value="all">Todos</Select.Item>
-                  {uniqueStatuses.map(s => <Select.Item key={s} value={s}>{s.replace('col-', '')}</Select.Item>)}
-                </Select.Content>
-              </Select.Root>
-            </label>
+                  <label>
+                    <Text as="div" size="1" mb="1" weight="bold">Status</Text>
+                    <Select.Root value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
+                      <Select.Trigger style={{ width: '100%' }} />
+                      <Select.Content>
+                        <Select.Item value="all">Todos</Select.Item>
+                        {uniqueStatuses.map(s => <Select.Item key={s} value={s}>{s.replace('col-', '')}</Select.Item>)}
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
 
-            <label>
-              <Text as="div" size="1" mb="1" weight="bold">Responsável</Text>
-              <Select.Root value={filters.assignee} onValueChange={(v) => handleFilterChange('assignee', v)}>
-                <Select.Trigger style={{ width: '150px' }} />
-                <Select.Content>
-                  <Select.Item value="all">Todos</Select.Item>
-                  {uniqueAssignees.map(a => <Select.Item key={a} value={a}>{a}</Select.Item>)}
-                </Select.Content>
-              </Select.Root>
-            </label>
+                  <label>
+                    <Text as="div" size="1" mb="1" weight="bold">Responsável</Text>
+                    <Select.Root value={filters.assignee} onValueChange={(v) => handleFilterChange('assignee', v)}>
+                      <Select.Trigger style={{ width: '100%' }} />
+                      <Select.Content>
+                        <Select.Item value="all">Todos</Select.Item>
+                        {uniqueAssignees.map(a => <Select.Item key={a} value={a}>{a}</Select.Item>)}
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
 
-            {/* Grouping */}
-            <label>
-              <Text as="div" size="1" mb="1" weight="bold" color="indigo">Agrupar por</Text>
-              <Select.Root value={groupBy} onValueChange={setGroupBy}>
-                <Select.Trigger style={{ width: '150px' }} />
-                <Select.Content>
-                  <Select.Item value="none">Nenhum</Select.Item>
-                  <Select.Item value="system">Sistema</Select.Item>
-                  <Select.Item value="status">Status</Select.Item>
-                  <Select.Item value="assignee">Responsável</Select.Item>
-                </Select.Content>
-              </Select.Root>
-            </label>
+                  {/* Grouping */}
+                  <label>
+                    <Text as="div" size="1" mb="1" weight="bold" color="indigo" mt="2">Agrupar por</Text>
+                    <Select.Root value={groupBy} onValueChange={setGroupBy}>
+                      <Select.Trigger style={{ width: '100%' }} />
+                      <Select.Content>
+                        <Select.Item value="none">Nenhum</Select.Item>
+                        <Select.Item value="system">Sistema</Select.Item>
+                        <Select.Item value="status">Status</Select.Item>
+                        <Select.Item value="assignee">Responsável</Select.Item>
+                      </Select.Content>
+                    </Select.Root>
+                  </label>
+                </Flex>
+              </Popover.Content>
+            </Popover.Root>
           </Flex>
 
           {/* Saved Views Popover */}

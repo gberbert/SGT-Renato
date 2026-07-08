@@ -521,6 +521,10 @@ ul {
     .show-on-mobile {
         display: inline !important;
     }
+
+    .show-on-mobile-block {
+        display: block !important;
+    }
     
     .modal-form .form-row {
         flex-direction: column;
@@ -542,6 +546,10 @@ ul {
 }
 
 .show-on-mobile {
+  display: none;
+}
+
+.show-on-mobile-block {
   display: none;
 }
 

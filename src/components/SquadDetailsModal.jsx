@@ -84,7 +84,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="600px">
+      <Dialog.Content className="ticket-modal" maxWidth="600px">
         <Flex justify="between" align="center" mb="4">
           <Dialog.Title style={{ marginBottom: 0 }}>Gestão da Squad</Dialog.Title>
           {userRole === 'admin' && (

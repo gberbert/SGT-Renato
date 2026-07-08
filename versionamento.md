@@ -1,5 +1,12 @@
 # Versionamento do Projeto
 
+## [0.1.39] - 2026-07-08
+- **UI Adjustments & Mobile Enhancements:** Multi-component UX optimizations.
+  - **Squad Management:** Forced full-screen layout on mobile using the `.ticket-modal` rules, preventing viewport overflow and improving touch interactions.
+  - **Settings Menu:** Redesigned mobile navigation by encapsulating the traditional Tab list into a modern Dropdown Select menu, heavily reducing visual clutter on small screens.
+  - **Roadmap Filters:** Encapsulated individual select filters into a single "Filtros e Agrupamento" popover, freeing up valuable vertical space for the Gantt timeline view.
+
+
 ## [0.1.38] - 2026-07-08
 - **UI Adjustments:** Revised Kanban header layout for mobile devices.
   - Replaced horizontal scroll with a stacked column layout (`flex-direction: column`).

@@ -43,6 +43,9 @@ const Settings = () => {
   const [rbacMembers, setRbacMembers] = useState({});
   const [savingRbac, setSavingRbac] = useState(false);
 
+  // Active Tab State (Responsive Menu)
+  const [activeTab, setActiveTab] = useState('users');
+
   // New/Edit Type Modal State
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [typeData, setTypeData] = useState({ name: '', color: 'blue', icon: 'Bug' });
@@ -417,17 +420,39 @@ const Settings = () => {
       </div>
 
       <Card size="4" style={{ flexGrow: 1 }}>
-        <Tabs.Root defaultValue="users">
-          <Tabs.List style={{ flexWrap: 'wrap' }}>
-            <Tabs.Trigger value="users">Usuários</Tabs.Trigger>
-            <Tabs.Trigger value="systems">Sistemas</Tabs.Trigger>
-            <Tabs.Trigger value="components">Componentes (Tags)</Tabs.Trigger>
-            <Tabs.Trigger value="ticketTypes">Tipos de Ticket</Tabs.Trigger>
-            <Tabs.Trigger value="customFields">Campos Custom</Tabs.Trigger>
-            <Tabs.Trigger value="workflows">Workflows</Tabs.Trigger>
-            <Tabs.Trigger value="automations">Automações</Tabs.Trigger>
-            <Tabs.Trigger value="rbac"><Shield size={14} style={{ display: 'inline', marginRight: 4 }}/> RBAC</Tabs.Trigger>
-          </Tabs.List>
+        <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+          
+          {/* Desktop Classic Tabs */}
+          <Box className="hide-on-mobile">
+            <Tabs.List style={{ flexWrap: 'wrap' }}>
+              <Tabs.Trigger value="users">Usuários</Tabs.Trigger>
+              <Tabs.Trigger value="systems">Sistemas</Tabs.Trigger>
+              <Tabs.Trigger value="components">Componentes (Tags)</Tabs.Trigger>
+              <Tabs.Trigger value="ticketTypes">Tipos de Ticket</Tabs.Trigger>
+              <Tabs.Trigger value="customFields">Campos Custom</Tabs.Trigger>
+              <Tabs.Trigger value="workflows">Workflows</Tabs.Trigger>
+              <Tabs.Trigger value="automations">Automações</Tabs.Trigger>
+              <Tabs.Trigger value="rbac"><Shield size={14} style={{ display: 'inline', marginRight: 4 }}/> RBAC</Tabs.Trigger>
+            </Tabs.List>
+          </Box>
+
+          {/* Mobile Modern Dropdown Menu */}
+          <Box className="show-on-mobile-block" mb="4">
+            <Text as="div" size="2" weight="bold" mb="2">Selecione a Configuração</Text>
+            <Select.Root value={activeTab} onValueChange={setActiveTab}>
+              <Select.Trigger style={{ width: '100%', height: '40px' }} />
+              <Select.Content>
+                <Select.Item value="users">Usuários</Select.Item>
+                <Select.Item value="systems">Sistemas</Select.Item>
+                <Select.Item value="components">Componentes (Tags)</Select.Item>
+                <Select.Item value="ticketTypes">Tipos de Ticket</Select.Item>
+                <Select.Item value="customFields">Campos Custom</Select.Item>
+                <Select.Item value="workflows">Workflows</Select.Item>
+                <Select.Item value="automations">Automações</Select.Item>
+                <Select.Item value="rbac">RBAC (Acessos)</Select.Item>
+              </Select.Content>
+            </Select.Root>
+          </Box>
 
           <Box pt="4">
             {/* USERS TAB */}
