@@ -492,27 +492,30 @@ ul {
     }
     
     .kanban-header {
-        flex-wrap: nowrap !important;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        padding-bottom: 8px;
+        flex-direction: column !important;
+        align-items: stretch !important;
         gap: 12px;
+        padding-bottom: 8px;
+        margin-bottom: 16px;
     }
 
-    .kanban-header::-webkit-scrollbar {
-        display: none;
+    .kanban-filters, .kanban-actions {
+        width: 100%;
+        justify-content: space-between;
     }
 
     .kanban-select {
-        width: 140px !important;
-        min-width: 140px !important;
+        flex: 1;
+        width: 100% !important;
+        min-width: 0 !important;
         font-size: 0.8rem;
     }
 
     .kanban-btn {
-        font-size: 0.8rem !important;
-        padding: 0 8px !important;
+        flex: 1;
+        font-size: 0.75rem !important;
+        padding: 0 4px !important;
+        justify-content: center;
     }
 
     .show-on-mobile {

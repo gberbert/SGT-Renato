@@ -1,5 +1,12 @@
 # Versionamento do Projeto
 
+## [0.1.38] - 2026-07-08
+- **UI Adjustments:** Revised Kanban header layout for mobile devices.
+  - Replaced horizontal scroll with a stacked column layout (`flex-direction: column`).
+  - Placed Project/Squad dropdown filters on the first row and view toggle buttons on the second row.
+  - Forced elements to split available width evenly using `flex: 1` to ensure they fit harmoniously on screen without wrapping or scrolling.
+
+
 ## [0.1.37] - 2026-07-08
 - **UI Adjustments:** Refined mobile Kanban header.
   - Reduced font sizes for dropdowns and buttons on narrow screens.
