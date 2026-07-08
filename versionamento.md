@@ -1,5 +1,12 @@
 # Versionamento do Projeto
 
+## [0.1.34] - 2026-07-08
+- **Features:** Implementação de Gestão Avançada de Squads.
+  - Vinculação de tickets a Squads na criação e edição.
+  - Associação de Sistemas a Squads.
+  - Definição de Perfis/Papéis (Arquiteto, Developer, Tester, Functional, Scrum Master, GP) por usuário na squad.
+  - Filtro de tickets por Squad no Kanban e Tags de indicação visual de squad nos Cards.
+
 ## [0.1.33] - 2026-07-07
 - **Features:** Improved Roadmap UI contrast and weekend/holiday highlighting logic.
 
