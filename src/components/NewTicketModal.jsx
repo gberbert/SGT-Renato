@@ -3,6 +3,7 @@ import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid } from '@radix
 import { createTicket } from '../services/ticketService';
 import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
+import { subscribeToProjectSquads } from '../services/squadService';
 import { auth } from '../firebase';
 import RichTextEditor from './RichTextEditor';
 import { Loader2 } from 'lucide-react';
@@ -15,6 +16,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     type: 'Task',
     priority: 'medium',
     projectId: '',
+    squadId: '',
     externalTicket: '',
     system: '',
     component: '',
@@ -26,6 +28,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   const [ticketTypes, setTicketTypes] = useState([]);
   const [users, setUsers] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [squads, setSquads] = useState([]);
   const [systems, setSystems] = useState([]);
   const [components, setComponents] = useState([]);
   const [customFields, setCustomFields] = useState([]);
@@ -53,6 +56,16 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
       unsubscribeCustomFields();
     };
   }, []);
+
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, squadId: '' }));
+    if (!formData.projectId) {
+      setSquads([]);
+      return;
+    }
+    const unsub = subscribeToProjectSquads(formData.projectId, setSquads, console.error);
+    return () => unsub();
+  }, [formData.projectId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -132,11 +145,11 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         
         <form onSubmit={handleSubmit}>
           <Flex direction="column" gap="4">
-            <Flex gap="4">
-              <Box style={{ flex: 1 }}>
-                <Text as="div" size="2" mb="1" weight="bold">Projeto</Text>
+            <Flex gap="4" align="end" wrap="wrap">
+              <Box style={{ flex: '1 1 200px' }}>
+                <Text as="div" size="2" mb="1" weight="bold">Projeto <span style={{ color: 'red' }}>*</span></Text>
                 <Select.Root value={formData.projectId} onValueChange={(v) => handleSelectChange('projectId', v)}>
-                  <Select.Trigger placeholder="Selecione um projeto..." style={{ width: '100%' }} />
+                  <Select.Trigger placeholder="Selecione o projeto..." style={{ width: '100%' }} />
                   <Select.Content>
                     {projects.map(p => (
                       <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
@@ -145,7 +158,22 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
                 </Select.Root>
               </Box>
 
-              <Box style={{ flex: 1 }}>
+              {squads.length > 0 && (
+                <Box style={{ flex: '1 1 200px' }}>
+                  <Text as="div" size="2" mb="1" weight="bold">Squad</Text>
+                  <Select.Root value={formData.squadId} onValueChange={(v) => handleSelectChange('squadId', v)}>
+                    <Select.Trigger placeholder="Selecione a Squad..." style={{ width: '100%' }} />
+                    <Select.Content>
+                      <Select.Item value="">Sem Squad</Select.Item>
+                      {squads.map(s => (
+                        <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </Box>
+              )}
+
+              <Box style={{ flex: '1 1 200px' }}>
                 <Text as="div" size="2" mb="1" weight="bold">Ticket Externo</Text>
                 <TextField.Root 
                   name="externalTicket" 

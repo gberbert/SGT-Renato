@@ -3,12 +3,14 @@ import { subscribeToProjects, deleteProject, updateProject } from '../services/p
 import { Loader2, Plus, FolderGit2, Users, MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import { Button, Card, Flex, Text, Badge, Grid, DropdownMenu } from '@radix-ui/themes';
 import NewProjectModal from './NewProjectModal';
+import { useNavigate } from 'react-router-dom';
 
 const Projects = ({ userRole }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = subscribeToProjects((data) => {
@@ -32,6 +34,10 @@ const Projects = ({ userRole }) => {
     e.stopPropagation();
     setEditingProject(project);
     setIsModalOpen(true);
+  };
+
+  const handleProjectClick = (projectId) => {
+    navigate(`/projetos/${projectId}`);
   };
 
   if (loading) {
@@ -69,7 +75,7 @@ const Projects = ({ userRole }) => {
       ) : (
         <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="4">
           {projects.map(project => (
-            <Card key={project.id} size="3" style={{ cursor: 'pointer' }} className="project-card">
+            <Card key={project.id} size="3" style={{ cursor: 'pointer' }} className="project-card" onClick={() => handleProjectClick(project.id)}>
               <Flex direction="column" gap="4" style={{ height: '100%' }}>
                 <Flex justify="between" align="start">
                   <Flex align="center" gap="3">

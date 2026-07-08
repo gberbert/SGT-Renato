@@ -15,6 +15,7 @@ import KanbanCard from './KanbanCard';
 import { subscribeToTickets, updateTicketStatus, updateTicket } from '../services/ticketService';
 import { subscribeToWorkflows } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
+import { subscribeToProjectSquads } from '../services/squadService';
 import { auth } from '../firebase';
 import { Loader2, LayoutList, List, LayoutGrid } from 'lucide-react';
 import { Button, Flex, Select, Text, Table, Badge, Card } from '@radix-ui/themes';
@@ -35,10 +36,12 @@ const KanbanBoard = ({ onCardClick }) => {
   const [activeTicket, setActiveTicket] = useState(null);
   const [useSwimlanes, setUseSwimlanes] = useState(false);
   const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'list'
-
   const [projects, setProjects] = useState([]);
   const [workflows, setWorkflows] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('all');
+  
+  const [squads, setSquads] = useState([]);
+  const [selectedSquadId, setSelectedSquadId] = useState('all');
 
   useEffect(() => {
     let ticketsLoaded = false;
@@ -86,18 +89,32 @@ const KanbanBoard = ({ onCardClick }) => {
     }
 
     const proj = projects.find(p => p.id === selectedProjectId);
-    if (!proj || !proj.workflowId) {
-      setColumns(DEFAULT_COLUMNS);
-      return;
-    }
-
-    const wf = workflows.find(w => w.id === proj.workflowId);
-    if (wf && wf.columns) {
-      setColumns(wf.columns.map(c => ({ id: c.id, title: c.title, statusId: c.id })));
+    if (proj && proj.workflowId) {
+      const flow = workflows.find(w => w.id === proj.workflowId);
+      if (flow && flow.columnsStr) {
+        const cols = flow.columnsStr.split(',').map(c => {
+          const title = c.trim();
+          const id = `col-${title.toLowerCase().replace(/\s+/g, '-')}`;
+          return { id, title, statusId: id };
+        });
+        setColumns(cols);
+      } else {
+        setColumns(DEFAULT_COLUMNS);
+      }
     } else {
       setColumns(DEFAULT_COLUMNS);
     }
   }, [selectedProjectId, projects, workflows]);
+
+  useEffect(() => {
+    setSelectedSquadId('all');
+    if (selectedProjectId === 'all') {
+      setSquads([]);
+      return;
+    }
+    const unsub = subscribeToProjectSquads(selectedProjectId, setSquads, console.error);
+    return () => unsub();
+  }, [selectedProjectId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -237,9 +254,18 @@ const KanbanBoard = ({ onCardClick }) => {
     );
   }
 
-  const filteredTickets = selectedProjectId === 'all' 
+  let filteredTickets = selectedProjectId === 'all' 
     ? tickets 
     : tickets.filter(t => t.projectId === selectedProjectId);
+
+  if (selectedSquadId !== 'all') {
+    filteredTickets = filteredTickets.filter(t => t.squadId === selectedSquadId);
+  }
+
+  filteredTickets = filteredTickets.map(t => ({
+    ...t,
+    squadName: squads.find(sq => sq.id === t.squadId)?.name
+  }));
 
   const assignees = useSwimlanes 
     ? [...new Set(filteredTickets.map(t => t.assignee || 'Sem responsável'))] 
@@ -249,7 +275,6 @@ const KanbanBoard = ({ onCardClick }) => {
     <div className="kanban-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="kanban-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <Flex align="center" gap="4">
-          <h2>Demandas</h2>
           <Select.Root value={selectedProjectId} onValueChange={setSelectedProjectId}>
             <Select.Trigger style={{ width: '250px' }} />
             <Select.Content>
@@ -259,6 +284,17 @@ const KanbanBoard = ({ onCardClick }) => {
               ))}
             </Select.Content>
           </Select.Root>
+          {selectedProjectId !== 'all' && squads.length > 0 && (
+            <Select.Root value={selectedSquadId} onValueChange={setSelectedSquadId}>
+              <Select.Trigger style={{ width: '200px' }} />
+              <Select.Content>
+                <Select.Item value="all">Todas as Squads</Select.Item>
+                {squads.map(sq => (
+                  <Select.Item key={sq.id} value={sq.id}>{sq.name}</Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
+          )}
         </Flex>
 
         <Flex gap="3">
@@ -304,6 +340,7 @@ const KanbanBoard = ({ onCardClick }) => {
                         <Table.ColumnHeaderCell>Código</Table.ColumnHeaderCell>
                         <Table.ColumnHeaderCell>Título</Table.ColumnHeaderCell>
                         <Table.ColumnHeaderCell>Sistema</Table.ColumnHeaderCell>
+                        <Table.ColumnHeaderCell>Squad</Table.ColumnHeaderCell>
                         <Table.ColumnHeaderCell>Responsável</Table.ColumnHeaderCell>
                         <Table.ColumnHeaderCell>Criação</Table.ColumnHeaderCell>
                       </Table.Row>
@@ -315,6 +352,9 @@ const KanbanBoard = ({ onCardClick }) => {
                           <Table.Cell>{t.title}</Table.Cell>
                           <Table.Cell>
                             {t.system ? <Badge color="blue" variant="soft">{t.system}</Badge> : '-'}
+                          </Table.Cell>
+                          <Table.Cell>
+                            {t.squadName ? <Badge color="purple" variant="soft">{t.squadName}</Badge> : '-'}
                           </Table.Cell>
                           <Table.Cell>{t.assignee || 'Sem responsável'}</Table.Cell>
                           <Table.Cell>

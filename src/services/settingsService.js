@@ -106,6 +106,29 @@ export const updateUser = async (userId, data) => {
   }
 };
 
+export const createUser = async (userData) => {
+  try {
+    const docRef = await addDoc(collection(db, 'users'), {
+      ...userData,
+      createdAt: serverTimestamp(),
+      role: userData.role || 'user'
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Erro ao criar usuário:", error);
+    throw error;
+  }
+};
+
+export const deleteUser = async (userId) => {
+  try {
+    await deleteDoc(doc(db, 'users', userId));
+  } catch (error) {
+    console.error("Erro ao excluir usuário:", error);
+    throw error;
+  }
+};
+
 export const subscribeToSystems = (callback) => {
   const q = query(collection(db, 'systems'), orderBy('createdAt', 'asc'));
   return onSnapshot(q, (snapshot) => {

@@ -55,7 +55,14 @@ const KanbanCard = ({ ticket, subtasksCount = 0, onCardClick }) => {
     >
       <div className="card-header">
         <span className="ticket-code">{ticket.code}</span>
-        <span className="ticket-type">{ticket.type}</span>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {ticket.squadName && (
+            <span style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary)', borderRadius: '12px', fontWeight: 'bold' }}>
+              {ticket.squadName}
+            </span>
+          )}
+          <span className="ticket-type">{ticket.type}</span>
+        </div>
       </div>
       
       <h4 className="ticket-title">{ticket.title}</h4>

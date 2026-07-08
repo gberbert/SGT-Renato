@@ -13,6 +13,7 @@ import KanbanBoard from './components/KanbanBoard';
 import NewTicketModal from './components/NewTicketModal';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
+import ProjectDetails from './components/ProjectDetails';
 import Roadmap from './components/Roadmap';
 import GlobalSearch from './components/GlobalSearch';
 import TicketDetailsModal from './components/TicketDetailsModal';
@@ -114,6 +115,7 @@ function App() {
               <Route path="/kanban" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} />} />
               <Route path="/roadmap" element={<Roadmap userRole={userRole} />} />
               <Route path="/projetos" element={<Projects userRole={userRole} />} />
+              <Route path="/projetos/:projectId" element={<ProjectDetails userRole={userRole} />} />
               <Route path="/configuracoes" element={userRole === 'admin' ? <Settings /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

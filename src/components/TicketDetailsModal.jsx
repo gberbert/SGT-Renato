@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, Badge, Tabs, Box, TextField, ScrollArea, Card, Switch, Grid, Select } from '@radix-ui/themes';
 import { updateTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory, addWorkLog, subscribeToWorkLogs } from '../services/ticketService';
 import { subscribeToProjects } from '../services/projectService';
+import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToWorkflows, subscribeToCustomFields, subscribeToTicketTypes, subscribeToUsers } from '../services/settingsService';
 import { auth } from '../firebase';
 import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles, Clock } from 'lucide-react';
@@ -21,6 +22,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   
   // Advanced fields
   const [sprint, setSprint] = useState('');
+  const [squadId, setSquadId] = useState('');
   const [storyPoints, setStoryPoints] = useState('');
   const [labels, setLabels] = useState('');
   const [dependsOn, setDependsOn] = useState('');
@@ -35,6 +37,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   const [customFields, setCustomFields] = useState([]);
   const [ticketTypes, setTicketTypes] = useState([]);
   const [users, setUsers] = useState([]);
+  const [squads, setSquads] = useState([]);
 
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,6 +49,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
       setStartDate(ticket.startDate || '');
       setDeadline(ticket.deadline || '');
       setSprint(ticket.sprint || '');
+      setSquadId(ticket.squadId || '');
       setStoryPoints(ticket.storyPoints || '');
       setLabels(ticket.labels || '');
       setDependsOn(ticket.dependsOn || '');
@@ -82,6 +86,9 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
       const unsubscribeUsers = subscribeToUsers((data) => {
         setUsers(data);
       });
+      const unsubscribeSquads = subscribeToProjectSquads(ticket.projectId, (data) => {
+        setSquads(data);
+      }, console.error);
 
       return () => {
         unsubscribeComments();
@@ -94,6 +101,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
         unsubscribeCustomFields();
         unsubscribeTicketTypes();
         unsubscribeUsers();
+        unsubscribeSquads();
       };
     }
   }, [isOpen, ticket]);
@@ -330,6 +338,26 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                   )}
 
                   <Grid columns="2" gap="4">
+                    {squads.length > 0 && (
+                      <Box>
+                        <Text as="div" size="2" weight="bold" mb="1" color="gray">Squad</Text>
+                        <Select.Root 
+                          value={squadId} 
+                          onValueChange={(val) => {
+                            setSquadId(val);
+                            handleUpdateField('squadId', val);
+                          }}
+                        >
+                          <Select.Trigger style={{ width: '100%' }} />
+                          <Select.Content>
+                            <Select.Item value="">Sem Squad</Select.Item>
+                            {squads.map(s => (
+                              <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Root>
+                      </Box>
+                    )}
                     <Box>
                       <Text as="div" size="2" weight="bold" mb="1" color="gray">Responsável</Text>
                       <Text as="div" size="3">{ticket.assignee}</Text>

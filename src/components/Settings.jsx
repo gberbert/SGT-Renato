@@ -66,7 +66,7 @@ const Settings = () => {
 
   // User Edit Modal State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [editingUserData, setEditingUserData] = useState({ id: '', shortName: '' });
+  const [editingUserData, setEditingUserData] = useState({ id: '', shortName: '', displayName: '', email: '', role: 'user' });
   const [savingUser, setSavingUser] = useState(false);
 
   // Custom Field Modal State
@@ -187,19 +187,44 @@ const Settings = () => {
     }
   };
 
-  const openEditUserModal = (user) => {
-    setEditingUserData({ id: user.id, shortName: user.shortName || '' });
+  const openNewUserModal = () => {
+    setEditingUserData({ id: '', shortName: '', displayName: '', email: '', role: 'user' });
     setIsUserModalOpen(true);
+  };
+
+  const openEditUserModal = (user) => {
+    setEditingUserData({ id: user.id, shortName: user.shortName || '', displayName: user.displayName || '', email: user.email || '', role: user.role || 'user' });
+    setIsUserModalOpen(true);
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (confirm("Deseja realmente excluir este usuário? (Isso não apaga do Firebase Auth)")) {
+      await deleteUser(userId);
+    }
   };
 
   const handleSaveUser = async (e) => {
     e.preventDefault();
     setSavingUser(true);
     try {
-      await updateUser(editingUserData.id, { shortName: editingUserData.shortName });
+      if (editingUserData.id) {
+        await updateUser(editingUserData.id, { 
+          shortName: editingUserData.shortName,
+          displayName: editingUserData.displayName,
+          email: editingUserData.email,
+          role: editingUserData.role
+        });
+      } else {
+        await createUser({
+          shortName: editingUserData.shortName,
+          displayName: editingUserData.displayName,
+          email: editingUserData.email,
+          role: editingUserData.role
+        });
+      }
       setIsUserModalOpen(false);
     } catch (e) {
-      alert("Erro ao atualizar usuário.");
+      alert("Erro ao salvar usuário.");
     } finally {
       setSavingUser(false);
     }
@@ -394,9 +419,15 @@ const Settings = () => {
           <Box pt="4">
             {/* USERS TAB */}
             <Tabs.Content value="users">
-              <Text as="h2" size="4" weight="bold" mb="4">Gestão de Usuários</Text>
-              <Text color="gray" mb="4" as="p">Gerencie papéis e os nomes resumidos exibidos na listagem.</Text>
-              
+              <Flex justify="between" align="center" mb="4">
+                <Box>
+                  <Text as="h2" size="4" weight="bold">Gestão de Usuários</Text>
+                  <Text color="gray" as="p">Gerencie os usuários, papéis e os nomes exibidos.</Text>
+                </Box>
+                <Button onClick={openNewUserModal}>
+                  Novo Usuário
+                </Button>
+              </Flex>
               {loadingUsers ? <Loader2 className="spinner-icon" /> : (
                 <Table.Root variant="surface">
                   <Table.Header>
@@ -424,6 +455,9 @@ const Settings = () => {
                           <Flex align="center" gap="2" justify="end">
                             <IconButton size="1" variant="soft" onClick={() => openEditUserModal(u)}>
                               <Edit2 size={14} />
+                            </IconButton>
+                            <IconButton size="1" color="red" variant="soft" onClick={() => handleDeleteUser(u.id)}>
+                              <Trash2 size={14} />
                             </IconButton>
                             <Select.Root value={u.role} onValueChange={(val) => handleRoleChange(u.id, val)}>
                               <Select.Trigger />
@@ -790,13 +824,44 @@ const Settings = () => {
           <form onSubmit={handleSaveUser}>
             <Flex direction="column" gap="3">
               <label>
-                <Text as="div" size="2" mb="1" weight="bold">Nome Resumido</Text>
+                <Text as="div" size="2" mb="1" weight="bold">Nome Completo</Text>
+                <TextField.Root 
+                  required
+                  value={editingUserData.displayName} 
+                  onChange={(e) => setEditingUserData({...editingUserData, displayName: e.target.value})} 
+                  placeholder="Ex: João Silva" 
+                />
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">E-mail</Text>
+                <TextField.Root 
+                  required
+                  type="email"
+                  value={editingUserData.email} 
+                  onChange={(e) => setEditingUserData({...editingUserData, email: e.target.value})} 
+                  placeholder="Ex: joao@empresa.com" 
+                />
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome Resumido (Opcional)</Text>
                 <TextField.Root 
                   value={editingUserData.shortName} 
                   onChange={(e) => setEditingUserData({...editingUserData, shortName: e.target.value})} 
                   placeholder="Ex: João S." 
                 />
               </label>
+              {!editingUserData.id && (
+                <label>
+                  <Text as="div" size="2" mb="1" weight="bold">Perfil</Text>
+                  <Select.Root value={editingUserData.role} onValueChange={(val) => setEditingUserData({...editingUserData, role: val})}>
+                    <Select.Trigger style={{ width: '100%' }} />
+                    <Select.Content>
+                      <Select.Item value="user">Membro (User)</Select.Item>
+                      <Select.Item value="admin">Administrador</Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </label>
+              )}
             </Flex>
             <Flex gap="3" mt="4" justify="end">
               <Dialog.Close>
