@@ -1,5 +1,9 @@
 # Versionamento do Projeto
 
+## [0.1.42] - 2026-07-08
+- **Bugfix (Chat Mentions):** Fixed a bug where marking a user in the chat would no longer trigger a notification. The HTML parsing logic was brittle and failed when TipTap changed the order of HTML attributes. Replaced Regex with a robust `DOMParser`.
+
+
 ## [0.1.41] - 2026-07-08
 - **UI Adjustments:** Fixed the flexbox wrapping issue inside the iOS installation instruction modal, ensuring the text flows naturally and the Share icon aligns properly with the text.
 

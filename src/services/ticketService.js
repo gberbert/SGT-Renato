@@ -8,9 +8,11 @@ const USERS_COLLECTION = 'users';
 
 export const extractMentionsAndNotify = async (htmlContent, actionText, ticketId, ticketTitle) => {
   if (!htmlContent) return;
-  const regex = /data-type="mention" data-id="([^"]+)"/g;
-  const matches = [...htmlContent.matchAll(regex)];
-  const userIds = [...new Set(matches.map(m => m[1]))];
+  
+  const parser = new DOMParser();
+  const docHtml = parser.parseFromString(htmlContent, 'text/html');
+  const mentionNodes = docHtml.querySelectorAll('[data-type="mention"]');
+  const userIds = [...new Set(Array.from(mentionNodes).map(n => n.getAttribute('data-id')).filter(Boolean))];
   
   const currentUserUid = auth?.currentUser?.uid;
   const userName = auth?.currentUser?.displayName || 'Sistema';
