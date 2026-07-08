@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, Badge, Tabs, Box, TextField, ScrollArea, Card, Switch, Grid, Select } from '@radix-ui/themes';
-import { updateTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory, addWorkLog, subscribeToWorkLogs } from '../services/ticketService';
+import { updateTicket, deleteTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory, addWorkLog, subscribeToWorkLogs } from '../services/ticketService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToWorkflows, subscribeToCustomFields, subscribeToTicketTypes, subscribeToUsers } from '../services/settingsService';
 import { auth } from '../firebase';
-import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles, Clock } from 'lucide-react';
+import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles, Clock, Edit2, Trash2, X } from 'lucide-react';
 import NewTicketModal from './NewTicketModal';
 import RichTextEditor from './RichTextEditor';
 
@@ -39,13 +39,25 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   const [users, setUsers] = useState([]);
   const [squads, setSquads] = useState([]);
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [editedCode, setEditedCode] = useState('');
+
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [comments, isOpen]);
+
   useEffect(() => {
     if (ticket) {
       setDescription(ticket.description || '');
+      setEditedTitle(ticket.title || '');
+      setEditedCode(ticket.code || '');
       setStartDate(ticket.startDate || '');
       setDeadline(ticket.deadline || '');
       setSprint(ticket.sprint || '');
@@ -138,9 +150,46 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
     ? currentWorkflow.columns.slice(0, currentColumnIndex + 1) 
     : [];
 
+  const handleSaveTitle = async () => {
+    if ((!editedTitle.trim() && !editedCode.trim()) || (editedTitle === ticket.title && editedCode === ticket.code)) {
+      setIsEditingTitle(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const userName = auth.currentUser?.displayName || 'Sistema';
+      const updates = {};
+      if (editedTitle !== ticket.title) updates.title = editedTitle;
+      if (editedCode !== ticket.code) updates.code = editedCode;
+
+      if (Object.keys(updates).length > 0) {
+        await updateTicket(ticket.id, updates, userName);
+        ticket.title = editedTitle;
+        ticket.code = editedCode;
+      }
+      setIsEditingTitle(false);
+    } catch (err) {
+      alert("Erro ao atualizar ticket");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTicket = async () => {
+    if (window.confirm('Tem certeza que deseja excluir este ticket?')) {
+      const userName = auth.currentUser?.displayName || 'Sistema';
+      try {
+        await deleteTicket(ticket.id, userName);
+        onClose();
+      } catch (err) {
+        alert("Erro ao excluir ticket");
+      }
+    }
+  };
+
   const handleSendComment = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
+    if (e) e.preventDefault();
+    if (!commentText.trim() || commentText === '<p></p>') return;
     setLoading(true);
     try {
       await addComment(ticket.id, {
@@ -194,36 +243,135 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="900px" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-        <Flex justify="between" align="start" mb="4">
+      <Dialog.Content maxWidth="900px" style={{ display: 'flex', flexDirection: 'column', height: '90vh', maxHeight: '90vh', overflow: 'hidden' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <Flex direction="column" mb="4">
+          <Flex justify="between" align="center" mb="2">
+            <Flex align="center" gap="3">
+              {!isEditingTitle && <Text size="2" color="gray" weight="medium">{ticket.code}</Text>}
+              <Badge color={ticket.priority === 'critical' ? 'red' : 'blue'} variant="soft" size="1">{ticket.type}</Badge>
+            </Flex>
+            <Flex align="center" gap="4">
+              {!isEditingTitle && (
+                <Flex gap="3" align="center">
+                  <Edit2 size={16} style={{ cursor: 'pointer', color: 'var(--gray-10)', transition: 'color 0.2s' }} onClick={() => setIsEditingTitle(true)} />
+                  <Trash2 size={16} style={{ cursor: 'pointer', color: 'var(--danger)', transition: 'color 0.2s' }} onClick={handleDeleteTicket} />
+                </Flex>
+              )}
+              <Dialog.Close>
+                <Box style={{ cursor: 'pointer', color: 'var(--gray-10)', display: 'flex', alignItems: 'center' }}>
+                  <X size={20} />
+                </Box>
+              </Dialog.Close>
+            </Flex>
+          </Flex>
+          
           <Box>
-            <Text as="div" size="2" color="indigo" weight="bold">{ticket.code}</Text>
-            <Dialog.Title mt="1">{ticket.title}</Dialog.Title>
+            {isEditingTitle ? (
+              <Flex gap="2" align="center">
+                <TextField.Root 
+                  value={editedCode} 
+                  onChange={(e) => setEditedCode(e.target.value)} 
+                  style={{ width: '120px' }}
+                  placeholder="Código"
+                />
+                <TextField.Root 
+                  value={editedTitle} 
+                  onChange={(e) => setEditedTitle(e.target.value)} 
+                  style={{ flexGrow: 1 }}
+                  placeholder="Título"
+                />
+                <Button size="1" onClick={handleSaveTitle}>Salvar</Button>
+                <Button size="1" variant="soft" color="gray" onClick={() => { setIsEditingTitle(false); setEditedTitle(ticket.title); setEditedCode(ticket.code); }}>Cancelar</Button>
+              </Flex>
+            ) : (
+              <Dialog.Title size="6" style={{ lineHeight: '1.2', margin: 0 }}>{ticket.title}</Dialog.Title>
+            )}
           </Box>
-          <Badge color={ticket.priority === 'critical' ? 'red' : 'blue'}>{ticket.type}</Badge>
         </Flex>
 
-        <Tabs.Root defaultValue="details" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <Tabs.Root defaultValue="chat" style={{ height: 'calc(90vh - 100px)', display: 'flex', flexDirection: 'column' }}>
           <Tabs.List>
+            <Tabs.Trigger value="chat">Chat da Demanda</Tabs.Trigger>
             <Tabs.Trigger value="details">Detalhes</Tabs.Trigger>
             <Tabs.Trigger value="subtasks">Sub-tarefas ({subtasks.length})</Tabs.Trigger>
             <Tabs.Trigger value="attachments">Anexos ({attachments.length})</Tabs.Trigger>
-            <Tabs.Trigger value="comments">Comentários ({comments.length})</Tabs.Trigger>
             <Tabs.Trigger value="history">Histórico</Tabs.Trigger>
             {userRole === 'admin' && <Tabs.Trigger value="time">Tempo (Admin)</Tabs.Trigger>}
           </Tabs.List>
 
-          <Box pt="4" style={{ flexGrow: 1, overflow: 'hidden' }}>
-            <Tabs.Content value="details" style={{ height: '100%' }}>
-              <ScrollArea style={{ height: '350px', paddingRight: '16px' }}>
+          <Box pt="4" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <Tabs.Content value="chat" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Box style={{ flexGrow: 1, minHeight: 0, marginBottom: '8px' }}>
+                  <ScrollArea style={{ height: '100%', paddingRight: '16px', background: 'var(--gray-2)', borderRadius: '8px', padding: '12px' }}>
+                  <Flex direction="column" gap="4" style={{ minHeight: '100%' }}>
+                    <Box style={{ flexGrow: 1 }} />
+                    {comments.length === 0 ? (
+                      <Text color="gray" align="center" mt="5">Nenhuma mensagem ainda.</Text>
+                    ) : (
+                      comments.map(c => {
+                        const isMe = c.authorId === auth.currentUser?.uid;
+                        return (
+                          <Flex key={c.id} justify={isMe ? "end" : "start"}>
+                            <Box 
+                              style={{ 
+                                maxWidth: '85%', 
+                                background: isMe ? 'var(--indigo-4)' : 'var(--surface)', 
+                                border: isMe ? 'none' : '1px solid var(--gray-5)',
+                                borderRadius: '12px',
+                                borderTopRightRadius: isMe ? '2px' : '12px',
+                                borderTopLeftRadius: !isMe ? '2px' : '12px',
+                                padding: '10px 14px',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                              }}
+                            >
+                              <Flex justify="between" mb="1" gap="4" align="center">
+                                <Text size="1" weight="bold" color={isMe ? "indigo" : "gray"}>
+                                  {isMe ? 'Você' : c.authorName}
+                                </Text>
+                                <Text size="1" color={isMe ? "indigo" : "gray"} style={{ opacity: 0.7 }}>
+                                  {c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                                </Text>
+                              </Flex>
+                              <div className="rich-text-content" style={{ fontSize: '0.9rem' }} dangerouslySetInnerHTML={{ __html: c.text }} />
+                            </Box>
+                          </Flex>
+                        );
+                      })
+                    )}
+                    <div ref={chatEndRef} />
+                  </Flex>
+                </ScrollArea>
+                </Box>
+
+                <Box>
+                  <RichTextEditor 
+                    content={commentText}
+                    onChange={(val) => setCommentText(val)}
+                    users={[{ id: 'todos', displayName: 'Todos', shortName: 'Todos' }, ...users]}
+                    minHeight="60px"
+                  />
+                  <Flex justify="end" mt="2">
+                    <Button onClick={handleSendComment} disabled={!commentText.trim() || commentText === '<p></p>' || loading}>
+                      {loading ? <Loader2 size={16} className="spinner-icon" /> : <Send size={16} />}
+                      Enviar Mensagem
+                    </Button>
+                  </Flex>
+                </Box>
+              </Box>
+            </Tabs.Content>
+
+            <Tabs.Content value="details" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box style={{ height: '100%' }}>
+                <ScrollArea style={{ height: '100%', paddingRight: '16px' }}>
                 <Flex direction="column" gap="4">
                   <Box>
-                    <Text as="div" size="2" weight="bold" mb="2">Descrição</Text>
+                    <Text as="div" size="2" weight="bold" mb="2">Descrição Técnica</Text>
                     <RichTextEditor 
                       content={description}
                       onChange={(val) => setDescription(val)}
                       onBlur={() => handleUpdateField('description', description)}
-                      users={users}
+                      enableMentions={false}
                     />
                   </Box>
 
@@ -436,8 +584,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                       </Flex>
                     </Box>
                   </Grid>
+
                 </Flex>
-              </ScrollArea>
+                </ScrollArea>
+              </Box>
             </Tabs.Content>
 
             <Tabs.Content value="subtasks" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -514,44 +664,6 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                   )}
                 </Flex>
               </ScrollArea>
-            </Tabs.Content>
-
-            <Tabs.Content value="comments" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <ScrollArea style={{ flexGrow: 1, height: '300px', paddingRight: '16px', marginBottom: '16px' }}>
-                <Flex direction="column" gap="4">
-                  {comments.length === 0 ? (
-                    <Text color="gray" align="center" mt="5">Nenhum comentário ainda.</Text>
-                  ) : (
-                    comments.map(c => (
-                      <Card key={c.id} size="1">
-                        <Flex direction="column" gap="1">
-                          <Flex justify="between">
-                            <Text size="2" weight="bold">{c.authorName}</Text>
-                            <Text size="1" color="gray">
-                              {c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString() : 'Agora'}
-                            </Text>
-                          </Flex>
-                          <Text size="2">{c.text}</Text>
-                        </Flex>
-                      </Card>
-                    ))
-                  )}
-                </Flex>
-              </ScrollArea>
-
-              <form onSubmit={handleSendComment}>
-                <Flex gap="2">
-                  <TextField.Root 
-                    style={{ flexGrow: 1 }}
-                    placeholder="Escreva um comentário..."
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                  />
-                  <Button type="submit" disabled={!commentText.trim() || loading}>
-                    {loading ? <Loader2 size={16} className="spinner-icon" /> : <Send size={16} />}
-                  </Button>
-                </Flex>
-              </form>
             </Tabs.Content>
 
             <Tabs.Content value="history" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -639,12 +751,6 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
 
           </Box>
         </Tabs.Root>
-
-        <Flex gap="3" mt="5" justify="end">
-          <Dialog.Close>
-            <Button variant="soft" color="gray">Fechar</Button>
-          </Dialog.Close>
-        </Flex>
       </Dialog.Content>
       {isSubtaskModalOpen && (
         <NewTicketModal 

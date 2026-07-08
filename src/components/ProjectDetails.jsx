@@ -18,7 +18,7 @@ const ProjectDetails = ({ userRole }) => {
   const [isNewSquadModalOpen, setIsNewSquadModalOpen] = useState(false);
   const [newSquadName, setNewSquadName] = useState('');
   const [newSquadDescription, setNewSquadDescription] = useState('');
-  const [newSquadSystemId, setNewSquadSystemId] = useState('');
+  const [newSquadSystemIds, setNewSquadSystemIds] = useState([]);
   const [savingSquad, setSavingSquad] = useState(false);
 
   const [systems, setSystems] = useState([]);
@@ -57,13 +57,13 @@ const ProjectDetails = ({ userRole }) => {
         projectId,
         name: newSquadName,
         description: newSquadDescription,
-        systemId: newSquadSystemId,
+        systemIds: newSquadSystemIds,
         users: []
       });
       setIsNewSquadModalOpen(false);
       setNewSquadName('');
       setNewSquadDescription('');
-      setNewSquadSystemId('');
+      setNewSquadSystemIds([]);
     } catch (error) {
       alert("Erro ao criar squad.");
     } finally {
@@ -167,19 +167,31 @@ const ProjectDetails = ({ userRole }) => {
                   placeholder="Ex: Responsável pelos aplicativos" 
                 />
               </label>
-              <label>
-                <Text as="div" size="2" mb="1" weight="bold">Sistema (Opcional)</Text>
-                <select 
-                  value={newSquadSystemId} 
-                  onChange={(e) => setNewSquadSystemId(e.target.value)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--gray-6)' }}
-                >
-                  <option value="">Sem Sistema</option>
-                  {systems.map(sys => (
-                    <option key={sys.id} value={sys.id}>{sys.name}</option>
-                  ))}
-                </select>
-              </label>
+              <Box>
+                <Text as="div" size="2" mb="2" weight="bold">Sistemas Associados</Text>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--gray-6)', padding: '8px', borderRadius: '4px' }}>
+                  {systems.length === 0 ? <Text size="1" color="gray">Nenhum sistema cadastrado.</Text> : (
+                    <Flex direction="column" gap="2">
+                      {systems.map(sys => (
+                        <label key={sys.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={newSquadSystemIds.includes(sys.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewSquadSystemIds([...newSquadSystemIds, sys.id]);
+                              } else {
+                                setNewSquadSystemIds(newSquadSystemIds.filter(id => id !== sys.id));
+                              }
+                            }}
+                          />
+                          <Text size="2">{sys.name}</Text>
+                        </label>
+                      ))}
+                    </Flex>
+                  )}
+                </div>
+              </Box>
             </Flex>
             <Flex gap="3" mt="4" justify="end">
               <Dialog.Close>

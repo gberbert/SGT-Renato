@@ -18,6 +18,7 @@ import Roadmap from './components/Roadmap';
 import GlobalSearch from './components/GlobalSearch';
 import TicketDetailsModal from './components/TicketDetailsModal';
 import Settings from './components/Settings';
+import ResetPassword from './components/ResetPassword';
 import { getUserRole } from './services/ticketService';
 
 function App() {
@@ -89,7 +90,16 @@ function App() {
   }
 
   if (!user) {
-    return <Login />;
+    return (
+      <Theme appearance={theme} accentColor="iris" panelBackground="translucent">
+        <Router>
+          <Routes>
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="*" element={<Login />} />
+          </Routes>
+        </Router>
+      </Theme>
+    );
   }
 
   return (

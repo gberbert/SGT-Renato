@@ -1,9 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X, Moon, Sun } from 'lucide-react';
-import { IconButton } from '@radix-ui/themes';
+import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X, Moon, Sun, Download, Bell, Share } from 'lucide-react';
+import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 
 const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) => {
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+  const [showDesktopPrompt, setShowDesktopPrompt] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState(
+    'Notification' in window ? Notification.permission : 'denied'
+  );
+
+  useEffect(() => {
+    // Detect iOS
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(ios);
+
+    // Detect if already installed
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    setIsStandalone(standalone);
+
+    // Catch the install prompt for Android/Desktop
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (isIOS) {
+      setShowIOSPrompt(true);
+    } else if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setInstallPrompt(null);
+      }
+    } else {
+      setShowDesktopPrompt(true);
+    }
+  };
+
+  const handleNotificationRequest = async () => {
+    if (!('Notification' in window)) {
+      alert("Este navegador não suporta notificações web.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+    if (permission === 'granted') {
+      new Notification("Notificações ativadas!", { body: "Você receberá atualizações do SGT aqui." });
+    }
+  };
+
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: 'Kanban', icon: <KanbanSquare size={20} />, path: '/kanban' },
@@ -78,7 +132,22 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
         </ul>
       </nav>
 
-      <div style={{ padding: '0 16px', marginBottom: '16px' }}>
+      <div style={{ padding: '0 16px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        
+        {!isStandalone && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--primary)', color: 'white', borderRadius: 'var(--border-radius)', cursor: 'pointer', transition: 'all 0.2s' }} onClick={handleInstallClick}>
+            <span style={{ fontSize: '14px', fontWeight: 600 }}>Instalar App SGT</span>
+            <Download size={16} />
+          </div>
+        )}
+
+        {'Notification' in window && notificationPermission !== 'granted' && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderRadius: 'var(--border-radius)', border: '1px solid var(--gray-5)', cursor: 'pointer' }} onClick={handleNotificationRequest}>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-main)' }}>Ligar Notificações</span>
+            <Bell size={16} />
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderRadius: 'var(--border-radius)', border: '1px solid var(--gray-5)' }}>
           <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-main)' }}>Modo Noturno</span>
           <IconButton variant="soft" radius="full" onClick={toggleTheme} style={{ cursor: 'pointer' }}>
@@ -102,6 +171,49 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
           </div>
         </div>
       </div>
+
+      <Dialog.Root open={showIOSPrompt} onOpenChange={setShowIOSPrompt}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>Instalar no iPhone (iOS)</Dialog.Title>
+          <Flex direction="column" gap="4">
+            <Text>Para instalar o SGT no seu iPhone, siga estes 2 passos:</Text>
+            <div style={{ background: 'var(--gray-3)', padding: '16px', borderRadius: '8px' }}>
+              <p style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                1. Toque no ícone de <strong>Compartilhar</strong> <Share size={16} /> na barra do Safari (na parte inferior da tela).
+              </p>
+              <p style={{ margin: 0 }}>
+                2. Role para baixo e selecione <strong>"Adicionar à Tela de Início"</strong> (Add to Home Screen).
+              </p>
+            </div>
+            <Flex justify="end" mt="2">
+              <Button onClick={() => setShowIOSPrompt(false)}>Entendi</Button>
+            </Flex>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      <Dialog.Root open={showDesktopPrompt} onOpenChange={setShowDesktopPrompt}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>Instalar no Computador / Android</Dialog.Title>
+          <Flex direction="column" gap="4">
+            <Text>Para instalar o SGT e usá-mo como aplicativo nativo:</Text>
+            <div style={{ background: 'var(--gray-3)', padding: '16px', borderRadius: '8px' }}>
+              <p style={{ margin: '0 0 12px 0' }}>
+                <strong>No Computador (Chrome/Edge):</strong><br/>
+                Clique no ícone de "Instalar" (uma tela com uma setinha para baixo) no lado direito da barra de endereços (onde fica a URL do site).
+              </p>
+              <p style={{ margin: 0 }}>
+                <strong>No Android (Chrome):</strong><br/>
+                Toque nos três pontinhos no canto superior direito e escolha <strong>"Adicionar à tela inicial"</strong> ou <strong>"Instalar aplicativo"</strong>.
+              </p>
+            </div>
+            <Flex justify="end" mt="2">
+              <Button onClick={() => setShowDesktopPrompt(false)}>Entendi</Button>
+            </Flex>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+
     </aside>
   );
 };

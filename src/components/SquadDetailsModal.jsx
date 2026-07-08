@@ -17,14 +17,14 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
   const [squadName, setSquadName] = useState(squad.name || '');
   const [squadDescription, setSquadDescription] = useState(squad.description || '');
   const [squadUsers, setSquadUsers] = useState(parseUsers(squad.users));
-  const [squadSystemId, setSquadSystemId] = useState(squad.systemId || '');
+  const [squadSystemIds, setSquadSystemIds] = useState(squad.systemIds || (squad.systemId ? [squad.systemId] : []));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setSquadName(squad.name || '');
     setSquadDescription(squad.description || '');
     setSquadUsers(parseUsers(squad.users));
-    setSquadSystemId(squad.systemId || '');
+    setSquadSystemIds(squad.systemIds || (squad.systemId ? [squad.systemId] : []));
   }, [squad]);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
         name: squadName,
         description: squadDescription,
         users: squadUsers, 
-        systemId: squadSystemId 
+        systemIds: squadSystemIds 
       });
       onClose();
     } catch (e) {
@@ -115,20 +115,30 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
 
         <Flex gap="4" align="center" mb="4">
           <Box style={{ flex: 1 }}>
-            <Text weight="bold" size="2" mb="1" as="div">Sistema Associado</Text>
-            <Select.Root 
-              value={squadSystemId} 
-              onValueChange={setSquadSystemId} 
-              disabled={userRole !== 'admin'}
-            >
-              <Select.Trigger style={{ width: '100%' }} />
-              <Select.Content>
-                <Select.Item value="">Nenhum Sistema (Padrão)</Select.Item>
-                {systems.map(sys => (
-                  <Select.Item key={sys.id} value={sys.id}>{sys.name}</Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+            <Text weight="bold" size="2" mb="1" as="div">Sistemas Associados</Text>
+            <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--gray-6)', padding: '8px', borderRadius: '4px' }}>
+              {systems.length === 0 ? <Text size="1" color="gray">Nenhum sistema cadastrado.</Text> : (
+                <Flex direction="column" gap="2">
+                  {systems.map(sys => (
+                    <label key={sys.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={squadSystemIds.includes(sys.id)}
+                        disabled={userRole !== 'admin'}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSquadSystemIds([...squadSystemIds, sys.id]);
+                          } else {
+                            setSquadSystemIds(squadSystemIds.filter(id => id !== sys.id));
+                          }
+                        }}
+                      />
+                      <Text size="2">{sys.name}</Text>
+                    </label>
+                  ))}
+                </Flex>
+              )}
+            </div>
           </Box>
         </Flex>
 

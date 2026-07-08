@@ -752,3 +752,26 @@ ul {
   animation: borderPulse 2s infinite;
   border-width: 2px !important;
 }
+
+/* Responsive Ticket Modal */
+.ticket-details-modal {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 90vh !important;
+  max-height: 90vh !important;
+  width: 900px !important;
+  max-width: 95vw !important;
+  overflow: hidden !important;
+}
+
+@media (max-width: 768px) {
+  .ticket-details-modal {
+    max-height: 100vh !important;
+    max-width: 100vw !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 12px !important;
+  }
+}

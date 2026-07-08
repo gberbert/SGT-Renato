@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc, getDocs } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../firebase';
 import { createNotification } from './notificationService';
@@ -6,19 +6,44 @@ import { createNotification } from './notificationService';
 const COLLECTION_NAME = 'tickets';
 const USERS_COLLECTION = 'users';
 
-export const extractMentionsAndNotify = async (htmlContent, title, message, link) => {
+export const extractMentionsAndNotify = async (htmlContent, actionText, ticketId, ticketTitle) => {
   if (!htmlContent) return;
   const regex = /data-type="mention" data-id="([^"]+)"/g;
   const matches = [...htmlContent.matchAll(regex)];
   const userIds = [...new Set(matches.map(m => m[1]))];
   
   const currentUserUid = auth?.currentUser?.uid;
+  const userName = auth?.currentUser?.displayName || 'Sistema';
+
+  let rawText = htmlContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  let textSnippet = rawText.length > 50 ? rawText.substring(0, 50) + '...' : rawText;
   
-  for (const uid of userIds) {
-    if (uid !== currentUserUid) {
-      await createNotification(uid, title, message, link);
+  if (userIds.includes('todos')) {
+    try {
+      const usersSnap = await getDocs(collection(db, USERS_COLLECTION));
+      usersSnap.forEach(doc => {
+        userIds.push(doc.id);
+      });
+    } catch (err) {
+      console.error("Erro ao buscar usuários para @todos", err);
     }
   }
+
+  const uniqueUserIds = [...new Set(userIds)].filter(id => id !== 'todos' && id !== currentUserUid);
+
+  for (const uid of uniqueUserIds) {
+      await createNotification(
+        uid, 
+        `Novo mention: ${ticketTitle || 'Ticket'}`, 
+        `${userName} ${actionText}`, 
+        ticketId,
+        {
+          senderName: userName,
+          ticketTitle: ticketTitle || 'Ticket',
+          textSnippet: textSnippet
+        }
+      );
+    }
 };
 
 export const getUserRole = async (user) => {
@@ -37,6 +62,21 @@ export const getUserRole = async (user) => {
       createdAt: new Date()
     });
     return role;
+  }
+};
+
+export const getTicketById = async (ticketId) => {
+  if (!ticketId) return null;
+  try {
+    const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+    const snap = await getDoc(ticketRef);
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() };
+    }
+    return null;
+  } catch (error) {
+    console.error("Erro ao buscar ticket por id:", error);
+    return null;
   }
 };
 
@@ -76,14 +116,7 @@ export const createTicket = async (ticketData) => {
     });
     await logTicketAction(docRef.id, 'Criou o ticket', ticketData.assignee || 'Sistema');
     const userName = auth?.currentUser?.displayName || 'Sistema';
-    if (ticketData.description) {
-      await extractMentionsAndNotify(
-        ticketData.description,
-        'Mencionaram você!',
-        `${userName} mencionou você na descrição de um ticket.`,
-        null
-      );
-    }
+    // Descrição não gera mais notificação (transferido para o chat)
     return docRef.id;
   } catch (error) {
     console.error("Erro ao criar ticket:", error);
@@ -114,16 +147,19 @@ export const updateTicket = async (ticketId, updates, userName = 'Sistema') => {
     });
     // For simplicity, we just say it was updated, but we could diff the updates
     await logTicketAction(ticketId, 'Atualizou os detalhes do ticket', userName);
-    if (updates.description) {
-      await extractMentionsAndNotify(
-        updates.description,
-        'Mencionaram você!',
-        `${userName} mencionou você ao editar um ticket.`,
-        null
-      );
-    }
+    // Descrição não gera mais notificação (transferido para o chat)
   } catch (error) {
     console.error("Erro ao atualizar ticket:", error);
+    throw error;
+  }
+};
+
+export const deleteTicket = async (ticketId, userName = 'Sistema') => {
+  try {
+    const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+    await deleteDoc(ticketRef);
+  } catch (error) {
+    console.error("Erro ao excluir ticket:", error);
     throw error;
   }
 };
@@ -136,11 +172,13 @@ export const addComment = async (ticketId, commentData) => {
       createdAt: new Date()
     });
     if (commentData.text) {
+      const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+      const currentTicket = (await getDoc(ticketRef)).data();
       await extractMentionsAndNotify(
         commentData.text,
-        'Nova menção!',
-        `${commentData.userName || 'Alguém'} mencionou você em um comentário de ticket.`,
-        null
+        'mencionou você em um comentário.',
+        ticketId,
+        currentTicket?.title || ticketId
       );
     }
   } catch (error) {
@@ -152,7 +190,7 @@ export const addComment = async (ticketId, commentData) => {
 export const subscribeToComments = (ticketId, callback) => {
   const q = query(
     collection(db, `${COLLECTION_NAME}/${ticketId}/comments`),
-    orderBy('createdAt', 'desc')
+    orderBy('createdAt', 'asc')
   );
   
   return onSnapshot(q, (snapshot) => {

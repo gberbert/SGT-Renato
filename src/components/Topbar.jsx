@@ -4,6 +4,7 @@ import { Flex, DropdownMenu, Button, IconButton, Badge, Box, Text, ScrollArea } 
 import GlobalSearch from './GlobalSearch';
 import { auth } from '../firebase';
 import { subscribeToUserNotifications, markNotificationAsRead, markAllAsRead } from '../services/notificationService';
+import { getTicketById } from '../services/ticketService';
 
 const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout }) => {
   const [notifications, setNotifications] = useState([]);
@@ -21,6 +22,12 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
 
   const handleNotificationClick = async (n) => {
     if (!n.read) await markNotificationAsRead(n.id);
+    if (n.link && setSelectedTicket) {
+      const ticket = await getTicketById(n.link);
+      if (ticket) {
+        setSelectedTicket(ticket);
+      }
+    }
   };
 
   return (
@@ -66,12 +73,15 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
                   >
                     <Flex direction="column" gap="1" style={{ width: '100%' }}>
                       <Flex justify="between" align="start">
-                        <Text weight="bold" size="2">{n.title}</Text>
+                        <Text weight="bold" size="2">{n.senderName || n.title.split(':')[0]}</Text>
                         {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--indigo-9)', flexShrink: 0 }} />}
                       </Flex>
-                      <Text size="2" color="gray" style={{ whiteSpace: 'normal', lineHeight: 1.2 }}>{n.message}</Text>
-                      <Text size="1" color="gray" mt="1">
-                        {n.createdAt?.toDate ? n.createdAt.toDate().toLocaleString() : 'Agora'}
+                      {n.ticketTitle && <Text weight="bold" size="1" color="indigo" mt="1">{n.ticketTitle}</Text>}
+                      <Text size="2" color="gray" style={{ whiteSpace: 'normal', lineHeight: 1.2, marginTop: '4px' }}>
+                        {n.textSnippet || n.message}
+                      </Text>
+                      <Text size="1" color="gray" mt="2">
+                        {n.createdAt?.toDate ? n.createdAt.toDate().toLocaleString('pt-BR') : 'Agora'}
                       </Text>
                     </Flex>
                   </DropdownMenu.Item>

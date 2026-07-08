@@ -1,13 +1,14 @@
 import { collection, doc, addDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
-export const createNotification = async (userId, title, message, link = null) => {
+export const createNotification = async (userId, title, message, link = null, additionalData = {}) => {
   try {
     await addDoc(collection(db, 'notifications'), {
       userId,
       title,
       message,
       link,
+      ...additionalData,
       read: false,
       createdAt: serverTimestamp()
     });

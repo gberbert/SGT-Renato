@@ -114,7 +114,7 @@ const MenuBar = ({ editor }) => {
   );
 };
 
-const RichTextEditor = ({ content, onChange, onBlur, users = [] }) => {
+const RichTextEditor = ({ content, onChange, onBlur, users = [], enableMentions = true, minHeight = '150px' }) => {
   React.useEffect(() => {
     setMentionUsers(users);
   }, [users]);
@@ -124,12 +124,15 @@ const RichTextEditor = ({ content, onChange, onBlur, users = [] }) => {
       StarterKit,
       Link.configure({ openOnClick: false }),
       Image,
-      Mention.configure({
+      ...(enableMentions ? [Mention.configure({
         HTMLAttributes: {
           class: 'mention',
         },
         suggestion: getSuggestionConfig(),
-      }),
+        renderLabel({ options, node }) {
+          return `${node.attrs.label ?? node.attrs.id}`;
+        }
+      })] : []),
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -153,7 +156,7 @@ const RichTextEditor = ({ content, onChange, onBlur, users = [] }) => {
   return (
     <Box style={{ border: '1px solid var(--gray-6)', borderRadius: 'var(--radius-3)', overflow: 'hidden', background: 'var(--surface)' }}>
       <MenuBar editor={editor} />
-      <Box p="3" className="tiptap-content" style={{ minHeight: '150px', outline: 'none' }}>
+      <Box p="3" className="tiptap-content" style={{ minHeight: minHeight, outline: 'none' }}>
         <EditorContent editor={editor} />
       </Box>
     </Box>

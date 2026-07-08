@@ -14,7 +14,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.ico', 'logo192.png', 'logo512.png'],
       workbox: {
         maximumFileSizeToCacheInBytes: 3000000,
         runtimeCaching: [
@@ -43,16 +43,18 @@ export default defineConfig({
         theme_color: '#1e1e2d',
         background_color: '#12121c',
         display: 'standalone',
+        start_url: '/',
         icons: [
           {
-            src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/192px-GitHub_Invertocat_Logo.svg.png',
+            src: '/logo192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/512px-GitHub_Invertocat_Logo.svg.png',
+            src: '/logo512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }

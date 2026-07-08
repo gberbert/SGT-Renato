@@ -57,10 +57,10 @@
   margin: 2rem 0;
 }
 
-.tiptap-content .ProseMirror .mention {
-  background-color: var(--accent-3);
-  color: var(--accent-11);
-  border-radius: 4px;
-  padding: 0.1rem 0.3rem;
-  font-weight: 500;
+.tiptap-content .ProseMirror .mention,
+.rich-text-content .mention {
+  color: #1a73e8; /* Azul */
+  font-weight: 600;
+  cursor: pointer;
 }
+

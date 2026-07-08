@@ -9,9 +9,10 @@ import {
   subscribeToCustomFields, saveCustomField, deleteCustomField,
   subscribeToAutomations, saveAutomation, deleteAutomation
 } from '../services/settingsService';
-import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield } from 'lucide-react';
+import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
 import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
 
@@ -227,6 +228,18 @@ const Settings = () => {
       alert("Erro ao salvar usuário.");
     } finally {
       setSavingUser(false);
+    }
+  };
+
+  const handlePasswordReset = async (email) => {
+    if (!email) return;
+    if (confirm(`Deseja enviar um e-mail de redefinição de senha para ${email}?`)) {
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert(`E-mail de redefinição enviado com sucesso para ${email}!`);
+      } catch (error) {
+        alert("Erro ao enviar e-mail: " + error.message);
+      }
     }
   };
 
@@ -453,7 +466,10 @@ const Settings = () => {
                         </Table.Cell>
                         <Table.Cell justify="end">
                           <Flex align="center" gap="2" justify="end">
-                            <IconButton size="1" variant="soft" onClick={() => openEditUserModal(u)}>
+                            <IconButton size="1" color="indigo" variant="soft" onClick={() => handlePasswordReset(u.email)} title="Enviar Reset de Senha">
+                              <Key size={14} />
+                            </IconButton>
+                            <IconButton size="1" variant="soft" onClick={() => openEditUserModal(u)} title="Editar Usuário">
                               <Edit2 size={14} />
                             </IconButton>
                             <IconButton size="1" color="red" variant="soft" onClick={() => handleDeleteUser(u.id)}>
