@@ -1,5 +1,12 @@
 # Versionamento do Projeto
 
+## [0.1.37] - 2026-07-08
+- **UI Adjustments:** Refined mobile Kanban header.
+  - Reduced font sizes for dropdowns and buttons on narrow screens.
+  - Abbreviated button texts on mobile to save horizontal space.
+  - Applied horizontal scrolling to the header container avoiding awkward line breaks.
+
+
 ## [0.1.36] - 2026-07-08
 - **Hotfix:** Mobile Layout Optimizations for Ticket Modal.
   - Forced `position: fixed` and `inset: 0` for mobile modals to bypass Radix UI's internal overlay padding and translate matrix, fixing horizontal overflow.
