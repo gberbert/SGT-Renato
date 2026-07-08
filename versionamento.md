@@ -1,5 +1,9 @@
 # Versionamento do Projeto
 
+## [0.1.43] - 2026-07-08
+- **Web Push Notifications:** Restored and fully implemented native OS notifications for incoming messages in real-time. Added a snapshot differential checker to fire `new Notification()` only for newly added database records, fixing the silent behavior on iOS PWAs.
+
+
 ## [0.1.42] - 2026-07-08
 - **Bugfix (Chat Mentions):** Fixed a bug where marking a user in the chat would no longer trigger a notification. The HTML parsing logic was brittle and failed when TipTap changed the order of HTML attributes. Replaced Regex with a robust `DOMParser`.
 

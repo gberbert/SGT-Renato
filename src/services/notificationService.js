@@ -17,7 +17,7 @@ export const createNotification = async (userId, title, message, link = null, ad
   }
 };
 
-export const subscribeToUserNotifications = (userId, callback) => {
+export const subscribeToUserNotifications = (userId, callback, onNewNotification = null) => {
   if (!userId) return () => {};
   
   const q = query(
@@ -26,12 +26,26 @@ export const subscribeToUserNotifications = (userId, callback) => {
     orderBy('createdAt', 'desc')
   );
   
+  let isInitialLoad = true;
+
   return onSnapshot(q, (snapshot) => {
     const notifs = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
     callback(notifs);
+
+    if (!isInitialLoad && onNewNotification) {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          if (!data.read) {
+            onNewNotification({ id: change.doc.id, ...data });
+          }
+        }
+      });
+    }
+    isInitialLoad = false;
   });
 };
 

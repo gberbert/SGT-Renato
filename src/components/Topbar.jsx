@@ -12,9 +12,25 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
 
   useEffect(() => {
     if (!user) return;
+
+    const handleNewNotification = (data) => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const title = data.senderName || data.title?.split(':')[0] || 'SGT - Nova Notificação';
+        const bodyText = data.ticketTitle 
+          ? `[${data.ticketTitle}]\n${data.textSnippet || data.message}`
+          : (data.textSnippet || data.message);
+          
+        new Notification(title, { 
+          body: bodyText,
+          icon: '/vite.svg' 
+        });
+      }
+    };
+
     const unsubscribe = subscribeToUserNotifications(user.uid, (data) => {
       setNotifications(data);
-    });
+    }, handleNewNotification);
+    
     return () => unsubscribe();
   }, [user]);
 
