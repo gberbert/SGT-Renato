@@ -458,6 +458,20 @@ ul {
         padding: 16px;
     }
     
+    .ticket-modal {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        padding: 16px 12px !important;
+    }
+
+    .ticket-tabs {
+        height: calc(100dvh - 120px) !important;
+    }
+    
     .modal-form .form-row {
         flex-direction: column;
         gap: 0;

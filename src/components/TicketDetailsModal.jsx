@@ -243,7 +243,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="900px" style={{ display: 'flex', flexDirection: 'column', height: '90vh', maxHeight: '90vh', overflow: 'hidden' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <Dialog.Content className="ticket-modal" maxWidth="900px" style={{ display: 'flex', flexDirection: 'column', height: '90vh', maxHeight: '90vh', overflow: 'hidden' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Flex direction="column" mb="4">
           <Flex justify="between" align="center" mb="2">
             <Flex align="center" gap="3">
@@ -289,7 +289,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
           </Box>
         </Flex>
 
-        <Tabs.Root defaultValue="chat" style={{ height: 'calc(90vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+        <Tabs.Root className="ticket-tabs" defaultValue="chat" style={{ height: 'calc(90vh - 100px)', display: 'flex', flexDirection: 'column' }}>
           <Tabs.List>
             <Tabs.Trigger value="chat">Chat da Demanda</Tabs.Trigger>
             <Tabs.Trigger value="details">Detalhes</Tabs.Trigger>
