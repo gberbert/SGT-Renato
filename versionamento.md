@@ -1,5 +1,9 @@
 # Versionamento do Projeto
 
+## [0.1.41] - 2026-07-08
+- **UI Adjustments:** Fixed the flexbox wrapping issue inside the iOS installation instruction modal, ensuring the text flows naturally and the Share icon aligns properly with the text.
+
+
 ## [0.1.40] - 2026-07-08
 - **Notifications UX:** Clicking a notification now fully deletes it from the user's list (instead of merely marking it as read), cleaning up the inbox automatically as they navigate to the mentioned ticket.
 

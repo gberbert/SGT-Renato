@@ -178,8 +178,8 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
           <Flex direction="column" gap="4">
             <Text>Para instalar o SGT no seu iPhone, siga estes 2 passos:</Text>
             <div style={{ background: 'var(--gray-3)', padding: '16px', borderRadius: '8px' }}>
-              <p style={{ margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                1. Toque no ícone de <strong>Compartilhar</strong> <Share size={16} /> na barra do Safari (na parte inferior da tela).
+              <p style={{ margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                1. Toque no ícone de <strong>Compartilhar</strong> <Share size={16} style={{ display: 'inline', verticalAlign: 'middle', margin: '0 4px' }} /> na barra do Safari (na parte inferior da tela).
               </p>
               <p style={{ margin: 0 }}>
                 2. Role para baixo e selecione <strong>"Adicionar à Tela de Início"</strong> (Add to Home Screen).
