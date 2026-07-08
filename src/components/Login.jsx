@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
-import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { KanbanSquare, Loader2 } from 'lucide-react';
+import { auth } from '../firebase';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { KanbanSquare, Loader2, CheckCircle2 } from 'lucide-react';
 
 const Login = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isResetPassword, setIsResetPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
     
-    // Check if API key is missing
     if (!import.meta.env.VITE_FIREBASE_API_KEY) {
       setError('ERRO DE CONFIGURAÇÃO: A Chave de API do Firebase (VITE_FIREBASE_API_KEY) não foi preenchida no arquivo .env.local.');
       setLoading(false);
@@ -24,28 +24,23 @@ const Login = () => {
     }
 
     try {
-      if (isLogin) {
+      if (!isResetPassword) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          email: userCredential.user.email,
-          displayName: userCredential.user.email.split('@')[0],
-          role: 'user',
-          createdAt: serverTimestamp()
-        });
+        await sendPasswordResetEmail(auth, email);
+        setSuccess('Um link de redefinição de senha foi enviado para seu email.');
+        setIsResetPassword(false);
       }
     } catch (err) {
       console.error(err);
       switch(err.code) {
         case 'auth/invalid-credential':
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
           setError('Email ou senha incorretos.');
           break;
-        case 'auth/email-already-in-use':
-          setError('Este email já está cadastrado.');
-          break;
-        case 'auth/weak-password':
-          setError('A senha deve ter pelo menos 6 caracteres.');
+        case 'auth/invalid-email':
+          setError('Formato de email inválido.');
           break;
         default:
           setError(err.message);
@@ -61,10 +56,11 @@ const Login = () => {
         <div className="login-header">
           <KanbanSquare className="logo-icon" size={40} color="var(--primary)" />
           <h2>SGT</h2>
-          <p>{isLogin ? 'Faça login para acessar o painel' : 'Crie sua conta para acessar'}</p>
+          <p>{!isResetPassword ? 'Faça login para acessar o painel' : 'Redefina sua senha'}</p>
         </div>
 
         {error && <div className="login-error">{error}</div>}
+        {success && <div className="login-success" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle2 size={18} /> {success}</div>}
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
@@ -77,26 +73,29 @@ const Login = () => {
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div className="form-group">
-            <label>Senha</label>
-            <input 
-              type="password" 
-              required 
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
-            />
-          </div>
+          
+          {!isResetPassword && (
+            <div className="form-group">
+              <label>Senha</label>
+              <input 
+                type="password" 
+                required 
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+              />
+            </div>
+          )}
           
           <button type="submit" className="btn btn-primary login-btn" disabled={loading}>
-            {loading ? <Loader2 className="spinner-icon" size={18} /> : (isLogin ? 'Entrar' : 'Cadastrar')}
+            {loading ? <Loader2 className="spinner-icon" size={18} /> : (!isResetPassword ? 'Entrar' : 'Enviar Link de Recuperação')}
           </button>
         </form>
 
         <div className="login-footer">
-          <button className="btn-link" onClick={() => { setIsLogin(!isLogin); setError(''); }}>
-            {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
+          <button type="button" className="btn-link" onClick={() => { setIsResetPassword(!isResetPassword); setError(''); setSuccess(''); }}>
+            {!isResetPassword ? 'Esqueci minha senha' : 'Voltar para o Login'}
           </button>
         </div>
       </div>
