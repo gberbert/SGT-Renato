@@ -1,5 +1,6 @@
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getToken } from 'firebase/messaging';
+import { db, messaging } from '../firebase';
 
 export const createNotification = async (userId, title, message, link = null, additionalData = {}) => {
   try {
@@ -47,6 +48,25 @@ export const subscribeToUserNotifications = (userId, callback, onNewNotification
     }
     isInitialLoad = false;
   });
+};
+
+export const requestFCMToken = async (userId) => {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const token = await getToken(messaging, { 
+        // A VAPID Key deve ser configurada pelo usuário no Firebase Console 
+        // e idealmente colocada no .env como VITE_VAPID_KEY
+        vapidKey: import.meta.env.VITE_VAPID_KEY || 'SUA_VAPID_KEY_AQUI' 
+      });
+      if (token) {
+        await updateDoc(doc(db, 'users', userId), { fcmToken: token });
+        console.log('FCM Token salvo com sucesso.');
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao pedir token FCM:', error);
+  }
 };
 
 export const markNotificationAsRead = async (notificationId) => {

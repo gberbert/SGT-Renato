@@ -1,5 +1,9 @@
 # Versionamento do Projeto
 
+## [0.1.44] - 2026-07-08
+- **Background Push Notifications:** Migrated push system to FCM (Firebase Cloud Messaging) and Firebase Cloud Functions. Implemented `firebase-messaging-sw.js` and server-side APNs/FCM dispatch to support true background notifications when iOS/Android apps are minimized or devices are locked.
+
+
 ## [0.1.43] - 2026-07-08
 - **Web Push Notifications:** Restored and fully implemented native OS notifications for incoming messages in real-time. Added a snapshot differential checker to fire `new Notification()` only for newly added database records, fixing the silent behavior on iOS PWAs.
 

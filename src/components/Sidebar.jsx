@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X, Moon, Sun, Download, Bell, Share } from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
+import { auth } from '../firebase';
+import { requestFCMToken } from '../services/notificationService';
 
 const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) => {
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -55,6 +57,9 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
     setNotificationPermission(permission);
     if (permission === 'granted') {
       new Notification("Notificações ativadas!", { body: "Você receberá atualizações do SGT aqui." });
+      if (auth.currentUser) {
+        await requestFCMToken(auth.currentUser.uid);
+      }
     }
   };
 

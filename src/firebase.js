@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
+import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBfX9ytpF-hXsLjvu8RFWd4qUIyRC1FiRs",
@@ -19,5 +20,6 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, "default");
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+export const messaging = getMessaging(app);
 
 console.log("Firebase services initialized.");
