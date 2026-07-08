@@ -49,7 +49,8 @@ AÇÃO PROIBIDA: NUNCA execute comandos para "ficar olhando" o sistema rodar par
 
 5. GESTÃO DE AMBIENTES E DEPLOY
  finalizar um desenvolvimento perguntar se os testes foram com sucesso, caso positivo:
- Preencher o arquivo versionamento.md com a última versão e executar o push para o git.
+ Alterar SEMPRE a versão do sistema (ex: package.json) antes de subir para o Firebase.
+ Preencher o arquivo versionamento.md com a última versão e executar o push para o git e o deploy no Firebase Hosting (ex: npm run build && firebase deploy).
  Preencher os campos da aplicação que informam a versão atual.
  
 

@@ -1,5 +1,12 @@
 # Versionamento do Projeto
 
+## [0.1.36] - 2026-07-08
+- **Hotfix:** Mobile Layout Optimizations for Ticket Modal.
+  - Forced `position: fixed` and `inset: 0` for mobile modals to bypass Radix UI's internal overlay padding and translate matrix, fixing horizontal overflow.
+  - Applied horizontal scroll (`overflow-x: auto`) and hidden scrollbars to the `Tabs.List` component, ensuring long tab labels do not stretch the viewport on small screens.
+  - Hardcoded width constraint to `100vw` with `box-sizing: border-box` to ensure pixel-perfect boundary mapping on iOS Safari.
+
+
 ## [0.1.35] - 2026-07-08
 - **Features:** Major UI/UX Overhaul for Ticket Details Modal.
   - Implemented full-screen responsive layout for mobile and fixed dimensions for desktop.
