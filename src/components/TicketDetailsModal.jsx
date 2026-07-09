@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, Button, Flex, Text, TextArea, Badge, Tabs, Box, TextField, ScrollArea, Card, Switch, Grid, Select } from '@radix-ui/themes';
-import { updateTicket, deleteTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory, addWorkLog, subscribeToWorkLogs } from '../services/ticketService';
+import { updateTicket, deleteTicket, addComment, subscribeToComments, subscribeToSubtasks, uploadAttachment, subscribeToAttachments, subscribeToHistory, addWorkLog, subscribeToWorkLogs, subscribeToEstimationsByTicketId } from '../services/ticketService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToWorkflows, subscribeToCustomFields, subscribeToTicketTypes, subscribeToUsers } from '../services/settingsService';
@@ -23,7 +23,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   // Advanced fields
   const [sprint, setSprint] = useState('');
   const [squadId, setSquadId] = useState('');
-  const [storyPoints, setStoryPoints] = useState('');
+  const [totalEstimatedHours, setTotalEstimatedHours] = useState(0);
   const [labels, setLabels] = useState('');
   const [dependsOn, setDependsOn] = useState('');
   const [isBlocked, setIsBlocked] = useState(false);
@@ -62,7 +62,6 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
       setDeadline(ticket.deadline || '');
       setSprint(ticket.sprint || '');
       setSquadId(ticket.squadId || '');
-      setStoryPoints(ticket.storyPoints || '');
       setLabels(ticket.labels || '');
       setDependsOn(ticket.dependsOn || '');
       setIsBlocked(ticket.isBlocked || false);
@@ -82,6 +81,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
       });
       const unsubscribeWorkLogs = subscribeToWorkLogs(ticket.id, (data) => {
         setWorkLogs(data);
+      });
+      const unsubscribeEstimations = subscribeToEstimationsByTicketId(ticket.id, (data) => {
+        const total = data.reduce((acc, curr) => acc + (curr.totalBaseHours || 0), 0);
+        setTotalEstimatedHours(total);
       });
       const unsubscribeProjects = subscribeToProjects((data) => {
         setProjects(data);
@@ -108,6 +111,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
         unsubscribeAttachments();
         unsubscribeHistory();
         unsubscribeWorkLogs();
+        unsubscribeEstimations();
         unsubscribeProjects();
         unsubscribeWorkflows();
         unsubscribeCustomFields();
@@ -289,10 +293,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
           </Box>
         </Flex>
 
-        <Tabs.Root className="ticket-tabs" defaultValue="chat" style={{ height: 'calc(90vh - 100px)', display: 'flex', flexDirection: 'column' }}>
+        <Tabs.Root className="ticket-tabs" defaultValue="details" style={{ height: 'calc(90vh - 100px)', display: 'flex', flexDirection: 'column' }}>
           <Tabs.List className="ticket-tabs-list">
-            <Tabs.Trigger value="chat">Chat da Demanda</Tabs.Trigger>
             <Tabs.Trigger value="details">Detalhes</Tabs.Trigger>
+            <Tabs.Trigger value="chat">Chat da Demanda</Tabs.Trigger>
             <Tabs.Trigger value="subtasks">Sub-tarefas ({subtasks.length})</Tabs.Trigger>
             <Tabs.Trigger value="attachments">Anexos ({attachments.length})</Tabs.Trigger>
             <Tabs.Trigger value="history">Histórico</Tabs.Trigger>
@@ -542,13 +546,13 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                       />
                     </Box>
                     <Box>
-                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Story Points</Text>
+                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Horas Estimadas (Base)</Text>
                       <TextField.Root 
-                        type="number"
-                        placeholder="Esforço (ex: 5)"
-                        value={storyPoints} 
-                        onChange={(e) => setStoryPoints(e.target.value)}
-                        onBlur={() => handleUpdateField('storyPoints', storyPoints)}
+                        type="text"
+                        placeholder="Sem estimativa..."
+                        value={totalEstimatedHours > 0 ? `${totalEstimatedHours.toFixed(2)}h` : ''} 
+                        readOnly
+                        disabled
                       />
                     </Box>
                     <Box>

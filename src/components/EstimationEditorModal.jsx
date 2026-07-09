@@ -11,11 +11,12 @@ import {
   Heading,
   ScrollArea,
   IconButton,
-  Dialog
+  Dialog,
+  TextArea
 } from '@radix-ui/themes';
 import { Plus, Trash2, Save } from 'lucide-react';
-import { db } from '../firebase';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
+import { collection, addDoc, updateDoc, doc, getDocs, query, where } from 'firebase/firestore';
 
 const COMPLEXITIES = [
   { label: 'Muito Baixa', value: 'muitoBaixa' },
@@ -26,18 +27,18 @@ const COMPLEXITIES = [
 ];
 
 const PHASE_DISTRIBUTION = {
-  EF: 0.10,
-  ET: 0.15,
-  Construcao: 0.50,
-  QA: 0.15,
-  Homologacao: 0.05,
-  TechLead: 0.05
+  SR: 0.089,
+  EF: 0.199,
+  ET: 0.081,
+  Construcao: 0.415,
+  TestesUnitarios: 0.165,
+  Homologacao: 0.051
 };
 
 const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimationToEdit, onSaveSuccess }) => {
   const [ticketSearch, setTicketSearch] = useState('');
   const [selectedTicketId, setSelectedTicketId] = useState('');
-  const [estimationTitle, setEstimationTitle] = useState('');
+  const [macroDescription, setMacroDescription] = useState('');
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -47,12 +48,12 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
         setSelectedTicketId(estimationToEdit.ticketId || '');
         const tk = tickets.find(t => t.id === estimationToEdit.ticketId);
         setTicketSearch(tk ? tk.title : '');
-        setEstimationTitle(estimationToEdit.title || '');
+        setMacroDescription(estimationToEdit.macroDescription || '');
         setRows(estimationToEdit.rows || []);
       } else {
         setSelectedTicketId('');
         setTicketSearch('');
-        setEstimationTitle('');
+        setMacroDescription('');
         setRows([]);
       }
     }
@@ -133,12 +134,12 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
     const base = unitHours * parseInt(row.quantity || 1);
     
     return {
+      SR: base * PHASE_DISTRIBUTION.SR,
       EF: base * PHASE_DISTRIBUTION.EF,
       ET: base * PHASE_DISTRIBUTION.ET,
       Construcao: base * PHASE_DISTRIBUTION.Construcao,
-      QA: base * PHASE_DISTRIBUTION.QA,
+      TestesUnitarios: base * PHASE_DISTRIBUTION.TestesUnitarios,
       Homologacao: base * PHASE_DISTRIBUTION.Homologacao,
-      TechLead: base * PHASE_DISTRIBUTION.TechLead,
       Total: base
     };
   };
@@ -153,20 +154,40 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
     
     setSaving(true);
     try {
+      const currentUser = auth.currentUser;
+      const userName = currentUser ? (currentUser.displayName || currentUser.email) : 'Usuário Desconhecido';
+      const userUid = currentUser ? currentUser.uid : 'anon';
+      
       const estimationData = {
         ticketId: selectedTicketId,
-        title: estimationTitle || 'Estimativa Padrão',
+        macroDescription,
         rows,
         totalBaseHours,
         updatedAt: new Date().toISOString()
       };
       
       if (estimationToEdit && estimationToEdit.id) {
+        // Se já existe, mantém autor e data de criação originais
         await updateDoc(doc(db, 'estimations', estimationToEdit.id), estimationData);
       } else {
         estimationData.createdAt = new Date().toISOString();
+        estimationData.authorName = userName;
+        estimationData.authorUid = userUid;
         await addDoc(collection(db, 'estimations'), estimationData);
       }
+      
+      // -- NOVIDADE: Atualiza o Ticket atrelado --
+      // Busca todas as estimativas deste ticket para calcular a soma total real
+      const q = query(collection(db, 'estimations'), where('ticketId', '==', selectedTicketId));
+      const querySnapshot = await getDocs(q);
+      const sumOfHours = querySnapshot.docs.reduce((acc, curr) => acc + (curr.data().totalBaseHours || 0), 0);
+      
+      // Grava no ticket tanto num campo 'estimatedHours' quanto em 'storyPoints' para alimentar os gráficos
+      await updateDoc(doc(db, 'tickets', selectedTicketId), {
+        estimatedHours: sumOfHours,
+        storyPoints: sumOfHours,
+        updatedAt: new Date().toISOString()
+      });
       
       onSaveSuccess();
       onOpenChange(false);
@@ -193,7 +214,8 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
         <Box mt="4">
           <Card mb="4">
             <Heading size="3" mb="3">Dados da Demanda (Vínculo)</Heading>
-            <Flex gap="4" align="end">
+            
+            <Flex gap="4" align="start" mb="4">
               <Box flexGrow="1">
                 <Text as="div" size="2" mb="1" weight="bold">Demanda / Ticket</Text>
                 <input 
@@ -222,14 +244,32 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
                 </datalist>
               </Box>
               <Box flexGrow="1">
-                <Text as="div" size="2" mb="1" weight="bold">Título da Estimativa (Opcional)</Text>
+                <Text as="div" size="2" mb="1" weight="bold">Responsável</Text>
                 <TextField.Root 
-                  placeholder="Ex: Estimativa Fase 1" 
-                  value={estimationTitle}
-                  onChange={(e) => setEstimationTitle(e.target.value)}
+                  value={estimationToEdit ? (estimationToEdit.authorName || 'Desconhecido') : (auth.currentUser?.displayName || auth.currentUser?.email || 'Desconhecido')} 
+                  readOnly 
+                  disabled
+                />
+              </Box>
+              <Box flexGrow="1">
+                <Text as="div" size="2" mb="1" weight="bold">Data da Estimativa</Text>
+                <TextField.Root 
+                  value={estimationToEdit && estimationToEdit.createdAt ? new Date(estimationToEdit.createdAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')} 
+                  readOnly 
+                  disabled
                 />
               </Box>
             </Flex>
+
+            <Box>
+              <Text as="div" size="2" mb="1" weight="bold">Macro Descrição do Escopo</Text>
+              <TextArea 
+                placeholder="Descreva o escopo macro em alto nível para compor esta estimativa..." 
+                value={macroDescription}
+                onChange={(e) => setMacroDescription(e.target.value)}
+                rows={3}
+              />
+            </Box>
           </Card>
 
           <Card>
@@ -248,12 +288,12 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
                     <Table.ColumnHeaderCell style={{ minWidth: '220px' }}>Componente</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell>Complexidade</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell style={{ textAlign: 'center', width: '60px' }}>Qtd</Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>SR</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>EF</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>ET</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>Construção</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>QA</Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>Testes Unit.</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>Homolog</Table.ColumnHeaderCell>
-                    <Table.ColumnHeaderCell style={{ textAlign: 'right' }}>TechLead</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell style={{ textAlign: 'right', backgroundColor: 'var(--indigo-2)' }}>Total</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell style={{ width: '40px', textAlign: 'center' }}></Table.ColumnHeaderCell>
                   </Table.Row>
@@ -320,12 +360,12 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
                             style={{ width: '50px', textAlign: 'center' }}
                           />
                         </Table.Cell>
+                        <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.SR.toFixed(2)}</Text></Table.Cell>
                         <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.EF.toFixed(2)}</Text></Table.Cell>
                         <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.ET.toFixed(2)}</Text></Table.Cell>
                         <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.Construcao.toFixed(2)}</Text></Table.Cell>
-                        <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.QA.toFixed(2)}</Text></Table.Cell>
+                        <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.TestesUnitarios.toFixed(2)}</Text></Table.Cell>
                         <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.Homologacao.toFixed(2)}</Text></Table.Cell>
-                        <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', padding: '4px 8px' }}><Text size="1" color="gray">{phases.TechLead.toFixed(2)}</Text></Table.Cell>
                         <Table.Cell style={{ textAlign: 'right', verticalAlign: 'middle', backgroundColor: 'var(--indigo-2)', padding: '4px 8px' }}><Text size="2" weight="bold" color="indigo">{phases.Total.toFixed(2)}</Text></Table.Cell>
                         <Table.Cell style={{ textAlign: 'center', verticalAlign: 'middle', padding: '4px' }}>
                           <IconButton color="red" variant="ghost" size="1" onClick={() => handleRemoveRow(row.id)}>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Button, Flex, Text, TextField, TextArea, Select } from '@radix-ui/themes';
+import { Dialog, Button, Flex, Text, TextField, TextArea, Select, Box } from '@radix-ui/themes';
 import { createProject, updateProject } from '../services/projectService';
 import { subscribeToWorkflows } from '../services/settingsService';
 import { auth } from '../firebase';
@@ -16,7 +16,8 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
     key: '',
     workflowId: '',
     estado: '',
-    municipio: ''
+    municipio: '',
+    gerenteGeral: ''
   });
 
   useEffect(() => {
@@ -27,10 +28,11 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
         key: editingProject.key,
         workflowId: editingProject.workflowId || '',
         estado: editingProject.estado || '',
-        municipio: editingProject.municipio || ''
+        municipio: editingProject.municipio || '',
+        gerenteGeral: editingProject.gerenteGeral || ''
       });
     } else {
-      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '', gerenteGeral: '' });
     }
 
     // Load Estados
@@ -75,7 +77,8 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           key: formData.key.toUpperCase(),
           workflowId: formData.workflowId,
           estado: formData.estado,
-          municipio: formData.municipio
+          municipio: formData.municipio,
+          gerenteGeral: formData.gerenteGeral
         });
       } else {
         await createProject({
@@ -85,11 +88,12 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           workflowId: formData.workflowId,
           estado: formData.estado,
           municipio: formData.municipio,
+          gerenteGeral: formData.gerenteGeral,
           createdBy: auth.currentUser?.uid || 'unknown',
           leaderName: auth.currentUser?.displayName || auth.currentUser?.email || 'Admin',
         });
       }
-      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '', gerenteGeral: '' });
       onClose();
     } catch (error) {
       console.error(error);
@@ -119,6 +123,16 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
                 required
               />
             </label>
+            
+            <Box>
+              <Text as="div" size="2" mb="1" weight="bold">Gerente Geral</Text>
+              <TextField.Root 
+                placeholder="Nome do Gerente Geral do projeto..."
+                name="gerenteGeral"
+                value={formData.gerenteGeral}
+                onChange={handleChange}
+              />
+            </Box>
 
             <label>
               <Text as="div" size="2" mb="1" weight="bold">Chave do Projeto</Text>

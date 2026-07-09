@@ -27,6 +27,8 @@
     "cheerio": "^1.2.0",
     "firebase": "^12.15.0",
     "frappe-gantt": "^1.2.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

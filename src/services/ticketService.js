@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc, getDocs, where } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../firebase';
 import { createNotification } from './notificationService';
@@ -306,6 +306,21 @@ export const subscribeToWorkLogs = (ticketId, callback) => {
       ...doc.data()
     }));
     callback(logs);
+  });
+};
+
+export const subscribeToEstimationsByTicketId = (ticketId, callback) => {
+  const q = query(
+    collection(db, 'estimations'),
+    where('ticketId', '==', ticketId)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const estimations = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(estimations);
   });
 };
 
