@@ -76,9 +76,9 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas' },
-    { name: 'Atividades', icon: <Check size={20} />, path: '/atividades' },
-    { name: 'Estimativas', icon: <Calculator size={20} />, path: '/estimativas' },
-    { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap' },
+    { name: 'Atividades', icon: <Check size={20} />, path: '/atividades', isChild: true },
+    { name: 'Estimativas', icon: <Calculator size={20} />, path: '/estimativas', isChild: true },
+    { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap', isChild: true },
     { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' },
   ];
 
@@ -111,6 +111,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                   alignItems: 'center',
                   gap: '12px',
                   padding: '12px 16px',
+                  paddingLeft: item.isChild ? '40px' : '16px',
                   borderRadius: 'var(--border-radius)',
                   fontWeight: 500,
                   transition: 'all 0.2s ease',
