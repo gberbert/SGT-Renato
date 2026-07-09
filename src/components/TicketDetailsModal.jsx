@@ -260,7 +260,15 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
         <Flex direction="column" mb="4">
           <Flex justify="between" align="center" mb="2">
             <Flex align="center" gap="3">
-              {!isEditingTitle && <Text size="2" color="gray" weight="medium">{ticket.code}</Text>}
+              {!isEditingTitle && (
+                ticket.board === 'atividades' && parentTicketInfo ? (
+                  <span style={{ border: '1px solid var(--primary)', color: 'var(--primary)', background: 'rgba(99, 102, 241, 0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.875rem', fontWeight: 'bold' }}>
+                    {parentTicketInfo.title}
+                  </span>
+                ) : (
+                  <Text size="2" color="gray" weight="medium">{ticket.code}</Text>
+                )
+              )}
               <Badge color={ticket.priority === 'critical' ? 'red' : 'blue'} variant="soft" size="1">{ticket.type}</Badge>
             </Flex>
             <Flex align="center" gap="4">
