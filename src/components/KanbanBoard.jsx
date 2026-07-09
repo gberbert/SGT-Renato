@@ -272,10 +272,18 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     return tBoard === board;
   });
 
-  filteredTickets = filteredTickets.map(t => ({
-    ...t,
-    squadName: squads.find(sq => sq.id === t.squadId)?.name
-  }));
+  filteredTickets = filteredTickets.map(t => {
+    let parentObj = null;
+    if (t.parentId) {
+      parentObj = tickets.find(p => p.id === t.parentId);
+    }
+    return {
+      ...t,
+      squadName: squads.find(sq => sq.id === t.squadId)?.name,
+      parentTitle: parentObj ? parentObj.title : null,
+      parentCode: parentObj ? parentObj.code : null
+    };
+  });
 
   const assignees = useSwimlanes 
     ? [...new Set(filteredTickets.map(t => t.assignee || 'Sem responsável'))] 
