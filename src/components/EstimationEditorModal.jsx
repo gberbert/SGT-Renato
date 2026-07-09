@@ -321,7 +321,9 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
               title: actTitle,
               description: actDesc,
               estimatedHours: rowHours,
-              storyPoints: rowHours
+              storyPoints: rowHours,
+              squadId: tk.squadId || '',
+              projectId: tk.projectId || ''
             }, userName);
           } else {
             // Criar nova atividade gerada

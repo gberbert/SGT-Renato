@@ -535,7 +535,21 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                     )}
                     <Box>
                       <Text as="div" size="2" weight="bold" mb="1" color="gray">Responsável</Text>
-                      <Text as="div" size="3">{ticket.assignee}</Text>
+                      <Select.Root 
+                        value={ticket.assignee === 'Sem responsável' ? '' : ticket.assignee} 
+                        onValueChange={(val) => {
+                          const assignedValue = val || 'Sem responsável';
+                          handleUpdateField('assignee', assignedValue);
+                        }}
+                      >
+                        <Select.Trigger style={{ width: '100%' }} />
+                        <Select.Content>
+                          <Select.Item value="">Sem responsável</Select.Item>
+                          {users.map(u => (
+                            <Select.Item key={u.id} value={u.name || u.email}>{u.name || u.email}</Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Root>
                     </Box>
                     <Box>
                       <Text as="div" size="2" weight="bold" mb="1" color="gray">Prioridade</Text>
