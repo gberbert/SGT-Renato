@@ -138,6 +138,21 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
     try {
       const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuário SGT';
       await updateTicket(ticket.id, { [field]: value }, userName);
+
+      // Sincronizar campo Squad para as Atividades filhas automaticamente
+      if (field === 'squadId' && (!ticket.board || ticket.board === 'demandas')) {
+        import('firebase/firestore').then(async ({ query, collection, where, getDocs }) => {
+          const q = query(
+            collection(db, 'tickets'), 
+            where('parentId', '==', ticket.id),
+            where('board', '==', 'atividades')
+          );
+          const childSnap = await getDocs(q);
+          for (const d of childSnap.docs) {
+            await updateTicket(d.id, { squadId: value }, userName);
+          }
+        });
+      }
     } catch (err) {
       console.error(err);
     }
