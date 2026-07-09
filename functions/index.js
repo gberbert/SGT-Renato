@@ -1,10 +1,15 @@
-const functions = require('firebase-functions');
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require('firebase-admin');
 admin.initializeApp();
 
-exports.onCreateNotification = functions.firestore
-  .document('notifications/{notificationId}')
-  .onCreate(async (snap, context) => {
+exports.onCreateNotification = onDocumentCreated({
+    document: 'notifications/{notificationId}',
+    database: 'default'
+}, async (event) => {
+    const snap = event.data;
+    if (!snap) {
+      return null;
+    }
     const notification = snap.data();
 
     // Verifique se a notificação possui o ID do usuário de destino
@@ -13,8 +18,11 @@ exports.onCreateNotification = functions.firestore
       return null;
     }
 
+    // Use a instância do Firestore do próprio documento que acionou o trigger
+    const db = event.data.ref.firestore;
+    
     // Busque o perfil do usuário no Firestore para pegar o FCM Token
-    const userDoc = await admin.firestore().collection('users').doc(notification.userId).get();
+    const userDoc = await db.collection('users').doc(notification.userId).get();
     
     if (!userDoc.exists) {
       console.log('Usuário não encontrado.');
@@ -42,7 +50,7 @@ exports.onCreateNotification = functions.firestore
       },
       webpush: {
         fcmOptions: {
-          link: "https://sgt-renato.web.app"
+          link: notification.link ? `https://sgt-renato.web.app/?ticket=${notification.link}` : "https://sgt-renato.web.app"
         },
         notification: {
           icon: '/vite.svg',
@@ -61,7 +69,7 @@ exports.onCreateNotification = functions.firestore
       if (error.code === 'messaging/invalid-registration-token' ||
           error.code === 'messaging/registration-token-not-registered') {
         console.log('Removendo token inválido do usuário.');
-        await admin.firestore().collection('users').doc(notification.userId).update({
+        await db.collection('users').doc(notification.userId).update({
           fcmToken: admin.firestore.FieldValue.delete()
         });
       }

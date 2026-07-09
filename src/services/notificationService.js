@@ -52,8 +52,7 @@ export const subscribeToUserNotifications = (userId, callback, onNewNotification
 
 export const requestFCMToken = async (userId) => {
   try {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
+    if (Notification.permission === 'granted') {
       const token = await getToken(messaging, { 
         // A VAPID Key deve ser configurada pelo usuário no Firebase Console 
         // e idealmente colocada no .env como VITE_VAPID_KEY
@@ -62,7 +61,11 @@ export const requestFCMToken = async (userId) => {
       if (token) {
         await updateDoc(doc(db, 'users', userId), { fcmToken: token });
         console.log('FCM Token salvo com sucesso.');
+      } else {
+        console.log('O Firebase não retornou um token FCM. Permissão negada ou ambiente não suportado.');
       }
+    } else {
+      console.log('Permissão de notificação negada pelo navegador.');
     }
   } catch (error) {
     console.error('Erro ao pedir token FCM:', error);
@@ -94,5 +97,14 @@ export const markAllAsRead = async (userId, notifications) => {
     await Promise.all(promises);
   } catch (error) {
     console.error("Erro ao marcar todas como lidas:", error);
+  }
+};
+
+export const deleteAllNotifications = async (notifications) => {
+  try {
+    const promises = notifications.map(n => deleteDoc(doc(db, 'notifications', n.id)));
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("Erro ao apagar todas as notificações:", error);
   }
 };

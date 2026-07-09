@@ -3,7 +3,7 @@ import { Menu, Plus, LogOut, Bell, Check, Trash2 } from 'lucide-react';
 import { Flex, DropdownMenu, Button, IconButton, Badge, Box, Text, ScrollArea } from '@radix-ui/themes';
 import GlobalSearch from './GlobalSearch';
 import { auth } from '../firebase';
-import { subscribeToUserNotifications, markNotificationAsRead, markAllAsRead, deleteNotification } from '../services/notificationService';
+import { subscribeToUserNotifications, markNotificationAsRead, deleteAllNotifications, deleteNotification } from '../services/notificationService';
 import { getTicketById } from '../services/ticketService';
 
 const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout }) => {
@@ -70,9 +70,9 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
           <DropdownMenu.Content align="end" style={{ width: '300px' }}>
             <Flex justify="between" align="center" p="2" style={{ borderBottom: '1px solid var(--gray-5)' }}>
               <Text weight="bold">Notificações</Text>
-              {unreadCount > 0 && (
-                <Button size="1" variant="ghost" onClick={() => markAllAsRead(user.uid, notifications)} style={{ cursor: 'pointer' }}>
-                  Marcar lidas
+              {notifications.length > 0 && (
+                <Button size="1" color="red" variant="soft" onClick={() => deleteAllNotifications(notifications)} style={{ cursor: 'pointer' }}>
+                  Apagar todas
                 </Button>
               )}
             </Flex>

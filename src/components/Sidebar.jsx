@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X, Moon, Sun, Download, Bell, Share } from 'lucide-react';
+import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X, Moon, Sun, Download, Bell, Share, Calculator } from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 import { auth } from '../firebase';
 import { requestFCMToken } from '../services/notificationService';
@@ -16,6 +16,10 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   );
 
   useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
     // Detect iOS
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(ios);
@@ -57,15 +61,22 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
     setNotificationPermission(permission);
     if (permission === 'granted') {
       new Notification("Notificações ativadas!", { body: "Você receberá atualizações do SGT aqui." });
-      if (auth.currentUser) {
-        await requestFCMToken(auth.currentUser.uid);
+      if (user) {
+        await requestFCMToken(user.uid);
       }
     }
   };
 
+  useEffect(() => {
+    if (user && 'Notification' in window && Notification.permission === 'granted') {
+      requestFCMToken(user.uid);
+    }
+  }, [user]);
+
   const menuItems = [
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
     { name: 'Kanban', icon: <KanbanSquare size={20} />, path: '/kanban' },
+    { name: 'Estimativas', icon: <Calculator size={20} />, path: '/estimativas' },
     { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap' },
     { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' },
   ];
@@ -146,9 +157,11 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
           </div>
         )}
 
-        {'Notification' in window && notificationPermission !== 'granted' && (
+        {'Notification' in window && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderRadius: 'var(--border-radius)', border: '1px solid var(--gray-5)', cursor: 'pointer' }} onClick={handleNotificationRequest}>
-            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-main)' }}>Ligar Notificações</span>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-main)' }}>
+              {notificationPermission === 'granted' ? 'Reconectar Notificações' : 'Ligar Notificações'}
+            </span>
             <Bell size={16} />
           </div>
         )}

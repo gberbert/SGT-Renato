@@ -18,8 +18,10 @@ import Roadmap from './components/Roadmap';
 import GlobalSearch from './components/GlobalSearch';
 import TicketDetailsModal from './components/TicketDetailsModal';
 import Settings from './components/Settings';
+import Estimations from './components/Estimations';
+import RunMigration from './components/RunMigration';
 import ResetPassword from './components/ResetPassword';
-import { getUserRole } from './services/ticketService';
+import { getUserRole, getTicketById } from './services/ticketService';
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -41,6 +43,23 @@ function App() {
       document.body.classList.remove('light');
     }
   }, [theme]);
+
+  // Verificar se há um ticket na URL (vindo de uma Notificação Push)
+  useEffect(() => {
+    const checkUrlForTicket = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const ticketId = params.get('ticket');
+      if (ticketId) {
+        const ticket = await getTicketById(ticketId);
+        if (ticket) {
+          setSelectedTicket(ticket);
+        }
+        // Opcional: limpar a URL sem recarregar a página
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+    checkUrlForTicket();
+  }, []);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -125,6 +144,8 @@ function App() {
               <Route path="/kanban" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} />} />
               <Route path="/roadmap" element={<Roadmap userRole={userRole} />} />
               <Route path="/projetos" element={<Projects userRole={userRole} />} />
+              <Route path="/estimativas" element={<Estimations />} />
+              <Route path="/migracao" element={<RunMigration />} />
               <Route path="/projetos/:projectId" element={<ProjectDetails userRole={userRole} />} />
               <Route path="/configuracoes" element={userRole === 'admin' ? <Settings /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />

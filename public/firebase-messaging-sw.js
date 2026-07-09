@@ -16,13 +16,13 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Mensagem recebida em background ', payload);
-  
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/vite.svg',
-    data: payload.data
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // O Firebase SDK já exibe automaticamente notificações que contêm o objeto "notification".
+  // Comentado para evitar duplicidade no iPhone/Android:
+  // const notificationTitle = payload.notification.title;
+  // const notificationOptions = {
+  //   body: payload.notification.body,
+  //   icon: '/vite.svg',
+  //   data: payload.data
+  // };
+  // self.registration.showNotification(notificationTitle, notificationOptions);
 });
