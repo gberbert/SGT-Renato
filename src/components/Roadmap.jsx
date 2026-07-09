@@ -152,7 +152,7 @@ const Roadmap = () => {
   let processedTickets = tickets.filter(t => t.startDate && t.deadline);
   
   if (filters.project !== 'all') processedTickets = processedTickets.filter(t => t.projectId === filters.project);
-  if (filters.system !== 'all') processedTickets = processedTickets.filter(t => t.system === filters.system);
+  if (filters.system !== 'all') processedTickets = processedTickets.filter(t => t.associatedSystems?.some(s => s.system === filters.system) || t.system === filters.system);
   if (filters.assignee !== 'all') processedTickets = processedTickets.filter(t => (t.assignee || 'Sem responsável') === filters.assignee);
   if (filters.status !== 'all') processedTickets = processedTickets.filter(t => t.columnId === filters.status);
 
@@ -163,7 +163,7 @@ const Roadmap = () => {
     const groups = {};
     processedTickets.forEach(t => {
       let groupKey = 'Outros';
-      if (groupBy === 'system') groupKey = t.system || 'Sem Sistema';
+      if (groupBy === 'system') groupKey = (t.associatedSystems && t.associatedSystems.length > 0) ? t.associatedSystems[0].system : (t.system || 'Sem Sistema');
       if (groupBy === 'status') groupKey = t.columnId || 'Sem Status';
       if (groupBy === 'assignee') groupKey = t.assignee || 'Sem responsável';
       
@@ -229,7 +229,7 @@ const Roadmap = () => {
   }
 
   // Extract unique values for filters from ALL tickets (to populate dropdowns)
-  const uniqueSystems = [...new Set(tickets.map(t => t.system).filter(Boolean))];
+  const uniqueSystems = [...new Set(tickets.flatMap(t => (t.associatedSystems?.map(s => s.system) || []).concat(t.system ? [t.system] : [])))];
   const uniqueAssignees = [...new Set(tickets.map(t => t.assignee).filter(Boolean))];
   const uniqueStatuses = [...new Set(tickets.map(t => t.columnId).filter(Boolean))];
 

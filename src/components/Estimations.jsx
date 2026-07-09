@@ -23,6 +23,7 @@ const Estimations = () => {
   const [estimations, setEstimations] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [dbRules, setDbRules] = useState([]);
+  const [systems, setSystems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -37,15 +38,17 @@ const Estimations = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [estSnap, tksSnap, rulesSnap] = await Promise.all([
+      const [estSnap, tksSnap, rulesSnap, sysSnap] = await Promise.all([
         getDocs(collection(db, 'estimations')),
         getDocs(collection(db, 'tickets')),
-        getDocs(collection(db, 'estimationRules'))
+        getDocs(collection(db, 'estimationRules')),
+        getDocs(collection(db, 'systems'))
       ]);
 
       setEstimations(estSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setTickets(tksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setDbRules(rulesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setSystems(sysSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (error) {
       console.error("Erro ao carregar dados", error);
     } finally {
@@ -413,6 +416,7 @@ const Estimations = () => {
         open={modalOpen} 
         onOpenChange={setModalOpen}
         dbRules={dbRules}
+        systems={systems}
         tickets={tickets}
         estimationToEdit={estimationToEdit}
         onSaveSuccess={loadData}

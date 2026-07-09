@@ -39,6 +39,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
   const [ticketSearch, setTicketSearch] = useState('');
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [macroDescription, setMacroDescription] = useState('');
+  const [system, setSystem] = useState('');
   const [rows, setRows] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -48,11 +49,13 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
         setSelectedTicketId(estimationToEdit.ticketId || '');
         const tk = tickets.find(t => t.id === estimationToEdit.ticketId);
         setTicketSearch(tk ? tk.title : '');
+        setSystem(estimationToEdit.system || '');
         setMacroDescription(estimationToEdit.macroDescription || '');
         setRows(estimationToEdit.rows || []);
       } else {
         setSelectedTicketId('');
         setTicketSearch('');
+        setSystem('');
         setMacroDescription('');
         setRows([]);
       }
@@ -160,6 +163,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
       
       const estimationData = {
         ticketId: selectedTicketId,
+        system,
         macroDescription,
         rows,
         totalBaseHours,
@@ -258,6 +262,22 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
                   readOnly 
                   disabled
                 />
+              </Box>
+              </Box>
+            </Flex>
+
+            <Flex gap="4" align="start" mb="4">
+              <Box flexGrow="1">
+                <Text as="div" size="2" mb="1" weight="bold">Sistema Associado</Text>
+                <Select.Root value={system} onValueChange={setSystem}>
+                  <Select.Trigger placeholder="Selecione um sistema..." />
+                  <Select.Content>
+                    {systems && systems.map(s => (
+                      <Select.Item key={s.id} value={s.name}>{s.name}</Select.Item>
+                    ))}
+                    {(!systems || systems.length === 0) && <Select.Item value="none" disabled>Nenhum sistema cadastrado</Select.Item>}
+                  </Select.Content>
+                </Select.Root>
               </Box>
             </Flex>
 

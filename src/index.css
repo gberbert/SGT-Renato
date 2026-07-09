@@ -603,12 +603,12 @@ ul {
 }
 
 .column-body {
-  padding: 16px;
+  padding: 12px;
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   transition: background-color 0.2s;
 }
 
@@ -626,7 +626,7 @@ ul {
 }
 
 .kanban-card {
-  padding: 16px;
+  padding: 12px;
   cursor: grab;
   user-select: none;
 }
@@ -639,7 +639,7 @@ ul {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 0.8rem;
 }
 
@@ -657,10 +657,10 @@ ul {
 }
 
 .ticket-title {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  margin-bottom: 16px;
-  line-height: 1.4;
+  margin-bottom: 10px;
+  line-height: 1.3;
 }
 
 .card-footer {

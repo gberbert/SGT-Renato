@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid } from '@radix-ui/themes';
+import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid, IconButton } from '@radix-ui/themes';
 import { createTicket } from '../services/ticketService';
 import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { auth } from '../firebase';
 import RichTextEditor from './RichTextEditor';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 
 const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   const [loading, setLoading] = useState(false);
@@ -18,12 +18,12 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     projectId: '',
     squadId: '',
     externalTicket: '',
-    system: '',
     component: '',
     assignee: '',
     startDate: '',
     endDate: ''
   });
+  const [associatedSystems, setAssociatedSystems] = useState([]);
 
   const [ticketTypes, setTicketTypes] = useState([]);
   const [users, setUsers] = useState([]);
@@ -76,6 +76,24 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleAddSystem = () => {
+    setAssociatedSystems([...associatedSystems, { system: systems.length > 0 ? systems[0].name : '', hours: 0 }]);
+  };
+
+  const handleRemoveSystem = (index) => {
+    setAssociatedSystems(associatedSystems.filter((_, i) => i !== index));
+  };
+
+  const handleSystemChange = (index, field, value) => {
+    const updated = [...associatedSystems];
+    if (field === 'hours') {
+      updated[index][field] = parseFloat(value) || 0;
+    } else {
+      updated[index][field] = value;
+    }
+    setAssociatedSystems(updated);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.projectId) return;
@@ -87,6 +105,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
 
       const DEFAULT_COLUMN_ID = 'col-backlog';
 
+      const sumHours = associatedSystems.reduce((acc, curr) => acc + curr.hours, 0);
+
       const ticketData = {
         code: `${projKey}-${Math.floor(Math.random() * 9000) + 1000}`,
         title: formData.title,
@@ -97,7 +117,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         projectId: formData.projectId,
         assignee: formData.assignee || 'Sem responsável',
         externalTicket: formData.externalTicket,
-        system: formData.system,
+        associatedSystems: associatedSystems,
+        estimatedHours: sumHours,
+        storyPoints: sumHours,
         component: formData.component,
         startDate: formData.startDate,
         endDate: formData.endDate,
@@ -118,12 +140,12 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         priority: 'medium',
         projectId: '',
         externalTicket: '',
-        system: '',
         component: '',
         assignee: '',
         startDate: '',
         endDate: ''
       });
+      setAssociatedSystems([]);
       setDescription('');
       setCustomData({});
       onClose();
@@ -228,17 +250,46 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
             </Flex>
 
             <Flex gap="4">
-              <Box style={{ flex: 1 }}>
-                <Text as="div" size="2" mb="1" weight="bold">Sistema</Text>
-                <Select.Root value={formData.system} onValueChange={(v) => handleSelectChange('system', v)}>
-                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
-                  <Select.Content>
-                    {systems.map(s => (
-                      <Select.Item key={s.id} value={s.name}>{s.name}</Select.Item>
+              <Box style={{ flex: 1, backgroundColor: 'var(--gray-2)', padding: '12px', borderRadius: '8px', border: '1px solid var(--gray-5)' }}>
+                <Flex justify="between" align="center" mb="2">
+                  <Text as="div" size="2" weight="bold">Sistemas Associados & Horas</Text>
+                  <Button size="1" variant="soft" onClick={handleAddSystem} type="button">
+                    <Plus size={14} /> Add Sistema
+                  </Button>
+                </Flex>
+                
+                {associatedSystems.length === 0 ? (
+                  <Text size="1" color="gray">Nenhum sistema adicionado.</Text>
+                ) : (
+                  <Flex direction="column" gap="2">
+                    {associatedSystems.map((item, idx) => (
+                      <Flex key={idx} gap="2" align="center">
+                        <Box style={{ flex: 2 }}>
+                          <Select.Root value={item.system} onValueChange={(v) => handleSystemChange(idx, 'system', v)}>
+                            <Select.Trigger style={{ width: '100%' }} />
+                            <Select.Content>
+                              {systems.map(s => (
+                                <Select.Item key={s.id} value={s.name}>{s.name}</Select.Item>
+                              ))}
+                              {systems.length === 0 && <Select.Item value="none" disabled>Nenhum cadastrado</Select.Item>}
+                            </Select.Content>
+                          </Select.Root>
+                        </Box>
+                        <Box style={{ flex: 1 }}>
+                          <TextField.Root 
+                            type="number" 
+                            placeholder="Horas" 
+                            value={item.hours === 0 ? '' : item.hours} 
+                            onChange={(e) => handleSystemChange(idx, 'hours', e.target.value)}
+                          />
+                        </Box>
+                        <IconButton size="1" color="red" variant="ghost" type="button" onClick={() => handleRemoveSystem(idx)}>
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </Flex>
                     ))}
-                    {systems.length === 0 && <Select.Item value="none" disabled>Nenhum cadastrado</Select.Item>}
-                  </Select.Content>
-                </Select.Root>
+                  </Flex>
+                )}
               </Box>
 
               <Box style={{ flex: 1 }}>

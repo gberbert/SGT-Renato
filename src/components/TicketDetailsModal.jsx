@@ -545,6 +545,22 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                         onBlur={() => handleUpdateField('sprint', sprint)}
                       />
                     </Box>
+                    <Box style={{ gridColumn: 'span 2' }}>
+                      <Text as="div" size="2" weight="bold" mb="1" color="gray">Sistemas Associados</Text>
+                      {(!ticket.associatedSystems || ticket.associatedSystems.length === 0) ? (
+                        <Text as="div" size="2" color="gray">Nenhum sistema associado</Text>
+                      ) : (
+                        <Flex gap="2" wrap="wrap">
+                          {ticket.associatedSystems.map((item, idx) => (
+                            <Box key={idx} style={{ background: 'var(--gray-3)', padding: '4px 8px', borderRadius: '4px' }}>
+                              <Text size="2" weight="bold">{item.system}</Text>
+                              <Text size="2" color="gray" ml="2">{item.hours}h</Text>
+                            </Box>
+                          ))}
+                        </Flex>
+                      )}
+                    </Box>
+
                     <Box>
                       <Text as="div" size="2" weight="bold" mb="1" color="gray">Horas Estimadas (Base)</Text>
                       <TextField.Root 

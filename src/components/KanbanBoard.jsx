@@ -355,7 +355,13 @@ const KanbanBoard = ({ onCardClick }) => {
                           <Table.Cell><Text weight="bold" color="indigo">{t.code}</Text></Table.Cell>
                           <Table.Cell>{t.title}</Table.Cell>
                           <Table.Cell>
-                            {t.system ? <Badge color="blue" variant="soft">{t.system}</Badge> : '-'}
+                            {(t.associatedSystems && t.associatedSystems.length > 0) ? (
+                              <Flex gap="1" wrap="wrap">
+                                {t.associatedSystems.map((sys, idx) => (
+                                  <Badge key={idx} color="blue" variant="soft">{sys.system}</Badge>
+                                ))}
+                              </Flex>
+                            ) : '-'}
                           </Table.Cell>
                           <Table.Cell>
                             {t.squadName ? <Badge color="purple" variant="soft">{t.squadName}</Badge> : '-'}
