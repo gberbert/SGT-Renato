@@ -296,8 +296,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
         <Tabs.Root className="ticket-tabs" defaultValue="details" style={{ height: 'calc(90vh - 100px)', display: 'flex', flexDirection: 'column' }}>
           <Tabs.List className="ticket-tabs-list">
             <Tabs.Trigger value="details">Detalhes</Tabs.Trigger>
-            <Tabs.Trigger value="chat">Chat da Demanda</Tabs.Trigger>
-            <Tabs.Trigger value="subtasks">Sub-tarefas ({subtasks.length})</Tabs.Trigger>
+            <Tabs.Trigger value="chat">Chat do Ticket</Tabs.Trigger>
+            {ticket.board !== 'atividades' && (
+              <Tabs.Trigger value="subtasks">Atividades ({subtasks.length})</Tabs.Trigger>
+            )}
             <Tabs.Trigger value="attachments">Anexos ({attachments.length})</Tabs.Trigger>
             <Tabs.Trigger value="history">Histórico</Tabs.Trigger>
             {userRole === 'admin' && <Tabs.Trigger value="time">Tempo (Admin)</Tabs.Trigger>}
@@ -561,6 +563,13 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                       )}
                     </Box>
 
+                    {ticket.board === 'atividades' && ticket.parentId && (
+                      <Box>
+                        <Text as="div" size="2" weight="bold" mb="1" color="gray">Demanda Pai</Text>
+                        <Text as="div" size="3">{ticket.parentId}</Text>
+                      </Box>
+                    )}
+
                     <Box>
                       <Text as="div" size="2" weight="bold" mb="1" color="gray">Horas Estimadas (Base)</Text>
                       <TextField.Root 
@@ -610,17 +619,18 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
               </Box>
             </Tabs.Content>
 
+            {ticket.board !== 'atividades' && (
             <Tabs.Content value="subtasks" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Flex justify="between" align="center" mb="3">
-                <Text size="2" color="gray">Tarefas agrupadas dentro deste ticket</Text>
+                <Text size="2" color="gray">Atividades agrupadas dentro desta demanda</Text>
                 <Button size="1" onClick={() => setIsSubtaskModalOpen(true)}>
-                  <Plus size={14} /> Criar Sub-tarefa
+                  <Plus size={14} /> Criar Atividade
                 </Button>
               </Flex>
               <ScrollArea style={{ flexGrow: 1, height: '300px', paddingRight: '16px' }}>
                 <Flex direction="column" gap="3">
                   {subtasks.length === 0 ? (
-                    <Text color="gray" align="center" mt="5">Nenhuma sub-tarefa criada.</Text>
+                    <Text color="gray" align="center" mt="5">Nenhuma atividade criada.</Text>
                   ) : (
                     subtasks.map(sub => (
                       <Card key={sub.id} size="1" style={{ borderLeft: `3px solid var(--primary)` }}>
@@ -629,8 +639,8 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                             <Text size="1" color="indigo" weight="bold">{sub.code}</Text>
                             <Text as="div" size="2" weight="medium">{sub.title}</Text>
                           </Box>
-                          <Badge color={sub.columnId === 'col-done' ? 'green' : 'orange'}>
-                            {sub.columnId === 'col-done' ? 'Concluída' : 'Pendente'}
+                          <Badge color={sub.statusId === 'col-done' ? 'green' : 'blue'} variant="soft">
+                            {sub.statusId?.replace('col-', '')}
                           </Badge>
                         </Flex>
                       </Card>
@@ -639,6 +649,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                 </Flex>
               </ScrollArea>
             </Tabs.Content>
+            )}
 
             <Tabs.Content value="attachments" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <Flex justify="between" align="center" mb="3">

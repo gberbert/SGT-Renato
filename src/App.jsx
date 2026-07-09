@@ -141,7 +141,8 @@ function App() {
           <section className="view-container">
             <Routes>
               <Route path="/" element={<Dashboard userRole={userRole} />} />
-              <Route path="/kanban" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} />} />
+              <Route path="/demandas" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="demandas" />} />
+              <Route path="/atividades" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="atividades" />} />
               <Route path="/roadmap" element={<Roadmap userRole={userRole} />} />
               <Route path="/projetos" element={<Projects userRole={userRole} />} />
               <Route path="/estimativas" element={<Estimations />} />
@@ -153,7 +154,7 @@ function App() {
           </section>
         </main>
         
-        <NewTicketModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+        <NewTicketModal isOpen={!!isModalOpen} onClose={() => setIsModalOpen(false)} currentBoard={typeof isModalOpen === 'string' ? isModalOpen : 'demandas'} />
         {selectedTicket && (
           <TicketDetailsModal 
             isOpen={!!selectedTicket} 

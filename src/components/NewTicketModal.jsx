@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid, IconButton } from '@radix-ui/themes';
-import { createTicket } from '../services/ticketService';
+import { createTicket, subscribeToTickets } from '../services/ticketService';
 import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
@@ -8,7 +8,7 @@ import { auth } from '../firebase';
 import RichTextEditor from './RichTextEditor';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 
-const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
+const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'demandas' }) => {
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState('');
   const [formData, setFormData] = useState({
@@ -21,7 +21,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     component: '',
     assignee: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    parentDemandaId: ''
   });
   const [associatedSystems, setAssociatedSystems] = useState([]);
 
@@ -33,6 +34,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   const [components, setComponents] = useState([]);
   const [customFields, setCustomFields] = useState([]);
   const [customData, setCustomData] = useState({});
+  const [demandas, setDemandas] = useState([]);
 
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
@@ -46,6 +48,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     const unsubscribeSystems = subscribeToSystems((data) => setSystems(data));
     const unsubscribeComponents = subscribeToComponents((data) => setComponents(data));
     const unsubscribeCustomFields = subscribeToCustomFields((data) => setCustomFields(data));
+    const unsubscribeTickets = subscribeToTickets((data) => {
+      setDemandas(data.filter(t => (t.board || 'demandas') === 'demandas'));
+    }, console.error);
 
     return () => {
       unsubscribeTypes();
@@ -54,6 +59,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
       unsubscribeSystems();
       unsubscribeComponents();
       unsubscribeCustomFields();
+      unsubscribeTickets();
     };
   }, []);
 
@@ -98,6 +104,11 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.projectId) return;
 
+    if (currentBoard === 'atividades' && !formData.parentDemandaId) {
+      alert("Por favor, selecione uma Demanda Pai para esta atividade.");
+      return;
+    }
+
     if (associatedSystems.length === 0) {
       alert("Por favor, adicione pelo menos um sistema associado.");
       return;
@@ -130,7 +141,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         startDate: formData.startDate,
         endDate: formData.endDate,
         customData: customData,
-        parentId: parentId,
+        parentId: currentBoard === 'atividades' ? formData.parentDemandaId : parentId,
+        board: currentBoard,
         comments: 0
       };
       
@@ -149,7 +161,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
         component: '',
         assignee: '',
         startDate: '',
-        endDate: ''
+        endDate: '',
+        parentDemandaId: ''
       });
       setAssociatedSystems([]);
       setDescription('');
@@ -166,13 +179,27 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Content maxWidth="600px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-        <Dialog.Title>Novo Ticket</Dialog.Title>
+        <Dialog.Title>{currentBoard === 'atividades' ? 'Nova Atividade' : 'Nova Demanda'}</Dialog.Title>
         <Dialog.Description size="2" mb="4" color="gray">
-          Crie uma nova demanda (O status inicial será sempre 'Backlog').
+          {currentBoard === 'atividades' ? 'Crie uma nova atividade atrelada a uma demanda pai.' : 'Crie uma nova demanda.'}
         </Dialog.Description>
         
         <form onSubmit={handleSubmit}>
           <Flex direction="column" gap="4">
+            {currentBoard === 'atividades' && (
+              <Box>
+                <Text as="div" size="2" mb="1" weight="bold">Demanda Pai <span style={{ color: 'red' }}>*</span></Text>
+                <Select.Root value={formData.parentDemandaId} onValueChange={(v) => handleSelectChange('parentDemandaId', v)}>
+                  <Select.Trigger placeholder="Selecione a demanda relacionada..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    {demandas.map(d => (
+                      <Select.Item key={d.id} value={d.id}>{d.code} - {d.title}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </Box>
+            )}
+
             <Flex gap="4" align="end" wrap="wrap">
               <Box style={{ flex: '1 1 200px' }}>
                 <Text as="div" size="2" mb="1" weight="bold">Projeto <span style={{ color: 'red' }}>*</span></Text>

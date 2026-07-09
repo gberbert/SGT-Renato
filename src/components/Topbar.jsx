@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, Plus, LogOut, Bell, Check, Trash2 } from 'lucide-react';
 import { Flex, DropdownMenu, Button, IconButton, Badge, Box, Text, ScrollArea } from '@radix-ui/themes';
+import { useLocation } from 'react-router-dom';
 import GlobalSearch from './GlobalSearch';
 import { auth } from '../firebase';
 import { subscribeToUserNotifications, markNotificationAsRead, deleteAllNotifications, deleteNotification } from '../services/notificationService';
@@ -9,6 +10,8 @@ import { getTicketById } from '../services/ticketService';
 const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout }) => {
   const [notifications, setNotifications] = useState([]);
   const user = auth.currentUser;
+  const location = useLocation();
+  const currentBoard = location.pathname === '/atividades' ? 'atividades' : 'demandas';
 
   useEffect(() => {
     if (!user) return;
@@ -108,8 +111,8 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
           </DropdownMenu.Content>
         </DropdownMenu.Root>
 
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} /> <span className="hide-on-mobile">Novo Ticket</span>
+        <button className="btn btn-primary" onClick={() => setIsModalOpen(currentBoard)}>
+          <Plus size={18} /> <span className="hide-on-mobile">{currentBoard === 'atividades' ? 'Nova Atividade' : 'Nova Demanda'}</span>
         </button>
         <button className="btn-icon" onClick={handleLogout} title="Sair">
           <LogOut size={20} />

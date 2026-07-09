@@ -28,7 +28,7 @@ const DEFAULT_COLUMNS = [
   { id: 'col-done', title: 'Concluído', statusId: 'col-done' }
 ];
 
-const KanbanBoard = ({ onCardClick }) => {
+const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
   const [tickets, setTickets] = useState([]);
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,8 +89,10 @@ const KanbanBoard = ({ onCardClick }) => {
     }
 
     const proj = projects.find(p => p.id === selectedProjectId);
-    if (proj && proj.workflowId) {
-      const flow = workflows.find(w => w.id === proj.workflowId);
+    const targetWorkflowId = board === 'atividades' ? proj?.workflowAtividadesId : proj?.workflowId;
+
+    if (proj && targetWorkflowId) {
+      const flow = workflows.find(w => w.id === targetWorkflowId);
       if (flow && flow.columnsStr) {
         const cols = flow.columnsStr.split(',').map(c => {
           const title = c.trim();
@@ -261,6 +263,12 @@ const KanbanBoard = ({ onCardClick }) => {
   if (selectedSquadId !== 'all') {
     filteredTickets = filteredTickets.filter(t => t.squadId === selectedSquadId);
   }
+
+  // Filtrar pelo quadro atual (Demandas vs Atividades)
+  filteredTickets = filteredTickets.filter(t => {
+    const tBoard = t.board || 'demandas';
+    return tBoard === board;
+  });
 
   filteredTickets = filteredTickets.map(t => ({
     ...t,

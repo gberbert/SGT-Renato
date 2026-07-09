@@ -134,6 +134,21 @@ export const updateTicketStatus = async (ticketId, newStatusId, userName = 'Sist
       updatedAt: new Date()
     });
     await logTicketAction(ticketId, `Moveu o ticket para ${newStatusId}`, userName);
+
+    // Se for movido para concluído, fechar atividades filhas
+    if (newStatusId === 'col-done') {
+      const q = query(collection(db, COLLECTION_NAME));
+      const snapshot = await getDocs(q);
+      const children = snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(t => t.parentId === ticketId && t.columnId !== 'col-done');
+
+      for (const child of children) {
+        const childRef = doc(db, COLLECTION_NAME, child.id);
+        await updateDoc(childRef, { columnId: 'col-done', updatedAt: new Date() });
+        await logTicketAction(child.id, `Fechado automaticamente via Demanda Pai`, 'Sistema');
+      }
+    }
   } catch (error) {
     console.error("Erro ao atualizar status:", error);
     throw error;

@@ -15,6 +15,7 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
     description: '',
     key: '',
     workflowId: '',
+    workflowAtividadesId: '',
     estado: '',
     municipio: '',
     gerenteGeral: ''
@@ -27,12 +28,13 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
         description: editingProject.description,
         key: editingProject.key,
         workflowId: editingProject.workflowId || '',
+        workflowAtividadesId: editingProject.workflowAtividadesId || '',
         estado: editingProject.estado || '',
         municipio: editingProject.municipio || '',
         gerenteGeral: editingProject.gerenteGeral || ''
       });
     } else {
-      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '', gerenteGeral: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', workflowAtividadesId: '', estado: '', municipio: '', gerenteGeral: '' });
     }
 
     // Load Estados
@@ -76,6 +78,7 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           description: formData.description,
           key: formData.key.toUpperCase(),
           workflowId: formData.workflowId,
+          workflowAtividadesId: formData.workflowAtividadesId,
           estado: formData.estado,
           municipio: formData.municipio,
           gerenteGeral: formData.gerenteGeral
@@ -86,6 +89,7 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           description: formData.description,
           key: formData.key.toUpperCase(),
           workflowId: formData.workflowId,
+          workflowAtividadesId: formData.workflowAtividadesId,
           estado: formData.estado,
           municipio: formData.municipio,
           gerenteGeral: formData.gerenteGeral,
@@ -93,7 +97,7 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           leaderName: auth.currentUser?.displayName || auth.currentUser?.email || 'Admin',
         });
       }
-      setFormData({ name: '', description: '', key: '', workflowId: '', estado: '', municipio: '', gerenteGeral: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', workflowAtividadesId: '', estado: '', municipio: '', gerenteGeral: '' });
       onClose();
     } catch (error) {
       console.error(error);
@@ -150,23 +154,37 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
               </Text>
             </label>
 
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">Workflow do Projeto</Text>
-              <Select.Root 
-                value={formData.workflowId} 
-                onValueChange={(val) => setFormData({...formData, workflowId: val})}
-              >
-                <Select.Trigger placeholder="Selecione um workflow..." style={{ width: '100%' }} />
-                <Select.Content>
-                  {workflows.map(wf => (
-                    <Select.Item key={wf.id} value={wf.id}>{wf.name}</Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-              <Text as="div" size="1" color="gray" mt="1">
-                Define as colunas que aparecerão no Kanban deste projeto.
-              </Text>
-            </label>
+            <Flex gap="4">
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Workflow de Demandas</Text>
+                <Select.Root 
+                  value={formData.workflowId} 
+                  onValueChange={(val) => setFormData({...formData, workflowId: val})}
+                >
+                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    {workflows.filter(w => (w.board || 'demandas') === 'demandas').map(wf => (
+                      <Select.Item key={wf.id} value={wf.id}>{wf.name}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+
+              <label style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Workflow de Atividades</Text>
+                <Select.Root 
+                  value={formData.workflowAtividadesId} 
+                  onValueChange={(val) => setFormData({...formData, workflowAtividadesId: val})}
+                >
+                  <Select.Trigger placeholder="Selecione..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    {workflows.filter(w => (w.board || 'demandas') === 'atividades').map(wf => (
+                      <Select.Item key={wf.id} value={wf.id}>{wf.name}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+            </Flex>
 
             <Flex gap="4">
               <label style={{ flex: 1 }}>

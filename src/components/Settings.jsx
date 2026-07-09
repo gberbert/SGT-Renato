@@ -43,6 +43,9 @@ const Settings = () => {
   const [rbacMembers, setRbacMembers] = useState({});
   const [savingRbac, setSavingRbac] = useState(false);
 
+  // Config Board Selector (Demandas vs Atividades)
+  const [configBoard, setConfigBoard] = useState('demandas');
+
   // Active Tab State (Responsive Menu)
   const [activeTab, setActiveTab] = useState('users');
 
@@ -142,7 +145,7 @@ const Settings = () => {
     if (!typeData.name.trim()) return;
     setSavingType(true);
     try {
-      await saveTicketType(typeData);
+      await saveTicketType({ ...typeData, board: configBoard });
       setIsTypeModalOpen(false);
     } catch (err) {
       alert("Erro ao salvar tipo.");
@@ -167,7 +170,7 @@ const Settings = () => {
         const id = `col-${title.toLowerCase().replace(/\s+/g, '-')}`;
         return { id, title, statusId: id };
       });
-      await saveWorkflow({ name: newWorkflowData.name, columns: colsArray });
+      await saveWorkflow({ name: newWorkflowData.name, columns: colsArray, board: configBoard });
       setNewWorkflowData({ name: '', columnsStr: '' });
       setIsNewWorkflowModalOpen(false);
     } catch (err) {
@@ -415,8 +418,30 @@ const Settings = () => {
   return (
     <div className="view-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div className="welcome-banner" style={{ marginBottom: 0 }}>
-        <Text as="h1" size="6" weight="bold">Configurações do Sistema</Text>
-        <Text as="p" size="3" color="gray">Área administrativa para parametrização do SGT.</Text>
+        <Flex justify="between" align="center" wrap="wrap" gap="4">
+          <Box>
+            <Text as="h1" size="6" weight="bold">Configurações do Sistema</Text>
+            <Text as="p" size="3" color="gray">Área administrativa para parametrização do SGT.</Text>
+          </Box>
+          <Box>
+            <Flex gap="2" style={{ background: 'var(--gray-3)', padding: '4px', borderRadius: 'var(--border-radius)' }}>
+              <Button 
+                variant={configBoard === 'demandas' ? 'solid' : 'ghost'} 
+                onClick={() => setConfigBoard('demandas')}
+                style={{ cursor: 'pointer' }}
+              >
+                Quadro: Demandas
+              </Button>
+              <Button 
+                variant={configBoard === 'atividades' ? 'solid' : 'ghost'} 
+                onClick={() => setConfigBoard('atividades')}
+                style={{ cursor: 'pointer' }}
+              >
+                Quadro: Atividades
+              </Button>
+            </Flex>
+          </Box>
+        </Flex>
       </div>
 
       <Card size="4" style={{ flexGrow: 1 }}>
@@ -603,7 +628,9 @@ const Settings = () => {
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
-                    {ticketTypes.map(type => (
+                    {ticketTypes
+                      .filter(t => (t.board || 'demandas') === configBoard)
+                      .map(type => (
                       <Table.Row key={type.id} align="center">
                         <Table.Cell><Text weight="bold">{type.name}</Text></Table.Cell>
                         <Table.Cell><Badge color={type.color}>{type.color}</Badge></Table.Cell>
@@ -722,7 +749,9 @@ const Settings = () => {
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
-                    {workflows.map(flow => (
+                    {workflows
+                      .filter(w => (w.board || 'demandas') === configBoard)
+                      .map(flow => (
                       <Table.Row key={flow.id} align="center">
                         <Table.Cell><Text weight="bold">{flow.name}</Text></Table.Cell>
                         <Table.Cell>
