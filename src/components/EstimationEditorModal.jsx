@@ -213,14 +213,17 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
         updatedAt: new Date().toISOString()
       };
       
+      let targetEstimationId = '';
       if (estimationToEdit && estimationToEdit.id) {
         // Se já existe, mantém autor e data de criação originais
         await updateDoc(doc(db, 'estimations', estimationToEdit.id), estimationData);
+        targetEstimationId = estimationToEdit.id;
       } else {
         estimationData.createdAt = new Date().toISOString();
         estimationData.authorName = userName;
         estimationData.authorUid = userUid;
-        await addDoc(collection(db, 'estimations'), estimationData);
+        const docRef = await addDoc(collection(db, 'estimations'), estimationData);
+        targetEstimationId = docRef.id;
       }
       
       // -- NOVIDADE: Atualiza o Ticket atrelado --
@@ -261,18 +264,6 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
       });
 
       // -- VÍNCULO HARD: Sincronizar Atividades da Demanda --
-      let targetEstimationId = '';
-      if (estimationToEdit && estimationToEdit.id) {
-        targetEstimationId = estimationToEdit.id;
-      } else {
-        // Se foi criado agora, pegamos o ID recém gerado da query que vai achar nossa estimativa pelo ticket+system
-        const estQuery = query(collection(db, 'estimations'), where('ticketId', '==', selectedTicketId), where('system', '==', system));
-        const estSnapshot = await getDocs(estQuery);
-        if (!estSnapshot.empty) {
-          targetEstimationId = estSnapshot.docs[0].id;
-        }
-      }
-
       if (targetEstimationId && tk) {
         // Busca atividades auto-geradas por esta estimativa
         const actQuery = query(
