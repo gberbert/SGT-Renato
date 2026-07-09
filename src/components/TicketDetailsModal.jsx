@@ -4,7 +4,8 @@ import { updateTicket, deleteTicket, addComment, subscribeToComments, subscribeT
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToWorkflows, subscribeToCustomFields, subscribeToTicketTypes, subscribeToUsers } from '../services/settingsService';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Loader2, Send, Plus, Paperclip, File, Download, ShieldAlert, Sparkles, Clock, Edit2, Trash2, X } from 'lucide-react';
 import NewTicketModal from './NewTicketModal';
 import RichTextEditor from './RichTextEditor';
@@ -141,7 +142,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
 
       // Sincronizar campo Squad para as Atividades filhas automaticamente
       if (field === 'squadId' && (!ticket.board || ticket.board === 'demandas')) {
-        import('firebase/firestore').then(async ({ query, collection, where, getDocs }) => {
+        try {
           const q = query(
             collection(db, 'tickets'), 
             where('parentId', '==', ticket.id),
@@ -151,7 +152,9 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
           for (const d of childSnap.docs) {
             await updateTicket(d.id, { squadId: value }, userName);
           }
-        });
+        } catch (childErr) {
+          console.error("Erro ao sincronizar filhos:", childErr);
+        }
       }
     } catch (err) {
       console.error(err);
