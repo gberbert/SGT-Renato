@@ -114,12 +114,13 @@ const MenuBar = ({ editor }) => {
   );
 };
 
-const RichTextEditor = ({ content, onChange, onBlur, users = [], enableMentions = true, minHeight = '150px' }) => {
+const RichTextEditor = ({ content, onChange, onBlur, users = [], enableMentions = true, minHeight = '150px', readOnly = false }) => {
   React.useEffect(() => {
     setMentionUsers(users);
   }, [users]);
 
   const editor = useEditor({
+    editable: !readOnly,
     extensions: [
       StarterKit,
       Link.configure({ openOnClick: false }),
@@ -138,7 +139,7 @@ const RichTextEditor = ({ content, onChange, onBlur, users = [], enableMentions 
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
-    onBlur: () => {
+    onBlur: ({ editor }) => {
       if (onBlur) onBlur();
     }
   });
@@ -154,9 +155,14 @@ const RichTextEditor = ({ content, onChange, onBlur, users = [], enableMentions 
   }, [content, editor]);
 
   return (
-    <Box style={{ border: '1px solid var(--gray-6)', borderRadius: 'var(--radius-3)', overflow: 'hidden', background: 'var(--surface)' }}>
-      <MenuBar editor={editor} />
-      <Box p="3" className="tiptap-content" style={{ minHeight: minHeight, outline: 'none' }}>
+    <Box style={{ border: '1px solid var(--gray-5)', 
+      borderRadius: 'var(--radius-3)',
+      display: 'flex',
+      flexDirection: 'column',
+      background: readOnly ? 'var(--gray-2)' : 'var(--surface)'
+    }}>
+      {!readOnly && <MenuBar editor={editor} />}
+      <Box className="editor-content-wrapper" style={{ flexGrow: 1, padding: '12px', minHeight }}>
         <EditorContent editor={editor} />
       </Box>
     </Box>
