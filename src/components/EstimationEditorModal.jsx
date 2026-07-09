@@ -16,7 +16,7 @@ import {
 } from '@radix-ui/themes';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { db, auth } from '../firebase';
-import { collection, addDoc, updateDoc, doc, getDocs, query, where, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, getDocs, getDoc, query, where, deleteDoc } from 'firebase/firestore';
 import { createTicket, updateTicket, deleteTicket } from '../services/ticketService';
 
 const COMPLEXITIES = [
@@ -265,6 +265,28 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
 
       // -- VÍNCULO HARD: Sincronizar Atividades da Demanda --
       if (targetEstimationId && tk) {
+        // Descobre a primeira coluna correta para Atividades deste projeto
+        let firstColumn = 'col-backlog';
+        if (tk.projectId) {
+          const [projSnap, wfSnap] = await Promise.all([
+            getDoc(doc(db, 'projects', tk.projectId)),
+            getDocs(collection(db, 'workflows'))
+          ]);
+          
+          if (projSnap.exists()) {
+            const projData = projSnap.data();
+            if (projData.workflowId) {
+              const wfDoc = wfSnap.docs.find(w => w.id === projData.workflowId);
+              if (wfDoc) {
+                const wfData = wfDoc.data();
+                if (wfData.columns && wfData.columns.length > 0) {
+                  firstColumn = typeof wfData.columns[0] === 'string' ? wfData.columns[0] : (wfData.columns[0].id || wfData.columns[0].title);
+                }
+              }
+            }
+          }
+        }
+
         // Busca atividades auto-geradas por esta estimativa
         const actQuery = query(
           collection(db, 'tickets'), 
@@ -307,8 +329,8 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
               description: actDesc,
               type: 'Task',
               priority: 'medium',
-              columnId: 'col-backlog',
-              projectId: tk.projectId,
+              columnId: firstColumn,
+              projectId: tk.projectId || '',
               assignee: 'Sem responsável',
               associatedSystems: [{ system, hours: rowHours }],
               estimatedHours: rowHours,
