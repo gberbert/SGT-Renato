@@ -93,7 +93,9 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
 
     if (proj && targetWorkflowId) {
       const flow = workflows.find(w => w.id === targetWorkflowId);
-      if (flow && flow.columnsStr) {
+      if (flow && flow.columns && flow.columns.length > 0) {
+        setColumns(flow.columns);
+      } else if (flow && flow.columnsStr) {
         const cols = flow.columnsStr.split(',').map(c => {
           const title = c.trim();
           const id = `col-${title.toLowerCase().replace(/\s+/g, '-')}`;

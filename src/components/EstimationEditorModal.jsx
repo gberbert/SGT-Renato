@@ -71,7 +71,9 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
     }
   }, [open, estimationToEdit, tickets]);
 
-  const expandedTickets = tickets.flatMap(t => {
+  const expandedTickets = tickets
+    .filter(t => !t.board || t.board === 'demandas')
+    .flatMap(t => {
     if (t.associatedSystems && t.associatedSystems.length > 0) {
       return t.associatedSystems.map(sys => ({
         id: t.id,
