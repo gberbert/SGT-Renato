@@ -81,13 +81,14 @@ function App() {
               role: 'user',
               createdAt: serverTimestamp()
             });
+            setUserRole('user');
+          } else {
+            setUserRole(userSnap.data().role || 'user');
           }
         } catch (error) {
           console.error("Erro ao sincronizar usuário no Firestore:", error);
+          setUserRole('user');
         }
-
-        // FORCANDO ADMIN TEMPORARIAMENTE
-        setUserRole('admin');
       }
       setLoading(false);
     });
