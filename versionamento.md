@@ -1,5 +1,16 @@
 # Versionamento do Projeto
 
+## [0.1.55] - 2026-07-09
+- **Cascade Updates (Real-time):** Alterações no Squad da Demanda Pai agora são instantaneamente sincronizadas para todas as Atividades filhas no Firestore, dispensando a necessidade de re-salvar a Estimativa original.
+- **UI Bugfix:** Corrigido o `Select` component do Radix UI que exibia uma caixa vazia ao invés de "Sem Squad" ou "Sem responsável" quando os valores originais eram vazios.
+- **Access Control:** Removido o mock que forçava acesso de 'Admin' no frontend e substituído por uma busca segura e direta do nível de acesso na base de usuários.
+
+## [0.1.45 a 0.1.54] - 2026-07-09
+- **Módulo de Estimativas de Esforço:** Lançamento do novo motor de Estimativas. Criação e gestão de linhas detalhadas de escopo com cálculo automático de horas baseadas nas Regras de Negócio e complexidade cadastradas no Admin.
+- **Kanban Segregado:** Demandas e Atividades agora vivem em pranchas visuais separadas (`board: 'demandas'` vs `board: 'atividades'`), limpando a visão gerencial.
+- **Autogeração de Atividades:** O fluxo de "Salvar" de uma estimativa agora sincroniza e converte automaticamente linhas de escopo em cards de Atividades atrelados nativamente à Demanda Pai, sem duplicidade de IDs, realizando limpeza orfã dinâmica.
+- **UI Enhancements:** Atualização do Kanban Card e Ticket Details Modal para exibir títulos contextualizados em badgets (ex: "DEM-777") no lugar de IDs internos de atividades geradas (ex: "SGT-4062") para maior clareza hierárquica.
+
 ## [0.1.44] - 2026-07-08
 - **Background Push Notifications:** Migrated push system to FCM (Firebase Cloud Messaging) and Firebase Cloud Functions. Implemented `firebase-messaging-sw.js` and server-side APNs/FCM dispatch to support true background notifications when iOS/Android apps are minimized or devices are locked.
 
