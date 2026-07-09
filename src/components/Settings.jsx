@@ -3,7 +3,7 @@ import { Tabs, Box, Text, Card, Flex, Button, Table, Badge, Dialog, TextField, S
 import { 
   subscribeToTicketTypes, saveTicketType, deleteTicketType, 
   subscribeToWorkflows, saveWorkflow, deleteWorkflow, 
-  subscribeToUsers, updateUserRole, updateUser,
+  subscribeToUsers, updateUserRole, updateUser, createUser, deleteUser,
   subscribeToSystems, saveSystem, deleteSystem,
   subscribeToComponents, saveComponent, deleteComponent,
   subscribeToCustomFields, saveCustomField, deleteCustomField,

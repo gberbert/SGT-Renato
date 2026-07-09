@@ -97,6 +97,12 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.projectId) return;
+
+    if (associatedSystems.length === 0) {
+      alert("Por favor, adicione pelo menos um sistema associado.");
+      return;
+    }
+
     setLoading(true);
     
     try {

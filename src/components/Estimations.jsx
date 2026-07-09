@@ -124,10 +124,11 @@ const Estimations = () => {
       const today = new Date();
       docPdf.text(`Data da Geração: ${today.toLocaleDateString('pt-BR')} ${today.toLocaleTimeString('pt-BR')}`, 14, 40);
       docPdf.text(`Demanda: ${ticketData.title || ticketData.id || est.ticketId}`, 14, 47);
-      docPdf.text(`Responsável: ${gerenteGeral}`, 14, 54);
-      docPdf.text(`Autor da Estimativa: ${est.authorName || 'Desconhecido'}`, 14, 61);
+      docPdf.text(`Sistema: ${est.system || 'N/A'}`, 14, 54);
+      docPdf.text(`Responsável: ${gerenteGeral}`, 14, 61);
+      docPdf.text(`Autor da Estimativa: ${est.authorName || 'Desconhecido'}`, 14, 68);
 
-      let currentY = 75;
+      let currentY = 82;
 
       // Introdução e Defesa Técnica
       docPdf.setFontSize(12);
@@ -418,6 +419,7 @@ const Estimations = () => {
         dbRules={dbRules}
         systems={systems}
         tickets={tickets}
+        estimations={estimations}
         estimationToEdit={estimationToEdit}
         onSaveSuccess={loadData}
       />

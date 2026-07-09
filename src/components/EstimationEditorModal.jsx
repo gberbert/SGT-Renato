@@ -35,7 +35,7 @@ const PHASE_DISTRIBUTION = {
   Homologacao: 0.051
 };
 
-const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimationToEdit, onSaveSuccess }) => {
+const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, estimations, estimationToEdit, onSaveSuccess }) => {
   const [ticketSearch, setTicketSearch] = useState('');
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [macroDescription, setMacroDescription] = useState('');
@@ -48,7 +48,15 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
       if (estimationToEdit) {
         setSelectedTicketId(estimationToEdit.ticketId || '');
         const tk = tickets.find(t => t.id === estimationToEdit.ticketId);
-        setTicketSearch(tk ? tk.title : '');
+        if (tk) {
+          if (estimationToEdit.system) {
+            setTicketSearch(`${tk.code} - ${tk.title} (${estimationToEdit.system})`);
+          } else {
+            setTicketSearch(`${tk.code} - ${tk.title}`);
+          }
+        } else {
+          setTicketSearch('');
+        }
         setSystem(estimationToEdit.system || '');
         setMacroDescription(estimationToEdit.macroDescription || '');
         setRows(estimationToEdit.rows || []);
@@ -61,6 +69,25 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
       }
     }
   }, [open, estimationToEdit, tickets]);
+
+  const expandedTickets = tickets.flatMap(t => {
+    if (t.associatedSystems && t.associatedSystems.length > 0) {
+      return t.associatedSystems.map(sys => ({
+        id: t.id,
+        title: t.title,
+        code: t.code,
+        system: sys.system,
+        label: `${t.code} - ${t.title} (${sys.system})`
+      }));
+    }
+    return [{
+      id: t.id,
+      title: t.title,
+      code: t.code,
+      system: '',
+      label: `${t.code} - ${t.title}`
+    }];
+  });
 
   const technologies = useMemo(() => {
     const techSet = new Set(dbRules.map(r => r.tecnologia));
@@ -154,6 +181,21 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
       alert("Por favor, selecione uma Demanda (Ticket) para atrelar a estimativa.");
       return;
     }
+
+    // Validação de unicidade
+    if (estimations && !estimationToEdit) {
+      const alreadyExists = estimations.some(e => e.ticketId === selectedTicketId && e.system === system);
+      if (alreadyExists) {
+        alert("Já existe uma estimativa criada para este Ticket e Sistema.");
+        return;
+      }
+    } else if (estimations && estimationToEdit) {
+      const alreadyExists = estimations.some(e => e.ticketId === selectedTicketId && e.system === system && e.id !== estimationToEdit.id);
+      if (alreadyExists) {
+        alert("Já existe OUTRA estimativa criada para este Ticket e Sistema.");
+        return;
+      }
+    }
     
     setSaving(true);
     try {
@@ -181,15 +223,39 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
       }
       
       // -- NOVIDADE: Atualiza o Ticket atrelado --
-      // Busca todas as estimativas deste ticket para calcular a soma total real
+      // Busca todas as estimativas deste ticket para garantir a soma correta
       const q = query(collection(db, 'estimations'), where('ticketId', '==', selectedTicketId));
       const querySnapshot = await getDocs(q);
-      const sumOfHours = querySnapshot.docs.reduce((acc, curr) => acc + (curr.data().totalBaseHours || 0), 0);
+      
+      const tk = tickets.find(t => t.id === selectedTicketId);
+      let newAssociatedSystems = [];
+      
+      if (tk && tk.associatedSystems) {
+        newAssociatedSystems = tk.associatedSystems.map(sys => {
+          // Atualiza as horas pro sistema que acabou de ser salvo
+          if (sys.system === system) {
+            return { ...sys, hours: totalBaseHours };
+          }
+          // Mantém as horas para outros sistemas (buscando na query se houver pra garantir)
+          const est = querySnapshot.docs.find(d => d.data().system === sys.system && d.data().system !== system);
+          if (est) {
+            return { ...sys, hours: est.data().totalBaseHours || 0 };
+          }
+          return sys;
+        });
+      } else if (tk) {
+        // Fallback pra tickets legados
+        newAssociatedSystems = [{ system, hours: totalBaseHours }];
+      }
+
+      const sumOfHours = newAssociatedSystems.reduce((acc, curr) => acc + (parseFloat(curr.hours) || 0), 0);
       
       // Grava no ticket tanto num campo 'estimatedHours' quanto em 'storyPoints' para alimentar os gráficos
+      // E atualiza a lista de sistemas com as horas novas
       await updateDoc(doc(db, 'tickets', selectedTicketId), {
         estimatedHours: sumOfHours,
         storyPoints: sumOfHours,
+        associatedSystems: newAssociatedSystems,
         updatedAt: new Date().toISOString()
       });
       
@@ -228,10 +294,15 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
                   onChange={(e) => {
                     const val = e.target.value;
                     setTicketSearch(val);
-                    const found = tickets.find(t => t.title === val);
-                    setSelectedTicketId(found ? found.id : '');
+                    const found = expandedTickets.find(t => t.label === val);
+                    if (found) {
+                      setSelectedTicketId(found.id);
+                      if (found.system) setSystem(found.system);
+                    } else {
+                      setSelectedTicketId('');
+                    }
                   }}
-                  placeholder="Digite para buscar um ticket pelo Título..."
+                  placeholder="Digite para buscar um ticket..."
                   style={{
                     width: '100%',
                     padding: '8px',
@@ -242,8 +313,8 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
                   }}
                 />
                 <datalist id="tickets-list-modal">
-                  {tickets.map(t => (
-                    <option key={t.id} value={t.title} />
+                  {expandedTickets.map((t, idx) => (
+                    <option key={idx} value={t.label} />
                   ))}
                 </datalist>
               </Box>
@@ -263,13 +334,12 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, tickets, estimatio
                   disabled
                 />
               </Box>
-              </Box>
             </Flex>
 
             <Flex gap="4" align="start" mb="4">
               <Box flexGrow="1">
                 <Text as="div" size="2" mb="1" weight="bold">Sistema Associado</Text>
-                <Select.Root value={system} onValueChange={setSystem}>
+                <Select.Root value={system} onValueChange={setSystem} disabled>
                   <Select.Trigger placeholder="Selecione um sistema..." />
                   <Select.Content>
                     {systems && systems.map(s => (
