@@ -342,7 +342,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
         {viewMode === 'list' ? (
           <div style={{ paddingRight: '16px' }}>
             {columns.map(col => {
-              const colTickets = filteredTickets.filter(t => t.columnId === col.statusId && !t.parentId);
+              const colTickets = filteredTickets.filter(t => t.columnId === col.statusId && (board === 'atividades' || !t.parentId));
               if (colTickets.length === 0) return null; // Esconde colunas vazias na lista para ser mais limpo
               
               return (
@@ -412,7 +412,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
                   <Flex gap="4">
                     {columns.map(col => {
                       const filteredTicketsForCol = filteredTickets.filter(t => {
-                        if (t.columnId !== col.statusId || t.parentId) return false;
+                        if (t.columnId !== col.statusId || (board === 'demandas' && t.parentId)) return false;
                         if (useSwimlanes) {
                           const tAssignee = t.assignee || 'Sem responsável';
                           return tAssignee === assignee;
