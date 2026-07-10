@@ -8,67 +8,28 @@ const CpflPdfTemplate = ({ specData, markdownContent }) => {
       
       {/* COVER PAGE */}
       <div className="pdf-page pdf-first-page">
-        {/* HEADER COVER */}
-        <div className="pdf-header">
-          <div className="pdf-header-logos">
-             {/* Mocking CPFL Logo */}
-             <div className="cpfl-logo-mock">
-               <span className="cpfl-line cpfl-green"></span>
-               <span className="cpfl-line cpfl-yellow"></span>
-               <span className="cpfl-line cpfl-orange"></span>
-               <div className="cpfl-text">CPFL<br/><span>ENERGIA</span></div>
-             </div>
-          </div>
-          
-          <div className="pdf-header-title">
-            Especificação Funcional | <br/>
-            {specData?.demandaId}
-          </div>
-
-          <div className="pdf-header-logos right">
-             {/* Mocking NTT DATA Logo */}
-             <div className="ntt-logo-mock">
-                <span>NTT</span> data
-             </div>
+        
+        <div className="pdf-title-container">
+          <div className="pdf-blue-bar"></div>
+          <div className="pdf-titles-wrapper">
+            <h1 className="pdf-main-title">Especificação Funcional (EF)</h1>
+            <h2 className="pdf-subtitle">[{specData?.demandaId}] {specData?.demandaTitle}</h2>
           </div>
         </div>
-
-        <div className="pdf-header-divider"></div>
-
-        {/* REPEATED LOGOS JUST FOR AESTHETICS (As in the screenshot where they appear twice on page 1) */}
-        <div className="pdf-header" style={{ marginTop: '20px', marginBottom: '40px' }}>
-          <div className="pdf-header-logos">
-             <div className="cpfl-logo-mock large">
-               <span className="cpfl-line cpfl-green"></span>
-               <span className="cpfl-line cpfl-yellow"></span>
-               <span className="cpfl-line cpfl-orange"></span>
-               <div className="cpfl-text">CPFL<br/><span>ENERGIA</span></div>
-             </div>
-          </div>
-          <div className="pdf-header-logos right">
-             <div className="ntt-logo-mock large">
-                <span>NTT</span> data
-             </div>
-          </div>
-        </div>
-
-        <div className="pdf-blue-bar"></div>
-        <h1 className="pdf-main-title">Especificação Funcional (EF)</h1>
-        <h2 className="pdf-subtitle">[{specData?.demandaId}] {specData?.demandaTitle}</h2>
 
         <div className="pdf-info-header">Informações do documento</div>
         <table className="pdf-table info-table">
           <tbody>
             <tr><td className="pdf-td-label">Cliente</td><td>{specData?.cliente || 'CPFL'}</td></tr>
-            <tr><td className="pdf-td-label">Projeto</td><td>{specData?.projeto || 'N/A'}</td></tr>
-            <tr><td className="pdf-td-label">Demanda / DM</td><td>{specData?.demandaId || 'N/A'}</td></tr>
-            <tr><td className="pdf-td-label">Sistema / módulo</td><td>{specData?.sistema || 'N/A'}</td></tr>
-            <tr><td className="pdf-td-label">Torre / Diretoria</td><td>{specData?.torre || 'N/A'}</td></tr>
-            <tr><td className="pdf-td-label">Empresas / unidades impactadas</td><td>{specData?.empresas || 'N/A'}</td></tr>
+            <tr><td className="pdf-td-label">Projeto</td><td className={!specData?.projeto ? "yellow-bg" : ""}>{specData?.projeto || '[Nome do projeto]'}</td></tr>
+            <tr><td className="pdf-td-label">Demanda / DM</td><td className={!specData?.demandaId ? "yellow-bg" : ""}>{specData?.demandaId || '[Número da DM]'}</td></tr>
+            <tr><td className="pdf-td-label">Sistema / módulo</td><td className={!specData?.sistema ? "yellow-bg" : ""}>{specData?.sistema || '[Sistema ou módulo]'}</td></tr>
+            <tr><td className="pdf-td-label">Torre / Diretoria</td><td className={!specData?.torre ? "yellow-bg" : ""}>{specData?.torre || '[Torre / Diretoria]'}</td></tr>
+            <tr><td className="pdf-td-label">Empresas / unidades impactadas:</td><td className={!specData?.empresas ? "yellow-bg" : ""}>{specData?.empresas || '[CPFL Listar empresas]'}</td></tr>
             <tr><td className="pdf-td-label">Versão</td><td>{specData?.versao || '1.0'}</td></tr>
-            <tr><td className="pdf-td-label">Data da criação</td><td>{specData?.data || 'N/A'}</td></tr>
-            <tr><td className="pdf-td-label">Elaborado por</td><td>NTT DATA | {specData?.autor || 'N/A'}</td></tr>
-            <tr><td className="pdf-td-label">Status</td><td>{specData?.status || 'Aprovado'}</td></tr>
+            <tr><td className="pdf-td-label">Data da criação</td><td className={!specData?.data ? "yellow-bg" : ""}>{specData?.data || '[dd/mm/aaaa]'}</td></tr>
+            <tr><td className="pdf-td-label">Elaborado por</td><td className={!specData?.autor ? "yellow-bg" : ""}>NTT DATA | {specData?.autor || '[Nome do responsável]'}</td></tr>
+            <tr><td className="pdf-td-label">Status</td><td className={!specData?.status ? "yellow-bg" : ""}>{specData?.status || 'Aprovado'}</td></tr>
           </tbody>
         </table>
         
