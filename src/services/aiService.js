@@ -76,19 +76,19 @@ Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcion
   };
 
   try {
-    result = await tryGenerateWithModel("gemini-3.1-flash");
+    result = await tryGenerateWithModel("gemini-3.1-flash-lite");
   } catch (err0) {
-    console.warn("Falha com gemini-3.1-flash, tentando gemini-1.5-flash-latest...", err0);
+    console.warn("Falha com gemini-3.1-flash-lite, tentando gemini-3.1-flash...", err0);
     try {
-      result = await tryGenerateWithModel("gemini-1.5-flash-latest");
+      result = await tryGenerateWithModel("gemini-3.1-flash");
     } catch (err) {
-      console.warn("Falha com gemini-1.5-flash-latest, tentando gemini-1.5-pro-latest...", err);
+      console.warn("Falha com gemini-3.1-flash, tentando gemini-1.5-flash-latest...", err);
       try {
-        result = await tryGenerateWithModel("gemini-1.5-pro-latest");
+        result = await tryGenerateWithModel("gemini-1.5-flash-latest");
       } catch (err2) {
-        console.warn("Falha com gemini-1.5-pro-latest, tentando gemini-pro...", err2);
+        console.warn("Falha com gemini-1.5-flash-latest, tentando gemini-1.5-pro-latest...", err2);
         try {
-          result = await tryGenerateWithModel("gemini-pro");
+          result = await tryGenerateWithModel("gemini-1.5-pro-latest");
         } catch (err3) {
           throw err3;
         }
