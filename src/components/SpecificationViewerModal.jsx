@@ -3,14 +3,12 @@ import { Dialog, Flex, Button, IconButton } from '@radix-ui/themes';
 import { Save, Download, X } from 'lucide-react';
 import MDEditor from '@uiw/react-md-editor';
 import { saveSpecification } from '../services/specService';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import PdfExportWizard from './PdfExportWizard';
 
-const SpecificationViewerModal = ({ isOpen, onClose, spec }) => {
+const SpecificationViewerModal = ({ isOpen, onClose, spec, estimations = [], tickets = [] }) => {
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const printRef = useRef(null);
+  const [exportWizardOpen, setExportWizardOpen] = useState(false);
 
   useEffect(() => {
     if (spec) {
@@ -34,43 +32,8 @@ const SpecificationViewerModal = ({ isOpen, onClose, spec }) => {
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!printRef.current) return;
-    setIsGeneratingPDF(true);
-    try {
-      const element = printRef.current;
-      const canvas = await html2canvas(element, { 
-        scale: 2, 
-        useCORS: true,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight 
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      let heightLeft = pdfHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pdf.internal.pageSize.getHeight();
-
-      while (heightLeft >= 0) {
-        position = heightLeft - pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pdf.internal.pageSize.getHeight();
-      }
-
-      pdf.save(`${spec?.title || 'Especificacao_Funcional'}.pdf`);
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      alert('Erro ao gerar PDF.');
-    } finally {
-      setIsGeneratingPDF(false);
-    }
+  const handleDownloadPDF = () => {
+    setExportWizardOpen(true);
   };
 
   if (!spec) return null;
@@ -104,15 +67,13 @@ const SpecificationViewerModal = ({ isOpen, onClose, spec }) => {
           />
         </div>
 
-        {/* Hidden Div for PDF Export (renders just the markdown viewer) */}
-        <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '800px' }}>
-          <div ref={printRef} style={{ padding: '40px', background: 'white', color: 'black' }} data-color-mode="light">
-            <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>{spec.title}</h1>
-            <p style={{ textAlign: 'center', color: '#666' }}>Documento gerado por SGT - {new Date().toLocaleDateString('pt-BR')}</p>
-            <hr style={{ marginBottom: '30px' }} />
-            <MDEditor.Markdown source={content} style={{ background: 'white', color: 'black' }} />
-          </div>
-        </div>
+        <PdfExportWizard
+          isOpen={exportWizardOpen}
+          onClose={() => setExportWizardOpen(false)}
+          spec={{...spec, markdownContent: content}}
+          parentEstimativa={estimations.find(e => e.id === spec?.parentId)}
+          parentDemanda={tickets.find(t => t.id === estimations.find(e => e.id === spec?.parentId)?.ticketId)}
+        />
       </Dialog.Content>
     </Dialog.Root>
   );

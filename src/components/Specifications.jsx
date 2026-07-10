@@ -7,6 +7,7 @@ import { subscribeToAllocations } from '../services/allocationService';
 import { subscribeToAISettings, saveAISettings } from '../services/settingsService';
 import SpecificationGeneratorModal from './SpecificationGeneratorModal';
 import SpecificationViewerModal from './SpecificationViewerModal';
+import PdfExportWizard from './PdfExportWizard';
 import { auth } from '../firebase';
 import { subscribeToProjectSquads } from '../services/squadService';
 
@@ -24,6 +25,7 @@ const Specifications = ({ userRole }) => {
   const [showConfig, setShowConfig] = useState(false);
   
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [exportWizardOpen, setExportWizardOpen] = useState(false);
   const [currentSpec, setCurrentSpec] = useState(null);
 
   useEffect(() => {
@@ -219,6 +221,9 @@ const Specifications = ({ userRole }) => {
                   <Table.Cell>{dateObj.toLocaleDateString('pt-BR')} às {dateObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</Table.Cell>
                   <Table.Cell align="right">
                     <Flex gap="2" justify="end">
+                      <Button variant="soft" color="indigo" size="1" onClick={() => { setCurrentSpec(spec); setExportWizardOpen(true); }}>
+                        <Download size={14} /> PDF
+                      </Button>
                       <Button variant="soft" size="1" onClick={() => handleEdit(spec)}>Editar</Button>
                       <IconButton color="red" variant="soft" size="1" onClick={() => handleDelete(spec.id)}>
                         <Trash2 size={14} />
@@ -245,6 +250,16 @@ const Specifications = ({ userRole }) => {
         isOpen={viewerOpen}
         onClose={() => setViewerOpen(false)}
         spec={currentSpec}
+        estimations={estimations}
+        tickets={tickets}
+      />
+
+      <PdfExportWizard
+        isOpen={exportWizardOpen}
+        onClose={() => setExportWizardOpen(false)}
+        spec={currentSpec}
+        parentEstimativa={estimations.find(e => e.id === currentSpec?.parentId)}
+        parentDemanda={tickets.find(t => t.id === estimations.find(e => e.id === currentSpec?.parentId)?.ticketId)}
       />
     </div>
   );

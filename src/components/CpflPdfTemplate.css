@@ -1,0 +1,258 @@
+/* CpflPdfTemplate.css */
+
+.pdf-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #333;
+  background-color: #fff;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.pdf-page {
+  padding: 40px;
+  background-color: #fff;
+}
+
+/* HEADERS */
+.pdf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pdf-header-title {
+  text-align: center;
+  font-size: 10pt;
+  font-weight: bold;
+  color: #004b87;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+/* LOGO MOCKS */
+.pdf-header-logos {
+  display: flex;
+  align-items: center;
+  width: 150px;
+}
+.pdf-header-logos.right {
+  justify-content: flex-end;
+}
+
+/* CPFL Mock */
+.cpfl-logo-mock {
+  position: relative;
+  width: 80px;
+}
+.cpfl-logo-mock.large {
+  width: 120px;
+}
+.cpfl-line {
+  display: block;
+  height: 3px;
+  margin-bottom: 2px;
+  border-radius: 2px;
+}
+.cpfl-green { background-color: #7bbf43; width: 60%; }
+.cpfl-yellow { background-color: #f7a800; width: 80%; }
+.cpfl-orange { background-color: #f05a28; width: 100%; }
+.cpfl-text {
+  font-family: Arial, sans-serif;
+  font-weight: 900;
+  color: #0055a4;
+  font-size: 14pt;
+  line-height: 1;
+  margin-top: 4px;
+}
+.cpfl-text span {
+  font-size: 8pt;
+  font-style: italic;
+  font-weight: bold;
+}
+
+.cpfl-logo-mock.large .cpfl-line { height: 4px; margin-bottom: 3px; }
+.cpfl-logo-mock.large .cpfl-text { font-size: 20pt; }
+.cpfl-logo-mock.large .cpfl-text span { font-size: 10pt; }
+
+
+/* NTT DATA Mock */
+.ntt-logo-mock {
+  font-family: Arial, sans-serif;
+  color: #0055a4;
+  font-size: 14pt;
+  font-weight: bold;
+}
+.ntt-logo-mock span {
+  font-size: 14pt;
+  font-weight: 900;
+}
+.ntt-logo-mock.large {
+  font-size: 20pt;
+}
+.ntt-logo-mock.large span {
+  font-size: 20pt;
+}
+
+.pdf-header-divider {
+  height: 2px;
+  background-color: #0055a4;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+/* TITLES AND SUBTITLES */
+.pdf-blue-bar {
+  width: 6px;
+  height: 60px;
+  background-color: #0055a4;
+  float: left;
+  margin-right: 15px;
+  margin-top: 5px;
+}
+
+.pdf-main-title {
+  color: #0055a4;
+  font-size: 24pt;
+  font-weight: bold;
+  margin: 0;
+  padding-top: 5px;
+}
+
+.pdf-subtitle {
+  color: #000;
+  font-size: 12pt;
+  font-weight: normal;
+  margin: 5px 0 30px 20px;
+  background-color: #ffff00;
+  display: inline-block;
+}
+
+/* TABLES */
+.pdf-info-header {
+  background-color: #e6f0f9;
+  color: #004b87;
+  font-size: 12pt;
+  font-weight: bold;
+  padding: 8px;
+  border-top: 1px solid #b3d4f0;
+  border-left: 1px solid #b3d4f0;
+  border-right: 1px solid #b3d4f0;
+}
+
+.pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 9pt;
+}
+
+.pdf-table th, .pdf-table td {
+  border: 1px solid #b3d4f0;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.pdf-table th {
+  background-color: #0055a4;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+}
+
+.pdf-td-label {
+  background-color: #f7fafd;
+  color: #004b87;
+  font-weight: bold;
+  width: 30%;
+}
+
+.info-table td:nth-child(2) {
+  background-color: #ffff00;
+}
+.info-table td:nth-child(2):empty {
+  background-color: #fff;
+}
+.info-table tr:nth-child(1) td:nth-child(2),
+.info-table tr:nth-child(7) td:nth-child(2),
+.info-table tr:nth-child(10) td:nth-child(2) {
+  background-color: #fff; /* Some fields are not yellow in the example */
+}
+
+.pdf-classification {
+  color: #777;
+  font-size: 8pt;
+  margin-bottom: 30px;
+}
+
+.pdf-control-header {
+  color: #0055a4;
+  font-size: 14pt;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.control-table th {
+  background-color: #0055a4;
+  color: white;
+}
+.control-table td {
+  background-color: white;
+  text-align: center;
+}
+
+/* MARKDOWN STYLES FOR PDF */
+.pdf-content-page h1 {
+  color: #0055a4;
+  font-size: 18pt;
+  border-bottom: 2px solid #0055a4;
+  padding-bottom: 5px;
+  margin-top: 30px;
+}
+
+.pdf-content-page h2 {
+  color: #0055a4;
+  font-size: 14pt;
+  margin-top: 20px;
+}
+
+.pdf-content-page h3 {
+  color: #000;
+  font-size: 12pt;
+  margin-top: 15px;
+}
+
+.pdf-content-page p, .pdf-content-page li {
+  font-size: 10pt;
+  line-height: 1.6;
+}
+
+.pdf-content-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  margin-bottom: 20px;
+  font-size: 9pt;
+}
+
+.pdf-content-page th {
+  background-color: #0055a4 !important;
+  color: white !important;
+  border: 1px solid #b3d4f0 !important;
+  padding: 8px !important;
+}
+
+.pdf-content-page td {
+  border: 1px solid #b3d4f0 !important;
+  padding: 8px !important;
+  background-color: #fff !important;
+}
+
+.pdf-content-page mark, .pdf-content-page [style*="background-color: yellow"] {
+  background-color: #ffff00;
+  color: #000;
+}
