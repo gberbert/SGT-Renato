@@ -15,6 +15,7 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
   const [userAdjustments, setUserAdjustments] = useState('');
   const [currentMarkdown, setCurrentMarkdown] = useState('');
   const [aiConfig, setAiConfig] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -25,11 +26,13 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       setCurrentMarkdown(initialSpec.markdownContent || '');
       setRequirements('');
       setUserAdjustments('');
+      setAttachments([]);
     } else {
       setParentId('');
       setCurrentMarkdown('');
       setRequirements('');
       setUserAdjustments('');
+      setAttachments([]);
     }
   }, [initialSpec, isOpen]);
 
@@ -41,6 +44,37 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
     });
     return () => unsub();
   }, []);
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    files.forEach(file => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        const result = event.target.result;
+        
+        if (file.type === 'application/pdf') {
+          // Extrair apenas o base64
+          const base64Data = result.split(',')[1];
+          setAttachments(prev => [...prev, { name: file.name, mimeType: file.type, data: base64Data, text: null }]);
+        } else {
+          // Arquivos de texto (.txt, .md)
+          setAttachments(prev => [...prev, { name: file.name, mimeType: file.type || 'text/plain', data: null, text: result }]);
+        }
+      };
+
+      if (file.type === 'application/pdf') {
+        reader.readAsDataURL(file);
+      } else {
+        reader.readAsText(file);
+      }
+    });
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleGenerate = async () => {
     if (!parentId) {
@@ -79,7 +113,8 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
         aiConfig.efInitialPrompt || '',
         enrichedRequirements,
         hasPrevious ? currentMarkdown : null,
-        hasPrevious ? userAdjustments : null
+        hasPrevious ? userAdjustments : null,
+        attachments
       );
 
       const executionStatus = markdownResponse && markdownResponse.trim() !== '' ? 'concluido' : 'pendente';
@@ -149,6 +184,31 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
               </Select.Content>
             </Select.Root>
           </label>
+
+          <Box>
+            <Text as="div" size="2" mb="1" weight="bold">Documentos de Referência (Opcional)</Text>
+            <Text color="gray" size="1" mb="2" as="div">Faça upload de PDFs, TXTs ou MDs para a IA ler e usar como contexto adicional.</Text>
+            
+            <Flex gap="2" align="center" mb="2">
+              <Button variant="soft" asChild>
+                <label style={{ cursor: 'pointer' }}>
+                  <Text>Anexar Arquivos</Text>
+                  <input type="file" multiple accept=".pdf,.txt,.md" style={{ display: 'none' }} onChange={handleFileChange} />
+                </label>
+              </Button>
+            </Flex>
+
+            {attachments.length > 0 && (
+              <Flex gap="2" wrap="wrap" mt="2">
+                {attachments.map((att, idx) => (
+                  <Flex key={idx} align="center" gap="1" style={{ padding: '4px 8px', backgroundColor: 'var(--gray-3)', borderRadius: '6px' }}>
+                    <Text size="1" weight="bold">{att.name}</Text>
+                    <div onClick={() => removeAttachment(idx)} style={{ cursor: 'pointer', marginLeft: '4px', color: 'var(--danger)' }}>x</div>
+                  </Flex>
+                ))}
+              </Flex>
+            )}
+          </Box>
 
           {currentMarkdown ? (
             <>

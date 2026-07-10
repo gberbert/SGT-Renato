@@ -8,9 +8,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
  * @param {string} userRequirements Os requisitos em linguagem natural escritos pelo usuário.
  * @param {string} previousMarkdown (Opcional) A versão atual do markdown, para ajustes.
  * @param {string} userAdjustments (Opcional) Sugestões de ajuste do usuário.
+ * @param {Array} attachments (Opcional) Array de anexos { name, mimeType, data, text }.
  * @returns {Promise<string>} O markdown gerado pela IA.
  */
-export const generateFunctionalSpecification = async (apiKey, initialPrompt, userRequirements, previousMarkdown = null, userAdjustments = null) => {
+export const generateFunctionalSpecification = async (apiKey, initialPrompt, userRequirements, previousMarkdown = null, userAdjustments = null, attachments = []) => {
   if (!apiKey) {
     throw new Error("API Key do Gemini não está configurada.");
   }
@@ -21,6 +22,14 @@ export const generateFunctionalSpecification = async (apiKey, initialPrompt, use
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   let finalPrompt = '';
+
+  // Adicionar textos extraídos dos arquivos (.txt, .md) aos requisitos
+  let finalRequirements = userRequirements;
+  attachments.forEach(att => {
+    if (att.mimeType === 'text/plain' || att.mimeType === 'text/markdown') {
+      finalRequirements += `\n\n--- CONTEÚDO DO ANEXO (${att.name}) ---\n${att.text}\n`;
+    }
+  });
 
   if (previousMarkdown && userAdjustments) {
     finalPrompt = `
@@ -38,15 +47,29 @@ Atenção: A sua resposta deve ser APENAS a Especificação Funcional COMPLETA r
     finalPrompt = `
 ${initialPrompt}
 
---- REQUISITOS DO USUÁRIO ---
-${userRequirements}
+--- REQUISITOS DO USUÁRIO E CONTEXTO ---
+${finalRequirements}
 
 Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcional em formato Markdown, seguindo a estrutura fornecida nas suas instruções, preenchida com os Requisitos do Usuário. Não adicione saudações ou explicações fora do Markdown.
     `.trim();
   }
 
+  // Prepara o payload multimodal
+  const promptParts = [ { text: finalPrompt } ];
+
+  attachments.forEach(att => {
+    if (att.mimeType === 'application/pdf' && att.data) {
+      promptParts.push({
+        inlineData: {
+          data: att.data, // base64 puro
+          mimeType: att.mimeType
+        }
+      });
+    }
+  });
+
   try {
-    const result = await model.generateContent(finalPrompt);
+    const result = await model.generateContent(promptParts);
     const response = await result.response;
     return response.text();
   } catch (error) {
