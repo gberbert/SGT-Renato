@@ -17,9 +17,7 @@ export const generateFunctionalSpecification = async (apiKey, initialPrompt, use
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Usa o modelo gemini-2.5-flash como padrão (rápido e barato) ou gemini-1.5-pro se preferir, mas 1.5-flash é recomendado pela documentação atual (ou 1.5-pro).
-  // Vamos usar gemini-1.5-flash que é excelente e rápido.
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
 
   let finalPrompt = '';
 
@@ -54,32 +52,50 @@ Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcion
     `.trim();
   }
 
-  try {
-    let result;
+  let result;
+  
+  // Função auxiliar para tentar gerar com um modelo específico
+  const tryGenerateWithModel = async (modelName) => {
+    const model = genAI.getGenerativeModel({ model: modelName });
     if (attachments.filter(a => a.mimeType === 'application/pdf').length === 0) {
-      // Se não tem PDF (apenas texto), manda como string simples para evitar erros do SDK com arrays
-      result = await model.generateContent(finalPrompt);
+      return await model.generateContent(finalPrompt);
     } else {
-      // Prepara o payload multimodal apenas se tiver PDF
       const promptParts = [ finalPrompt ];
-
       attachments.forEach(att => {
         if (att.mimeType === 'application/pdf' && att.data) {
           promptParts.push({
             inlineData: {
-              data: att.data, // base64 puro
+              data: att.data,
               mimeType: att.mimeType
             }
           });
         }
       });
-      result = await model.generateContent(promptParts);
+      return await model.generateContent(promptParts);
     }
-    
+  };
+
+  try {
+    result = await tryGenerateWithModel("gemini-1.5-flash-latest");
+  } catch (err) {
+    console.warn("Falha com gemini-1.5-flash-latest, tentando gemini-1.5-pro-latest...", err);
+    try {
+      result = await tryGenerateWithModel("gemini-1.5-pro-latest");
+    } catch (err2) {
+      console.warn("Falha com gemini-1.5-pro-latest, tentando gemini-pro...", err2);
+      try {
+        result = await tryGenerateWithModel("gemini-pro");
+      } catch (err3) {
+        throw err3;
+      }
+    }
+  }
+
+  try {
     const response = await result.response;
     return response.text();
   } catch (error) {
-    console.error("Erro ao gerar especificação:", error);
+    console.error("Erro ao processar resposta da especificação:", error);
     throw error;
   }
 };
