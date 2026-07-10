@@ -10,7 +10,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
  * @param {string} userAdjustments (Opcional) Sugestões de ajuste do usuário.
  * @returns {Promise<string>} O markdown gerado pela IA.
  */
-export const generateFunctionalSpecification = async (apiKey, initialPrompt, modelTemplate, userRequirements, previousMarkdown = null, userAdjustments = null) => {
+export const generateFunctionalSpecification = async (apiKey, initialPrompt, userRequirements, previousMarkdown = null, userAdjustments = null) => {
   if (!apiKey) {
     throw new Error("API Key do Gemini não está configurada.");
   }
@@ -38,13 +38,10 @@ Atenção: A sua resposta deve ser APENAS a Especificação Funcional COMPLETA r
     finalPrompt = `
 ${initialPrompt}
 
---- MODELO OBRIGATÓRIO A SER SEGUIDO ---
-${modelTemplate}
-
 --- REQUISITOS DO USUÁRIO ---
 ${userRequirements}
 
-Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcional em formato Markdown, seguindo a estrutura do Modelo Obrigatório, preenchida com os Requisitos do Usuário. Não adicione saudações ou explicações fora do Markdown.
+Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcional em formato Markdown, seguindo a estrutura fornecida nas suas instruções, preenchida com os Requisitos do Usuário. Não adicione saudações ou explicações fora do Markdown.
     `.trim();
   }
 

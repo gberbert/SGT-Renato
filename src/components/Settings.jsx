@@ -88,7 +88,7 @@ const Settings = () => {
   const [savingAutomation, setSavingAutomation] = useState(false);
 
   // AI Settings State
-  const [aiSettings, setAiSettings] = useState({ geminiApiKey: '', efModelTemplate: '', efInitialPrompt: '' });
+  const [aiSettings, setAiSettings] = useState({ geminiApiKey: '', efInitialPrompt: '' });
   const [loadingAi, setLoadingAi] = useState(true);
   const [savingAi, setSavingAi] = useState(false);
 

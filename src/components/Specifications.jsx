@@ -19,7 +19,7 @@ const Specifications = ({ userRole }) => {
   const [globalSquads, setGlobalSquads] = useState([]);
   const [allocations, setAllocations] = useState([]);
   
-  const [aiSettings, setAiSettings] = useState({ efModelTemplate: '', efInitialPrompt: '' });
+  const [aiSettings, setAiSettings] = useState({ efInitialPrompt: '' });
   const [savingAi, setSavingAi] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   
@@ -130,15 +130,7 @@ const Specifications = ({ userRole }) => {
                 style={{ minHeight: '100px' }}
               />
             </label>
-            <label>
-              <Text as="div" size="2" mb="1" weight="bold">Modelo Base (.md)</Text>
-              <TextArea 
-                placeholder="Estrutura que a IA deverá preencher..."
-                value={aiSettings.efModelTemplate || ''}
-                onChange={(e) => setAiSettings({...aiSettings, efModelTemplate: e.target.value})}
-                style={{ minHeight: '200px', fontFamily: 'monospace' }}
-              />
-            </label>
+
             <Flex justify="end" mt="2">
               <Button onClick={handleSaveAiConfig} disabled={savingAi}>
                 {savingAi ? "Salvando..." : "Salvar Padrões"}

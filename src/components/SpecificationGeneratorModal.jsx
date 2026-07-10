@@ -77,7 +77,6 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       const markdownResponse = await generateFunctionalSpecification(
         aiConfig.geminiApiKey,
         aiConfig.efInitialPrompt || '',
-        aiConfig.efModelTemplate || '',
         enrichedRequirements,
         hasPrevious ? currentMarkdown : null,
         hasPrevious ? userAdjustments : null
