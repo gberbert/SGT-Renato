@@ -48,8 +48,8 @@ const SpecificationViewerModal = ({ isOpen, onClose, spec, estimations = [], tic
             <Button variant="soft" onClick={handleSave} disabled={isSaving || content === spec.markdownContent}>
               <Save size={16} /> Salvar
             </Button>
-            <Button variant="solid" onClick={handleDownloadPDF} disabled={isGeneratingPDF}>
-              <Download size={16} /> {isGeneratingPDF ? 'Gerando...' : 'Baixar PDF'}
+            <Button variant="solid" onClick={handleDownloadPDF} style={{ background: 'linear-gradient(90deg, #0055a4, #0070c0)', color: 'white' }}>
+              <Download size={16} /> Exportar PDF Padrão
             </Button>
             <IconButton variant="ghost" color="gray" onClick={onClose}>
               <X size={20} />
