@@ -54,22 +54,28 @@ Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcion
     `.trim();
   }
 
-  // Prepara o payload multimodal
-  const promptParts = [ { text: finalPrompt } ];
+  try {
+    let result;
+    if (attachments.filter(a => a.mimeType === 'application/pdf').length === 0) {
+      // Se não tem PDF (apenas texto), manda como string simples para evitar erros do SDK com arrays
+      result = await model.generateContent(finalPrompt);
+    } else {
+      // Prepara o payload multimodal apenas se tiver PDF
+      const promptParts = [ finalPrompt ];
 
-  attachments.forEach(att => {
-    if (att.mimeType === 'application/pdf' && att.data) {
-      promptParts.push({
-        inlineData: {
-          data: att.data, // base64 puro
-          mimeType: att.mimeType
+      attachments.forEach(att => {
+        if (att.mimeType === 'application/pdf' && att.data) {
+          promptParts.push({
+            inlineData: {
+              data: att.data, // base64 puro
+              mimeType: att.mimeType
+            }
+          });
         }
       });
+      result = await model.generateContent(promptParts);
     }
-  });
-
-  try {
-    const result = await model.generateContent(promptParts);
+    
     const response = await result.response;
     return response.text();
   } catch (error) {
