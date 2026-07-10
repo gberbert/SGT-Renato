@@ -7,11 +7,12 @@ import {
   subscribeToSystems, saveSystem, deleteSystem,
   subscribeToComponents, saveComponent, deleteComponent,
   subscribeToCustomFields, saveCustomField, deleteCustomField,
-  subscribeToAutomations, saveAutomation, deleteAutomation
+  subscribeToAutomations, saveAutomation, deleteAutomation,
+  subscribeToAISettings, saveAISettings
 } from '../services/settingsService';
 import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
-import { db, auth } from '../firebase';
+import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
 import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
@@ -86,6 +87,11 @@ const Settings = () => {
   const [automationData, setAutomationData] = useState({ name: '', trigger: 'on_create', action: 'send_webhook', target: '' });
   const [savingAutomation, setSavingAutomation] = useState(false);
 
+  // AI Settings State
+  const [aiSettings, setAiSettings] = useState({ geminiApiKey: '', efModelTemplate: '', efInitialPrompt: '' });
+  const [loadingAi, setLoadingAi] = useState(true);
+  const [savingAi, setSavingAi] = useState(false);
+
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
       setTicketTypes(data);
@@ -118,6 +124,10 @@ const Settings = () => {
     const unsubscribeProjects = subscribeToProjects((data) => {
       setProjects(data);
     });
+    const unsubscribeAI = subscribeToAISettings((data) => {
+      if (data) setAiSettings(data);
+      setLoadingAi(false);
+    });
     return () => {
       unsubscribeTypes();
       unsubscribeWorkflows();
@@ -127,6 +137,7 @@ const Settings = () => {
       unsubscribeCustomFields();
       unsubscribeAutomations();
       unsubscribeProjects();
+      unsubscribeAI();
     };
   }, []);
 
@@ -222,7 +233,12 @@ const Settings = () => {
           role: editingUserData.role
         });
       } else {
+        // Criar no Auth primeiro
+        const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
+        const newUid = await createAuthUser(editingUserData.email, tempPassword);
+
         await createUser({
+          id: newUid,
           shortName: editingUserData.shortName,
           displayName: editingUserData.displayName,
           email: editingUserData.email,
@@ -231,7 +247,8 @@ const Settings = () => {
       }
       setIsUserModalOpen(false);
     } catch (e) {
-      alert("Erro ao salvar usuário.");
+      console.error(e);
+      alert("Erro ao salvar usuário. Verifique o console.");
     } finally {
       setSavingUser(false);
     }
@@ -414,6 +431,17 @@ const Settings = () => {
       alert("Erro ao injetar feriados: " + e.message);
     }
   };
+  const handleSaveAI = async () => {
+    setSavingAi(true);
+    try {
+      await saveAISettings(aiSettings);
+      alert("Configurações de IA salvas com sucesso!");
+    } catch (err) {
+      alert("Erro ao salvar configurações de IA.");
+    } finally {
+      setSavingAi(false);
+    }
+  };
 
   return (
     <div className="view-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -437,7 +465,7 @@ const Settings = () => {
                 onClick={() => setConfigBoard('atividades')}
                 style={{ cursor: 'pointer' }}
               >
-                Quadro: Atividades
+                Quadro de desenvolvimento
               </Button>
             </Flex>
           </Box>
@@ -457,6 +485,7 @@ const Settings = () => {
               <Tabs.Trigger value="customFields">Campos Custom</Tabs.Trigger>
               <Tabs.Trigger value="workflows">Workflows</Tabs.Trigger>
               <Tabs.Trigger value="automations">Automações</Tabs.Trigger>
+              <Tabs.Trigger value="ai"><Zap size={14} style={{ display: 'inline', marginRight: 4 }}/> IA (Gemini)</Tabs.Trigger>
               <Tabs.Trigger value="rbac"><Shield size={14} style={{ display: 'inline', marginRight: 4 }}/> RBAC</Tabs.Trigger>
             </Tabs.List>
           </Box>
@@ -474,6 +503,7 @@ const Settings = () => {
                 <Select.Item value="customFields">Campos Custom</Select.Item>
                 <Select.Item value="workflows">Workflows</Select.Item>
                 <Select.Item value="automations">Automações</Select.Item>
+                <Select.Item value="ai">IA (Gemini)</Select.Item>
                 <Select.Item value="rbac">RBAC (Acessos)</Select.Item>
               </Select.Content>
             </Select.Root>
@@ -529,6 +559,7 @@ const Settings = () => {
                               <Select.Trigger />
                               <Select.Content>
                                 <Select.Item value="user">Membro (User)</Select.Item>
+                                <Select.Item value="squad_leader">Líder de Squad</Select.Item>
                                 <Select.Item value="admin">Admin</Select.Item>
                               </Select.Content>
                             </Select.Root>
@@ -815,6 +846,39 @@ const Settings = () => {
                     ))}
                   </Table.Body>
                 </Table.Root>
+              )}
+            </Tabs.Content>
+
+            {/* AI TAB */}
+            <Tabs.Content value="ai">
+              <Flex justify="between" align="center" mb="4">
+                <Box>
+                  <Text as="h2" size="4" weight="bold">Inteligência Artificial (Gemini)</Text>
+                  <Text color="gray" size="2">Configure a API Key e os Prompts Padrão para geração de Especificações Funcionais.</Text>
+                </Box>
+                <Button onClick={handleSaveAI} disabled={savingAi}>
+                  {savingAi ? <Loader2 size={16} className="spinner-icon"/> : "Salvar Integração"}
+                </Button>
+              </Flex>
+
+              {loadingAi ? (
+                <Flex justify="center" p="6"><Loader2 className="spinner-icon" size={24} color="var(--primary)"/></Flex>
+              ) : (
+                <Flex direction="column" gap="4" style={{ maxWidth: '800px' }}>
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">Google Gemini API Key</Text>
+                    <TextField.Root 
+                      type="password"
+                      placeholder="AIzaSy..."
+                      value={aiSettings.geminiApiKey || ''}
+                      onChange={(e) => setAiSettings({...aiSettings, geminiApiKey: e.target.value})}
+                    >
+                      <TextField.Slot><Key size={14} /></TextField.Slot>
+                    </TextField.Root>
+                    <Text size="1" color="gray">Sua chave é salva no banco de dados e enviada ao navegador do usuário no momento de gerar a especificação.</Text>
+                  </label>
+
+                </Flex>
               )}
             </Tabs.Content>
 

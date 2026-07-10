@@ -16,7 +16,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo192.png', 'logo512.png'],
       workbox: {
-        maximumFileSizeToCacheInBytes: 3000000,
+        maximumFileSizeToCacheInBytes: 5000000,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,

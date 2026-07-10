@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, KanbanSquare, Route, FolderDot, Settings, Menu, X, Moon, Sun, Download, Bell, Share, Calculator, Check } from 'lucide-react';
+import { 
+  LayoutDashboard, FolderDot, KanbanSquare, Settings, LogOut, Download, Moon, Sun, 
+  Menu, X, Check, Share, Bell, Calculator, Route, FileText, Shirt, FileCode, ListChecks
+} from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 import { auth } from '../firebase';
 import { requestFCMToken } from '../services/notificationService';
+import { subscribeToUsers } from '../services/settingsService';
+import UserDetailsModal from './UserDetailsModal';
 
 const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) => {
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -14,6 +19,21 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   const [notificationPermission, setNotificationPermission] = useState(
     'Notification' in window ? Notification.permission : 'denied'
   );
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [fullUser, setFullUser] = useState(null);
+
+  useEffect(() => {
+    let unsubUsers;
+    if (user?.email || user?.uid) {
+      unsubUsers = subscribeToUsers((data) => {
+        const found = data.find(u => u.email === user.email || u.id === user.uid);
+        if (found) setFullUser(found);
+      });
+    }
+    return () => {
+      if (unsubUsers) unsubUsers();
+    };
+  }, [user]);
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -73,14 +93,24 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
     }
   }, [user]);
 
-  const menuItems = [
-    { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
-    { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' },
+  let menuItems = [
+    { name: 'Minhas Atividades', icon: <ListChecks size={20} />, path: '/minhas-atividades' },
     { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas' },
     { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap', isChild: true },
+    { name: 'T-Shirt', icon: <Shirt size={20} />, path: '/t-shirt', isChild: true },
     { name: 'Estimativas', icon: <Calculator size={20} />, path: '/estimativas', isChild: true },
-    { name: 'Atividades', icon: <Check size={20} />, path: '/atividades', isChild: true },
+    { name: 'Espec. Func.', icon: <FileText size={20} />, path: '/especificacoes', isChild: true },
+    { name: 'Espec. Técnica', icon: <FileCode size={20} />, path: '/espec-tecnica', isChild: true },
+    { name: 'Desenvolvimento', icon: <Check size={20} />, path: '/atividades', isChild: true },
   ];
+
+  if (userRole === 'admin' || userRole === 'squad_leader') {
+    menuItems = [
+      { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
+      { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' },
+      ...menuItems
+    ];
+  }
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -122,12 +152,34 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
               </NavLink>
             </li>
           ))}
-          {userRole === 'admin' && (
+          {(userRole === 'admin' || userRole === 'squad_leader') && (
             <>
               <li className="divider"></li>
+              {userRole === 'admin' && (
+                <li>
+                  <NavLink 
+                    to="/configuracoes"
+                    onClick={() => {
+                      if (isOpen) toggleSidebar();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--border-radius)',
+                      color: 'var(--text-muted)',
+                      fontWeight: 500,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <Settings size={20} /> Configurações
+                  </NavLink>
+                </li>
+              )}
               <li>
                 <NavLink 
-                  to="/configuracoes"
+                  to="/planejamento"
                   onClick={() => {
                     if (isOpen) toggleSidebar();
                   }}
@@ -137,12 +189,14 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                     gap: '12px',
                     padding: '12px 16px',
                     borderRadius: 'var(--border-radius)',
-                    color: 'var(--text-muted)',
                     fontWeight: 500,
-                    textDecoration: 'none'
+                    transition: 'all 0.2s ease',
+                    textDecoration: 'none',
+                    color: 'inherit'
                   }}
+                  className={({ isActive }) => isActive ? "active-link" : ""}
                 >
-                  <Settings size={20} /> Configurações
+                  <Calculator size={20} /> Planejamento
                 </NavLink>
               </li>
             </>
@@ -159,31 +213,21 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
           </div>
         )}
 
-        {'Notification' in window && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderRadius: 'var(--border-radius)', border: '1px solid var(--gray-5)', cursor: 'pointer' }} onClick={handleNotificationRequest}>
-            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-main)' }}>
-              {notificationPermission === 'granted' ? 'Reconectar Notificações' : 'Ligar Notificações'}
-            </span>
-            <Bell size={16} />
-          </div>
-        )}
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderRadius: 'var(--border-radius)', border: '1px solid var(--gray-5)' }}>
-          <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-main)' }}>Modo Noturno</span>
-          <IconButton variant="soft" radius="full" onClick={toggleTheme} style={{ cursor: 'pointer' }}>
-            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-          </IconButton>
-        </div>
       </div>
 
-      <div className="sidebar-footer">
+      <div className="sidebar-footer" onClick={() => setShowProfileModal(true)} style={{ cursor: 'pointer' }}>
         <div className="user-profile">
           <div className="avatar">
-            {user?.email?.charAt(0).toUpperCase() || 'U'}
+            {fullUser?.photoURL ? (
+              <img src={fullUser.photoURL} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              (fullUser?.displayName || user?.email || 'U').charAt(0).toUpperCase()
+            )}
           </div>
           <div className="user-info">
             <span className="name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
-              {user?.displayName || user?.email || 'Usuário SGT'}
+              {fullUser?.displayName || user?.email || 'Usuário SGT'}
             </span>
             <span className="role" style={{ textTransform: 'capitalize' }}>
               {userRole} • v{__APP_VERSION__}
@@ -233,6 +277,18 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
           </Flex>
         </Dialog.Content>
       </Dialog.Root>
+
+      {fullUser && (
+        <UserDetailsModal 
+          open={showProfileModal} 
+          onOpenChange={setShowProfileModal} 
+          user={fullUser} 
+          theme={theme}
+          toggleTheme={toggleTheme}
+          notificationPermission={notificationPermission}
+          handleNotificationRequest={handleNotificationRequest}
+        />
+      )}
 
     </aside>
   );

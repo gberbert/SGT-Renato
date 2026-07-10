@@ -50,15 +50,15 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
         setSelectedTicketId(estimationToEdit.ticketId || '');
         const tk = tickets.find(t => t.id === estimationToEdit.ticketId);
         if (tk) {
-          if (estimationToEdit.system) {
-            setTicketSearch(`${tk.code} - ${tk.title} (${estimationToEdit.system})`);
+          if (estimationToEdit.system || estimationToEdit.sistema) {
+            setTicketSearch(`${tk.code} - ${tk.title} (${estimationToEdit.system || estimationToEdit.sistema})`);
           } else {
             setTicketSearch(`${tk.code} - ${tk.title}`);
           }
         } else {
           setTicketSearch('');
         }
-        setSystem(estimationToEdit.system || '');
+        setSystem(estimationToEdit.system || estimationToEdit.sistema || '');
         setMacroDescription(estimationToEdit.macroDescription || '');
         setRows(estimationToEdit.rows || []);
       } else {
@@ -206,12 +206,15 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
       const userName = currentUser ? (currentUser.displayName || currentUser.email) : 'Usuário Desconhecido';
       const userUid = currentUser ? currentUser.uid : 'anon';
       
+      const executionStatus = (macroDescription && macroDescription.trim() !== '' && rows.length > 0) ? 'concluido' : 'pendente';
+
       const estimationData = {
         ticketId: selectedTicketId,
         system,
         macroDescription,
         rows,
         totalBaseHours,
+        executionStatus,
         updatedAt: new Date().toISOString()
       };
       
@@ -286,8 +289,9 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
           
           if (projSnap.exists()) {
             const projData = projSnap.data();
-            if (projData.workflowId) {
-              const wfDoc = wfSnap.docs.find(w => w.id === projData.workflowId);
+            const targetWfId = projData.workflowAtividadesId || projData.workflowId;
+            if (targetWfId) {
+              const wfDoc = wfSnap.docs.find(w => w.id === targetWfId);
               if (wfDoc) {
                 const wfData = wfDoc.data();
                 if (wfData.columns && wfData.columns.length > 0) {
@@ -319,7 +323,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
         // 2. Criar ou Atualizar as rows atuais
         for (const row of rows) {
           const rowHours = calculateRowPhases(row).Total;
-          const actTitle = `${tk.code} - ${row.description || row.element}`;
+          const actTitle = `${tk.externalTicket || tk.code} - ${row.description || row.element}`;
           const actDesc = `**Tecnologia:** ${row.technology}\n**Tipo:** ${row.type}\n**Elemento:** ${row.element}\n**Complexidade:** ${row.complexity}`;
           
           const existingAct = existingActivities.find(a => a.sourceRowId === row.id);
@@ -337,7 +341,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
           } else {
             // Criar nova atividade gerada
             await createTicket({
-              code: `${latestTk.key || 'SGT'}-${Math.floor(Math.random() * 9000) + 1000}`,
+              code: `ATV-${latestTk.externalTicket || latestTk.code}-${Math.floor(Math.random() * 900) + 100}`,
               title: actTitle,
               description: actDesc,
               type: 'Task',
@@ -422,7 +426,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
               <Box flexGrow="1">
                 <Text as="div" size="2" mb="1" weight="bold">Responsável</Text>
                 <TextField.Root 
-                  value={estimationToEdit ? (estimationToEdit.authorName || 'Desconhecido') : (auth.currentUser?.displayName || auth.currentUser?.email || 'Desconhecido')} 
+                  value={estimationToEdit ? (estimationToEdit.assignee || estimationToEdit.authorName || 'Não Atribuido') : (auth.currentUser?.displayName || auth.currentUser?.email || 'Não Atribuido')} 
                   readOnly 
                   disabled
                 />
@@ -430,7 +434,13 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
               <Box flexGrow="1">
                 <Text as="div" size="2" mb="1" weight="bold">Data da Estimativa</Text>
                 <TextField.Root 
-                  value={estimationToEdit && estimationToEdit.createdAt ? new Date(estimationToEdit.createdAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')} 
+                  value={(() => {
+                    if (estimationToEdit && estimationToEdit.createdAt) {
+                      const d = new Date(estimationToEdit.createdAt);
+                      return isNaN(d.getTime()) ? 'Não Planejada' : d.toLocaleDateString('pt-BR');
+                    }
+                    return estimationToEdit ? 'Não Planejada' : new Date().toLocaleDateString('pt-BR');
+                  })()}
                   readOnly 
                   disabled
                 />

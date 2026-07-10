@@ -1,10 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyBfX9ytpF-hXsLjvu8RFWd4qUIyRC1FiRs",
   authDomain: "sgt-renato.firebaseapp.com",
   projectId: "sgt-renato",
@@ -23,3 +23,29 @@ export const storage = getStorage(app);
 export const messaging = getMessaging(app);
 
 console.log("Firebase services initialized.");
+
+export const createAuthUser = async (email, password) => {
+  try {
+    // Procura se o app secundário já existe
+    let secondaryApp = app; // Fallback
+    try {
+      const { getApp } = await import("firebase/app");
+      secondaryApp = getApp("Secondary");
+    } catch (e) {
+      // Se não existir, inicializa
+      secondaryApp = initializeApp(firebaseConfig, "Secondary");
+    }
+
+    const secondaryAuth = getAuth(secondaryApp);
+    const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    
+    // Envia o link de redefinição para o usuário criar a senha real
+    await sendPasswordResetEmail(secondaryAuth, email);
+    await signOut(secondaryAuth);
+    
+    return userCredential.user.uid;
+  } catch (error) {
+    console.error("Erro ao criar usuário no Firebase Auth:", error);
+    throw error;
+  }
+};

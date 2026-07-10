@@ -11,20 +11,24 @@ import {
   IconButton,
   Tabs
 } from '@radix-ui/themes';
-import { Plus, Edit2, Trash2, FileText } from 'lucide-react';
-import { db } from '../firebase';
+import { Edit2, Trash2, FileText, Plus } from 'lucide-react';
+import { db, auth } from '../firebase';
 import { collection, getDocs, deleteDoc, doc, getDoc } from 'firebase/firestore';
+import { subscribeToProjectSquads } from '../services/squadService';
+import { subscribeToAllocations } from '../services/allocationService';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import EstimationEditorModal from './EstimationEditorModal';
 import EstimationRulesAdmin from './EstimationRulesAdmin';
 
-const Estimations = () => {
+const Estimations = ({ userRole }) => {
   const [estimations, setEstimations] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [dbRules, setDbRules] = useState([]);
   const [systems, setSystems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [globalSquads, setGlobalSquads] = useState([]);
+  const [allocations, setAllocations] = useState([]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [estimationToEdit, setEstimationToEdit] = useState(null);
@@ -58,6 +62,12 @@ const Estimations = () => {
 
   useEffect(() => {
     loadData();
+    const unsubSquads = subscribeToProjectSquads('all', setGlobalSquads, console.error);
+    const unsubAllocations = subscribeToAllocations(setAllocations);
+    return () => {
+      unsubSquads();
+      unsubAllocations();
+    };
   }, []);
 
   const handleNewEstimation = () => {
@@ -266,15 +276,31 @@ const Estimations = () => {
 
   const getTicketTitle = (ticketId) => {
     const tk = tickets.find(t => t.id === ticketId);
-    return tk ? tk.title : ticketId;
+    return tk ? (tk.externalTicket || tk.code) : ticketId;
   };
 
   const filteredEstimations = estimations.filter(est => {
+    if (userRole !== 'admin') {
+      const parentDemanda = tickets.find(t => t.id === est.ticketId);
+      const userName = auth.currentUser?.displayName || auth.currentUser?.email;
+
+      if (userRole === 'user') {
+        const isAllocated = allocations.some(a => a.activityId === est.id && a.userId === auth.currentUser?.uid);
+        if (est.assignee !== userName && est.authorName !== userName && !isAllocated) return false;
+      }
+      
+      if (userRole === 'squad_leader') {
+        const allowedSquadIds = globalSquads.filter(s => s.leaderId === auth.currentUser?.uid).map(s => s.id);
+        if (!parentDemanda || !allowedSquadIds.includes(parentDemanda.squadId)) return false;
+      }
+    }
+
     const ticketTitle = getTicketTitle(est.ticketId).toLowerCase();
     const ticketId = (est.ticketId || '').toLowerCase();
     const author = (est.authorName || '').toLowerCase();
+    const docTitle = est.ticketCode?.startsWith('EST-') ? est.ticketCode : `EST-${getTicketTitle(est.ticketId)}`;
     
-    const matchesTicket = !ticketFilter || ticketTitle.includes(ticketFilter.toLowerCase()) || ticketId.includes(ticketFilter.toLowerCase());
+    const matchesTicket = !ticketFilter || docTitle.toLowerCase().includes(ticketFilter.toLowerCase()) || ticketTitle.includes(ticketFilter.toLowerCase()) || ticketId.includes(ticketFilter.toLowerCase());
     const matchesAuthor = !authorFilter || author.includes(authorFilter.toLowerCase());
     
     return matchesTicket && matchesAuthor;
@@ -340,7 +366,7 @@ const Estimations = () => {
             <Table.Root variant="surface">
               <Table.Header>
                 <Table.Row>
-                  <Table.ColumnHeaderCell>Demanda / Ticket</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Título do Documento</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Responsável</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Total Horas (Base)</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell>Última Atualização</Table.ColumnHeaderCell>
@@ -357,9 +383,11 @@ const Estimations = () => {
                 ) : paginatedEstimations.map(est => (
                   <Table.Row key={est.id}>
                     <Table.Cell>
-                      <Text weight="bold">{getTicketTitle(est.ticketId)}</Text>
+                      <Text weight="bold">
+                        {est.ticketCode?.startsWith('EST-') ? est.ticketCode : `EST-${getTicketTitle(est.ticketId)}`}
+                      </Text>
                     </Table.Cell>
-                    <Table.Cell>{est.authorName || 'Desconhecido'}</Table.Cell>
+                    <Table.Cell>{est.assignee || est.authorName || 'Desconhecido'}</Table.Cell>
                     <Table.Cell>
                       <Text color="indigo" weight="bold">{(est.totalBaseHours || 0).toFixed(2)}h</Text>
                     </Table.Cell>

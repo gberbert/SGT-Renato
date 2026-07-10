@@ -18,6 +18,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
   const [squadDescription, setSquadDescription] = useState(squad.description || '');
   const [squadUsers, setSquadUsers] = useState(parseUsers(squad.users));
   const [squadSystemIds, setSquadSystemIds] = useState(squad.systemIds || (squad.systemId ? [squad.systemId] : []));
+  const [squadLeaderId, setSquadLeaderId] = useState(squad.leaderId || '');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
     setSquadDescription(squad.description || '');
     setSquadUsers(parseUsers(squad.users));
     setSquadSystemIds(squad.systemIds || (squad.systemId ? [squad.systemId] : []));
+    setSquadLeaderId(squad.leaderId || '');
   }, [squad]);
 
   useEffect(() => {
@@ -61,7 +63,8 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
         name: squadName,
         description: squadDescription,
         users: squadUsers, 
-        systemIds: squadSystemIds 
+        systemIds: squadSystemIds,
+        leaderId: squadLeaderId
       });
       onClose();
     } catch (e) {
@@ -110,6 +113,25 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
               onChange={e => setSquadDescription(e.target.value)} 
               disabled={userRole !== 'admin'}
             />
+          </Box>
+        </Flex>
+
+        <Flex gap="4" mb="4">
+          <Box style={{ flex: 1 }}>
+            <Text weight="bold" size="2" mb="1" as="div">Líder da Squad</Text>
+            <Select.Root 
+              value={squadLeaderId} 
+              onValueChange={setSquadLeaderId}
+              disabled={userRole !== 'admin'}
+            >
+              <Select.Trigger style={{ width: '100%' }} placeholder="Selecione um líder..." />
+              <Select.Content>
+                <Select.Item value="">Nenhum</Select.Item>
+                {users.filter(u => u.role === 'squad_leader').map(u => (
+                  <Select.Item key={u.id} value={u.id}>{u.displayName || u.shortName || u.name || u.email}</Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
           </Box>
         </Flex>
 

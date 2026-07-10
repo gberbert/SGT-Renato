@@ -21,6 +21,11 @@ import Settings from './components/Settings';
 import Estimations from './components/Estimations';
 import RunMigration from './components/RunMigration';
 import ResetPassword from './components/ResetPassword';
+import Specifications from './components/Specifications';
+import TechSpecs from './components/TechSpecs';
+import TShirts from './components/TShirts';
+import CapacityPlanning from './components/CapacityPlanning';
+import MyActivities from './components/MyActivities';
 import { getUserRole, getTicketById } from './services/ticketService';
 
 function App() {
@@ -146,10 +151,15 @@ function App() {
               <Route path="/atividades" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="atividades" />} />
               <Route path="/roadmap" element={<Roadmap userRole={userRole} />} />
               <Route path="/projetos" element={<Projects userRole={userRole} />} />
-              <Route path="/estimativas" element={<Estimations />} />
+              <Route path="/especificacoes" element={<Specifications userRole={userRole} />} />
+              <Route path="/espec-tecnica" element={<TechSpecs userRole={userRole} />} />
+              <Route path="/t-shirt" element={<TShirts userRole={userRole} />} />
+              <Route path="/estimativas" element={<Estimations userRole={userRole} />} />
               <Route path="/migracao" element={<RunMigration />} />
               <Route path="/projetos/:projectId" element={<ProjectDetails userRole={userRole} />} />
               <Route path="/configuracoes" element={userRole === 'admin' ? <Settings /> : <Navigate to="/" replace />} />
+              <Route path="/planejamento" element={(userRole === 'admin' || userRole === 'squad_leader') ? <CapacityPlanning userRole={userRole} /> : <Navigate to="/" replace />} />
+              <Route path="/minhas-atividades" element={<MyActivities userRole={userRole} user={user} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </section>

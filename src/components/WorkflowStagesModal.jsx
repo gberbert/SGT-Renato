@@ -34,6 +34,26 @@ const WorkflowStagesModal = ({ isOpen, onClose, workflow }) => {
     setColumns(newCols);
   };
 
+  const handleAddColumn = () => {
+    const title = `Nova Coluna ${columns.length + 1}`;
+    const id = `col-${Date.now()}`;
+    setColumns([...columns, { id, title, statusId: id, customFields: [] }]);
+  };
+
+  const handleRemoveColumn = (colIndex) => {
+    if (confirm("Tem certeza que deseja excluir esta coluna? Tickets que estiverem nela poderão desaparecer do quadro Kanban.")) {
+      const newCols = [...columns];
+      newCols.splice(colIndex, 1);
+      setColumns(newCols);
+    }
+  };
+
+  const handleRenameColumn = (colIndex, newTitle) => {
+    const newCols = [...columns];
+    newCols[colIndex].title = newTitle;
+    setColumns(newCols);
+  };
+
   const handleSave = async () => {
     setLoading(true);
     try {
@@ -63,13 +83,23 @@ const WorkflowStagesModal = ({ isOpen, onClose, workflow }) => {
           {columns.map((col, colIndex) => (
             <Card key={col.id} variant="surface">
               <Flex justify="between" align="center" mb="3">
-                <Flex align="center" gap="2">
-                  <Badge color="blue">{col.title}</Badge>
+                <Flex align="center" gap="2" style={{ flex: 1 }}>
+                  <TextField.Root 
+                    value={col.title}
+                    onChange={(e) => handleRenameColumn(colIndex, e.target.value)}
+                    placeholder="Nome da Coluna"
+                    style={{ flex: 1, maxWidth: '250px' }}
+                  />
                   <Text size="2" color="gray">({col.id})</Text>
                 </Flex>
-                <Button size="1" variant="soft" onClick={() => handleAddField(colIndex)}>
-                  <Plus size={14} /> Adicionar Campo
-                </Button>
+                <Flex gap="2">
+                  <Button size="1" variant="soft" onClick={() => handleAddField(colIndex)}>
+                    <Plus size={14} /> Adicionar Campo
+                  </Button>
+                  <IconButton size="1" color="red" variant="soft" onClick={() => handleRemoveColumn(colIndex)}>
+                    <Trash2 size={14} />
+                  </IconButton>
+                </Flex>
               </Flex>
 
               {(!col.customFields || col.customFields.length === 0) ? (
@@ -117,6 +147,12 @@ const WorkflowStagesModal = ({ isOpen, onClose, workflow }) => {
               )}
             </Card>
           ))}
+        </Flex>
+
+        <Flex mt="4">
+          <Button onClick={handleAddColumn} variant="soft" color="indigo">
+            <Plus size={14} style={{ marginRight: '4px' }} /> Adicionar Nova Coluna
+          </Button>
         </Flex>
 
         <Flex gap="3" mt="5" justify="end">

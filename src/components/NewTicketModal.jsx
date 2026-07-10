@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid, IconButton } from '@radix-ui/themes';
 import { createTicket, subscribeToTickets } from '../services/ticketService';
-import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields } from '../services/settingsService';
+import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields, subscribeToWorkflows } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { auth } from '../firebase';
@@ -35,6 +35,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
   const [customFields, setCustomFields] = useState([]);
   const [customData, setCustomData] = useState({});
   const [demandas, setDemandas] = useState([]);
+  const [workflows, setWorkflows] = useState([]);
 
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
@@ -51,6 +52,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     const unsubscribeTickets = subscribeToTickets((data) => {
       setDemandas(data.filter(t => (t.board || 'demandas') === 'demandas'));
     }, console.error);
+    const unsubscribeWorkflows = subscribeToWorkflows(setWorkflows);
 
     return () => {
       unsubscribeTypes();
@@ -60,6 +62,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
       unsubscribeComponents();
       unsubscribeCustomFields();
       unsubscribeTickets();
+      unsubscribeWorkflows();
     };
   }, []);
 
@@ -79,7 +82,19 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
   };
 
   const handleSelectChange = (name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      if (name === 'squadId' && value) {
+        const squad = squads.find(s => s.id === value);
+        if (squad && squad.leaderId) {
+          const leader = users.find(u => u.id === squad.leaderId);
+          if (leader) {
+            updated.assignee = leader.shortName || leader.displayName || leader.email;
+          }
+        }
+      }
+      return updated;
+    });
   };
 
   const handleAddSystem = () => {
@@ -102,7 +117,15 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.projectId) return;
+    if (!formData.title.trim() || !formData.projectId || !formData.externalTicket?.trim() || !formData.type) {
+      alert("Por favor, preencha todos os campos obrigatórios (Projeto, Ticket Externo, Título e Tipo).");
+      return;
+    }
+
+    if (!formData.squadId && squads.length > 0) {
+      alert("Por favor, selecione uma Squad.");
+      return;
+    }
 
     if (currentBoard === 'atividades' && !formData.parentDemandaId) {
       alert("Por favor, selecione uma Demanda Pai para esta atividade.");
@@ -120,18 +143,29 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
       const proj = projects.find(p => p.id === formData.projectId);
       const projKey = proj ? proj.key : 'SGT';
 
-      const DEFAULT_COLUMN_ID = 'col-backlog';
+      let startColumnId = 'col-backlog'; // Fallback
+      if (proj) {
+        const targetWorkflowId = currentBoard === 'atividades' ? proj.workflowAtividadesId : proj.workflowId;
+        const flow = workflows.find(w => w.id === targetWorkflowId);
+        if (flow && flow.columns && flow.columns.length > 0) {
+          startColumnId = flow.columns[0].id;
+        } else if (flow && flow.columnsStr) {
+          const firstColName = flow.columnsStr.split(',')[0].trim();
+          startColumnId = `col-${firstColName.toLowerCase().replace(/\s+/g, '-')}`;
+        }
+      }
 
       const sumHours = associatedSystems.reduce((acc, curr) => acc + curr.hours, 0);
 
       const ticketData = {
-        code: `${projKey}-${Math.floor(Math.random() * 9000) + 1000}`,
+        code: currentBoard === 'demandas' ? formData.externalTicket : `ATV-${formData.externalTicket}`,
         title: formData.title,
         description: description,
         type: formData.type,
         priority: formData.priority,
-        columnId: DEFAULT_COLUMN_ID,
+        columnId: startColumnId,
         projectId: formData.projectId,
+        squadId: formData.squadId,
         assignee: formData.assignee || 'Sem responsável',
         externalTicket: formData.externalTicket,
         associatedSystems: associatedSystems,
@@ -215,11 +249,10 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
 
               {squads.length > 0 && (
                 <Box style={{ flex: '1 1 200px' }}>
-                  <Text as="div" size="2" mb="1" weight="bold">Squad</Text>
+                  <Text as="div" size="2" mb="1" weight="bold">Squad <span style={{ color: 'red' }}>*</span></Text>
                   <Select.Root value={formData.squadId} onValueChange={(v) => handleSelectChange('squadId', v)}>
                     <Select.Trigger placeholder="Selecione a Squad..." style={{ width: '100%' }} />
                     <Select.Content>
-                      <Select.Item value="">Sem Squad</Select.Item>
                       {squads.map(s => (
                         <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
                       ))}
@@ -229,7 +262,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
               )}
 
               <Box style={{ flex: '1 1 200px' }}>
-                <Text as="div" size="2" mb="1" weight="bold">Ticket Externo</Text>
+                <Text as="div" size="2" mb="1" weight="bold">Ticket Externo <span style={{ color: 'red' }}>*</span></Text>
                 <TextField.Root 
                   name="externalTicket" 
                   placeholder="Ex: DEMANDA-123"
@@ -240,7 +273,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
             </Flex>
 
             <Box>
-              <Text as="div" size="2" mb="1" weight="bold">Título do Ticket</Text>
+              <Text as="div" size="2" mb="1" weight="bold">Título do Ticket <span style={{ color: 'red' }}>*</span></Text>
               <TextField.Root 
                 name="title" 
                 required 
@@ -252,7 +285,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
             
             <Flex gap="4">
               <Box style={{ flex: 1 }}>
-                <Text as="div" size="2" mb="1" weight="bold">Tipo</Text>
+                <Text as="div" size="2" mb="1" weight="bold">Tipo <span style={{ color: 'red' }}>*</span></Text>
                 <Select.Root value={formData.type} onValueChange={(v) => handleSelectChange('type', v)}>
                   <Select.Trigger style={{ width: '100%' }} />
                   <Select.Content>

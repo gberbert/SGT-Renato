@@ -116,8 +116,55 @@ export const createTicket = async (ticketData) => {
       createdAt: new Date(),
       updatedAt: new Date()
     });
-    await logTicketAction(docRef.id, 'Criou o ticket', ticketData.assignee || 'Sistema');
     const userName = auth?.currentUser?.displayName || 'Sistema';
+    await logTicketAction(docRef.id, 'Criou o ticket', ticketData.assignee || userName);
+    
+    // Automação: Se for uma demanda, cria automaticamente Estimativa e EF para cada sistema
+    if (ticketData.board === 'demandas') {
+      const systemsToProcess = (ticketData.associatedSystems && ticketData.associatedSystems.length > 0)
+        ? ticketData.associatedSystems.map(s => s.system)
+        : [ticketData.system || ''];
+
+      for (const sys of systemsToProcess) {
+        const estRef = await addDoc(collection(db, 'estimations'), {
+          ticketId: docRef.id,
+          ticketCode: `EST-${ticketData.code}${sys ? '-' + sys : ''}`,
+          title: ticketData.title || '',
+          squad: ticketData.squad || '',
+          system: sys,
+          macroDescription: ticketData.description || '',
+          rows: [],
+          createdAt: new Date()
+        });
+
+        await addDoc(collection(db, 'specifications'), {
+          title: `EF-${ticketData.code}${sys ? '-' + sys : ''}`,
+          parentId: estRef.id,
+          markdownContent: '',
+          authorId: auth?.currentUser?.uid || 'system',
+          authorName: 'Não Atribuído',
+          createdAt: new Date()
+        });
+
+        await addDoc(collection(db, 'tech_specifications'), {
+          title: `ET-${ticketData.code}${sys ? '-' + sys : ''}`,
+          parentId: estRef.id,
+          markdownContent: '',
+          authorId: auth?.currentUser?.uid || 'system',
+          authorName: 'Não Atribuído',
+          createdAt: new Date()
+        });
+      }
+
+      await addDoc(collection(db, 't_shirts'), {
+        ticketId: docRef.id,
+        size: '',
+        assignee: 'Não Atribuído',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+
     // Descrição não gera mais notificação (transferido para o chat)
     return docRef.id;
   } catch (error) {
@@ -153,6 +200,30 @@ export const updateTicketStatus = async (ticketId, newStatusId, userName = 'Sist
     console.error("Erro ao atualizar status:", error);
     throw error;
   }
+};
+
+export const updateTicketAssignee = async (ticketId, userId) => {
+  const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+  await updateDoc(ticketRef, {
+    assignee: userId,
+    updatedAt: new Date()
+  });
+};
+
+export const updatePlanningStatus = async (ticketId, status) => {
+  const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+  await updateDoc(ticketRef, {
+    planningStatus: status,
+    updatedAt: new Date()
+  });
+};
+
+export const updateExecutionStatus = async (ticketId, status) => {
+  const ticketRef = doc(db, COLLECTION_NAME, ticketId);
+  await updateDoc(ticketRef, {
+    executionStatus: status,
+    updatedAt: new Date()
+  });
 };
 
 export const updateTicket = async (ticketId, updates, userName = 'Sistema') => {

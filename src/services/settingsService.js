@@ -108,12 +108,21 @@ export const updateUser = async (userId, data) => {
 
 export const createUser = async (userData) => {
   try {
-    const docRef = await addDoc(collection(db, 'users'), {
-      ...userData,
-      createdAt: serverTimestamp(),
-      role: userData.role || 'user'
-    });
-    return docRef.id;
+    if (userData.id) {
+      await setDoc(doc(db, 'users', userData.id), {
+        ...userData,
+        createdAt: serverTimestamp(),
+        role: userData.role || 'user'
+      });
+      return userData.id;
+    } else {
+      const docRef = await addDoc(collection(db, 'users'), {
+        ...userData,
+        createdAt: serverTimestamp(),
+        role: userData.role || 'user'
+      });
+      return docRef.id;
+    }
   } catch (error) {
     console.error("Erro ao criar usuário:", error);
     throw error;
@@ -253,4 +262,27 @@ export const deleteAutomation = async (autoId) => {
   }
 };
 
+// AI Integration Settings
+export const subscribeToAISettings = (callback) => {
+  const docRef = doc(db, 'systemSettings', 'aiIntegration');
+  return onSnapshot(docRef, (docSnap) => {
+    if (docSnap.exists()) {
+      callback({ id: docSnap.id, ...docSnap.data() });
+    } else {
+      callback(null);
+    }
+  });
+};
 
+export const saveAISettings = async (settingsData) => {
+  try {
+    const docRef = doc(db, 'systemSettings', 'aiIntegration');
+    await setDoc(docRef, {
+      ...settingsData,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    console.error("Erro ao salvar configurações de IA:", error);
+    throw error;
+  }
+};

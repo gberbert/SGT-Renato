@@ -1,0 +1,59 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+/**
+ * Gera uma Especificação Funcional usando o modelo Gemini.
+ * @param {string} apiKey A chave de API do Gemini configurada pelo admin.
+ * @param {string} initialPrompt As instruções comportamentais para a IA.
+ * @param {string} modelTemplate O modelo (esqueleto) em Markdown.
+ * @param {string} userRequirements Os requisitos em linguagem natural escritos pelo usuário.
+ * @param {string} previousMarkdown (Opcional) A versão atual do markdown, para ajustes.
+ * @param {string} userAdjustments (Opcional) Sugestões de ajuste do usuário.
+ * @returns {Promise<string>} O markdown gerado pela IA.
+ */
+export const generateFunctionalSpecification = async (apiKey, initialPrompt, modelTemplate, userRequirements, previousMarkdown = null, userAdjustments = null) => {
+  if (!apiKey) {
+    throw new Error("API Key do Gemini não está configurada.");
+  }
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  // Usa o modelo gemini-2.5-flash como padrão (rápido e barato) ou gemini-1.5-pro se preferir, mas 1.5-flash é recomendado pela documentação atual (ou 1.5-pro).
+  // Vamos usar gemini-1.5-flash que é excelente e rápido.
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  let finalPrompt = '';
+
+  if (previousMarkdown && userAdjustments) {
+    finalPrompt = `
+${initialPrompt}
+
+--- VERSÃO ATUAL DA ESPECIFICAÇÃO ---
+${previousMarkdown}
+
+--- SOLICITAÇÃO DE AJUSTE DO USUÁRIO ---
+${userAdjustments}
+
+Atenção: A sua resposta deve ser APENAS a Especificação Funcional COMPLETA revisada em formato Markdown. Aplique os ajustes solicitados na versão atual. Não adicione saudações ou explicações fora do Markdown.
+    `.trim();
+  } else {
+    finalPrompt = `
+${initialPrompt}
+
+--- MODELO OBRIGATÓRIO A SER SEGUIDO ---
+${modelTemplate}
+
+--- REQUISITOS DO USUÁRIO ---
+${userRequirements}
+
+Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcional em formato Markdown, seguindo a estrutura do Modelo Obrigatório, preenchida com os Requisitos do Usuário. Não adicione saudações ou explicações fora do Markdown.
+    `.trim();
+  }
+
+  try {
+    const result = await model.generateContent(finalPrompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Erro ao gerar especificação:", error);
+    throw error;
+  }
+};

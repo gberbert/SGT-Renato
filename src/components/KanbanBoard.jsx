@@ -16,6 +16,7 @@ import { subscribeToTickets, updateTicketStatus, updateTicket } from '../service
 import { subscribeToWorkflows } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
+import { subscribeToAllocations } from '../services/allocationService';
 import { auth } from '../firebase';
 import { Loader2, LayoutList, List, LayoutGrid } from 'lucide-react';
 import { Button, Flex, Select, Text, Table, Badge, Card } from '@radix-ui/themes';
@@ -41,6 +42,8 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
   const [selectedProjectId, setSelectedProjectId] = useState('all');
   
   const [squads, setSquads] = useState([]);
+  const [globalSquads, setGlobalSquads] = useState([]);
+  const [allocations, setAllocations] = useState([]);
   const [selectedSquadId, setSelectedSquadId] = useState('all');
 
   useEffect(() => {
@@ -75,10 +78,15 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
       }
     });
 
+    const unsubscribeGlobalSquads = subscribeToProjectSquads('all', setGlobalSquads, console.error);
+    const unsubscribeAllocations = subscribeToAllocations(setAllocations);
+
     return () => {
       unsubscribeTickets();
       unsubscribeCols();
       unsubscribeProjects();
+      unsubscribeGlobalSquads();
+      unsubscribeAllocations();
     };
   }, []);
 
@@ -108,7 +116,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     } else {
       setColumns(DEFAULT_COLUMNS);
     }
-  }, [selectedProjectId, projects, workflows]);
+  }, [selectedProjectId, projects, workflows, board]);
 
   useEffect(() => {
     setSelectedSquadId('all');
@@ -217,7 +225,11 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
            const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuário SGT';
            
            if (activeTicketOriginal.columnId !== finalColumnId) {
+             const isLastColumn = columns.length > 0 && columns[columns.length - 1].id === finalColumnId;
+             const executionStatus = isLastColumn ? 'concluido' : 'pendente';
+             
              await updateTicketStatus(activeId, finalColumnId, userName);
+             await updateTicket(activeId, { executionStatus }, userName);
            }
            
            if (finalAssignee && activeTicketOriginal.assignee !== finalAssignee) {
@@ -258,12 +270,27 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     );
   }
 
+  const isLeader = userRole === 'squad_leader' && auth.currentUser;
+  const allowedSquadIds = isLeader ? globalSquads.filter(s => s.leaderId === auth.currentUser.uid).map(s => s.id) : [];
+  const allowedProjectIds = isLeader ? [...new Set(globalSquads.filter(s => s.leaderId === auth.currentUser.uid).map(s => s.projectId))] : [];
+
   let filteredTickets = selectedProjectId === 'all' 
     ? tickets 
     : tickets.filter(t => t.projectId === selectedProjectId);
 
   if (selectedSquadId !== 'all') {
     filteredTickets = filteredTickets.filter(t => t.squadId === selectedSquadId);
+  }
+
+  if (isLeader) {
+    filteredTickets = filteredTickets.filter(t => allowedSquadIds.includes(t.squadId));
+  }
+
+  const isUser = userRole === 'user' && auth.currentUser;
+  if (isUser) {
+    const userName = auth.currentUser?.displayName || auth.currentUser?.email;
+    const myAllocations = allocations.filter(a => a.userId === auth.currentUser.uid).map(a => a.activityId);
+    filteredTickets = filteredTickets.filter(t => t.assignee === userName || myAllocations.includes(t.id));
   }
 
   // Filtrar pelo quadro atual (Demandas vs Atividades)
@@ -280,8 +307,8 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     return {
       ...t,
       squadName: squads.find(sq => sq.id === t.squadId)?.name,
-      parentTitle: parentObj ? parentObj.title : null,
-      parentCode: parentObj ? parentObj.code : null
+      parentTitle: parentObj ? (parentObj.externalTicket || parentObj.code) : null,
+      parentCode: parentObj ? (parentObj.externalTicket || parentObj.code) : null
     };
   });
 
@@ -294,20 +321,20 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
       <div className="kanban-header">
         <Flex align="center" gap="2" className="kanban-filters">
           <Select.Root value={selectedProjectId} onValueChange={setSelectedProjectId}>
-            <Select.Trigger className="kanban-select" style={{ minWidth: '140px' }} />
-            <Select.Content>
-              <Select.Item value="all">Ver Todos os Projetos</Select.Item>
-              {projects.map(p => (
-                <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
-              ))}
-            </Select.Content>
+              <Select.Trigger className="kanban-select" style={{ minWidth: '140px' }} />
+              <Select.Content>
+                <Select.Item value="all">Ver Todos os Projetos</Select.Item>
+                {projects.filter(p => !isLeader || allowedProjectIds.includes(p.id)).map(p => (
+                  <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
+                ))}
+              </Select.Content>
           </Select.Root>
           {selectedProjectId !== 'all' && squads.length > 0 && (
             <Select.Root value={selectedSquadId} onValueChange={setSelectedSquadId}>
               <Select.Trigger className="kanban-select" style={{ minWidth: '140px' }} />
               <Select.Content>
                 <Select.Item value="all">Todas as Squads</Select.Item>
-                {squads.map(sq => (
+                {squads.filter(sq => !isLeader || allowedSquadIds.includes(sq.id)).map(sq => (
                   <Select.Item key={sq.id} value={sq.id}>{sq.name}</Select.Item>
                 ))}
               </Select.Content>

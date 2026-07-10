@@ -5,6 +5,7 @@ import { Button, Card, Flex, Text, Grid, Dialog, TextField, Box } from '@radix-u
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToSystems } from '../services/settingsService';
 import { subscribeToProjectSquads, createSquad } from '../services/squadService';
+import { auth } from '../firebase';
 import SquadDetailsModal from './SquadDetailsModal';
 
 const ProjectDetails = ({ userRole }) => {
@@ -110,19 +111,29 @@ const ProjectDetails = ({ userRole }) => {
         </Flex>
       </div>
 
-      {squads.length === 0 ? (
-        <Card size="4" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <FolderGit2 size={48} color="var(--text-muted)" />
-          <Text as="h2" size="5" weight="bold">Nenhuma squad criada</Text>
-          <Text color="gray">Organize seu time em squads específicas neste projeto.</Text>
-          {userRole === 'admin' && (
-            <Button mt="3" onClick={() => setIsNewSquadModalOpen(true)}>Criar Squad</Button>
-          )}
-        </Card>
-      ) : (
-        <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="4">
-          {squads.map(squad => (
-            <Card key={squad.id} size="3" style={{ cursor: 'pointer' }} className="project-card" onClick={() => setSelectedSquad(squad)}>
+      {(() => {
+        const isLeader = userRole === 'squad_leader' && auth.currentUser;
+        const filteredSquads = isLeader ? squads.filter(s => s.leaderId === auth.currentUser.uid) : squads;
+
+        if (filteredSquads.length === 0) {
+          return (
+            <Card size="4" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <FolderGit2 size={48} color="var(--text-muted)" />
+              <Text as="h2" size="5" weight="bold">Nenhuma squad disponível</Text>
+              <Text color="gray">
+                {isLeader ? 'Você não é líder de nenhuma squad neste projeto.' : 'Organize seu time em squads específicas neste projeto.'}
+              </Text>
+              {userRole === 'admin' && (
+                <Button mt="3" onClick={() => setIsNewSquadModalOpen(true)}>Criar Squad</Button>
+              )}
+            </Card>
+          );
+        }
+
+        return (
+          <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="4">
+            {filteredSquads.map(squad => (
+              <Card key={squad.id} size="3" style={{ cursor: 'pointer' }} className="project-card" onClick={() => setSelectedSquad(squad)}>
               <Flex direction="column" gap="4" style={{ height: '100%' }}>
                 <Flex align="center" gap="3">
                   <Flex align="center" justify="center" style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--primary-dark)', color: 'white', fontWeight: 'bold' }}>
@@ -142,7 +153,8 @@ const ProjectDetails = ({ userRole }) => {
             </Card>
           ))}
         </Grid>
-      )}
+        );
+      })()}
 
       {/* NEW SQUAD MODAL */}
       <Dialog.Root open={isNewSquadModalOpen} onOpenChange={setIsNewSquadModalOpen}>

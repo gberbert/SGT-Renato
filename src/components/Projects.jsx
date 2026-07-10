@@ -4,12 +4,15 @@ import { Loader2, Plus, FolderGit2, Users, MoreVertical, Trash2, Edit2 } from 'l
 import { Button, Card, Flex, Text, Badge, Grid, DropdownMenu } from '@radix-ui/themes';
 import NewProjectModal from './NewProjectModal';
 import { useNavigate } from 'react-router-dom';
+import { subscribeToProjectSquads } from '../services/squadService';
+import { auth } from '../firebase';
 
 const Projects = ({ userRole }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [globalSquads, setGlobalSquads] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,7 +23,13 @@ const Projects = ({ userRole }) => {
       console.error(err);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    const unsubSquads = subscribeToProjectSquads('all', setGlobalSquads, console.error);
+
+    return () => {
+      unsubscribe();
+      unsubSquads();
+    };
   }, []);
 
   const handleDelete = async (e, id) => {
@@ -63,19 +72,30 @@ const Projects = ({ userRole }) => {
         )}
       </div>
 
-      {projects.length === 0 ? (
-        <Card size="4" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <FolderGit2 size={48} color="var(--text-muted)" />
-          <Text as="h2" size="5" weight="bold">Nenhum projeto encontrado</Text>
-          <Text color="gray">Comece criando seu primeiro projeto para agrupar as demandas.</Text>
-          {userRole === 'admin' && (
-            <Button mt="3" onClick={() => setIsModalOpen(true)}>Criar Projeto</Button>
-          )}
-        </Card>
-      ) : (
-        <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="4">
-          {projects.map(project => (
-            <Card key={project.id} size="3" style={{ cursor: 'pointer' }} className="project-card" onClick={() => handleProjectClick(project.id)}>
+      {(() => {
+        const isLeader = userRole === 'squad_leader' && auth.currentUser;
+        const allowedProjectIds = isLeader ? [...new Set(globalSquads.filter(s => s.leaderId === auth.currentUser.uid).map(s => s.projectId))] : [];
+        const filteredProjects = isLeader ? projects.filter(p => allowedProjectIds.includes(p.id)) : projects;
+
+        if (filteredProjects.length === 0) {
+          return (
+            <Card size="4" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <FolderGit2 size={48} color="var(--text-muted)" />
+              <Text as="h2" size="5" weight="bold">Nenhum projeto encontrado</Text>
+              <Text color="gray">
+                {isLeader ? 'Você não é líder em nenhuma squad com projetos vinculados.' : 'Comece criando seu primeiro projeto para agrupar as demandas.'}
+              </Text>
+              {userRole === 'admin' && (
+                <Button mt="3" onClick={() => setIsModalOpen(true)}>Criar Projeto</Button>
+              )}
+            </Card>
+          );
+        }
+
+        return (
+          <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap="4">
+            {filteredProjects.map(project => (
+              <Card key={project.id} size="3" style={{ cursor: 'pointer' }} className="project-card" onClick={() => handleProjectClick(project.id)}>
               <Flex direction="column" gap="4" style={{ height: '100%' }}>
                 <Flex justify="between" align="start">
                   <Flex align="center" gap="3">
@@ -113,12 +133,13 @@ const Projects = ({ userRole }) => {
                 <Flex align="center" gap="2" pt="3" style={{ borderTop: '1px solid var(--glass-border)' }}>
                   <Users size={16} color="var(--text-muted)" />
                   <Text size="2" color="gray">Líder: <Text weight="bold" color="indigo">{project.leaderName}</Text></Text>
+                  </Flex>
                 </Flex>
-              </Flex>
-            </Card>
-          ))}
-        </Grid>
-      )}
+              </Card>
+            ))}
+          </Grid>
+        );
+      })()}
 
       <NewProjectModal 
         isOpen={isModalOpen} 
