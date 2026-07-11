@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Flex, Text, Table, Badge, Select, Card } from '@radix-ui/themes';
-import { KanbanSquare } from 'lucide-react';
+import { Flex, Text, Table, Badge, Select, Card, Tabs, Button, IconButton } from '@radix-ui/themes';
+import { KanbanSquare, Send, CheckCircle2 } from 'lucide-react';
 import { subscribeToTickets } from '../services/ticketService';
 import { subscribeToTShirts, updateTShirt } from '../services/tshirtService';
 import { auth } from '../firebase';
@@ -13,6 +13,7 @@ const TShirts = ({ userRole }) => {
   const [loading, setLoading] = useState(true);
   const [globalSquads, setGlobalSquads] = useState([]);
   const [allocations, setAllocations] = useState([]);
+  const [currentTab, setCurrentTab] = useState('pendente');
 
   useEffect(() => {
     let tLoaded = false;
@@ -43,8 +44,11 @@ const TShirts = ({ userRole }) => {
   }, []);
 
   const handleSizeChange = async (tshirtId, newSize) => {
-    const executionStatus = newSize && newSize.trim() !== '' ? 'concluido' : 'pendente';
-    await updateTShirt(tshirtId, { size: newSize, executionStatus });
+    await updateTShirt(tshirtId, { size: newSize });
+  };
+
+  const handleSendToReview = async (tshirtId) => {
+    await updateTShirt(tshirtId, { executionStatus: 'em_revisao' });
   };
 
   if (loading) return <Flex p="4" justify="center"><Text>Carregando...</Text></Flex>;
@@ -58,6 +62,15 @@ const TShirts = ({ userRole }) => {
         </Flex>
       </Flex>
 
+      <Flex mb="4">
+        <Tabs.Root value={currentTab} onValueChange={setCurrentTab} style={{ width: '100%' }}>
+          <Tabs.List>
+            <Tabs.Trigger value="pendente">Pendentes</Tabs.Trigger>
+            <Tabs.Trigger value="concluido">Concluídas</Tabs.Trigger>
+          </Tabs.List>
+        </Tabs.Root>
+      </Flex>
+
       <Card size="3" className="glass-panel">
         <div className="table-responsive">
           <Table.Root variant="surface">
@@ -68,6 +81,7 @@ const TShirts = ({ userRole }) => {
                 <Table.ColumnHeaderCell>T-Shirt Size</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Responsável</Table.ColumnHeaderCell>
                 <Table.ColumnHeaderCell>Última Atualização</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
               </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -85,10 +99,15 @@ const TShirts = ({ userRole }) => {
                 
                 if (userRole === 'squad_leader') {
                   const allowedSquadIds = globalSquads.filter(s => s.leaderId === auth.currentUser?.uid).map(s => s.id);
-                  return allowedSquadIds.includes(ticket.squadId);
+                  if (!allowedSquadIds.includes(ticket.squadId)) return false;
                 }
                 
-                return true;
+                const execStatus = tshirt.executionStatus || 'pendente';
+                if (currentTab === 'concluido') {
+                  return execStatus === 'concluido';
+                } else {
+                  return execStatus !== 'concluido';
+                }
               }).map(ticket => {
                 const tshirt = tshirts.find(ts => ts.ticketId === ticket.id);
                 const dateObj = tshirt.updatedAt ? tshirt.updatedAt.toDate() : tshirt.createdAt?.toDate() || new Date();
@@ -116,6 +135,17 @@ const TShirts = ({ userRole }) => {
                     </Table.Cell>
                     <Table.Cell>{tshirt.assignee || 'Sem Responsável'}</Table.Cell>
                     <Table.Cell>{dateObj.toLocaleDateString('pt-BR')} às {dateObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</Table.Cell>
+                    <Table.Cell align="right">
+                      {tshirt.executionStatus === 'em_revisao' ? (
+                        <Badge color="orange">Em Revisão</Badge>
+                      ) : tshirt.executionStatus !== 'concluido' ? (
+                        <Button variant="soft" size="1" onClick={() => handleSendToReview(tshirt.id)} disabled={!tshirt.size}>
+                          <Send size={14} /> Enviar p/ Revisão
+                        </Button>
+                      ) : (
+                        <Badge color="green"><CheckCircle2 size={14}/> Concluído</Badge>
+                      )}
+                    </Table.Cell>
                   </Table.Row>
                 );
               })}

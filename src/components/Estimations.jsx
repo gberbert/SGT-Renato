@@ -11,7 +11,8 @@ import {
   IconButton,
   Tabs
 } from '@radix-ui/themes';
-import { Edit2, Trash2, FileText, Plus } from 'lucide-react';
+import { Edit2, Trash2, FileText, Plus, Send, CheckCircle2 } from 'lucide-react';
+import { updateEstimationExecutionStatus } from '../services/specService';
 import { db, auth } from '../firebase';
 import { collection, getDocs, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { subscribeToProjectSquads } from '../services/squadService';
@@ -36,6 +37,7 @@ const Estimations = ({ userRole }) => {
   // Filtros e Paginação
   const [ticketFilter, setTicketFilter] = useState('');
   const [authorFilter, setAuthorFilter] = useState('');
+  const [currentTab, setCurrentTab] = useState('pendente');
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
 
@@ -279,6 +281,15 @@ const Estimations = ({ userRole }) => {
     return tk ? (tk.externalTicket || tk.code) : ticketId;
   };
 
+  const handleSendToReview = async (estId) => {
+    try {
+      await updateEstimationExecutionStatus(estId, 'em_revisao');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao enviar para revisão.');
+    }
+  };
+
   const filteredEstimations = estimations.filter(est => {
     if (userRole !== 'admin') {
       const parentDemanda = tickets.find(t => t.id === est.ticketId);
@@ -303,7 +314,10 @@ const Estimations = ({ userRole }) => {
     const matchesTicket = !ticketFilter || docTitle.toLowerCase().includes(ticketFilter.toLowerCase()) || ticketTitle.includes(ticketFilter.toLowerCase()) || ticketId.includes(ticketFilter.toLowerCase());
     const matchesAuthor = !authorFilter || author.includes(authorFilter.toLowerCase());
     
-    return matchesTicket && matchesAuthor;
+    const execStatus = est.executionStatus || 'pendente';
+    const matchesTab = currentTab === 'concluido' ? execStatus === 'concluido' : execStatus !== 'concluido';
+    
+    return matchesTicket && matchesAuthor && matchesTab;
   });
 
   const totalPages = Math.ceil(filteredEstimations.length / ITEMS_PER_PAGE);
@@ -337,16 +351,25 @@ const Estimations = ({ userRole }) => {
           <Flex justify="between" align="end" mb="4" gap="4">
             <Flex gap="3" flexGrow="1">
               <Box style={{ flex: 1, maxWidth: '300px' }}>
+                <Text as="div" size="2" mb="1" weight="bold">Status</Text>
+                <Tabs.Root value={currentTab} onValueChange={setCurrentTab} style={{ width: '100%' }}>
+                  <Tabs.List>
+                    <Tabs.Trigger value="pendente">Pendentes</Tabs.Trigger>
+                    <Tabs.Trigger value="concluido">Concluídas</Tabs.Trigger>
+                  </Tabs.List>
+                </Tabs.Root>
+              </Box>
+              <Box style={{ flex: 1, maxWidth: '200px' }}>
                 <Text as="div" size="2" mb="1" weight="bold">Filtrar por Demanda</Text>
                 <input 
                   type="text"
-                  placeholder="ID ou Título da Demanda..."
+                  placeholder="ID ou Título..."
                   value={ticketFilter}
                   onChange={handleFilterChange(setTicketFilter)}
                   style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid var(--gray-6)', backgroundColor: 'var(--gray-2)', color: 'var(--gray-12)' }}
                 />
               </Box>
-              <Box style={{ flex: 1, maxWidth: '300px' }}>
+              <Box style={{ flex: 1, maxWidth: '200px' }}>
                 <Text as="div" size="2" mb="1" weight="bold">Filtrar por Responsável</Text>
                 <input 
                   type="text"
@@ -396,6 +419,15 @@ const Estimations = ({ userRole }) => {
                     </Table.Cell>
                     <Table.Cell style={{ textAlign: 'right' }}>
                       <Flex gap="2" justify="end">
+                        {est.executionStatus === 'em_revisao' ? (
+                          <Badge color="orange">Em Revisão</Badge>
+                        ) : est.executionStatus !== 'concluido' ? (
+                          <Button variant="soft" size="1" onClick={() => handleSendToReview(est.id)}>
+                            <Send size={14} /> Revisão
+                          </Button>
+                        ) : (
+                          <Badge color="green"><CheckCircle2 size={14}/> Concluído</Badge>
+                        )}
                         <IconButton size="1" variant="ghost" color="indigo" onClick={() => handleExportPDF(est)} title="Gerar PDF NTT DATA">
                           <FileText size={16} />
                         </IconButton>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Flex, Text, Button, Table, Badge, IconButton, Box, Card, TextArea } from '@radix-ui/themes';
-import { Plus, FileText, Trash2, Download } from 'lucide-react';
-import { subscribeToSpecifications, subscribeToEstimations, deleteSpecification } from '../services/specService';
+import { Flex, Text, Button, Table, Badge, IconButton, Box, Card, TextArea, Tabs } from '@radix-ui/themes';
+import { Plus, FileText, Trash2, Download, Send, CheckCircle2 } from 'lucide-react';
+import { subscribeToSpecifications, subscribeToEstimations, deleteSpecification, updateSpecExecutionStatus } from '../services/specService';
 import { subscribeToTickets } from '../services/ticketService';
 import { subscribeToAllocations } from '../services/allocationService';
 import { subscribeToAISettings, saveAISettings } from '../services/settingsService';
@@ -29,6 +29,7 @@ const Specifications = ({ userRole }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [exportWizardOpen, setExportWizardOpen] = useState(false);
   const [currentSpec, setCurrentSpec] = useState(null);
+  const [currentTab, setCurrentTab] = useState('pendente');
 
   useEffect(() => {
     let specsLoaded = false;
@@ -90,6 +91,15 @@ const Specifications = ({ userRole }) => {
     setIsGeneratorOpen(true);
   };
 
+  const handleSendToReview = async (specId) => {
+    try {
+      await updateSpecExecutionStatus(specId, 'em_revisao');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao enviar para revisão.');
+    }
+  };
+
   const handleSaveAiConfig = async () => {
     setSavingAi(true);
     try {
@@ -146,6 +156,15 @@ const Specifications = ({ userRole }) => {
         </Card>
       )}
 
+      <Flex mb="4">
+        <Tabs.Root value={currentTab} onValueChange={setCurrentTab} style={{ width: '100%' }}>
+          <Tabs.List>
+            <Tabs.Trigger value="pendente">Pendentes</Tabs.Trigger>
+            <Tabs.Trigger value="concluido">Concluídas</Tabs.Trigger>
+          </Tabs.List>
+        </Tabs.Root>
+      </Flex>
+
       <div className="table-container glass-panel">
         <Table.Root variant="surface">
           <Table.Header>
@@ -186,10 +205,15 @@ const Specifications = ({ userRole }) => {
               
               if (userRole === 'squad_leader') {
                 const allowedSquadIds = globalSquads.filter(s => s.leaderId === auth.currentUser?.uid).map(s => s.id);
-                return parentDemanda && allowedSquadIds.includes(parentDemanda.squadId);
+                if (!parentDemanda || !allowedSquadIds.includes(parentDemanda.squadId)) return false;
               }
               
-              return true;
+              const execStatus = spec.executionStatus || 'pendente';
+              if (currentTab === 'concluido') {
+                return execStatus === 'concluido';
+              } else {
+                return execStatus !== 'concluido';
+              }
             }).map(spec => {
               const parentEstimativa = estimations.find(e => e.id === spec.parentId);
               const parentDemanda = tickets.find(t => t.id === parentEstimativa?.ticketId);
@@ -225,6 +249,15 @@ const Specifications = ({ userRole }) => {
                   <Table.Cell>{dateObj.toLocaleDateString('pt-BR')} às {dateObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</Table.Cell>
                   <Table.Cell align="right">
                     <Flex gap="2" justify="end">
+                      {spec.executionStatus === 'em_revisao' ? (
+                        <Badge color="orange">Em Revisão</Badge>
+                      ) : spec.executionStatus !== 'concluido' ? (
+                        <Button variant="soft" size="1" onClick={() => handleSendToReview(spec.id)}>
+                          <Send size={14} /> Revisão
+                        </Button>
+                      ) : (
+                        <Badge color="green"><CheckCircle2 size={14}/> Concluído</Badge>
+                      )}
                       <Button variant="soft" color="indigo" size="1" onClick={() => { setCurrentSpec(spec); setExportWizardOpen(true); }}>
                         <Download size={14} /> PDF
                       </Button>

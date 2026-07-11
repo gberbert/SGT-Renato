@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Flex, Text, Badge, Button, Tabs, Box, Grid, Table, IconButton } from '@radix-ui/themes';
 import { FileText, Calculator, Shirt, FileCode, Clock, CheckCircle2, ArrowRight, LayoutList, LayoutGrid, Check } from 'lucide-react';
 import { subscribeToAllocations } from '../services/allocationService';
+import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToTickets, updateExecutionStatus } from '../services/ticketService';
 import { subscribeToEstimations, subscribeToSpecifications, updateEstimationExecutionStatus, updateSpecExecutionStatus } from '../services/specService';
 import { subscribeToTechSpecs, updateTechSpecExecutionStatus } from '../services/techSpecService';
@@ -15,6 +16,7 @@ const MyActivities = ({ user }) => {
   const [specifications, setSpecifications] = useState([]);
   const [techSpecs, setTechSpecs] = useState([]);
   const [tshirts, setTshirts] = useState([]);
+  const [globalSquads, setGlobalSquads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState('pendente');
   const [viewMode, setViewMode] = useState('card');
@@ -28,6 +30,7 @@ const MyActivities = ({ user }) => {
     const unsubSpecs = subscribeToSpecifications(setSpecifications);
     const unsubTechSpecs = subscribeToTechSpecs(setTechSpecs);
     const unsubTShirts = subscribeToTShirts(setTshirts);
+    const unsubSquads = subscribeToProjectSquads('all', setGlobalSquads, console.error);
 
     setLoading(false);
 
@@ -38,6 +41,7 @@ const MyActivities = ({ user }) => {
       unsubSpecs();
       unsubTechSpecs();
       unsubTShirts();
+      unsubSquads();
     };
   }, [user]);
 
@@ -69,6 +73,62 @@ const MyActivities = ({ user }) => {
       groupedAllocations[alloc.activityId].assignerName = alloc.assignerName || 'Sistema';
     }
   });
+
+  const leaderSquads = globalSquads.filter(s => s.leaderId === user.uid);
+  const leaderSquadIds = leaderSquads.map(s => s.id);
+
+  if (leaderSquadIds.length > 0) {
+    const addReviewItem = (item, type, titlePrefix, typeDisplay, icon) => {
+      if (!groupedAllocations[item.id]) {
+        const dDate = item.updatedAt?.toDate ? item.updatedAt.toDate() : (item.createdAt?.toDate ? item.createdAt.toDate() : new Date());
+        groupedAllocations[item.id] = {
+          activityId: item.id,
+          activityType: type,
+          totalHours: item.totalBaseHours || 0,
+          dates: [dDate],
+          createdAt: dDate,
+          assignerName: item.authorName || item.assignee || 'Usuário',
+          executionStatus: item.executionStatus,
+          isReview: true,
+          forcedTitle: titlePrefix,
+          forcedTypeDisplay: typeDisplay,
+          forcedIcon: icon
+        };
+      } else {
+        groupedAllocations[item.id].isReview = true;
+      }
+    };
+
+    tshirts.forEach(ts => {
+      if (ts.executionStatus === 'em_revisao' || ts.executionStatus === 'concluido') {
+        const dem = tickets.find(t => t.id === ts.ticketId);
+        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(ts, 'tshirt', `T-Shirt: ${dem.title}`, 'Aprovação: T-Shirt', <Shirt size={16} color="var(--orange-9)" />);
+      }
+    });
+
+    estimations.forEach(est => {
+      if (est.executionStatus === 'em_revisao' || est.executionStatus === 'concluido') {
+        const dem = tickets.find(t => t.id === est.ticketId);
+        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(est, 'estimativa', `Estimativa: ${dem.title}`, 'Aprovação: Estimativa', <Calculator size={16} color="var(--orange-9)" />);
+      }
+    });
+
+    specifications.forEach(spec => {
+      if (spec.executionStatus === 'em_revisao' || spec.executionStatus === 'concluido') {
+        const parentEstimativa = estimations.find(e => e.id === spec.parentId);
+        const dem = tickets.find(t => t.id === parentEstimativa?.ticketId);
+        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(spec, 'ef', spec.title, 'Aprovação: Espec. Funcional', <FileText size={16} color="var(--orange-9)" />);
+      }
+    });
+
+    techSpecs.forEach(spec => {
+      if (spec.executionStatus === 'em_revisao' || spec.executionStatus === 'concluido') {
+        const parentEstimativa = estimations.find(e => e.id === spec.parentId);
+        const dem = tickets.find(t => t.id === parentEstimativa?.ticketId);
+        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(spec, 'et', spec.title, 'Aprovação: Espec. Técnica', <FileCode size={16} color="var(--orange-9)" />);
+      }
+    });
+  }
 
   const activitiesList = Object.values(groupedAllocations).map(group => {
     let title = 'Atividade Não Encontrada';
@@ -116,11 +176,11 @@ const MyActivities = ({ user }) => {
 
     return {
       ...group,
-      title,
-      typeDisplay,
-      icon,
+      title: group.forcedTitle || title,
+      typeDisplay: group.forcedTypeDisplay || typeDisplay,
+      icon: group.forcedIcon || icon,
       deliveryDate,
-      executionStatus
+      executionStatus: group.executionStatus || executionStatus
     };
   });
 
@@ -144,7 +204,25 @@ const MyActivities = ({ user }) => {
     }
   };
 
-  const filteredActivities = activitiesList.filter(a => a.executionStatus === currentTab);
+  const handleApprove = async (item, e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!confirm('Deseja aprovar este item?')) return;
+    
+    try {
+      if (item.activityType === 'tshirt') await updateTShirtExecutionStatus(item.activityId, 'concluido');
+      else if (item.activityType === 'estimativa') await updateEstimationExecutionStatus(item.activityId, 'concluido');
+      else if (item.activityType === 'ef') await updateSpecExecutionStatus(item.activityId, 'concluido');
+      else if (item.activityType === 'et') await updateTechSpecExecutionStatus(item.activityId, 'concluido');
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao aprovar.');
+    }
+  };
+
+  const filteredActivities = activitiesList.filter(a => a.executionStatus === currentTab || (currentTab === 'pendente' && a.executionStatus === 'em_revisao'));
 
   return (
     <div className="view-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -240,16 +318,29 @@ const MyActivities = ({ user }) => {
                           </Badge>
                         </Table.Cell>
                         <Table.Cell justify="end">
-                          <Button 
-                            size="1"
-                            color="indigo" 
-                            variant={item.executionStatus === 'concluido' ? 'soft' : 'solid'}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleExecuteAction(item)}
-                          >
-                            <ArrowRight size={14} style={{ marginRight: '4px' }} /> 
-                            Ir
-                          </Button>
+                          <Flex gap="2" justify="end">
+                            {item.isReview && item.executionStatus === 'em_revisao' && (
+                              <Button 
+                                size="1" 
+                                color="green" 
+                                variant="solid" 
+                                onClick={(e) => handleApprove(item, e)}
+                                title="Aprovar"
+                              >
+                                <Check size={14} /> Aprovar
+                              </Button>
+                            )}
+                            <Button 
+                              size="1"
+                              color="indigo" 
+                              variant={item.executionStatus === 'concluido' ? 'soft' : 'solid'}
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleExecuteAction(item)}
+                            >
+                              <ArrowRight size={14} style={{ marginRight: '4px' }} /> 
+                              Ir
+                            </Button>
+                          </Flex>
                         </Table.Cell>
                       </Table.Row>
                     );
@@ -292,15 +383,27 @@ const MyActivities = ({ user }) => {
                       </Flex>
 
                       <Box mt="2" style={{ borderTop: '1px solid var(--gray-4)', paddingTop: '12px' }}>
-                        <Button 
-                          color="indigo" 
-                          variant={item.executionStatus === 'concluido' ? 'soft' : 'solid'}
-                          style={{ width: '100%', cursor: 'pointer' }}
-                          onClick={() => handleExecuteAction(item)}
-                        >
-                          <ArrowRight size={16} style={{ marginRight: '8px' }} /> 
-                          {item.executionStatus === 'concluido' ? 'Ir para a Tarefa' : 'Ir para a Tarefa'}
-                        </Button>
+                        <Flex gap="2">
+                          <Button 
+                            color="indigo" 
+                            variant={item.executionStatus === 'concluido' ? 'soft' : 'solid'}
+                            style={{ flexGrow: 1, cursor: 'pointer' }}
+                            onClick={() => handleExecuteAction(item)}
+                          >
+                            <ArrowRight size={16} style={{ marginRight: '8px' }} /> 
+                            Ir para a Tarefa
+                          </Button>
+                          {item.isReview && item.executionStatus === 'em_revisao' && (
+                            <Button 
+                              color="green" 
+                              variant="solid" 
+                              onClick={(e) => handleApprove(item, e)}
+                              title="Aprovar"
+                            >
+                              <Check size={16} />
+                            </Button>
+                          )}
+                        </Flex>
                       </Box>
                     </Flex>
                   </Card>
