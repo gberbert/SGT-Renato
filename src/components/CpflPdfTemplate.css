@@ -325,6 +325,10 @@
   }
 
   .wmde-markdown hr {
+    page-break-after: auto;
+  }
+
+  .wmde-markdown > hr:first-of-type {
     page-break-after: always !important;
     border: none !important;
     margin: 0 !important;
