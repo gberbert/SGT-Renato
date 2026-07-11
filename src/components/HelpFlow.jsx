@@ -54,11 +54,12 @@ sequenceDiagram
 sequenceDiagram
     participant Dev as Desenvolvedor
     participant System as SGT (Regras)
-    participant Output as Entregável
+    participant Output as Item Dimensionado
     Dev->>System: Preenche tamanho macro ou Componentes
     System->>System: Aplica regras de negócio e capacity
-    System->>Output: Gera Documento Calculado
-    Dev->>Output: Revisa e Confirma
+    System->>Output: Consolida o Dimensionamento
+    Dev->>Output: Revisa e Clica em "Enviar para Revisão"
+    Output->>System: Atualiza status para em_revisao
     `
   },
   {
@@ -81,6 +82,8 @@ sequenceDiagram
     GenAI-->>SGT: Retorna Markdown Formatado
     SGT->>Output: Salva Documento no Firestore
     Dev->>Output: Revisa e Edita manualmente (opcional)
+    Dev->>Output: Clica em "Enviar para Revisão"
+    Output->>SGT: Atualiza status para em_revisao
     `
   },
   {
