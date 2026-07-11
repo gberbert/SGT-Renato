@@ -74,7 +74,7 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak:    { 
           mode: ['css', 'legacy'],
-          avoid: ['h1', 'h2', 'h3', 'h4', 'p', 'li', 'tr', 'img', 'table', 'blockquote', 'pre', '.pdf-title-container', '.pdf-info-header', '.pdf-control-header']
+          avoid: 'h1, h2, h3, h4, p, li, tr, img, table, blockquote, pre, .pdf-title-container, .pdf-info-header, .pdf-control-header'
         }
       };
 
