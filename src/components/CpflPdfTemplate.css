@@ -23,9 +23,10 @@
 
 /* HEADERS (will be drawn via jsPDF, so we just need margin top) */
 .pdf-page {
-  padding: 0; 
+  padding: 0 15mm; 
   background-color: #fff;
   min-height: 800px;
+  box-sizing: border-box;
 }
 
 /* TITLES E SUBTITLES DA CAPA */
@@ -264,6 +265,7 @@
   flex-direction: column;
   z-index: 20; 
   background-color: white;
+  padding: 0 !important;
 }
 
 .cover-client-logo {
