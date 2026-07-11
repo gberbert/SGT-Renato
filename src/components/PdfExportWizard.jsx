@@ -34,7 +34,7 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
         projeto: parentDemanda?.title || project?.name || '',
         demandaId: parentDemanda?.code || parentEstimativa?.ticketCode || '',
         demandaTitle: spec?.title?.replace(/^(EF - |ET - )/, '') || '',
-        sistema: parentDemanda?.systems?.join(', ') || parentEstimativa?.sistema || '',
+        sistema: (parentDemanda?.associatedSystems?.map(s => s.system).join(', ') || parentDemanda?.system) || parentEstimativa?.sistema || '',
         torre: project?.name || '',
         empresas: 'CPFL',
         versao: '1.0',
@@ -93,8 +93,7 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
         html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak:    { 
-          mode: 'css',
-          avoid: 'h1, h2, h3, h4, p, li, tr, img, table, blockquote, pre, .pdf-title-container, .pdf-info-header, .pdf-control-header'
+          mode: ['avoid-all', 'css', 'legacy']
         }
       };
 

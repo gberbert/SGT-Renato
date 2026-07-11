@@ -171,7 +171,7 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
     projeto: selectedTicket?.title || selectedProject?.name || '',
     demandaId: selectedTicket?.code || selectedEstimation?.ticketCode || '',
     demandaTitle: initialSpec?.title?.replace(/^(EF - |ET - )/, '') || 'Nova Especificação',
-    sistema: selectedTicket?.systems?.join(', ') || selectedEstimation?.sistema || '',
+    sistema: (selectedTicket?.associatedSystems?.map(s => s.system).join(', ') || selectedTicket?.system) || selectedEstimation?.sistema || '',
     torre: selectedProject?.name || '',
     empresas: 'CPFL',
     versao: '1.0',
