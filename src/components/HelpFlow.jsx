@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Flex, Text, Card, Dialog, Button, Heading } from '@radix-ui/themes';
-import { FileText, ArrowRight, Play, CheckCircle2, Bot, Info, UserCheck, ShieldCheck } from 'lucide-react';
+import { FileText, ArrowRight, Play, CheckCircle2, Bot, Info, UserCheck, ShieldCheck, Calculator } from 'lucide-react';
 import MermaidViewer from './MermaidViewer';
 import './HelpFlow.css';
 
@@ -44,9 +44,27 @@ sequenceDiagram
     `
   },
   {
-    id: 'entregaveis',
-    title: 'Geração de Entregáveis (IA)',
-    description: 'Criação de T-Shirt, Estimativa e Especificações usando Inteligência Artificial.',
+    id: 'entregaveis_tshirt_est',
+    title: 'Geração de T-Shirt e Estimativas',
+    description: 'Criação de T-Shirt Size e Estimativa de Esforço baseada em regras.',
+    icon: <Calculator size={24} color="var(--pink-9)" />,
+    color: 'var(--pink-9)',
+    bgColor: 'var(--pink-2)',
+    uml: `
+sequenceDiagram
+    participant Dev as Desenvolvedor
+    participant System as SGT (Regras)
+    participant Output as Entregável
+    Dev->>System: Preenche tamanho macro ou Componentes
+    System->>System: Aplica regras de negócio e capacity
+    System->>Output: Gera Documento Calculado
+    Dev->>Output: Revisa e Confirma
+    `
+  },
+  {
+    id: 'entregaveis_ef_et',
+    title: 'Geração de EF e ET (IA)',
+    description: 'Criação de Especificação Funcional e Técnica via IA generativa.',
     icon: <Bot size={24} color="var(--purple-9)" />,
     color: 'var(--purple-9)',
     bgColor: 'var(--purple-2)',
@@ -55,9 +73,10 @@ sequenceDiagram
     participant Dev as Desenvolvedor
     participant SGT as Motor IA (SGT)
     participant GenAI as LLM (Gemini)
-    participant Output as Entregável (PDF/MD)
+    participant Output as Entregável (EF/ET)
+    Dev->>SGT: Cria prompt inicial com requisitos detalhados em linguagem natural ou markdown
     Dev->>SGT: Clica em "Gerar com IA"
-    SGT->>SGT: Compila Contexto (Ticket, Anexos, Regras de Negócio)
+    SGT->>SGT: Compila Contexto (Ticket, Prompt, Anexos)
     SGT->>GenAI: Envia Prompt Especializado
     GenAI-->>SGT: Retorna Markdown Formatado
     SGT->>Output: Salva Documento no Firestore
