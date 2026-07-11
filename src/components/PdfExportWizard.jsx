@@ -116,43 +116,50 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             // REGULAR PAGES (Header and Footer)
             
             // ---- HEADER ----
-            pdf.setFontSize(10);
-            pdf.setTextColor(110, 139, 163); // Cinza/Azul claro (para o nome da demanda)
-            pdf.setFont('helvetica', 'bold');
             
             // Client Logo (Left)
             if (clientLogo) {
-              // Altura fixa de 12mm
               const ratio = clientLogo.width / clientLogo.height;
-              const calcWidth = 12 * ratio;
-              pdf.addImage(clientLogo.data, 'PNG', 10, 8, calcWidth, 12);
+              const calcHeight = 16;
+              const calcWidth = calcHeight * ratio;
+              const finalWidth = calcWidth > 50 ? 50 : calcWidth;
+              const finalHeight = finalWidth / ratio;
+              pdf.addImage(clientLogo.data, 'PNG', 10, 23 - finalHeight, finalWidth, finalHeight);
             } else {
               pdf.setTextColor(0, 85, 164); // Azul escuro
-              pdf.text('CPFL ENERGIA', 10, 15);
+              pdf.setFontSize(14);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('CPFL ENERGIA', 10, 18);
             }
             
             // Title (Center)
-            pdf.setFontSize(9);
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
             pdf.setTextColor(110, 139, 163);
-            pdf.text('Especificação Funcional |', 105, 12, { align: 'center' });
-            pdf.text(formData.demandaId || '[NÚMERO DA DEMANDA]', 105, 16, { align: 'center' });
+            pdf.text('Especificação Funcional |', 105, 13, { align: 'center' });
+            
+            const demandText = formData.demandaId ? `[${formData.demandaId}] ${formData.demandaTitle || ''}` : '[NÚMERO E NOME DA DEMANDA]';
+            pdf.text(demandText, 105, 18, { align: 'center' });
             
             // NTT DATA Logo (Right)
             if (nttLogo) {
-              // Altura fixa de 8mm (menor no cabeçalho)
               const ratio = nttLogo.width / nttLogo.height;
-              const calcWidth = 8 * ratio;
-              pdf.addImage(nttLogo.data, 'PNG', 200 - calcWidth, 10, calcWidth, 8);
+              const calcHeight = 8;
+              const calcWidth = calcHeight * ratio;
+              const finalWidth = calcWidth > 40 ? 40 : calcWidth;
+              const finalHeight = finalWidth / ratio;
+              pdf.addImage(nttLogo.data, 'PNG', 200 - finalWidth, 23 - finalHeight, finalWidth, finalHeight);
             } else {
               pdf.setTextColor(0, 85, 164); // Azul escuro
               pdf.setFontSize(10);
-              pdf.text('NTT DATA', 200, 15, { align: 'right' });
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('NTT DATA', 200, 18, { align: 'right' });
             }
             
             // Blue Horizontal Line
-            pdf.setDrawColor(180, 205, 225); // Linha azul bem clara
+            pdf.setDrawColor(128, 179, 219); // Azul claro
             pdf.setLineWidth(0.5);
-            pdf.line(10, 24, 200, 24);
+            pdf.line(10, 26, 200, 26);
 
             // ---- FOOTER ----
             pdf.setFontSize(8);
