@@ -82,25 +82,32 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
           
           if (i === 1) {
             // FRONT COVER
-            pdf.setFillColor(0, 75, 135); // Azul Petróleo (CPFL/NTT Data)
+            pdf.setFillColor(255, 255, 255); // Branca
             pdf.rect(0, 0, 210, 297, 'F'); // A4 is 210x297mm
             
-            if (nttLogo) {
-              // Altura fixa de 30mm, calcula largura proporcional
-              const ratio = nttLogo.width / nttLogo.height;
-              const calcWidth = 30 * ratio;
-              const xPos = 105 - (calcWidth / 2);
-              pdf.addImage(nttLogo.data, 'PNG', xPos, 130, calcWidth, 30);
+            if (clientLogo) {
+              const ratio = clientLogo.width / clientLogo.height;
+              const calcHeight = 40; // Altura base 40mm
+              const calcWidth = calcHeight * ratio;
+              const finalWidth = calcWidth > 120 ? 120 : calcWidth;
+              const finalHeight = finalWidth / ratio;
+              
+              const xPos = 105 - (finalWidth / 2);
+              pdf.addImage(clientLogo.data, 'PNG', xPos, 110, finalWidth, finalHeight);
+              
+              pdf.setFontSize(18);
+              pdf.setTextColor(0, 85, 164); // Azul Escuro
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Especificação Funcional', 105, 110 + finalHeight + 15, { align: 'center' });
             } else {
               pdf.setFontSize(36);
-              pdf.setTextColor(255, 255, 255); // Branco
+              pdf.setTextColor(0, 85, 164);
               pdf.setFont('helvetica', 'bold');
-              pdf.text('NTT DATA', 105, 140, { align: 'center' });
+              pdf.text('CPFL ENERGIA', 105, 130, { align: 'center' });
+              
+              pdf.setFontSize(18);
+              pdf.text('Especificação Funcional', 105, 150, { align: 'center' });
             }
-            
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text('Especificação Funcional', 105, 160, { align: 'center' });
             
           } else if (i === totalPages) {
             // BACK COVER
@@ -144,11 +151,11 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             // NTT DATA Logo (Right)
             if (nttLogo) {
               const ratio = nttLogo.width / nttLogo.height;
-              const calcHeight = 8;
+              const calcHeight = 11; // Aumentado
               const calcWidth = calcHeight * ratio;
-              const finalWidth = calcWidth > 40 ? 40 : calcWidth;
+              const finalWidth = calcWidth > 45 ? 45 : calcWidth;
               const finalHeight = finalWidth / ratio;
-              pdf.addImage(nttLogo.data, 'PNG', 200 - finalWidth, 23 - finalHeight, finalWidth, finalHeight);
+              pdf.addImage(nttLogo.data, 'PNG', 200 - finalWidth, 24 - finalHeight, finalWidth, finalHeight);
             } else {
               pdf.setTextColor(0, 85, 164); // Azul escuro
               pdf.setFontSize(10);
