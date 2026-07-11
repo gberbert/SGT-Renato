@@ -192,6 +192,10 @@ const Specifications = ({ userRole }) => {
                 </Table.Cell>
               </Table.Row>
             ) : specs.filter(spec => {
+              const execStatus = spec.executionStatus || 'pendente';
+              const matchesTab = currentTab === 'concluido' ? execStatus === 'concluido' : execStatus !== 'concluido';
+              if (!matchesTab) return false;
+
               if (userRole === 'admin') return true;
               
               const parentEstimativa = estimations.find(e => e.id === spec.parentId);
@@ -208,12 +212,7 @@ const Specifications = ({ userRole }) => {
                 if (!parentDemanda || !allowedSquadIds.includes(parentDemanda.squadId)) return false;
               }
               
-              const execStatus = spec.executionStatus || 'pendente';
-              if (currentTab === 'concluido') {
-                return execStatus === 'concluido';
-              } else {
-                return execStatus !== 'concluido';
-              }
+              return true;
             }).map(spec => {
               const parentEstimativa = estimations.find(e => e.id === spec.parentId);
               const parentDemanda = tickets.find(t => t.id === parentEstimativa?.ticketId);

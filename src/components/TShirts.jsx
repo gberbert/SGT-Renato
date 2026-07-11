@@ -89,6 +89,10 @@ const TShirts = ({ userRole }) => {
                 const tshirt = tshirts.find(ts => ts.ticketId === ticket.id);
                 if (!tshirt) return false;
 
+                const execStatus = tshirt.executionStatus || 'pendente';
+                const matchesTab = currentTab === 'concluido' ? execStatus === 'concluido' : execStatus !== 'concluido';
+                if (!matchesTab) return false;
+
                 if (userRole === 'admin') return true;
                 
                 const userName = auth.currentUser?.displayName || auth.currentUser?.email;
@@ -102,12 +106,7 @@ const TShirts = ({ userRole }) => {
                   if (!allowedSquadIds.includes(ticket.squadId)) return false;
                 }
                 
-                const execStatus = tshirt.executionStatus || 'pendente';
-                if (currentTab === 'concluido') {
-                  return execStatus === 'concluido';
-                } else {
-                  return execStatus !== 'concluido';
-                }
+                return true;
               }).map(ticket => {
                 const tshirt = tshirts.find(ts => ts.ticketId === ticket.id);
                 const dateObj = tshirt.updatedAt ? tshirt.updatedAt.toDate() : tshirt.createdAt?.toDate() || new Date();
