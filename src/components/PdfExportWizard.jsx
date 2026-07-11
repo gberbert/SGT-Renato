@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, Flex, Button, Text, TextField, Box, Grid, Heading } from '@radix-ui/themes';
 import html2pdf from 'html2pdf.js';
 import CpflPdfTemplate from './CpflPdfTemplate';
@@ -26,6 +26,25 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
     status: spec?.executionStatus === 'concluido' ? 'Aprovado' : 'Em validação',
     aprovador: ''
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        cliente: project?.cliente || 'CPFL',
+        projeto: parentDemanda?.title || project?.name || '',
+        demandaId: parentDemanda?.code || parentEstimativa?.ticketCode || '',
+        demandaTitle: spec?.title?.replace(/^(EF - |ET - )/, '') || '',
+        sistema: parentDemanda?.systems?.join(', ') || parentEstimativa?.sistema || '',
+        torre: project?.name || '',
+        empresas: 'CPFL',
+        versao: '1.0',
+        data: new Date().toLocaleDateString('pt-BR'),
+        autor: auth.currentUser?.displayName || spec?.authorName || spec?.assignee || '',
+        status: spec?.executionStatus === 'concluido' ? 'Aprovado' : 'Em validação',
+        aprovador: ''
+      });
+    }
+  }, [isOpen, spec, parentDemanda, parentEstimativa, project]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
