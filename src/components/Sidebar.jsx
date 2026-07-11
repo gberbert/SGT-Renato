@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, FolderDot, KanbanSquare, Settings, LogOut, Download, Moon, Sun, 
-  Menu, X, Check, Share, Bell, Calculator, Route, FileText, Shirt, FileCode, ListChecks, HelpCircle
+  Menu, X, Check, Share, Bell, Calculator, Route, FileText, Shirt, FileCode, ListChecks, HelpCircle, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 import { auth } from '../firebase';
@@ -21,6 +21,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   );
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [fullUser, setFullUser] = useState(null);
+  const [isDemandasOpen, setIsDemandasOpen] = useState(true);
 
   useEffect(() => {
     let unsubUsers;
@@ -95,14 +96,13 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
 
   let menuItems = [
     { name: 'Minhas Atividades', icon: <ListChecks size={20} />, path: '/minhas-atividades' },
-    { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas' },
+    { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas', isDemandasParent: true },
     { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap', isChild: true },
     { name: 'T-Shirt', icon: <Shirt size={20} />, path: '/t-shirt', isChild: true },
     { name: 'Estimativas', icon: <Calculator size={20} />, path: '/estimativas', isChild: true },
     { name: 'Espec. Func.', icon: <FileText size={20} />, path: '/especificacoes', isChild: true },
     { name: 'Espec. Técnica', icon: <FileCode size={20} />, path: '/espec-tecnica', isChild: true },
-    { name: 'Desenvolvimento', icon: <Check size={20} />, path: '/atividades', isChild: true },
-    { name: 'Ajuda', icon: <HelpCircle size={20} />, path: '/ajuda' }
+    { name: 'Desenvolvimento', icon: <Check size={20} />, path: '/atividades', isChild: true }
   ];
 
   if (userRole === 'admin' || userRole === 'squad_leader') {
@@ -127,19 +127,28 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
 
       <nav className="sidebar-nav">
         <ul>
-          {menuItems.map((item, index) => (
+          {menuItems.map((item, index) => {
+            if (item.isChild && !isDemandasOpen) return null;
+            
+            return (
             <li key={index}>
               <NavLink 
                 to={item.path} 
-                onClick={() => {
-                  if (isOpen) toggleSidebar();
+                onClick={(e) => {
+                  if (item.isDemandasParent) {
+                    setIsDemandasOpen(!isDemandasOpen);
+                  }
+                  if (isOpen && !item.isDemandasParent) {
+                    toggleSidebar();
+                  }
                 }}
-                className={({ isActive }) => isActive ? "active-link" : ""}
+                className={({ isActive }) => (isActive && !item.isDemandasParent) ? "active-link" : ""}
                 style={({ isActive }) => ({
-                  backgroundColor: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                  color: isActive ? 'var(--primary)' : 'inherit',
+                  backgroundColor: (isActive && !item.isDemandasParent) ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                  color: (isActive && !item.isDemandasParent) ? 'var(--primary)' : 'inherit',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'space-between',
                   gap: '12px',
                   padding: '12px 16px',
                   paddingLeft: item.isChild ? '40px' : '16px',
@@ -149,10 +158,38 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                   textDecoration: 'none'
                 })}
               >
-                {item.icon} {item.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {item.icon} {item.name}
+                </div>
+                {item.isDemandasParent && (
+                  isDemandasOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+                )}
               </NavLink>
             </li>
-          ))}
+          )})}
+          <li className="divider"></li>
+          <li>
+            <NavLink 
+              to="/ajuda"
+              onClick={() => {
+                if (isOpen) toggleSidebar();
+              }}
+              className={({ isActive }) => isActive ? "active-link" : ""}
+              style={({ isActive }) => ({
+                backgroundColor: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: 'var(--border-radius)',
+                color: isActive ? 'var(--primary)' : 'inherit',
+                fontWeight: 500,
+                textDecoration: 'none'
+              })}
+            >
+              <HelpCircle size={20} /> Ajuda
+            </NavLink>
+          </li>
           {(userRole === 'admin' || userRole === 'squad_leader') && (
             <>
               <li className="divider"></li>
