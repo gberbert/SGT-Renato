@@ -883,6 +883,17 @@ const Settings = () => {
                     <Text size="1" color="gray">Sua chave é salva no banco de dados e enviada ao navegador do usuário no momento de gerar a especificação.</Text>
                   </label>
 
+                  <label>
+                    <Text as="div" size="2" mb="1" weight="bold">Prompt Inicial Padrão (Especificação Funcional)</Text>
+                    <textarea 
+                      style={{ width: '100%', minHeight: '200px', padding: '8px', borderRadius: '4px', border: '1px solid var(--gray-6)' }}
+                      placeholder="Instruções para a IA..."
+                      value={aiSettings.efInitialPrompt || ''}
+                      onChange={(e) => setAiSettings({...aiSettings, efInitialPrompt: e.target.value})}
+                    />
+                    <Text size="1" color="gray">Este prompt orientará a IA na geração do documento. Peça para a IA incluir um Sumário com links em markdown (ex: [Tópico](#topico)) e separar a página de sumário.</Text>
+                  </label>
+
                 </Flex>
               )}
             </Tabs.Content>

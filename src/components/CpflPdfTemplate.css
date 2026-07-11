@@ -271,6 +271,13 @@
   background-color: white;
 }
 
+.cover-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .cover-client-logo {
   max-width: 120mm;
   max-height: 40mm;
@@ -315,5 +322,13 @@
 
   .pdf-cover-page, .pdf-back-cover-page {
     height: 100vh !important;
+  }
+
+  .wmde-markdown hr {
+    page-break-after: always !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
   }
 }
