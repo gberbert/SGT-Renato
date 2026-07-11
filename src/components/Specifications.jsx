@@ -266,6 +266,8 @@ const Specifications = ({ userRole }) => {
         spec={currentSpec}
         parentEstimativa={estimations.find(e => e.id === currentSpec?.parentId)}
         parentDemanda={tickets.find(t => t.id === estimations.find(e => e.id === currentSpec?.parentId)?.ticketId)}
+        projects={projects}
+        squads={globalSquads}
       />
     </div>
   );
