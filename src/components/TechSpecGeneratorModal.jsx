@@ -8,7 +8,6 @@ import { subscribeToAISettings } from '../services/settingsService';
 import { auth } from '../firebase';
 
 import WysiwygMarkdownEditor from './WysiwygMarkdownEditor';
-import TechSpecPdfTemplate from './TechSpecPdfTemplate';
 
 const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRole, initialSpec }) => {
   const [parentId, setParentId] = useState('');
