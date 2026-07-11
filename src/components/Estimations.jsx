@@ -285,6 +285,7 @@ const Estimations = ({ userRole }) => {
   const handleSendToReview = async (estId) => {
     try {
       await updateEstimationExecutionStatus(estId, 'em_revisao');
+      setEstimations(estimations.map(e => e.id === estId ? { ...e, executionStatus: 'em_revisao' } : e));
     } catch (error) {
       console.error(error);
       alert('Erro ao enviar para revisão.');
