@@ -72,7 +72,10 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak:    { 
+          mode: ['css', 'legacy'],
+          avoid: ['h1', 'h2', 'h3', 'h4', 'p', 'li', 'tr', 'img', 'table', 'blockquote', 'pre', '.pdf-title-container', '.pdf-info-header', '.pdf-control-header']
+        }
       };
 
       await html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
