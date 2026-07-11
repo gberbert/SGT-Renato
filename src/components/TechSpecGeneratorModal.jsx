@@ -225,7 +225,6 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
                   />
                 </div>
               </Box>
-              </Box>
             </>
           ) : (
             <Box pt="3">

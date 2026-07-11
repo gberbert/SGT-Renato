@@ -250,7 +250,6 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
                       />
                     </div>
                   </Box>
-                  </Box>
                 </Flex>
 
                 {/* Lado Direito - Preview PDF */}
