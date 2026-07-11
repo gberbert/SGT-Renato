@@ -7,7 +7,8 @@ import { saveTechSpecification } from '../services/techSpecService';
 import { subscribeToAISettings } from '../services/settingsService';
 import { auth } from '../firebase';
 
-import MDEditor from '@uiw/react-md-editor';
+import WysiwygMarkdownEditor from './WysiwygMarkdownEditor';
+import TechSpecPdfTemplate from './TechSpecPdfTemplate';
 
 const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRole, initialSpec }) => {
   const [parentId, setParentId] = useState('');
@@ -216,11 +217,11 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
                 <Text as="div" size="2" mb="2" weight="bold">
                   Versão Atual (Edição Direta)
                 </Text>
-                <div data-color-mode="light">
-                  <MDEditor
-                    value={currentMarkdown}
+                <div data-color-mode="light" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <WysiwygMarkdownEditor
+                    content={currentMarkdown}
                     onChange={setCurrentMarkdown}
-                    height={350}
+                    height="50vh"
                   />
                 </div>
               </Box>
