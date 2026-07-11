@@ -4,6 +4,7 @@ import { Save, Download, X } from 'lucide-react';
 import MDEditor from '@uiw/react-md-editor';
 import { saveSpecification } from '../services/specService';
 import PdfExportWizard from './PdfExportWizard';
+import CodeRenderer from './CodeRenderer';
 
 const SpecificationViewerModal = ({ isOpen, onClose, spec, estimations = [], tickets = [] }) => {
   const [content, setContent] = useState('');
@@ -64,6 +65,7 @@ const SpecificationViewerModal = ({ isOpen, onClose, spec, estimations = [], tic
             onChange={setContent}
             height="100%"
             visibleDragbar={false}
+            components={{ code: CodeRenderer }}
           />
         </div>
 

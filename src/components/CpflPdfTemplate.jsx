@@ -1,6 +1,7 @@
 import React from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import './CpflPdfTemplate.css';
+import CodeRenderer from './CodeRenderer';
 
 const CpflPdfTemplate = ({ specData, markdownContent }) => {
   return (
@@ -60,7 +61,11 @@ const CpflPdfTemplate = ({ specData, markdownContent }) => {
 
       {/* MARKDOWN CONTENT PAGES */}
       <div className="pdf-page pdf-content-page" style={{ pageBreakBefore: 'always' }} data-color-mode="light">
-        <MDEditor.Markdown source={markdownContent} style={{ backgroundColor: 'transparent', color: 'black' }} />
+        <MDEditor.Markdown 
+          source={markdownContent} 
+          style={{ backgroundColor: 'transparent', color: 'black' }} 
+          components={{ code: CodeRenderer }}
+        />
       </div>
       
     </div>
