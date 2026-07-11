@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, FolderDot, KanbanSquare, Settings, LogOut, Download, Moon, Sun, 
-  Menu, X, Check, Share, Bell, Calculator, Route, FileText, Shirt, FileCode, ListChecks
+  Menu, X, Check, Share, Bell, Calculator, Route, FileText, Shirt, FileCode, ListChecks, HelpCircle
 } from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 import { auth } from '../firebase';
@@ -102,6 +102,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
     { name: 'Espec. Func.', icon: <FileText size={20} />, path: '/especificacoes', isChild: true },
     { name: 'Espec. Técnica', icon: <FileCode size={20} />, path: '/espec-tecnica', isChild: true },
     { name: 'Desenvolvimento', icon: <Check size={20} />, path: '/atividades', isChild: true },
+    { name: 'Ajuda', icon: <HelpCircle size={20} />, path: '/ajuda' }
   ];
 
   if (userRole === 'admin' || userRole === 'squad_leader') {
