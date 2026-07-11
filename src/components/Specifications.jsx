@@ -248,6 +248,8 @@ const Specifications = ({ userRole }) => {
         estimations={estimations}
         userRole={userRole}
         initialSpec={currentSpec}
+        projects={projects}
+        squads={globalSquads}
       />
 
       <SpecificationViewerModal

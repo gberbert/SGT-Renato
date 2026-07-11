@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Flex, Button, Text, Box, Select } from '@radix-ui/themes';
+import { Dialog, Flex, Button, Text, Box, Select, Grid, Heading } from '@radix-ui/themes';
 import { Loader2, Wand2 } from 'lucide-react';
 import RichTextEditor from './RichTextEditor';
 import { generateFunctionalSpecification } from '../services/aiService';
@@ -8,8 +8,9 @@ import { subscribeToAISettings } from '../services/settingsService';
 import { auth } from '../firebase';
 
 import MDEditor from '@uiw/react-md-editor';
+import CpflPdfTemplate from './CpflPdfTemplate';
 
-const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRole, initialSpec }) => {
+const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRole, initialSpec, projects = [], squads = [] }) => {
   const [parentId, setParentId] = useState('');
   const [requirements, setRequirements] = useState('');
   const [userAdjustments, setUserAdjustments] = useState('');
@@ -160,9 +161,29 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
     }
   };
 
+  const selectedEstimation = estimations?.find(e => e.id === parentId);
+  const selectedTicket = tickets?.find(t => t.id === selectedEstimation?.ticketId);
+  const selectedProject = projects?.find(p => p.id === selectedTicket?.projectId);
+  const selectedSquad = squads?.find(s => s.id === selectedTicket?.squadId);
+
+  const mockSpecData = {
+    cliente: 'CPFL',
+    projeto: selectedProject?.name || selectedTicket?.title || '',
+    demandaId: selectedTicket?.code || selectedEstimation?.ticketCode || '',
+    demandaTitle: initialSpec?.title?.replace(/^(EF - |ET - )/, '') || 'Nova Especificação',
+    sistema: selectedEstimation?.sistema || '',
+    torre: selectedSquad?.name || '',
+    empresas: 'CPFL',
+    versao: '1.0',
+    data: new Date().toLocaleDateString('pt-BR'),
+    autor: auth.currentUser?.displayName || 'Desconhecido',
+    status: 'Em validação',
+    aprovador: ''
+  };
+
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Content maxWidth="700px" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+      <Dialog.Content maxWidth={currentMarkdown ? "1400px" : "700px"} style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
         <Dialog.Title>Nova Especificação Funcional (IA)</Dialog.Title>
         <Dialog.Description size="2" mb="4">
           Escreva os requisitos e deixe a inteligência artificial formatar a Especificação Funcional.
@@ -213,26 +234,42 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
 
           {currentMarkdown ? (
             <>
-              <Box pt="1">
-                <Text as="div" size="2" mb="2" weight="bold">
-                  Versão Atual (Edição Direta)
-                </Text>
-                <div data-color-mode="light">
-                  <MDEditor
-                    value={currentMarkdown}
-                    onChange={setCurrentMarkdown}
-                    height={350}
-                  />
-                </div>
-              </Box>
-              <Box pt="2">
-                <Text as="div" size="2" mb="2" color="gray">
-                  Solicite ajustes específicos para a IA reescrever a especificação (Opcional):
-                </Text>
-                <div style={{ border: '1px solid var(--gray-6)', borderRadius: 'var(--border-radius)' }}>
-                  <RichTextEditor value={userAdjustments} onChange={setUserAdjustments} />
-                </div>
-              </Box>
+              <Grid columns="2" gap="4">
+                {/* Lado Esquerdo - Editor */}
+                <Flex direction="column" gap="3">
+                  <Box pt="1">
+                    <Text as="div" size="2" mb="2" weight="bold">
+                      Versão Atual (Edição Direta)
+                    </Text>
+                    <div data-color-mode="light">
+                      <MDEditor
+                        value={currentMarkdown}
+                        onChange={setCurrentMarkdown}
+                        height={450}
+                      />
+                    </div>
+                  </Box>
+                  <Box pt="2">
+                    <Text as="div" size="2" mb="2" color="gray">
+                      Solicite ajustes específicos para a IA reescrever a especificação (Opcional):
+                    </Text>
+                    <div style={{ border: '1px solid var(--gray-6)', borderRadius: 'var(--border-radius)' }}>
+                      <RichTextEditor value={userAdjustments} onChange={setUserAdjustments} />
+                    </div>
+                  </Box>
+                </Flex>
+
+                {/* Lado Direito - Preview PDF */}
+                <Box style={{ maxHeight: '600px', overflowY: 'auto', backgroundColor: '#e9ecef', border: '1px solid #ccc', borderRadius: '4px', padding: '10px' }}>
+                  <Heading size="3" mb="3" style={{ color: '#555', textAlign: 'center' }}>Pré-visualização do PDF</Heading>
+                  <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', maxWidth: '800px', pointerEvents: 'none' }}>
+                     <CpflPdfTemplate 
+                        specData={mockSpecData} 
+                        markdownContent={currentMarkdown} 
+                     />
+                  </div>
+                </Box>
+              </Grid>
             </>
           ) : (
             <Box pt="3">
