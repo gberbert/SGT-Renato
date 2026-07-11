@@ -40,6 +40,28 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
       // Precisamos garantir que o display do elemento não seja "none" durante a exportação
       element.style.display = 'block';
 
+      // Converter URLs para Base64 para evitar bloqueios CORS do jsPDF
+      const getBase64Image = (url) => {
+        if (!url) return Promise.resolve(null);
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/png"));
+          };
+          img.onerror = () => resolve(null);
+          img.src = url;
+        });
+      };
+
+      const clientLogoBase64 = await getBase64Image(project?.clientLogoUrl);
+      const nttLogoBase64 = await getBase64Image(project?.nttLogoUrl);
+
       const opt = {
         margin:       [28, 12, 22, 12], // [top, right, bottom, left] em mm
         filename:     `${spec?.title || 'Especificacao'}.pdf`,
@@ -59,10 +81,15 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             pdf.setFillColor(0, 75, 135); // Azul Petróleo (CPFL/NTT Data)
             pdf.rect(0, 0, 210, 297, 'F'); // A4 is 210x297mm
             
-            pdf.setFontSize(36);
-            pdf.setTextColor(255, 255, 255); // Branco
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('NTT DATA', 105, 140, { align: 'center' });
+            if (nttLogoBase64) {
+              // Tentar centralizar (supondo proporção retangular). A altura do logo será uns 30mm
+              pdf.addImage(nttLogoBase64, 'PNG', 55, 120, 100, 30);
+            } else {
+              pdf.setFontSize(36);
+              pdf.setTextColor(255, 255, 255); // Branco
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('NTT DATA', 105, 140, { align: 'center' });
+            }
             
             pdf.setFontSize(14);
             pdf.setFont('helvetica', 'normal');
@@ -86,17 +113,25 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             pdf.setTextColor(0, 85, 164); // Azul escuro
             pdf.setFont('helvetica', 'bold');
             
-            // CPFL Text Mock (Left)
-            pdf.text('CPFL ENERGIA', 10, 15);
+            // Client Logo Mock (Left)
+            if (clientLogoBase64) {
+              pdf.addImage(clientLogoBase64, 'PNG', 10, 10, 30, 10);
+            } else {
+              pdf.text('CPFL ENERGIA', 10, 15);
+            }
             
             // Title (Center)
             pdf.setFontSize(9);
             pdf.text('Especificação Funcional |', 105, 13, { align: 'center' });
             pdf.text(formData.demandaId || '[NÚMERO DA DEMANDA]', 105, 17, { align: 'center' });
             
-            // NTT DATA Text Mock (Right)
-            pdf.setFontSize(10);
-            pdf.text('NTT DATA', 200, 15, { align: 'right' });
+            // NTT DATA Logo (Right)
+            if (nttLogoBase64) {
+              pdf.addImage(nttLogoBase64, 'PNG', 160, 10, 40, 10);
+            } else {
+              pdf.setFontSize(10);
+              pdf.text('NTT DATA', 200, 15, { align: 'right' });
+            }
             
             // Blue Horizontal Line
             pdf.setDrawColor(0, 85, 164);

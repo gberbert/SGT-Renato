@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextField, TextArea, Select, Box } from '@radix-ui/themes';
-import { createProject, updateProject } from '../services/projectService';
+import { createProject, updateProject, uploadProjectLogo } from '../services/projectService';
 import { subscribeToWorkflows } from '../services/settingsService';
 import { auth } from '../firebase';
 import { Loader2 } from 'lucide-react';
@@ -18,8 +18,12 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
     workflowAtividadesId: '',
     estado: '',
     municipio: '',
-    gerenteGeral: ''
+    gerenteGeral: '',
+    clientLogoUrl: '',
+    nttLogoUrl: ''
   });
+  const [clientLogoFile, setClientLogoFile] = useState(null);
+  const [nttLogoFile, setNttLogoFile] = useState(null);
 
   useEffect(() => {
     if (editingProject) {
@@ -31,11 +35,15 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
         workflowAtividadesId: editingProject.workflowAtividadesId || '',
         estado: editingProject.estado || '',
         municipio: editingProject.municipio || '',
-        gerenteGeral: editingProject.gerenteGeral || ''
+        gerenteGeral: editingProject.gerenteGeral || '',
+        clientLogoUrl: editingProject.clientLogoUrl || '',
+        nttLogoUrl: editingProject.nttLogoUrl || ''
       });
     } else {
-      setFormData({ name: '', description: '', key: '', workflowId: '', workflowAtividadesId: '', estado: '', municipio: '', gerenteGeral: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', workflowAtividadesId: '', estado: '', municipio: '', gerenteGeral: '', clientLogoUrl: '', nttLogoUrl: '' });
     }
+    setClientLogoFile(null);
+    setNttLogoFile(null);
 
     // Load Estados
     fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
@@ -66,42 +74,47 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.name.trim() || !formData.key.trim()) return;
-
+  const handleSave = async () => {
+    if (!formData.name || !formData.key) {
+      alert("Nome e Chave (Key) são obrigatórios.");
+      return;
+    }
     setLoading(true);
     try {
+      let savedProjectId;
+      const dataToSave = {
+        ...formData,
+        key: formData.key.toUpperCase(),
+        createdBy: auth.currentUser?.uid || 'unknown',
+        leaderName: auth.currentUser?.displayName || auth.currentUser?.email || 'Admin',
+      };
+
       if (editingProject) {
-        await updateProject(editingProject.id, {
-          name: formData.name,
-          description: formData.description,
-          key: formData.key.toUpperCase(),
-          workflowId: formData.workflowId,
-          workflowAtividadesId: formData.workflowAtividadesId,
-          estado: formData.estado,
-          municipio: formData.municipio,
-          gerenteGeral: formData.gerenteGeral
-        });
+        await updateProject(editingProject.id, dataToSave);
+        savedProjectId = editingProject.id;
       } else {
-        await createProject({
-          name: formData.name,
-          description: formData.description,
-          key: formData.key.toUpperCase(),
-          workflowId: formData.workflowId,
-          workflowAtividadesId: formData.workflowAtividadesId,
-          estado: formData.estado,
-          municipio: formData.municipio,
-          gerenteGeral: formData.gerenteGeral,
-          createdBy: auth.currentUser?.uid || 'unknown',
-          leaderName: auth.currentUser?.displayName || auth.currentUser?.email || 'Admin',
-        });
+        savedProjectId = await createProject(dataToSave);
       }
-      setFormData({ name: '', description: '', key: '', workflowId: '', workflowAtividadesId: '', estado: '', municipio: '', gerenteGeral: '' });
+
+      // Upload logos se houver
+      let updates = {};
+      if (clientLogoFile) {
+        const clientLogoUrl = await uploadProjectLogo(savedProjectId, clientLogoFile, 'client');
+        updates.clientLogoUrl = clientLogoUrl;
+      }
+      if (nttLogoFile) {
+        const nttLogoUrl = await uploadProjectLogo(savedProjectId, nttLogoFile, 'ntt');
+        updates.nttLogoUrl = nttLogoUrl;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateProject(savedProjectId, updates);
+      }
+
       onClose();
     } catch (error) {
       console.error(error);
-      alert('Erro ao criar projeto.');
+      alert("Erro ao salvar projeto.");
     } finally {
       setLoading(false);
     }
@@ -115,7 +128,7 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
           {editingProject ? 'Atualize as informações do seu projeto.' : 'Crie um novo espaço de trabalho para isolar suas demandas.'}
         </Dialog.Description>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
           <Flex direction="column" gap="4">
             <label>
               <Text as="div" size="2" mb="1" weight="bold">Nome do Projeto</Text>
@@ -229,9 +242,51 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
                 rows={3}
               />
             </label>
+
+          <Text as="div" size="3" weight="bold" mt="4" mb="2">Imagens para Exportação PDF</Text>
+          <Flex gap="4" direction="column">
+            <Box>
+              <Text as="div" size="2" mb="1" weight="bold">Logo do Cliente</Text>
+              <Text size="1" color="gray" as="div" mb="2">Este logo aparecerá no canto superior esquerdo de todas as páginas do PDF.</Text>
+              <Flex gap="3" align="center">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => setClientLogoFile(e.target.files[0])} 
+                />
+                {(clientLogoFile || formData.clientLogoUrl) && (
+                  <img 
+                    src={clientLogoFile ? URL.createObjectURL(clientLogoFile) : formData.clientLogoUrl} 
+                    alt="Client Logo" 
+                    style={{ height: '40px', objectFit: 'contain' }} 
+                  />
+                )}
+              </Flex>
+            </Box>
+
+            <Box>
+              <Text as="div" size="2" mb="1" weight="bold">Logo da Consultoria (NTT DATA)</Text>
+              <Text size="1" color="gray" as="div" mb="2">Este logo aparecerá na capa gigante e no canto superior direito do PDF.</Text>
+              <Flex gap="3" align="center">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => setNttLogoFile(e.target.files[0])} 
+                />
+                {(nttLogoFile || formData.nttLogoUrl) && (
+                  <img 
+                    src={nttLogoFile ? URL.createObjectURL(nttLogoFile) : formData.nttLogoUrl} 
+                    alt="NTT Logo" 
+                    style={{ height: '40px', objectFit: 'contain', backgroundColor: 'var(--gray-3)', padding: '4px', borderRadius: '4px' }} 
+                  />
+                )}
+              </Flex>
+            </Box>
           </Flex>
 
-          <Flex gap="3" mt="5" justify="end">
+        </Flex>
+
+        <Flex gap="3" mt="4" justify="end">
             <Dialog.Close>
               <Button variant="soft" color="gray" type="button" disabled={loading}>
                 Cancelar
