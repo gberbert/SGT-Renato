@@ -149,7 +149,7 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
           {/* Lado Direito - Preview */}
           <Box style={{ maxHeight: '65vh', overflowY: 'auto', backgroundColor: '#e9ecef', border: '1px solid #ccc', borderRadius: '4px', padding: '20px 10px' }}>
             <Heading size="3" mb="4" style={{ color: '#555', textAlign: 'center' }}>Pré-visualização do Documento</Heading>
-            <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', maxWidth: '800px', pointerEvents: 'none' }}>
+            <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', width: 'fit-content', minWidth: '800px', pointerEvents: 'none' }}>
                <CpflPdfTemplate 
                   specData={formData} 
                   markdownContent={spec.markdownContent}
