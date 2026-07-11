@@ -81,7 +81,9 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       alert("Selecione uma estimativa para associar a especificação.");
       return;
     }
-    if (!requirements || requirements === '<p></p>') {
+    const hasPrevious = !!currentMarkdown?.trim();
+
+    if (!hasPrevious && (!requirements || requirements === '<p></p>' || requirements === '<p><br></p>')) {
       alert("Descreva os requisitos antes de gerar.");
       return;
     }
@@ -106,8 +108,7 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       if (parentEst?.components?.length) enrichedRequirements += `- Componentes Envolvidos: ${parentEst.components.join(', ')}\n`;
       if (parentEst?.details) enrichedRequirements += `- Detalhes da Estimativa: ${parentEst.details}\n`;
 
-      const hasPrevious = !!currentMarkdown.trim();
-
+      // const hasPrevious = !!currentMarkdown.trim(); (removido, já declarado acima)
       const markdownResponse = await generateFunctionalSpecification(
         aiConfig.geminiApiKey,
         aiConfig.efInitialPrompt || '',
