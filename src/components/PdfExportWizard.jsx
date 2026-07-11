@@ -52,16 +52,17 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
   };
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
     documentTitle: `${spec?.title || 'Especificacao'}`,
-    onBeforeGetContent: () => {
-      setIsExporting(true);
-      return Promise.resolve();
+    onBeforePrint: () => {
+      return new Promise((resolve) => {
+        setIsExporting(true);
+        setTimeout(resolve, 0); // Permite que o estado seja atualizado
+      });
     },
     onAfterPrint: () => {
       setIsExporting(false);
-    },
-    removeAfterPrint: true
+    }
   });
 
   if (!spec) return null;
