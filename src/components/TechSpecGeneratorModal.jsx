@@ -19,6 +19,7 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditAIModalOpen, setIsEditAIModalOpen] = useState(false);
 
   useEffect(() => {
     if (initialSpec) {
@@ -224,13 +225,6 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
                   />
                 </div>
               </Box>
-              <Box pt="2">
-                <Text as="div" size="2" mb="2" color="gray">
-                  Solicite ajustes específicos para a IA reescrever a especificação (Opcional):
-                </Text>
-                <div style={{ border: '1px solid var(--gray-6)', borderRadius: 'var(--border-radius)' }}>
-                  <RichTextEditor value={userAdjustments} onChange={setUserAdjustments} />
-                </div>
               </Box>
             </>
           ) : (
@@ -254,12 +248,33 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
               {isSaving ? <Loader2 size={18} className="spinner-icon" /> : "Salvar Edição Manual"}
             </Button>
           )}
-          <Button onClick={handleGenerate} disabled={isGenerating || isSaving || !parentId} size="3" style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', color: 'white' }}>
+          <Button onClick={() => currentMarkdown ? setIsEditAIModalOpen(true) : handleGenerate()} disabled={isGenerating || isSaving || !parentId} size="3" style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', color: 'white' }}>
             {isGenerating ? <Loader2 size={18} className="spinner-icon" /> : <Wand2 size={18} />}
-            {isGenerating ? "Gerando..." : currentMarkdown ? "Re-gerar com IA" : "Gerar Especificação"}
+            {isGenerating ? "Processando..." : currentMarkdown ? "Editar com IA" : "Gerar Especificação"}
           </Button>
         </Flex>
       </Dialog.Content>
+
+      <Dialog.Root open={isEditAIModalOpen} onOpenChange={setIsEditAIModalOpen}>
+        <Dialog.Content maxWidth="600px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <Dialog.Title>Editar com IA</Dialog.Title>
+          <Dialog.Description size="2" mb="4">
+            Descreva o que você gostaria que a IA alterasse, adicionasse ou removesse da especificação atual.
+          </Dialog.Description>
+          <div style={{ border: '1px solid var(--gray-6)', borderRadius: 'var(--border-radius)', marginBottom: '16px' }}>
+             <RichTextEditor value={userAdjustments} onChange={setUserAdjustments} minHeight="120px" />
+          </div>
+          <Flex gap="3" justify="end">
+            <Button variant="soft" color="gray" onClick={() => setIsEditAIModalOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+                setIsEditAIModalOpen(false);
+                handleGenerate();
+            }} style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', color: 'white' }}>
+              <Wand2 size={16} /> Ajustar com IA
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
     </Dialog.Root>
   );
 };
