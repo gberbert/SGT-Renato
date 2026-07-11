@@ -10,6 +10,7 @@ import SpecificationViewerModal from './SpecificationViewerModal';
 import PdfExportWizard from './PdfExportWizard';
 import { auth } from '../firebase';
 import { subscribeToProjectSquads } from '../services/squadService';
+import { subscribeToProjects } from '../services/projectService';
 
 const Specifications = ({ userRole }) => {
   const [specs, setSpecs] = useState([]);
@@ -18,6 +19,7 @@ const Specifications = ({ userRole }) => {
   const [loading, setLoading] = useState(true);
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const [globalSquads, setGlobalSquads] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [allocations, setAllocations] = useState([]);
   
   const [aiSettings, setAiSettings] = useState({ efInitialPrompt: '' });
@@ -63,6 +65,7 @@ const Specifications = ({ userRole }) => {
     });
 
     const unsubSquads = subscribeToProjectSquads('all', setGlobalSquads, console.error);
+    const unsubProjects = subscribeToProjects(setProjects, console.error);
     const unsubAllocations = subscribeToAllocations(setAllocations);
 
     return () => {
@@ -71,6 +74,7 @@ const Specifications = ({ userRole }) => {
       unsubEstimations();
       unsubAi();
       unsubSquads();
+      unsubProjects();
       unsubAllocations();
     };
   }, []);
@@ -252,6 +256,8 @@ const Specifications = ({ userRole }) => {
         spec={currentSpec}
         estimations={estimations}
         tickets={tickets}
+        projects={projects}
+        squads={globalSquads}
       />
 
       <PdfExportWizard

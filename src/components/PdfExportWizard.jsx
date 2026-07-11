@@ -3,18 +3,21 @@ import { Dialog, Flex, Button, Text, TextField, Box } from '@radix-ui/themes';
 import html2pdf from 'html2pdf.js';
 import CpflPdfTemplate from './CpflPdfTemplate';
 
-const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemanda }) => {
+const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemanda, projects = [], squads = [] }) => {
   const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef(null);
+
+  const project = projects.find(p => p.id === parentDemanda?.projectId);
+  const squad = squads.find(s => s.id === parentDemanda?.squadId);
 
   // Form State
   const [formData, setFormData] = useState({
     cliente: 'CPFL',
-    projeto: parentDemanda?.title || '',
+    projeto: project?.name || parentDemanda?.title || '',
     demandaId: parentDemanda?.code || parentEstimativa?.ticketCode || '',
     demandaTitle: spec?.title?.replace(/^(EF - |ET - )/, '') || '',
     sistema: parentEstimativa?.sistema || '',
-    torre: '',
+    torre: squad?.name || '',
     empresas: 'CPFL',
     versao: '1.0',
     data: new Date().toLocaleDateString('pt-BR'),
@@ -158,6 +161,17 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             <Box style={{ flex: 1 }}>
               <Text as="div" size="2" mb="1" weight="bold">Título (Capa)</Text>
               <TextField.Root name="demandaTitle" value={formData.demandaTitle} onChange={handleChange} />
+            </Box>
+          </Flex>
+
+          <Flex gap="3">
+            <Box style={{ flex: 1 }}>
+              <Text as="div" size="2" mb="1" weight="bold">Projeto</Text>
+              <TextField.Root name="projeto" value={formData.projeto} onChange={handleChange} />
+            </Box>
+            <Box style={{ flex: 1 }}>
+              <Text as="div" size="2" mb="1" weight="bold">Torre / Diretoria</Text>
+              <TextField.Root name="torre" value={formData.torre} onChange={handleChange} />
             </Box>
           </Flex>
 

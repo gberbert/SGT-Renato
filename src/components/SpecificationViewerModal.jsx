@@ -6,7 +6,7 @@ import { saveSpecification } from '../services/specService';
 import PdfExportWizard from './PdfExportWizard';
 import CodeRenderer from './CodeRenderer';
 
-const SpecificationViewerModal = ({ isOpen, onClose, spec, estimations = [], tickets = [] }) => {
+const SpecificationViewerModal = ({ isOpen, onClose, spec, estimations = [], tickets = [], projects = [], squads = [] }) => {
   const [content, setContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [exportWizardOpen, setExportWizardOpen] = useState(false);
@@ -75,6 +75,8 @@ const SpecificationViewerModal = ({ isOpen, onClose, spec, estimations = [], tic
           spec={{...spec, markdownContent: content}}
           parentEstimativa={estimations.find(e => e.id === spec?.parentId)}
           parentDemanda={tickets.find(t => t.id === estimations.find(e => e.id === spec?.parentId)?.ticketId)}
+          projects={projects}
+          squads={squads}
         />
       </Dialog.Content>
     </Dialog.Root>
