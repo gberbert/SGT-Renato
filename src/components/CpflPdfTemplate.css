@@ -2,6 +2,7 @@
 
 .wmde-markdown {
   display: block !important;
+  box-sizing: border-box;
 }
 
 
@@ -196,6 +197,7 @@
 .print-content-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .print-content-table td {

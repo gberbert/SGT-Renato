@@ -233,16 +233,17 @@ const Settings = () => {
           role: editingUserData.role
         });
       } else {
-        // Criar no Auth primeiro
+        // Criar no Auth primeiro (sem enviar email)
         const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
-        const newUid = await createAuthUser(editingUserData.email, tempPassword);
+        const newUid = await createAuthUser(editingUserData.email, tempPassword, false);
 
         await createUser({
           id: newUid,
           shortName: editingUserData.shortName,
           displayName: editingUserData.displayName,
           email: editingUserData.email,
-          role: editingUserData.role
+          role: editingUserData.role,
+          tempPassword: tempPassword
         });
       }
       setIsUserModalOpen(false);
@@ -527,6 +528,7 @@ const Settings = () => {
                     <Table.Row>
                       <Table.ColumnHeaderCell>Nome / E-mail</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell>Nome Resumido</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Senha Provisória</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell>Data de Ingresso</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell align="right">Ações / Papel (Role)</Table.ColumnHeaderCell>
                     </Table.Row>
@@ -541,6 +543,9 @@ const Settings = () => {
                           </Flex>
                         </Table.Cell>
                         <Table.Cell>{u.shortName || '-'}</Table.Cell>
+                        <Table.Cell>
+                          {u.tempPassword ? <Text color="ruby" weight="bold">{u.tempPassword}</Text> : <Text color="gray">-</Text>}
+                        </Table.Cell>
                         <Table.Cell>
                           {u.createdAt ? new Date(u.createdAt.toDate()).toLocaleDateString() : 'N/A'}
                         </Table.Cell>

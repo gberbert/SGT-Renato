@@ -25,7 +25,7 @@ export const messaging = getMessaging(app);
 
 console.log("Firebase services initialized.");
 
-export const createAuthUser = async (email, password) => {
+export const createAuthUser = async (email, password, sendEmail = true) => {
   try {
     // Procura se o app secundário já existe
     let secondaryApp = app; // Fallback
@@ -40,8 +40,10 @@ export const createAuthUser = async (email, password) => {
     const secondaryAuth = getAuth(secondaryApp);
     const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
     
-    // Envia o link de redefinição para o usuário criar a senha real
-    await sendPasswordResetEmail(secondaryAuth, email);
+    if (sendEmail) {
+      // Envia o link de redefinição para o usuário criar a senha real
+      await sendPasswordResetEmail(secondaryAuth, email);
+    }
     await signOut(secondaryAuth);
     
     return userCredential.user.uid;
