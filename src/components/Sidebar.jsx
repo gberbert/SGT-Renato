@@ -237,7 +237,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
       </div>
 
       <Dialog.Root open={showIOSPrompt} onOpenChange={setShowIOSPrompt}>
-        <Dialog.Content maxWidth="400px">
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>Instalar no iPhone (iOS)</Dialog.Title>
           <Flex direction="column" gap="4">
             <Text>Para instalar o SGT no seu iPhone, siga estes 2 passos:</Text>
@@ -257,7 +257,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
       </Dialog.Root>
 
       <Dialog.Root open={showDesktopPrompt} onOpenChange={setShowDesktopPrompt}>
-        <Dialog.Content maxWidth="400px">
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>Instalar no Computador / Android</Dialog.Title>
           <Flex direction="column" gap="4">
             <Text>Para instalar o SGT e usá-mo como aplicativo nativo:</Text>

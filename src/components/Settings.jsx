@@ -741,7 +741,7 @@ const Settings = () => {
                   <Dialog.Trigger>
                     <Button size="2">Novo Workflow</Button>
                   </Dialog.Trigger>
-                  <Dialog.Content maxWidth="400px">
+                  <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
                     <Dialog.Title>Criar Novo Workflow</Dialog.Title>
                     <form onSubmit={handleSaveWorkflow}>
                       <Flex direction="column" gap="3">
@@ -958,7 +958,7 @@ const Settings = () => {
       {/* MODALS */}
       {/* Edit User Modal */}
       <Dialog.Root open={isUserModalOpen} onOpenChange={setIsUserModalOpen}>
-        <Dialog.Content maxWidth="400px">
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>Editar Usuário</Dialog.Title>
           <form onSubmit={handleSaveUser}>
             <Flex direction="column" gap="3">
@@ -1016,7 +1016,7 @@ const Settings = () => {
 
       {/* Edit/New Type Modal */}
       <Dialog.Root open={isTypeModalOpen} onOpenChange={setIsTypeModalOpen}>
-        <Dialog.Content maxWidth="400px">
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>{typeData.id ? 'Editar Tipo' : 'Criar Novo Tipo'}</Dialog.Title>
           <form onSubmit={handleSaveType}>
             <Flex direction="column" gap="3">
@@ -1056,7 +1056,7 @@ const Settings = () => {
 
       {/* Edit/New System Modal */}
       <Dialog.Root open={isSystemModalOpen} onOpenChange={setIsSystemModalOpen}>
-        <Dialog.Content maxWidth="400px">
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>{systemData.id ? 'Editar Sistema' : 'Criar Novo Sistema'}</Dialog.Title>
           <form onSubmit={handleSaveSystem}>
             <Flex direction="column" gap="3">
@@ -1084,7 +1084,7 @@ const Settings = () => {
 
       {/* Edit/New Component Modal */}
       <Dialog.Root open={isComponentModalOpen} onOpenChange={setIsComponentModalOpen}>
-        <Dialog.Content maxWidth="400px">
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>{componentData.id ? 'Editar Componente' : 'Criar Novo Componente'}</Dialog.Title>
           <form onSubmit={handleSaveComponent}>
             <Flex direction="column" gap="3">
@@ -1112,7 +1112,7 @@ const Settings = () => {
 
       {/* Edit/New Custom Field Modal */}
       <Dialog.Root open={isCustomFieldModalOpen} onOpenChange={setIsCustomFieldModalOpen}>
-        <Dialog.Content maxWidth="450px">
+        <Dialog.Content maxWidth="450px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>{customFieldData.id ? 'Editar Campo Customizado' : 'Criar Campo Customizado'}</Dialog.Title>
           <form onSubmit={handleSaveCustomField}>
             <Flex direction="column" gap="3">
@@ -1179,7 +1179,7 @@ const Settings = () => {
 
       {/* New Automation Modal */}
       <Dialog.Root open={isAutomationModalOpen} onOpenChange={setIsAutomationModalOpen}>
-        <Dialog.Content maxWidth="450px">
+        <Dialog.Content maxWidth="450px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>Criar Automação</Dialog.Title>
           <form onSubmit={handleSaveAutomation}>
             <Flex direction="column" gap="3">

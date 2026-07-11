@@ -69,7 +69,7 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Content maxWidth="1100px">
+      <Dialog.Content maxWidth="1100px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>Assistente de Exportação (Padrão CPFL)</Dialog.Title>
         <Dialog.Description size="2" mb="4">
           Preencha ou revise os dados que comporão a capa e as tabelas de controle do documento oficial. Ao lado você pode ver a pré-visualização.

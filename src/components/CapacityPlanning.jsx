@@ -703,7 +703,7 @@ const CapacityPlanning = ({ userRole }) => {
 
       {/* Modal Details of Cell */}
       <Dialog.Root open={!!selectedCellInfo} onOpenChange={(open) => !open && setSelectedCellInfo(null)}>
-        <Dialog.Content style={{ maxWidth: 450 }}>
+        <Dialog.Content style={{ maxWidth: 450 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           {selectedCellInfo && (
             <>
               <Dialog.Title>

@@ -182,7 +182,7 @@ const EstimationRulesAdmin = ({ dbRules, onRulesChange }) => {
       </Card>
 
       <Dialog.Root open={modalOpen} onOpenChange={setModalOpen}>
-        <Dialog.Content style={{ maxWidth: '600px' }}>
+        <Dialog.Content style={{ maxWidth: '600px' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>{editingRule ? 'Editar Regra' : 'Nova Regra'}</Dialog.Title>
           
           <Flex direction="column" gap="3" mt="4">

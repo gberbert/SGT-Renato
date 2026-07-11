@@ -158,7 +158,7 @@ const ProjectDetails = ({ userRole }) => {
 
       {/* NEW SQUAD MODAL */}
       <Dialog.Root open={isNewSquadModalOpen} onOpenChange={setIsNewSquadModalOpen}>
-        <Dialog.Content maxWidth="400px">
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <Dialog.Title>Nova Squad</Dialog.Title>
           <form onSubmit={handleCreateSquad}>
             <Flex direction="column" gap="3">

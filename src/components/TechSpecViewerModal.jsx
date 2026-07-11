@@ -77,7 +77,7 @@ const TechSpecViewerModal = ({ isOpen, onClose, spec }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Content maxWidth="1000px" style={{ height: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }}>
+      <Dialog.Content maxWidth="1000px" style={{ height: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         {/* Header toolbar */}
         <Flex justify="between" align="center" style={{ padding: '16px', borderBottom: '1px solid var(--gray-5)', background: 'var(--panel-solid)' }}>
           <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{spec.title}</div>

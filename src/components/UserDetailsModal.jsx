@@ -45,7 +45,7 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content style={{ maxWidth: 400 }}>
+      <Dialog.Content style={{ maxWidth: 400 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>Detalhes do Membro</Dialog.Title>
         <Flex gap="4" align="center" mb="5" mt="2">
           <Box position="relative">

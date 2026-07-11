@@ -161,7 +161,7 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Content maxWidth="700px" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+      <Dialog.Content maxWidth="700px" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>Nova Especificação Técnica (IA)</Dialog.Title>
         <Dialog.Description size="2" mb="4">
           Escreva os requisitos e deixe a inteligência artificial formatar a Especificação Técnica.

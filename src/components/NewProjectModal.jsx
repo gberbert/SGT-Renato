@@ -124,7 +124,7 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="450px">
+      <Dialog.Content maxWidth="450px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>{editingProject ? 'Editar Projeto' : 'Novo Projeto'}</Dialog.Title>
         <Dialog.Description size="2" mb="4" color="gray">
           {editingProject ? 'Atualize as informações do seu projeto.' : 'Crie um novo espaço de trabalho para isolar suas demandas.'}

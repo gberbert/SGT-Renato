@@ -87,7 +87,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content className="ticket-modal" maxWidth="600px">
+      <Dialog.Content className="ticket-modal" maxWidth="600px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Flex justify="between" align="center" mb="4">
           <Dialog.Title style={{ marginBottom: 0 }}>Gestão da Squad</Dialog.Title>
           {userRole === 'admin' && (

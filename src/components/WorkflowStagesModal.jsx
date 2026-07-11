@@ -73,7 +73,7 @@ const WorkflowStagesModal = ({ isOpen, onClose, workflow }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content maxWidth="600px" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+      <Dialog.Content maxWidth="600px" style={{ maxHeight: '80vh', overflowY: 'auto' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>Editar Etapas: {workflow.name}</Dialog.Title>
         <Dialog.Description size="2" mb="4" color="gray">
           Configure campos exclusivos que aparecerão apenas quando o ticket estiver em cada etapa específica.

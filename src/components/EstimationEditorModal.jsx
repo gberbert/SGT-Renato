@@ -376,7 +376,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content style={{ maxWidth: '95vw', maxHeight: '95vh' }}>
+      <Dialog.Content style={{ maxWidth: '95vw', maxHeight: '95vh' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>
           <Flex justify="between" align="center">
             <Text>{estimationToEdit ? 'Editar Estimativa' : 'Nova Estimativa'}</Text>
