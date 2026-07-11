@@ -134,6 +134,8 @@
   padding-bottom: 5px;
   margin-top: 30px;
   margin-bottom: 15px;
+  page-break-inside: avoid;
+  page-break-after: avoid;
 }
 
 .pdf-content-page h2 {
@@ -141,6 +143,8 @@
   font-size: 16pt;
   margin-top: 20px;
   margin-bottom: 10px;
+  page-break-inside: avoid;
+  page-break-after: avoid;
 }
 
 .pdf-content-page h3 {
@@ -148,6 +152,8 @@
   font-size: 12pt;
   margin-top: 15px;
   margin-bottom: 10px;
+  page-break-inside: avoid;
+  page-break-after: avoid;
 }
 
 .pdf-content-page p, .pdf-content-page li {

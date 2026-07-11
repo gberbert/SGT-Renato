@@ -52,15 +52,19 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             canvas.height = img.height;
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL("image/png"));
+            resolve({
+              data: canvas.toDataURL("image/png"),
+              width: img.width,
+              height: img.height
+            });
           };
           img.onerror = () => resolve(null);
           img.src = url;
         });
       };
 
-      const clientLogoBase64 = await getBase64Image(project?.clientLogoUrl);
-      const nttLogoBase64 = await getBase64Image(project?.nttLogoUrl);
+      const clientLogo = await getBase64Image(project?.clientLogoUrl);
+      const nttLogo = await getBase64Image(project?.nttLogoUrl);
 
       const opt = {
         margin:       [28, 12, 22, 12], // [top, right, bottom, left] em mm
@@ -81,9 +85,12 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             pdf.setFillColor(0, 75, 135); // Azul Petróleo (CPFL/NTT Data)
             pdf.rect(0, 0, 210, 297, 'F'); // A4 is 210x297mm
             
-            if (nttLogoBase64) {
-              // Tentar centralizar (supondo proporção retangular). A altura do logo será uns 30mm
-              pdf.addImage(nttLogoBase64, 'PNG', 55, 120, 100, 30);
+            if (nttLogo) {
+              // Altura fixa de 30mm, calcula largura proporcional
+              const ratio = nttLogo.width / nttLogo.height;
+              const calcWidth = 30 * ratio;
+              const xPos = 105 - (calcWidth / 2);
+              pdf.addImage(nttLogo.data, 'PNG', xPos, 130, calcWidth, 30);
             } else {
               pdf.setFontSize(36);
               pdf.setTextColor(255, 255, 255); // Branco
@@ -93,7 +100,7 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             
             pdf.setFontSize(14);
             pdf.setFont('helvetica', 'normal');
-            pdf.text('Especificação Funcional', 105, 150, { align: 'center' });
+            pdf.text('Especificação Funcional', 105, 160, { align: 'center' });
             
           } else if (i === totalPages) {
             // BACK COVER
@@ -110,33 +117,42 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             
             // ---- HEADER ----
             pdf.setFontSize(10);
-            pdf.setTextColor(0, 85, 164); // Azul escuro
+            pdf.setTextColor(110, 139, 163); // Cinza/Azul claro (para o nome da demanda)
             pdf.setFont('helvetica', 'bold');
             
-            // Client Logo Mock (Left)
-            if (clientLogoBase64) {
-              pdf.addImage(clientLogoBase64, 'PNG', 10, 10, 30, 10);
+            // Client Logo (Left)
+            if (clientLogo) {
+              // Altura fixa de 12mm
+              const ratio = clientLogo.width / clientLogo.height;
+              const calcWidth = 12 * ratio;
+              pdf.addImage(clientLogo.data, 'PNG', 10, 8, calcWidth, 12);
             } else {
+              pdf.setTextColor(0, 85, 164); // Azul escuro
               pdf.text('CPFL ENERGIA', 10, 15);
             }
             
             // Title (Center)
             pdf.setFontSize(9);
-            pdf.text('Especificação Funcional |', 105, 13, { align: 'center' });
-            pdf.text(formData.demandaId || '[NÚMERO DA DEMANDA]', 105, 17, { align: 'center' });
+            pdf.setTextColor(110, 139, 163);
+            pdf.text('Especificação Funcional |', 105, 12, { align: 'center' });
+            pdf.text(formData.demandaId || '[NÚMERO DA DEMANDA]', 105, 16, { align: 'center' });
             
             // NTT DATA Logo (Right)
-            if (nttLogoBase64) {
-              pdf.addImage(nttLogoBase64, 'PNG', 160, 10, 40, 10);
+            if (nttLogo) {
+              // Altura fixa de 8mm (menor no cabeçalho)
+              const ratio = nttLogo.width / nttLogo.height;
+              const calcWidth = 8 * ratio;
+              pdf.addImage(nttLogo.data, 'PNG', 200 - calcWidth, 10, calcWidth, 8);
             } else {
+              pdf.setTextColor(0, 85, 164); // Azul escuro
               pdf.setFontSize(10);
               pdf.text('NTT DATA', 200, 15, { align: 'right' });
             }
             
             // Blue Horizontal Line
-            pdf.setDrawColor(0, 85, 164);
+            pdf.setDrawColor(180, 205, 225); // Linha azul bem clara
             pdf.setLineWidth(0.5);
-            pdf.line(10, 22, 200, 22);
+            pdf.line(10, 24, 200, 24);
 
             // ---- FOOTER ----
             pdf.setFontSize(8);
