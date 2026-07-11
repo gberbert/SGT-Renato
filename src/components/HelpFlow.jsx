@@ -14,13 +14,16 @@ const FLOW_STEPS = [
     bgColor: 'var(--indigo-2)',
     uml: `
 sequenceDiagram
-    participant Requester as Solicitante
-    participant System as SGT (Kanban)
-    participant Backlog as Coluna Pendente
-    Requester->>System: Preenche Título, Descrição, Prazo e Anexos
-    System->>System: Gera Código Único (ex: DEM-123-ABC)
-    System->>Backlog: Move Card para Pendente
-    System-->>Requester: Confirmação de Criação
+    participant Admin as Team Leader / Admin
+    participant Proj as Setup (Projeto/Sistema)
+    participant Demanda as Nova Demanda
+    participant Kanban as Board Kanban
+    Admin->>Proj: Cria Workflow, Sistemas, Projeto e Squads (Roles)
+    Admin->>Demanda: Preenche Título, Descrição e Prazo
+    Admin->>Demanda: Associa Squad e seleciona Sistemas
+    Demanda->>Demanda: Atribui Squad Leader automaticamente
+    Admin->>Demanda: Salva Demanda
+    Demanda->>Kanban: Cria Card na primeira etapa do Kanban
     `
   },
   {
