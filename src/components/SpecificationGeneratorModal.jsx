@@ -167,12 +167,12 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
   const selectedSquad = squads?.find(s => s.id === selectedTicket?.squadId);
 
   const mockSpecData = {
-    cliente: 'CPFL',
-    projeto: selectedProject?.name || selectedTicket?.title || '',
+    cliente: selectedProject?.cliente || 'CPFL',
+    projeto: selectedTicket?.title || selectedProject?.name || '',
     demandaId: selectedTicket?.code || selectedEstimation?.ticketCode || '',
     demandaTitle: initialSpec?.title?.replace(/^(EF - |ET - )/, '') || 'Nova Especificação',
-    sistema: selectedEstimation?.sistema || '',
-    torre: selectedSquad?.name || '',
+    sistema: selectedTicket?.systems?.join(', ') || selectedEstimation?.sistema || '',
+    torre: selectedProject?.name || '',
     empresas: 'CPFL',
     versao: '1.0',
     data: new Date().toLocaleDateString('pt-BR'),

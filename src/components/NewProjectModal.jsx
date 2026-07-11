@@ -20,7 +20,8 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
     municipio: '',
     gerenteGeral: '',
     clientLogoUrl: '',
-    nttLogoUrl: ''
+    nttLogoUrl: '',
+    cliente: ''
   });
   const [clientLogoFile, setClientLogoFile] = useState(null);
   const [nttLogoFile, setNttLogoFile] = useState(null);
@@ -37,10 +38,11 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
         municipio: editingProject.municipio || '',
         gerenteGeral: editingProject.gerenteGeral || '',
         clientLogoUrl: editingProject.clientLogoUrl || '',
-        nttLogoUrl: editingProject.nttLogoUrl || ''
+        nttLogoUrl: editingProject.nttLogoUrl || '',
+        cliente: editingProject.cliente || ''
       });
     } else {
-      setFormData({ name: '', description: '', key: '', workflowId: '', workflowAtividadesId: '', estado: '', municipio: '', gerenteGeral: '', clientLogoUrl: '', nttLogoUrl: '' });
+      setFormData({ name: '', description: '', key: '', workflowId: '', workflowAtividadesId: '', estado: '', municipio: '', gerenteGeral: '', clientLogoUrl: '', nttLogoUrl: '', cliente: '' });
     }
     setClientLogoFile(null);
     setNttLogoFile(null);
@@ -165,6 +167,16 @@ const NewProjectModal = ({ isOpen, onClose, editingProject }) => {
               <Text as="div" size="1" color="gray" mt="1">
                 Usado para identificar tickets (ex: RM-1, RM-2)
               </Text>
+            </label>
+
+            <label>
+              <Text as="div" size="2" mb="1" weight="bold">Cliente (Nome na Exportação PDF)</Text>
+              <TextField.Root
+                name="cliente"
+                value={formData.cliente}
+                onChange={handleChange}
+                placeholder="Ex: CPFL Energia"
+              />
             </label>
 
             <Flex gap="4">

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Dialog, Flex, Button, Text, TextField, Box, Grid, Heading } from '@radix-ui/themes';
 import html2pdf from 'html2pdf.js';
 import CpflPdfTemplate from './CpflPdfTemplate';
+import { auth } from '../firebase';
 
 const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemanda, projects = [], squads = [] }) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -12,16 +13,16 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
 
   // Form State
   const [formData, setFormData] = useState({
-    cliente: 'CPFL',
-    projeto: project?.name || parentDemanda?.title || '',
+    cliente: project?.cliente || 'CPFL',
+    projeto: parentDemanda?.title || project?.name || '',
     demandaId: parentDemanda?.code || parentEstimativa?.ticketCode || '',
     demandaTitle: spec?.title?.replace(/^(EF - |ET - )/, '') || '',
-    sistema: parentEstimativa?.sistema || '',
-    torre: squad?.name || '',
+    sistema: parentDemanda?.systems?.join(', ') || parentEstimativa?.sistema || '',
+    torre: project?.name || '',
     empresas: 'CPFL',
     versao: '1.0',
     data: new Date().toLocaleDateString('pt-BR'),
-    autor: spec?.authorName || spec?.assignee || '',
+    autor: auth.currentUser?.displayName || spec?.authorName || spec?.assignee || '',
     status: spec?.executionStatus === 'concluido' ? 'Aprovado' : 'Em validação',
     aprovador: ''
   });
@@ -134,12 +135,12 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
               const calcWidth = calcHeight * ratio;
               const finalWidth = calcWidth > 50 ? 50 : calcWidth;
               const finalHeight = finalWidth / ratio;
-              pdf.addImage(clientLogo.data, 'PNG', 10, 23 - finalHeight, finalWidth, finalHeight);
+              pdf.addImage(clientLogo.data, 'PNG', 10, 18 - (finalHeight / 2), finalWidth, finalHeight);
             } else {
               pdf.setTextColor(0, 85, 164); // Azul escuro
               pdf.setFontSize(14);
               pdf.setFont('helvetica', 'bold');
-              pdf.text('CPFL ENERGIA', 10, 18);
+              pdf.text(formData.cliente || 'CPFL ENERGIA', 10, 18);
             }
             
             // Title (Center)
@@ -158,7 +159,7 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
               const calcWidth = calcHeight * ratio;
               const finalWidth = calcWidth > 45 ? 45 : calcWidth;
               const finalHeight = finalWidth / ratio;
-              pdf.addImage(nttLogo.data, 'PNG', 200 - finalWidth, 24 - finalHeight, finalWidth, finalHeight);
+              pdf.addImage(nttLogo.data, 'PNG', 200 - finalWidth, 18 - (finalHeight / 2), finalWidth, finalHeight);
             } else {
               pdf.setTextColor(0, 85, 164); // Azul escuro
               pdf.setFontSize(10);
@@ -234,15 +235,6 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             </Box>
           </Flex>
 
-          <Flex gap="3">
-            <Box style={{ flex: 1 }}>
-              <Text as="div" size="2" mb="1" weight="bold">Projeto</Text>
-              <TextField.Root name="projeto" value={formData.projeto} onChange={handleChange} />
-            </Box>
-            <Box style={{ flex: 1 }}>
-              <Text as="div" size="2" mb="1" weight="bold">Torre / Diretoria</Text>
-              <TextField.Root name="torre" value={formData.torre} onChange={handleChange} />
-            </Box>
           </Flex>
 
           <Flex gap="3">
