@@ -10,6 +10,7 @@ import TechSpecGeneratorModal from './TechSpecGeneratorModal';
 import TechSpecViewerModal from './TechSpecViewerModal';
 import { auth } from '../firebase';
 import { subscribeToProjectSquads } from '../services/squadService';
+import { subscribeToProjects } from '../services/projectService';
 
 const TechSpecs = ({ userRole }) => {
   const [specs, setSpecs] = useState([]);
@@ -18,6 +19,7 @@ const TechSpecs = ({ userRole }) => {
   const [loading, setLoading] = useState(true);
   const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const [globalSquads, setGlobalSquads] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [allocations, setAllocations] = useState([]);
   
   const [aiSettings, setAiSettings] = useState({ efInitialPrompt: '' });
@@ -28,41 +30,32 @@ const TechSpecs = ({ userRole }) => {
   const [currentSpec, setCurrentSpec] = useState(null);
 
   useEffect(() => {
-    let specsLoaded = false;
-    let ticketsLoaded = false;
-    let estimationsLoaded = false;
     let aiLoaded = false;
 
     const checkLoading = () => {
-      if (specsLoaded && ticketsLoaded && estimationsLoaded && aiLoaded) setLoading(false);
+      setLoading(false);
     };
 
     const unsubSpecs = subscribeToTechSpecs((data) => {
       setSpecs(data);
-      specsLoaded = true;
-      checkLoading();
     });
 
     const unsubTickets = subscribeToTickets((data) => {
       setTickets(data);
-      ticketsLoaded = true;
-      checkLoading();
     });
 
     const unsubEstimations = subscribeToEstimations((data) => {
       setEstimations(data);
-      estimationsLoaded = true;
-      checkLoading();
     });
 
     const unsubAi = subscribeToAISettings((data) => {
       if (data) setAiSettings(data);
-      aiLoaded = true;
       checkLoading();
     });
 
     const unsubSquads = subscribeToProjectSquads('all', setGlobalSquads, console.error);
     const unsubAllocations = subscribeToAllocations(setAllocations);
+    const unsubProjects = subscribeToProjects(setProjects);
 
     return () => {
       unsubSpecs();
@@ -71,6 +64,7 @@ const TechSpecs = ({ userRole }) => {
       unsubAi();
       unsubSquads();
       unsubAllocations();
+      unsubProjects();
     };
   }, []);
 
@@ -241,6 +235,8 @@ const TechSpecs = ({ userRole }) => {
         estimations={estimations}
         userRole={userRole}
         initialSpec={currentSpec}
+        projects={projects}
+        squads={globalSquads}
       />
 
       <TechSpecViewerModal

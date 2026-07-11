@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Flex, Button, Text, Box, Select } from '@radix-ui/themes';
+import { Dialog, Flex, Button, Text, Box, Select, Grid, Heading } from '@radix-ui/themes';
 import { Loader2, Wand2 } from 'lucide-react';
 import RichTextEditor from './RichTextEditor';
 import { generateFunctionalSpecification } from '../services/aiService';
@@ -8,8 +8,9 @@ import { subscribeToAISettings } from '../services/settingsService';
 import { auth } from '../firebase';
 
 import WysiwygMarkdownEditor from './WysiwygMarkdownEditor';
+import CpflPdfTemplate from './CpflPdfTemplate';
 
-const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRole, initialSpec }) => {
+const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRole, initialSpec, projects = [], squads = [] }) => {
   const [parentId, setParentId] = useState('');
   const [requirements, setRequirements] = useState('');
   const [userAdjustments, setUserAdjustments] = useState('');
@@ -160,6 +161,25 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
     }
   };
 
+  const selectedEstimation = estimations?.find(e => e.id === parentId);
+  const selectedTicket = tickets?.find(t => t.id === selectedEstimation?.ticketId);
+  const selectedProject = projects?.find(p => p.id === selectedTicket?.projectId);
+  const selectedSquad = squads?.find(s => s.id === selectedTicket?.squadId);
+
+  const mockSpecData = {
+    cliente: selectedProject?.cliente || 'CPFL',
+    projeto: selectedTicket?.title || selectedProject?.name || '',
+    demandaId: selectedTicket?.code || selectedEstimation?.ticketCode || '',
+    demandaTitle: initialSpec?.title?.replace(/^(EF - |ET - )/, '') || 'Nova Especificação',
+    sistema: (selectedTicket?.associatedSystems?.map(s => s.system).join(', ') || selectedTicket?.system) || selectedEstimation?.sistema || '',
+    torre: selectedProject?.name || '',
+    empresas: 'CPFL',
+    versao: '1.0',
+    data: new Date().toLocaleDateString('pt-BR'),
+    autor: auth.currentUser?.displayName || 'Desconhecido',
+    status: 'Rascunho'
+  };
+
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Content maxWidth="700px" style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
@@ -213,18 +233,34 @@ const TechSpecGeneratorModal = ({ isOpen, onClose, tickets, estimations, userRol
 
           {currentMarkdown ? (
             <>
-              <Box pt="1">
-                <Text as="div" size="2" mb="2" weight="bold">
-                  Versão Atual (Edição Direta)
-                </Text>
-                <div data-color-mode="light" style={{ display: 'flex', flexDirection: 'column' }}>
-                  <WysiwygMarkdownEditor
-                    content={currentMarkdown}
-                    onChange={setCurrentMarkdown}
-                    height="50vh"
-                  />
-                </div>
-              </Box>
+              <Grid columns="2" gap="4">
+                {/* Lado Esquerdo - Editor */}
+                <Flex direction="column" gap="3">
+                  <Box pt="1">
+                    <Text as="div" size="2" mb="2" weight="bold">
+                      Versão Atual (Edição Direta)
+                    </Text>
+                    <div data-color-mode="light" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <WysiwygMarkdownEditor
+                        content={currentMarkdown}
+                        onChange={setCurrentMarkdown}
+                        height="60vh"
+                      />
+                    </div>
+                  </Box>
+                </Flex>
+
+                {/* Lado Direito - Preview PDF */}
+                <Box style={{ maxHeight: '600px', overflowY: 'auto', backgroundColor: '#e9ecef', border: '1px solid #ccc', borderRadius: '4px', padding: '10px' }}>
+                  <Heading size="3" mb="3" style={{ color: '#555', textAlign: 'center' }}>Pré-visualização do PDF</Heading>
+                  <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', maxWidth: '800px', pointerEvents: 'none' }}>
+                     <CpflPdfTemplate 
+                        specData={mockSpecData} 
+                        markdownContent={currentMarkdown} 
+                     />
+                  </div>
+                </Box>
+              </Grid>
             </>
           ) : (
             <Box pt="3">
