@@ -996,6 +996,7 @@ const Settings = () => {
                     <Select.Trigger style={{ width: '100%' }} />
                     <Select.Content>
                       <Select.Item value="user">Membro (User)</Select.Item>
+                      <Select.Item value="squad_leader">Líder de Squad</Select.Item>
                       <Select.Item value="admin">Administrador</Select.Item>
                     </Select.Content>
                   </Select.Root>
