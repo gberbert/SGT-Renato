@@ -146,7 +146,7 @@ export default function HelpFlow() {
                   flex: '1 1 180px', 
                   maxWidth: '220px',
                   transition: 'all 0.2s ease',
-                  border: \`1px solid \${step.color}40\`
+                  border: `1px solid ${step.color}40`
                 }}
               >
                 <Flex direction="column" align="center" gap="3" p="4" style={{ textAlign: 'center', height: '100%' }}>
