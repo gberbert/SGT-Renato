@@ -90,10 +90,10 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
         margin:       [28, 12, 22, 12], // [top, right, bottom, left] em mm
         filename:     `${spec?.title || 'Especificacao'}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak:    { 
-          mode: ['css', 'legacy'],
+          mode: 'css',
           avoid: 'h1, h2, h3, h4, p, li, tr, img, table, blockquote, pre, .pdf-title-container, .pdf-info-header, .pdf-control-header'
         }
       };
