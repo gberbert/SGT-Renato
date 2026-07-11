@@ -235,8 +235,6 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             </Box>
           </Flex>
 
-          </Flex>
-
           <Flex gap="3">
             <Box style={{ flex: 1 }}>
               <Text as="div" size="2" mb="1" weight="bold">Sistema / Módulo</Text>
