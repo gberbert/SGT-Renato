@@ -23,7 +23,6 @@
 
 /* HEADERS (will be drawn via jsPDF, so we just need margin top) */
 .pdf-page {
-  padding: 0 15mm; 
   background-color: #fff;
   min-height: 800px;
   box-sizing: border-box;
@@ -199,6 +198,10 @@
   border-collapse: collapse;
 }
 
+.print-content-table td {
+  padding: 0 15mm;
+}
+
 .print-header-space { height: 25mm; }
 .print-footer-space { height: 15mm; }
 
@@ -265,7 +268,6 @@
   flex-direction: column;
   z-index: 20; 
   background-color: white;
-  padding: 0 !important;
 }
 
 .cover-client-logo {
