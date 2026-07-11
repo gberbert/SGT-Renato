@@ -1,6 +1,6 @@
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const projectsCollection = collection(db, 'projects');
 
@@ -43,20 +43,39 @@ export const updateProject = async (projectId, updates) => {
   }
 };
 
-export const uploadProjectLogo = async (projectId, file, type) => {
-  if (!file) return null;
-  try {
+export const uploadProjectLogo = (projectId, file, type) => {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve(null);
+      return;
+    }
     const fileExtension = file.name.split('.').pop();
     const filePath = `projects/${projectId}/${type}_${Date.now()}.${fileExtension}`;
     const storageRef = ref(storage, filePath);
     
-    const snapshot = await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(snapshot.ref);
-    return downloadURL;
-  } catch (error) {
-    console.error("Erro no upload do logo:", error);
-    throw error;
-  }
+    const uploadTask = uploadBytesResumable(storageRef, file);
+    
+    uploadTask.on('state_changed',
+      (snapshot) => {
+        // Opcional: acompanhar progresso
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        console.log(`Upload ${type} está ${progress}% concluído`);
+      },
+      (error) => {
+        console.error(`Erro no uploadTask (${type}):`, error);
+        reject(error);
+      },
+      async () => {
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
+        } catch (err) {
+          console.error(`Erro ao obter URL de download (${type}):`, err);
+          reject(err);
+        }
+      }
+    );
+  });
 };
 
 export const updateProjectMembers = async (projectId, membersMap) => {

@@ -20,6 +20,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, "default");
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+storage.maxUploadRetryTime = 10000; // 10 segundos máximo para não travar a interface
 export const messaging = getMessaging(app);
 
 console.log("Firebase services initialized.");
