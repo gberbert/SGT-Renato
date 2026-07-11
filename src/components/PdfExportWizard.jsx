@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, Flex, Button, Text, TextField, Box, Grid, Heading } from '@radix-ui/themes';
-import html2pdf from 'html2pdf.js';
+import { useReactToPrint } from 'react-to-print';
 import CpflPdfTemplate from './CpflPdfTemplate';
 import { auth } from '../firebase';
 
@@ -51,166 +51,18 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleExport = async () => {
-    if (!printRef.current) return;
-    setIsExporting(true);
-
-    try {
-      const element = printRef.current;
-      // Precisamos garantir que o display do elemento não seja "none" durante a exportação
-      element.style.display = 'block';
-
-      // Converter URLs para Base64 para evitar bloqueios CORS do jsPDF
-      const getBase64Image = (url) => {
-        if (!url) return Promise.resolve(null);
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.crossOrigin = 'Anonymous';
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-            resolve({
-              data: canvas.toDataURL("image/png"),
-              width: img.width,
-              height: img.height
-            });
-          };
-          img.onerror = () => resolve(null);
-          img.src = url;
-        });
-      };
-
-      const clientLogo = await getBase64Image(project?.clientLogoUrl);
-      const nttLogo = await getBase64Image(project?.nttLogoUrl);
-
-      const opt = {
-        margin:       [28, 12, 22, 12], // [top, right, bottom, left] em mm
-        filename:     `${spec?.title || 'Especificacao'}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { 
-          mode: ['avoid-all', 'css', 'legacy']
-        }
-      };
-
-      await html2pdf().set(opt).from(element).toPdf().get('pdf').then(function (pdf) {
-        const totalPages = pdf.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          pdf.setPage(i);
-          
-          if (i === 1) {
-            // FRONT COVER
-            pdf.setFillColor(255, 255, 255); // Branca
-            pdf.rect(0, 0, 210, 297, 'F'); // A4 is 210x297mm
-            
-            if (clientLogo) {
-              const ratio = clientLogo.width / clientLogo.height;
-              const calcHeight = 40; // Altura base 40mm
-              const calcWidth = calcHeight * ratio;
-              const finalWidth = calcWidth > 120 ? 120 : calcWidth;
-              const finalHeight = finalWidth / ratio;
-              
-              const xPos = 105 - (finalWidth / 2);
-              pdf.addImage(clientLogo.data, 'PNG', xPos, 110, finalWidth, finalHeight);
-              
-              pdf.setFontSize(18);
-              pdf.setTextColor(0, 85, 164); // Azul Escuro
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('Especificação Funcional', 105, 110 + finalHeight + 15, { align: 'center' });
-            } else {
-              pdf.setFontSize(36);
-              pdf.setTextColor(0, 85, 164);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('CPFL ENERGIA', 105, 130, { align: 'center' });
-              
-              pdf.setFontSize(18);
-              pdf.text('Especificação Funcional', 105, 150, { align: 'center' });
-            }
-            
-          } else if (i === totalPages) {
-            // BACK COVER
-            pdf.setFillColor(0, 75, 135);
-            pdf.rect(0, 0, 210, 297, 'F');
-            
-            pdf.setFontSize(30);
-            pdf.setTextColor(255, 255, 255);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Obrigado', 105, 148, { align: 'center' });
-            
-          } else {
-            // REGULAR PAGES (Header and Footer)
-            
-            // ---- HEADER ----
-            
-            // Client Logo (Left)
-            if (clientLogo) {
-              const ratio = clientLogo.width / clientLogo.height;
-              const calcHeight = 16;
-              const calcWidth = calcHeight * ratio;
-              const finalWidth = calcWidth > 50 ? 50 : calcWidth;
-              const finalHeight = finalWidth / ratio;
-              pdf.addImage(clientLogo.data, 'PNG', 10, 18 - (finalHeight / 2), finalWidth, finalHeight);
-            } else {
-              pdf.setTextColor(0, 85, 164); // Azul escuro
-              pdf.setFontSize(14);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text(formData.cliente || 'CPFL ENERGIA', 10, 18);
-            }
-            
-            // Title (Center)
-            pdf.setFontSize(10);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(110, 139, 163);
-            pdf.text('Especificação Funcional |', 105, 13, { align: 'center' });
-            
-            const demandText = formData.demandaId ? `[${formData.demandaId}] ${formData.demandaTitle || ''}` : '[NÚMERO E NOME DA DEMANDA]';
-            pdf.text(demandText, 105, 18, { align: 'center' });
-            
-            // NTT DATA Logo (Right)
-            if (nttLogo) {
-              const ratio = nttLogo.width / nttLogo.height;
-              const calcHeight = 11; // Aumentado
-              const calcWidth = calcHeight * ratio;
-              const finalWidth = calcWidth > 45 ? 45 : calcWidth;
-              const finalHeight = finalWidth / ratio;
-              pdf.addImage(nttLogo.data, 'PNG', 200 - finalWidth, 18 - (finalHeight / 2), finalWidth, finalHeight);
-            } else {
-              pdf.setTextColor(0, 85, 164); // Azul escuro
-              pdf.setFontSize(10);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('NTT DATA', 200, 18, { align: 'right' });
-            }
-            
-            // Blue Horizontal Line
-            pdf.setDrawColor(128, 179, 219); // Azul claro
-            pdf.setLineWidth(0.5);
-            pdf.line(10, 26, 200, 26);
-
-            // ---- FOOTER ----
-            pdf.setFontSize(8);
-            pdf.setTextColor(128, 128, 128); // Cinza
-            pdf.setFont('helvetica', 'normal');
-            
-            pdf.text('Uso interno/Confidencial', 10, 285);
-            pdf.text(`Página ${i - 1}`, 200, 285, { align: 'right' }); // -1 because page 1 is the cover
-          }
-        }
-      }).save();
-
-      // Esconde novamente após exportar
-      element.style.display = 'none';
-      onClose();
-    } catch (error) {
-      console.error('Erro ao exportar PDF:', error);
-      alert('Houve um erro ao tentar gerar o PDF.');
-    } finally {
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `${spec?.title || 'Especificacao'}`,
+    onBeforeGetContent: () => {
+      setIsExporting(true);
+      return Promise.resolve();
+    },
+    onAfterPrint: () => {
       setIsExporting(false);
-    }
-  };
+    },
+    removeAfterPrint: true
+  });
 
   if (!spec) return null;
 
@@ -299,27 +151,36 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', maxWidth: '800px', pointerEvents: 'none' }}>
                <CpflPdfTemplate 
                   specData={formData} 
-                  markdownContent={spec.markdownContent} 
+                  markdownContent={spec.markdownContent}
+                  project={project}
                />
             </div>
           </Box>
         </Grid>
 
+        <Box mt="3" mb="3">
+          <Text size="2" color="gray" style={{ fontStyle: 'italic' }}>
+            <span style={{ fontWeight: 'bold' }}>Atenção:</span> Ao clicar no botão abaixo, a janela de impressão do seu navegador será aberta. Certifique-se de escolher o destino <b>"Salvar como PDF"</b> e habilitar a opção <b>"Gráficos de plano de fundo"</b> (Background graphics) nas configurações de impressão para que o PDF seja gerado com as cores corretas!
+          </Text>
+        </Box>
+
         <Flex gap="3" mt="4" justify="end">
           <Dialog.Close>
             <Button variant="soft" color="gray" disabled={isExporting}>Cancelar</Button>
           </Dialog.Close>
-          <Button onClick={handleExport} disabled={isExporting} style={{ background: 'linear-gradient(90deg, #0055a4, #0070c0)', color: 'white' }}>
-            {isExporting ? 'Gerando PDF...' : 'Gerar e Baixar PDF'}
+          <Button onClick={handlePrint} disabled={isExporting} style={{ background: 'linear-gradient(90deg, #0055a4, #0070c0)', color: 'white' }}>
+            {isExporting ? 'Preparando...' : 'Gerar PDF via Navegador'}
           </Button>
         </Flex>
 
-        {/* CONTAINER OCULTO PARA O HTML2PDF */}
+        {/* CONTAINER OCULTO PARA O REACT-TO-PRINT */}
         <div style={{ display: 'none' }}>
           <div ref={printRef}>
              <CpflPdfTemplate 
                 specData={formData} 
-                markdownContent={spec.markdownContent} 
+                markdownContent={spec.markdownContent}
+                project={project}
+                isPrinting={true}
              />
           </div>
         </div>

@@ -188,3 +188,127 @@
   background-color: #ffff00;
   color: #000;
 }
+
+/* =========================================================
+   ESTILOS DE IMPRESSÃO (Nativo via react-to-print)
+   ========================================================= */
+
+.print-content-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.print-header-space { height: 25mm; }
+.print-footer-space { height: 15mm; }
+
+.print-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 25mm;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8mm 15mm 0 15mm;
+  background-color: white;
+  z-index: 5;
+  box-sizing: border-box;
+}
+
+.header-left img { max-width: 40mm; max-height: 15mm; }
+.header-right img { max-width: 40mm; max-height: 10mm; }
+.header-client-text { font-size: 14pt; color: #0055a4; font-weight: bold; }
+.header-ntt-text { font-size: 10pt; color: #0055a4; font-weight: bold; }
+
+.header-center {
+  text-align: center;
+  flex-grow: 1;
+  padding: 0 10mm;
+}
+.header-title { font-size: 10pt; color: #6e8ba3; font-weight: bold; }
+.header-subtitle { font-size: 10pt; color: #000; font-weight: bold; margin-top: 2px; display: block; }
+
+.header-divider {
+  position: absolute;
+  bottom: 2mm;
+  left: 10mm;
+  right: 10mm;
+  height: 0.5mm;
+  background-color: #80b3db;
+}
+
+.print-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 15mm;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10mm 5mm 10mm;
+  background-color: white;
+  z-index: 5;
+  box-sizing: border-box;
+}
+.footer-left { font-size: 8pt; color: #808080; }
+
+.pdf-cover-page, .pdf-back-cover-page {
+  position: relative;
+  width: 100%;
+  height: 290mm; /* Simulando folha A4 no preview */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 20; 
+  background-color: white;
+}
+
+.cover-client-logo {
+  max-width: 120mm;
+  max-height: 40mm;
+  margin-bottom: 20px;
+}
+.cover-client-text {
+  font-size: 36pt;
+  color: #0055a4;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+.cover-title {
+  font-size: 18pt;
+  color: #0055a4;
+  font-weight: bold;
+  text-align: center;
+}
+
+.pdf-back-cover-page {
+  background-color: #004b87;
+  color: white;
+}
+.back-cover-content {
+  font-size: 30pt;
+  font-weight: bold;
+}
+
+.is-printing .print-header, .is-printing .print-footer { display: flex; }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  
+  body { margin: 0; }
+  
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .pdf-cover-page, .pdf-back-cover-page {
+    height: 100vh !important;
+  }
+}

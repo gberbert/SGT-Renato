@@ -3,13 +3,66 @@ import MDEditor from '@uiw/react-md-editor';
 import './CpflPdfTemplate.css';
 import CodeRenderer from './CodeRenderer';
 
-const CpflPdfTemplate = ({ specData, markdownContent }) => {
+const CpflPdfTemplate = ({ specData, markdownContent, project, isPrinting }) => {
+  const demandText = specData?.demandaId ? `[${specData.demandaId}] ${specData.demandaTitle || ''}` : '[NÚMERO E NOME DA DEMANDA]';
+
   return (
-    <div id="cpfl-pdf-template" className="pdf-container">
-      {/* FRONT COVER (Blank in HTML, painted by jsPDF) */}
-      <div className="pdf-page" style={{ height: '290mm' }}>
-        {/* Placeholder para a capa */}
+    <div id="cpfl-pdf-template" className={`pdf-container ${isPrinting ? 'is-printing' : ''}`}>
+      
+      {/* HEADER REPETIDO (SÓ APARECE NA IMPRESSÃO) */}
+      <div className="print-header">
+        <div className="header-left">
+          {project?.clientLogoUrl ? (
+            <img src={project.clientLogoUrl} alt="Cliente" className="header-client-logo" />
+          ) : (
+            <span className="header-client-text">{specData?.cliente || 'CPFL ENERGIA'}</span>
+          )}
+        </div>
+        <div className="header-center">
+          <span className="header-title">Especificação Funcional |</span><br/>
+          <span className="header-subtitle">{demandText}</span>
+        </div>
+        <div className="header-right">
+          {project?.nttLogoUrl ? (
+            <img src={project.nttLogoUrl} alt="NTT DATA" className="header-ntt-logo" />
+          ) : (
+            <span className="header-ntt-text">NTT DATA</span>
+          )}
+        </div>
+        <div className="header-divider"></div>
       </div>
+
+      {/* FOOTER REPETIDO */}
+      <div className="print-footer">
+        <span className="footer-left">Uso interno/Confidencial</span>
+        {/* Número da página (só no Chrome, com limitações, mas deixamos o espaço) */}
+      </div>
+
+      {/* CAPA (TAPA O HEADER E FOOTER COM Z-INDEX SE FOR IMPRESSÃO) */}
+      <div className="pdf-page pdf-cover-page">
+        <div className="cover-content">
+          {project?.clientLogoUrl ? (
+            <>
+              <img src={project.clientLogoUrl} alt="Logo Cliente" className="cover-client-logo" />
+              <div className="cover-title">Especificação Funcional</div>
+            </>
+          ) : (
+            <>
+              <div className="cover-client-text">CPFL ENERGIA</div>
+              <div className="cover-title">Especificação Funcional</div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ENVOLVENDO O CONTEÚDO EM TABELA PARA FORÇAR ESPAÇO DO HEADER/FOOTER NAS PÁGINAS SEGUINTES */}
+      <table className="print-content-table">
+        <thead>
+          <tr><td><div className="print-header-space"></div></td></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
 
       {/* DOCUMENT INFO PAGE */}
       <div className="pdf-page pdf-first-page" style={{ pageBreakBefore: 'always' }}>
@@ -72,9 +125,20 @@ const CpflPdfTemplate = ({ specData, markdownContent }) => {
         />
       </div>
 
-      {/* BACK COVER (Blank in HTML, painted by jsPDF) */}
-      <div className="pdf-page" style={{ height: '290mm', pageBreakBefore: 'always' }}>
-        {/* Placeholder para a contracapa */}
+      {/* FECHAMENTO DA TABELA DE CONTEÚDO */}
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr><td><div className="print-footer-space"></div></td></tr>
+        </tfoot>
+      </table>
+
+      {/* BACK COVER */}
+      <div className="pdf-page pdf-back-cover-page" style={{ pageBreakBefore: 'always' }}>
+        <div className="back-cover-content">
+          Obrigado
+        </div>
       </div>
       
     </div>
