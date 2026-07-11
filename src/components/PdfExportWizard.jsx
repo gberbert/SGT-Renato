@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Dialog, Flex, Button, Text, TextField, Box } from '@radix-ui/themes';
+import { Dialog, Flex, Button, Text, TextField, Box, Grid, Heading } from '@radix-ui/themes';
 import html2pdf from 'html2pdf.js';
 import CpflPdfTemplate from './CpflPdfTemplate';
 
@@ -197,15 +197,17 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Content maxWidth="600px">
+      <Dialog.Content maxWidth="1100px">
         <Dialog.Title>Assistente de Exportação (Padrão CPFL)</Dialog.Title>
         <Dialog.Description size="2" mb="4">
-          Preencha ou revise os dados que comporão a capa e as tabelas de controle do documento oficial.
+          Preencha ou revise os dados que comporão a capa e as tabelas de controle do documento oficial. Ao lado você pode ver a pré-visualização.
         </Dialog.Description>
 
-        <Flex direction="column" gap="3" style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '10px' }}>
+        <Grid columns="2" gap="5">
+          {/* Lado Esquerdo - Formulário */}
+          <Flex direction="column" gap="3" style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: '10px' }}>
           
-          <Flex gap="3">
+            <Flex gap="3">
             <Box style={{ flex: 1 }}>
               <Text as="div" size="2" mb="1" weight="bold">Cliente</Text>
               <TextField.Root name="cliente" value={formData.cliente} onChange={handleChange} />
@@ -281,7 +283,19 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
             <TextField.Root name="aprovador" value={formData.aprovador} onChange={handleChange} placeholder="Nome do aprovador (opcional)" />
           </Box>
 
-        </Flex>
+          </Flex>
+
+          {/* Lado Direito - Preview */}
+          <Box style={{ maxHeight: '65vh', overflowY: 'auto', backgroundColor: '#e9ecef', border: '1px solid #ccc', borderRadius: '4px', padding: '20px 10px' }}>
+            <Heading size="3" mb="4" style={{ color: '#555', textAlign: 'center' }}>Pré-visualização do Documento</Heading>
+            <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', maxWidth: '800px', pointerEvents: 'none' }}>
+               <CpflPdfTemplate 
+                  specData={formData} 
+                  markdownContent={spec.markdownContent} 
+               />
+            </div>
+          </Box>
+        </Grid>
 
         <Flex gap="3" mt="4" justify="end">
           <Dialog.Close>
