@@ -51,35 +51,63 @@ const PdfExportWizard = ({ isOpen, onClose, spec, parentEstimativa, parentDemand
         for (let i = 1; i <= totalPages; i++) {
           pdf.setPage(i);
           
-          // ---- HEADER ----
-          pdf.setFontSize(10);
-          pdf.setTextColor(0, 85, 164); // Azul escuro
-          pdf.setFont('helvetica', 'bold');
-          
-          // CPFL Text Mock (Left)
-          pdf.text('CPFL ENERGIA', 10, 15);
-          
-          // Title (Center)
-          pdf.setFontSize(9);
-          pdf.text('Especificação Funcional |', 105, 13, { align: 'center' });
-          pdf.text(formData.demandaId || '[NÚMERO DA DEMANDA]', 105, 17, { align: 'center' });
-          
-          // NTT DATA Text Mock (Right)
-          pdf.setFontSize(10);
-          pdf.text('NTT DATA', 200, 15, { align: 'right' });
-          
-          // Blue Horizontal Line
-          pdf.setDrawColor(0, 85, 164);
-          pdf.setLineWidth(0.5);
-          pdf.line(10, 22, 200, 22);
+          if (i === 1) {
+            // FRONT COVER
+            pdf.setFillColor(0, 75, 135); // Azul Petróleo (CPFL/NTT Data)
+            pdf.rect(0, 0, 210, 297, 'F'); // A4 is 210x297mm
+            
+            pdf.setFontSize(36);
+            pdf.setTextColor(255, 255, 255); // Branco
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('NTT DATA', 105, 140, { align: 'center' });
+            
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text('Especificação Funcional', 105, 150, { align: 'center' });
+            
+          } else if (i === totalPages) {
+            // BACK COVER
+            pdf.setFillColor(0, 75, 135);
+            pdf.rect(0, 0, 210, 297, 'F');
+            
+            pdf.setFontSize(30);
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Obrigado', 105, 148, { align: 'center' });
+            
+          } else {
+            // REGULAR PAGES (Header and Footer)
+            
+            // ---- HEADER ----
+            pdf.setFontSize(10);
+            pdf.setTextColor(0, 85, 164); // Azul escuro
+            pdf.setFont('helvetica', 'bold');
+            
+            // CPFL Text Mock (Left)
+            pdf.text('CPFL ENERGIA', 10, 15);
+            
+            // Title (Center)
+            pdf.setFontSize(9);
+            pdf.text('Especificação Funcional |', 105, 13, { align: 'center' });
+            pdf.text(formData.demandaId || '[NÚMERO DA DEMANDA]', 105, 17, { align: 'center' });
+            
+            // NTT DATA Text Mock (Right)
+            pdf.setFontSize(10);
+            pdf.text('NTT DATA', 200, 15, { align: 'right' });
+            
+            // Blue Horizontal Line
+            pdf.setDrawColor(0, 85, 164);
+            pdf.setLineWidth(0.5);
+            pdf.line(10, 22, 200, 22);
 
-          // ---- FOOTER ----
-          pdf.setFontSize(8);
-          pdf.setTextColor(128, 128, 128); // Cinza
-          pdf.setFont('helvetica', 'normal');
-          
-          pdf.text('Uso interno/Confidencial', 10, 285);
-          pdf.text(`Página ${i}`, 200, 285, { align: 'right' });
+            // ---- FOOTER ----
+            pdf.setFontSize(8);
+            pdf.setTextColor(128, 128, 128); // Cinza
+            pdf.setFont('helvetica', 'normal');
+            
+            pdf.text('Uso interno/Confidencial', 10, 285);
+            pdf.text(`Página ${i - 1}`, 200, 285, { align: 'right' }); // -1 because page 1 is the cover
+          }
         }
       }).save();
 

@@ -6,9 +6,13 @@ import CodeRenderer from './CodeRenderer';
 const CpflPdfTemplate = ({ specData, markdownContent }) => {
   return (
     <div id="cpfl-pdf-template" className="pdf-container">
-      
-      {/* COVER PAGE */}
-      <div className="pdf-page pdf-first-page">
+      {/* FRONT COVER (Blank in HTML, painted by jsPDF) */}
+      <div className="pdf-page" style={{ height: '290mm' }}>
+        {/* Placeholder para a capa */}
+      </div>
+
+      {/* DOCUMENT INFO PAGE */}
+      <div className="pdf-page pdf-first-page" style={{ pageBreakBefore: 'always' }}>
         
         <div className="pdf-title-container">
           <div className="pdf-blue-bar"></div>
@@ -66,6 +70,11 @@ const CpflPdfTemplate = ({ specData, markdownContent }) => {
           style={{ backgroundColor: 'transparent', color: 'black' }} 
           components={{ code: CodeRenderer }}
         />
+      </div>
+
+      {/* BACK COVER (Blank in HTML, painted by jsPDF) */}
+      <div className="pdf-page" style={{ height: '290mm', pageBreakBefore: 'always' }}>
+        {/* Placeholder para a contracapa */}
       </div>
       
     </div>
