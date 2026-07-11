@@ -22,7 +22,7 @@ const TechSpecs = ({ userRole }) => {
   const [projects, setProjects] = useState([]);
   const [allocations, setAllocations] = useState([]);
   
-  const [aiSettings, setAiSettings] = useState({ efInitialPrompt: '' });
+  const [aiSettings, setAiSettings] = useState({ etInitialPrompt: '' });
   const [savingAi, setSavingAi] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   
@@ -117,11 +117,11 @@ const TechSpecs = ({ userRole }) => {
           <Text as="h2" size="4" weight="bold" mb="4">Padrões de Geração (Admin)</Text>
           <Flex direction="column" gap="4">
             <label>
-              <Text as="div" size="2" mb="1" weight="bold">Prompt Inicial Padrão</Text>
+              <Text as="div" size="2" mb="1" weight="bold">Prompt Inicial Padrão (Especificação Técnica)</Text>
               <TextArea 
-                placeholder="Instruções comportamentais da IA..."
-                value={aiSettings.efInitialPrompt || ''}
-                onChange={(e) => setAiSettings({...aiSettings, efInitialPrompt: e.target.value})}
+                placeholder="Instruções comportamentais da IA para Especificação Técnica..."
+                value={aiSettings.etInitialPrompt || ''}
+                onChange={(e) => setAiSettings({...aiSettings, etInitialPrompt: e.target.value})}
                 style={{ minHeight: '100px' }}
               />
             </label>
