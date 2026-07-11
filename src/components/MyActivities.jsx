@@ -236,7 +236,7 @@ const MyActivities = ({ user }) => {
           <Flex justify="between" align="center">
             <Tabs.List>
               <Tabs.Trigger value="pendente">
-                Pendentes <Badge color="indigo" variant="soft" ml="2">{activitiesList.filter(a => a.executionStatus === 'pendente').length}</Badge>
+                Pendentes <Badge color="indigo" variant="soft" ml="2">{activitiesList.filter(a => a.executionStatus === 'pendente' || a.executionStatus === 'em_revisao').length}</Badge>
               </Tabs.Trigger>
               <Tabs.Trigger value="concluido">
                 Concluídas <Badge color="green" variant="soft" ml="2">{activitiesList.filter(a => a.executionStatus === 'concluido').length}</Badge>
