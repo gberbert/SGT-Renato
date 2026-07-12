@@ -249,7 +249,21 @@ Faça-me perguntas se alguma dessas informações estiver faltando no meu contex
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Content maxWidth={currentMarkdown ? "1400px" : "700px"} style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <Dialog.Content maxWidth={currentMarkdown ? "1400px" : "700px"} style={{ display: 'flex', flexDirection: 'column', maxHeight: '90vh', position: 'relative', overflow: 'hidden' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        {isGenerating && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.9)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Loader2 size={48} color="var(--indigo-9)" className="spinner-icon" style={{ marginBottom: '16px', animation: 'spin 1s linear infinite' }} />
+            <Heading size="5" mb="2" style={{ color: 'var(--indigo-9)' }}>A Inteligência Artificial está trabalhando...</Heading>
+            <Text size="3" color="gray">Escrevendo a Especificação, isso pode levar alguns segundos.</Text>
+            
+            <style>{`
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        )}
         <Dialog.Title>Nova Especificação Funcional (IA)</Dialog.Title>
         <Dialog.Description size="2" mb="4">
           Escreva os requisitos e deixe a inteligência artificial formatar a Especificação Funcional.
