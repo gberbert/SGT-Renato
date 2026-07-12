@@ -102,16 +102,12 @@ REGRAS CRÍTICAS DE GERAÇÃO:
   try {
     result = await tryGenerateWithModel("gemini-3.1-pro-preview");
   } catch (err0) {
-    console.warn("Falha com gemini-3.1-pro-preview, tentando gemini-2.5-pro...", err0);
+    console.warn("Falha com gemini-3.1-pro-preview, tentando fallback gemini-2.5-pro...", err0);
     try {
       result = await tryGenerateWithModel("gemini-2.5-pro");
     } catch (err) {
-      console.warn("Falha com gemini-2.5-pro, tentando gemini-1.5-pro-latest...", err);
-      try {
-        result = await tryGenerateWithModel("gemini-1.5-pro-latest");
-      } catch (err2) {
-        throw err2;
-      }
+      console.error("Falha com os modelos gemini-3.1-pro-preview e gemini-2.5-pro.", err);
+      throw err;
     }
   }
 
