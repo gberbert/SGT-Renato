@@ -44,9 +44,9 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
   useEffect(() => {
     if (currentMarkdown) {
       const expectedTopics = [
-        "Sumário", "Plano de comunicação", "Objetivo", "Contexto e Justificativa de Negócio",
+        "Plano de comunicação", "Objetivo", "Contexto e Justificativa de Negócio",
         "Escopo Funcional", "Requisitos Funcionais", "Requisitos Não Funcionais",
-        "Regras de Negócio", "Premissas, restrições, riscos e dependências",
+        "Diagramas e Fluxos Visuais", "Regras de Negócio", "Premissas, restrições, riscos e dependências",
         "Critérios de Aceite", "Anexos funcionais", "Glossário"
       ];
       
@@ -209,13 +209,13 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
     const template = `Por favor, atue como um Engenheiro de Requisitos Sênior. Estou prestes a criar uma Especificação Funcional e preciso que você me ajude a extrair, organizar e detalhar todas as informações necessárias baseadas no contexto que vou te fornecer.
 
 O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os 12 tópicos abaixo. Se faltar informação para preencher algum, me pergunte antes de gerar o documento:
-1. Sumário
-2. Plano de comunicação (Informar Momento, Público, Canal e Conteúdo)
-3. Objetivo
-4. Contexto e Justificativa de Negócio
-5. Escopo Funcional
-6. Requisitos Funcionais (Para cada um, incluir Descrição, Atores, Resultado esperado e uma tabela de alterações de tela/relatório)
-7. Requisitos Não Funcionais (Listar explicitly o que NÃO será tratado na demanda)
+1. Plano de comunicação (Informar Momento, Público, Canal e Conteúdo)
+2. Objetivo
+3. Contexto e Justificativa de Negócio
+4. Escopo Funcional
+5. Requisitos Funcionais (Para cada um, incluir Descrição, Atores, Resultado esperado e uma tabela de alterações de tela/relatório)
+6. Requisitos Não Funcionais (Listar explicitly o que NÃO será tratado na demanda)
+7. Diagramas e Fluxos Visuais (Gerar diagramas estruturais em Mermaid.js)
 8. Regras de Negócio (Fluxo principal, exceções, validações e permissões)
 9. Premissas, restrições, riscos e dependências (Separar Premissas e Restrições em tabelas claras)
 10. Critérios de Aceite
@@ -422,13 +422,13 @@ Faça-me perguntas se alguma dessas informações estiver faltando no meu contex
             Por favor, atue como um Engenheiro de Requisitos Sênior. Estou prestes a criar uma Especificação Funcional e preciso que você me ajude a extrair, organizar e detalhar todas as informações necessárias baseadas no contexto que vou te fornecer.
             {'\n\n'}
             O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os 12 tópicos abaixo. Se faltar informação para preencher algum, me pergunte antes de gerar o documento:
-            {'\n'}1. Sumário
-            {'\n'}2. Plano de comunicação (Momento, Público, Canal e Conteúdo)
-            {'\n'}3. Objetivo
-            {'\n'}4. Contexto e Justificativa de Negócio
-            {'\n'}5. Escopo Funcional
-            {'\n'}6. Requisitos Funcionais (Ações, atores, resultados esperados e tabela de campos/elementos)
-            {'\n'}7. Requisitos Não Funcionais (O que não será tratado na demanda)
+            {'\n'}1. Plano de comunicação (Momento, Público, Canal e Conteúdo)
+            {'\n'}2. Objetivo
+            {'\n'}3. Contexto e Justificativa de Negócio
+            {'\n'}4. Escopo Funcional
+            {'\n'}5. Requisitos Funcionais (Ações, atores, resultados esperados e tabela de campos/elementos)
+            {'\n'}6. Requisitos Não Funcionais (O que não será tratado na demanda)
+            {'\n'}7. Diagramas e Fluxos Visuais (Gerar diagramas estruturais em Mermaid.js)
             {'\n'}8. Regras de Negócio (Validações, permissões, exceções)
             {'\n'}9. Premissas, restrições, riscos e dependências
             {'\n'}10. Critérios de Aceite

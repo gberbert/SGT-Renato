@@ -55,13 +55,13 @@ ${finalRequirements}
 
 REGRAS CRÍTICAS DE GERAÇÃO:
 1. ESTRUTURA RIGOROSA (12 TÓPICOS): A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown, contendo OBRIGATORIAMENTE OS 12 TÓPICOS ABAIXO, NA ORDEM EXATA:
-   1. Sumário
-   2. Plano de comunicação (Momento [Pré-deploy, deploy, pós-deploy], Público, Canal, Conteúdo)
-   3. Objetivo
-   4. Contexto e Justificativa de Negócio
-   5. Escopo Funcional
-   6. Requisitos Funcionais (RF-001 - Descrição, Atores, Resultado. OBRIGATÓRIO: Tabela de "Alterações funcionais em tela, relatório ou processo" com as colunas: Campo/elemento, Descrição funcional, Tipo/formato, Obrigatório, Regra/domínio, Exemplo).
-   7. Requisitos Não Funcionais (Listar explicitamente itens que não serão tratados nesta demanda para evitar interpretações divergentes).
+   1. Plano de comunicação (Momento [Pré-deploy, deploy, pós-deploy], Público, Canal, Conteúdo)
+   2. Objetivo
+   3. Contexto e Justificativa de Negócio
+   4. Escopo Funcional
+   5. Requisitos Funcionais (RF-001 - Descrição, Atores, Resultado. OBRIGATÓRIO: Tabela de "Alterações funcionais em tela, relatório ou processo" com as colunas: Campo/elemento, Descrição funcional, Tipo/formato, Obrigatório, Regra/domínio, Exemplo).
+   6. Requisitos Não Funcionais (Listar explicitamente itens que não serão tratados nesta demanda para evitar interpretações divergentes).
+   7. Diagramas e Fluxos Visuais (Mermaid) (Desenhar fluxos de sistema, sequência, estados ou casos de uso pertinentes aos requisitos).
    8. Regras de Negócio (RN-001 - Fluxo Principal, Alternativos, Exceção, Validações obrigatórias, Permissões funcionais, Cálculos).
    9. Premissas, restrições, riscos e dependências (OBRIGATÓRIO: Uma tabela para Premissas com [ID, Premissa, Responsável] e uma tabela para Restrições com [ID, Restrição, Impacto funcional]).
    10. Critérios de Aceite
@@ -70,10 +70,9 @@ REGRAS CRÍTICAS DE GERAÇÃO:
 
 2. INFORMAÇÕES AUSENTES: Se os "Requisitos do Usuário" não fornecerem informações suficientes para preencher um determinado tópico do template (dos 12 acima), você DEVE gerar o título do tópico normalmente (Ex: "# 10. Critérios de Aceite") e inserir como conteúdo exatamente este texto: "[PENDENTE: Informação ausente no requisito original]".
 3. RETENÇÃO TOTAL (PROIBIDO RESUMIR): É terminantemente PROIBIDO resumir, abreviar ou parafrasear. Se o usuário forneceu textos densos, cenários BDD, regras de negócio ou Critérios de Aceite, você DEVE preservar as sentenças originais (copiar e colar o texto base) e APENAS EXPANDIR adicionando novos cenários ou detalhes que faltaram. Nunca condense listas.
-4. DIAGRAMAS E VISUAL: É OBRIGATÓRIO gerar e preservar diagramas visuais (Mermaid) para fluxos de sistema, sequência, estados ou casos de uso pertinentes aos requisitos.
-5. AUTO-CORREÇÃO DE SINTAXE (CRÍTICO): A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos "usecaseDiagram", "actor" ou PlantUML. Caso haja diagramas de uso na origem, converta-os OBRIGATORIAMENTE para um Diagrama de Fluxo (flowchart TD/LR) em sintaxe Mermaid válida.
-6. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
-7. Não adicione saudações, conclusões verbais ou explicações fora do Markdown.
+4. DIAGRAMAS E VISUAL: Use a sessão 7 para gerar e preservar diagramas visuais (Mermaid). A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos "usecaseDiagram", "actor" ou PlantUML. Caso haja diagramas de uso na origem, converta-os OBRIGATORIAMENTE para um Diagrama de Fluxo (flowchart TD/LR) em sintaxe Mermaid válida.
+5. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
+6. Não adicione saudações, conclusões verbais ou explicações fora do Markdown. Não crie um tópico de Sumário, pois o sistema já gera índices automaticamente.
     `.trim();
   }
 
