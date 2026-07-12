@@ -40,9 +40,10 @@ ${previousMarkdown}
 ${userAdjustments}
 
 REGRAS CRÍTICAS DE GERAÇÃO:
-1. NUNCA resuma ou simplifique a especificação original. Mantenha 100% da complexidade e regras de negócio.
-2. A sua resposta deve ser APENAS a Especificação COMPLETA revisada em formato Markdown. Aplique os ajustes solicitados na versão atual. 
-3. Não adicione saudações ou explicações fora do Markdown.
+1. ESTRUTURA RIGOROSA: A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown. Aplique os ajustes solicitados seguindo rigorosamente a estrutura e template originais.
+2. RETENÇÃO TOTAL: NUNCA resuma, abrevie ou simplifique. Mantenha 100% da complexidade, fluxos e regras de negócio.
+3. DIAGRAMAS E VISUAL: Sempre preserve e expanda os diagramas visuais (Mermaid) e tabelas.
+4. Não adicione saudações, conclusões ou explicações fora do Markdown.
     `.trim();
   } else {
     finalPrompt = `
@@ -52,9 +53,11 @@ ${initialPrompt}
 ${finalRequirements}
 
 REGRAS CRÍTICAS DE GERAÇÃO:
-1. NUNCA resuma, abrevie ou simplifique os requisitos e contextos fornecidos. Você deve absorver e refletir 100% da complexidade original.
-2. Seu objetivo é ENROBUSTECER o documento. Expanda os conceitos fornecidos adicionando casos de borda (edge cases), tratamentos de erro e detalhamentos arquiteturais pertinentes sem fugir do escopo.
-3. A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown. Não adicione saudações ou explicações fora do Markdown.
+1. ESTRUTURA RIGOROSA: A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown, seguindo RIGOROSAMENTE o TEMPLATE E A ESTRUTURA fornecidos nas suas instruções iniciais.
+2. RETENÇÃO TOTAL: NUNCA resuma, abrevie ou simplifique os requisitos e contextos fornecidos. Você deve absorver, refletir e organizar 100% da complexidade original.
+3. DIAGRAMAS E VISUAL: É OBRIGATÓRIO gerar e preservar diagramas visuais (Mermaid) para fluxos de sistema, sequência, estados ou casos de uso pertinentes aos requisitos.
+4. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
+5. Não adicione saudações, conclusões verbais ou explicações fora do Markdown.
     `.trim();
   }
 
