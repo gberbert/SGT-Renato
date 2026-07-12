@@ -254,11 +254,12 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
 
                 {/* Lado Direito - Preview PDF */}
                 <Box style={{ maxHeight: '600px', overflowY: 'auto', backgroundColor: '#e9ecef', border: '1px solid #ccc', borderRadius: '4px', padding: '10px' }}>
-                  <Heading size="3" mb="3" style={{ color: '#555', textAlign: 'center' }}>Pré-visualização do PDF</Heading>
-                  <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', maxWidth: '800px', pointerEvents: 'none' }}>
+                  <Heading size="3" mb="3" style={{ color: '#555', textAlign: 'center' }}>Pré-visualização do Documento</Heading>
+                  <div style={{ transform: 'scale(0.85)', transformOrigin: 'top center', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', margin: '0 auto', width: 'fit-content', minWidth: '800px', pointerEvents: 'none' }}>
                      <CpflPdfTemplate 
                         specData={mockSpecData} 
-                        markdownContent={currentMarkdown} 
+                        markdownContent={currentMarkdown}
+                        project={selectedProject}
                      />
                   </div>
                 </Box>
