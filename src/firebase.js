@@ -3,6 +3,7 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
+import { getFunctions } from "firebase/functions";
 
 export const firebaseConfig = {
   apiKey: "AIzaSyBfX9ytpF-hXsLjvu8RFWd4qUIyRC1FiRs",
@@ -22,6 +23,7 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 storage.maxUploadRetryTime = 10000; // 10 segundos máximo para não travar a interface
 export const messaging = getMessaging(app);
+export const functions = getFunctions(app);
 
 console.log("Firebase services initialized.");
 
