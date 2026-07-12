@@ -22,7 +22,7 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
   const [isSaving, setIsSaving] = useState(false);
   const [isEditAIModalOpen, setIsEditAIModalOpen] = useState(false);
   const [isPromptHelperOpen, setIsPromptHelperOpen] = useState(false);
-  const [pendingTopics, setPendingTopics] = useState([]);
+  const [topicStatus, setTopicStatus] = useState([]); // Array of { name, status }
 
   useEffect(() => {
     if (initialSpec) {
@@ -37,7 +37,7 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       setRequirements('');
       setUserAdjustments('');
       setAttachments([]);
-      setPendingTopics([]);
+      setTopicStatus([]);
     }
   }, [initialSpec, isOpen]);
 
@@ -125,21 +125,39 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
 
       const executionStatus = markdownResponse && markdownResponse.trim() !== '' ? 'concluido' : 'pendente';
       
-      // Validação de tópicos pendentes
+      // Validação de tópicos obrigatórios
       if (markdownResponse) {
-        const lines = markdownResponse.split('\n');
-        const pending = [];
-        let currentTopic = 'Documento';
+        const expectedTopics = [
+          "Sumário", "Plano de comunicação", "Objetivo", "Contexto e Justificativa de Negócio",
+          "Escopo Funcional", "Requisitos Funcionais", "Requisitos Não Funcionais",
+          "Regras de Negócio", "Premissas, restrições, riscos e dependências",
+          "Critérios de Aceite", "Anexos funcionais", "Glossário"
+        ];
         
-        for (const line of lines) {
-          if (line.startsWith('#')) {
-            currentTopic = line.replace(/#/g, '').trim();
-          }
-          if (line.includes('[PENDENTE: Informação ausente no requisito original]')) {
-            pending.push(currentTopic);
-          }
-        }
-        setPendingTopics(pending);
+        const lines = markdownResponse.split('\n');
+        
+        const statusMap = expectedTopics.map(topicName => {
+           // Encontrar o tópico no markdown
+           const topicIndex = lines.findIndex(line => line.match(new RegExp(`^#+\\s*(?:\\d+\\.)?\\s*${topicName}`, 'i')));
+           
+           if (topicIndex === -1) {
+             return { name: topicName, status: 'ausente' };
+           }
+           
+           // Olhar o conteúdo até o próximo tópico
+           let hasPending = false;
+           for (let i = topicIndex + 1; i < lines.length; i++) {
+              if (lines[i].startsWith('#')) break; // Próximo tópico
+              if (lines[i].includes('[PENDENTE: Informação ausente no requisito original]')) {
+                hasPending = true;
+                break;
+              }
+           }
+           
+           return { name: topicName, status: hasPending ? 'pendente' : 'concluido' };
+        });
+        
+        setTopicStatus(statusMap);
       }
 
       await saveSpecification({
@@ -185,18 +203,21 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
   const copyPromptTemplate = () => {
     const template = `Por favor, atue como um Engenheiro de Requisitos Sênior. Estou prestes a criar uma Especificação Funcional e preciso que você me ajude a extrair, organizar e detalhar todas as informações necessárias baseadas no contexto que vou te fornecer.
 
-O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os seguintes tópicos:
-1. Objetivo do Sistema/Funcionalidade
-2. Escopo (O que faz e o que não faz)
-3. Atores e Perfis de Usuário
-4. Requisitos Funcionais (Lista detalhada de ações do usuário/sistema)
-5. Requisitos Não Funcionais (Performance, Segurança, Escalabilidade)
-6. Regras de Negócio (Restrições, Cálculos, Condições)
-7. Casos de Uso (Caminho feliz e fluxos alternativos/exceções)
-8. Critérios de Aceite (BDD / Given-When-Then para testes)
-9. Integrações e Dependências de API/Sistemas externos
+O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os 12 tópicos abaixo. Se faltar informação para preencher algum, me pergunte antes de gerar o documento:
+1. Sumário
+2. Plano de comunicação (Informar Momento, Público, Canal e Conteúdo)
+3. Objetivo
+4. Contexto e Justificativa de Negócio
+5. Escopo Funcional
+6. Requisitos Funcionais (Para cada um, incluir Descrição, Atores, Resultado esperado e uma tabela de alterações de tela/relatório)
+7. Requisitos Não Funcionais (Listar explicitly o que NÃO será tratado na demanda)
+8. Regras de Negócio (Fluxo principal, exceções, validações e permissões)
+9. Premissas, restrições, riscos e dependências (Separar Premissas e Restrições em tabelas claras)
+10. Critérios de Aceite
+11. Anexos funcionais
+12. Glossário (Tabela com Termo/Sigla e Definição)
 
-Faça-me perguntas se alguma dessas informações estiver faltando no meu contexto. Assim que eu fornecer tudo, gere um rascunho completo cobrindo todos esses 9 pontos.`;
+Faça-me perguntas se alguma dessas informações estiver faltando no meu contexto. Assim que eu fornecer tudo, gere um rascunho completo cobrindo todos esses 12 pontos.`;
     navigator.clipboard.writeText(template);
     alert('Prompt copiado para a área de transferência! Cole no ChatGPT ou Claude.');
   };
@@ -274,21 +295,31 @@ Faça-me perguntas se alguma dessas informações estiver faltando no meu contex
 
           {currentMarkdown ? (
             <>
-              {pendingTopics.length > 0 && (
-                <Callout.Root color="amber" mb="3">
-                  <Callout.Icon>
-                    <AlertTriangle size={18} />
-                  </Callout.Icon>
-                  <Callout.Text>
-                    <strong>Atenção! A IA detectou informações faltando.</strong> Os seguintes tópicos do template oficial não puderam ser preenchidos com o requisito fornecido:
-                    <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-                      {pendingTopics.map((topic, idx) => (
-                        <li key={idx}><strong>{topic}</strong></li>
-                      ))}
-                    </ul>
-                    Recomendamos preencher manualmente esses campos na edição direta ou fornecer mais contexto.
-                  </Callout.Text>
-                </Callout.Root>
+              {topicStatus.length > 0 && (
+                <Box mb="3" p="3" style={{ backgroundColor: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: '6px' }}>
+                  <Flex align="center" gap="2" mb="3">
+                    <CheckCircle2 size={18} color="var(--indigo-9)" />
+                    <Text size="3" weight="bold">Checklist de Tópicos Obrigatórios</Text>
+                  </Flex>
+                  <Grid columns="2" gapX="4" gapY="2">
+                    {topicStatus.map((topic, idx) => (
+                      <Flex key={idx} align="center" gap="2">
+                        {topic.status === 'concluido' ? (
+                           <CheckCircle2 size={16} color="var(--green-9)" />
+                        ) : topic.status === 'pendente' ? (
+                           <AlertTriangle size={16} color="var(--amber-9)" />
+                        ) : (
+                           <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '1px solid var(--red-9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                             <Text size="1" color="red" style={{ lineHeight: 1 }}>x</Text>
+                           </div>
+                        )}
+                        <Text size="2" color={topic.status === 'concluido' ? 'gray' : topic.status === 'pendente' ? 'amber' : 'red'} style={{ textDecoration: topic.status === 'concluido' ? 'line-through' : 'none' }}>
+                          {idx + 1}. {topic.name}
+                        </Text>
+                      </Flex>
+                    ))}
+                  </Grid>
+                </Box>
               )}
               <Grid columns="2" gap="4">
                 {/* Lado Esquerdo - Editor */}
@@ -385,16 +416,19 @@ Faça-me perguntas se alguma dessas informações estiver faltando no meu contex
           <Box p="4" style={{ backgroundColor: 'var(--gray-3)', borderRadius: 'var(--border-radius)', fontFamily: 'monospace', fontSize: '13px', whiteSpace: 'pre-wrap' }}>
             Por favor, atue como um Engenheiro de Requisitos Sênior. Estou prestes a criar uma Especificação Funcional e preciso que você me ajude a extrair, organizar e detalhar todas as informações necessárias baseadas no contexto que vou te fornecer.
             {'\n\n'}
-            O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os seguintes tópicos:
-            {'\n'}1. Objetivo do Sistema/Funcionalidade
-            {'\n'}2. Escopo (O que faz e o que não faz)
-            {'\n'}3. Atores e Perfis de Usuário
-            {'\n'}4. Requisitos Funcionais
-            {'\n'}5. Requisitos Não Funcionais
-            {'\n'}6. Regras de Negócio
-            {'\n'}7. Casos de Uso
-            {'\n'}8. Critérios de Aceite (BDD)
-            {'\n'}9. Integrações e Dependências
+            O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os 12 tópicos abaixo. Se faltar informação para preencher algum, me pergunte antes de gerar o documento:
+            {'\n'}1. Sumário
+            {'\n'}2. Plano de comunicação (Momento, Público, Canal e Conteúdo)
+            {'\n'}3. Objetivo
+            {'\n'}4. Contexto e Justificativa de Negócio
+            {'\n'}5. Escopo Funcional
+            {'\n'}6. Requisitos Funcionais (Ações, atores, resultados esperados e tabela de campos/elementos)
+            {'\n'}7. Requisitos Não Funcionais (O que não será tratado na demanda)
+            {'\n'}8. Regras de Negócio (Validações, permissões, exceções)
+            {'\n'}9. Premissas, restrições, riscos e dependências
+            {'\n'}10. Critérios de Aceite
+            {'\n'}11. Anexos funcionais
+            {'\n'}12. Glossário
             {'\n\n'}
             Faça-me perguntas se alguma dessas informações estiver faltando no meu contexto.
           </Box>
