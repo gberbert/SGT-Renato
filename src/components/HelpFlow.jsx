@@ -18,12 +18,19 @@ sequenceDiagram
     participant Proj as Setup (Projeto/Sistema)
     participant Demanda as Nova Demanda
     participant Kanban as Board Kanban
+    participant Sistema as Sistema
     Admin->>Proj: Cria Workflow, Sistemas, Projeto e Squads (Roles)
     Admin->>Demanda: Preenche Título, Descrição e Prazo
     Admin->>Demanda: Associa Squad e seleciona Sistemas
     Demanda->>Demanda: Atribui Squad Leader automaticamente
     Admin->>Demanda: Salva Demanda
     Demanda->>Kanban: Cria Card na primeira etapa do Kanban
+    Demanda->>Sistema: Aciona automação de Atividades
+    Sistema->>Sistema: Cria T-Shirt (Status: Pendente)
+    Sistema->>Sistema: Cria Estimativa p/ cada Sistema (Status: Pendente)
+    Sistema->>Sistema: Cria Espc. Func. p/ cada Sistema (Status: Pendente)
+    Sistema->>Sistema: Cria Espc. Técnica p/ cada Sistema (Status: Pendente)
+    Sistema->>Kanban: Disponibiliza cada Atividade como "Pendente Planejamento"
     `
   },
   {
@@ -37,19 +44,19 @@ sequenceDiagram
 sequenceDiagram
     participant Leader as Team Leader
     participant Roadmap as Visão Roadmap/Capacity
-    participant Ticket as Demanda
+    participant Atividade as Atividades (T-Shirt, Est, EF, ET, Dev)
     participant Dev as Desenvolvedor
     Leader->>Roadmap: Analisa disponibilidade do time
-    Leader->>Ticket: Aloca Demanda ao Dev
-    Ticket->>Ticket: Atualiza Squad ID e Status
-    Ticket-->>Dev: Notifica (App/Email) sobre Atribuição
-    Ticket->>Dev: Adiciona à fila "Minhas Atividades"
+    Leader->>Atividade: Aloca Atividades ao Dev
+    Atividade->>Atividade: Atualiza Responsável e Status
+    Atividade-->>Dev: Notifica (App/Email) sobre Atribuição
+    Atividade->>Dev: Adiciona à fila "Minhas Atividades"
     `
   },
   {
-    id: 'entregaveis_tshirt_est',
-    title: 'Geração de T-Shirt e Estimativas',
-    description: 'Criação de T-Shirt Size e Estimativa de Esforço baseada em regras.',
+    id: 'entregaveis_tshirt',
+    title: 'Geração de T-Shirt',
+    description: 'Criação do dimensionamento T-Shirt Size.',
     icon: <Calculator size={24} color="var(--pink-9)" />,
     color: 'var(--pink-9)',
     bgColor: 'var(--pink-2)',
@@ -57,12 +64,32 @@ sequenceDiagram
 sequenceDiagram
     participant Dev as Desenvolvedor
     participant System as SGT (Regras)
-    participant Output as Item Dimensionado
-    Dev->>System: Preenche tamanho macro ou Componentes
-    System->>System: Aplica regras de negócio e capacity
+    participant Output as T-Shirt
+    Dev->>System: Preenche tamanho macro (P, M, G)
     System->>Output: Consolida o Dimensionamento
     Dev->>Output: Revisa e Clica em "Enviar para Revisão"
     Output->>System: Atualiza status para em_revisao
+    `
+  },
+  {
+    id: 'entregaveis_estimativas',
+    title: 'Geração de Estimativas',
+    description: 'Criação de Estimativa detalhada e geração de cards de Desenvolvimento.',
+    icon: <FileText size={24} color="var(--blue-9)" />,
+    color: 'var(--blue-9)',
+    bgColor: 'var(--blue-2)',
+    uml: `
+sequenceDiagram
+    participant Dev as Desenvolvedor
+    participant System as SGT (Regras)
+    participant Est as Estimativa
+    participant Kanban as Board Kanban
+    Dev->>System: Preenche Componentes e Funcionalidades
+    System->>System: Aplica regras de negócio e capacity
+    System->>Est: Consolida a Estimativa
+    Est->>Kanban: Cria Card de Desenvolvimento p/ cada funcionalidade do sistema
+    Dev->>Est: Revisa e Clica em "Enviar para Revisão"
+    Est->>System: Atualiza status para em_revisao
     `
   },
   {

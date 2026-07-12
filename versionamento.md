@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.116] - 2026-07-12
+- **Documentation:** Updated the UML Sequence diagrams in the Help Flow (`HelpFlow.jsx`) to separate the T-Shirt step and explicitly show the automated generation of Development cards for Estimations per system/functionality.
+
 ## [0.1.55] - 2026-07-09
 - **Cascade Updates (Real-time):** Alterações no Squad da Demanda Pai agora são instantaneamente sincronizadas para todas as Atividades filhas no Firestore, dispensando a necessidade de re-salvar a Estimativa original.
 - **UI Bugfix:** Corrigido o `Select` component do Radix UI que exibia uma caixa vazia ao invés de "Sem Squad" ou "Sem responsável" quando os valores originais eram vazios.
