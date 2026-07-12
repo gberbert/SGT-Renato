@@ -39,7 +39,10 @@ ${previousMarkdown}
 --- SOLICITAÇÃO DE AJUSTE DO USUÁRIO ---
 ${userAdjustments}
 
-Atenção: A sua resposta deve ser APENAS a Especificação Funcional COMPLETA revisada em formato Markdown. Aplique os ajustes solicitados na versão atual. Não adicione saudações ou explicações fora do Markdown.
+REGRAS CRÍTICAS DE GERAÇÃO:
+1. NUNCA resuma ou simplifique a especificação original. Mantenha 100% da complexidade e regras de negócio.
+2. A sua resposta deve ser APENAS a Especificação COMPLETA revisada em formato Markdown. Aplique os ajustes solicitados na versão atual. 
+3. Não adicione saudações ou explicações fora do Markdown.
     `.trim();
   } else {
     finalPrompt = `
@@ -48,7 +51,10 @@ ${initialPrompt}
 --- REQUISITOS DO USUÁRIO E CONTEXTO ---
 ${finalRequirements}
 
-Atenção: A sua resposta deve ser APENAS o conteúdo da Especificação Funcional em formato Markdown, seguindo a estrutura fornecida nas suas instruções, preenchida com os Requisitos do Usuário. Não adicione saudações ou explicações fora do Markdown.
+REGRAS CRÍTICAS DE GERAÇÃO:
+1. NUNCA resuma, abrevie ou simplifique os requisitos e contextos fornecidos. Você deve absorver e refletir 100% da complexidade original.
+2. Seu objetivo é ENROBUSTECER o documento. Expanda os conceitos fornecidos adicionando casos de borda (edge cases), tratamentos de erro e detalhamentos arquiteturais pertinentes sem fugir do escopo.
+3. A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown. Não adicione saudações ou explicações fora do Markdown.
     `.trim();
   }
 
