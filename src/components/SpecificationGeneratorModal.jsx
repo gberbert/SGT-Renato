@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Flex, Button, Text, Box, Select, Grid, Heading } from '@radix-ui/themes';
-import { Loader2, Wand2 } from 'lucide-react';
+import { Dialog, Flex, Button, Text, Box, Select, Grid, Heading, Callout, Checkbox } from '@radix-ui/themes';
+import { Loader2, Wand2, Info, Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
 import RichTextEditor from './RichTextEditor';
 import { generateFunctionalSpecification } from '../services/aiService';
 import { saveSpecification } from '../services/specService';
@@ -21,6 +21,8 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditAIModalOpen, setIsEditAIModalOpen] = useState(false);
+  const [isPromptHelperOpen, setIsPromptHelperOpen] = useState(false);
+  const [pendingTopics, setPendingTopics] = useState([]);
 
   useEffect(() => {
     if (initialSpec) {
@@ -35,6 +37,7 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       setRequirements('');
       setUserAdjustments('');
       setAttachments([]);
+      setPendingTopics([]);
     }
   }, [initialSpec, isOpen]);
 
@@ -121,6 +124,23 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       );
 
       const executionStatus = markdownResponse && markdownResponse.trim() !== '' ? 'concluido' : 'pendente';
+      
+      // Validação de tópicos pendentes
+      if (markdownResponse) {
+        const lines = markdownResponse.split('\n');
+        const pending = [];
+        let currentTopic = 'Documento';
+        
+        for (const line of lines) {
+          if (line.startsWith('#')) {
+            currentTopic = line.replace(/#/g, '').trim();
+          }
+          if (line.includes('[PENDENTE: Informação ausente no requisito original]')) {
+            pending.push(currentTopic);
+          }
+        }
+        setPendingTopics(pending);
+      }
 
       await saveSpecification({
         id: initialSpec?.id,
@@ -160,6 +180,25 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const copyPromptTemplate = () => {
+    const template = `Por favor, atue como um Engenheiro de Requisitos Sênior. Estou prestes a criar uma Especificação Funcional e preciso que você me ajude a extrair, organizar e detalhar todas as informações necessárias baseadas no contexto que vou te fornecer.
+
+O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os seguintes tópicos:
+1. Objetivo do Sistema/Funcionalidade
+2. Escopo (O que faz e o que não faz)
+3. Atores e Perfis de Usuário
+4. Requisitos Funcionais (Lista detalhada de ações do usuário/sistema)
+5. Requisitos Não Funcionais (Performance, Segurança, Escalabilidade)
+6. Regras de Negócio (Restrições, Cálculos, Condições)
+7. Casos de Uso (Caminho feliz e fluxos alternativos/exceções)
+8. Critérios de Aceite (BDD / Given-When-Then para testes)
+9. Integrações e Dependências de API/Sistemas externos
+
+Faça-me perguntas se alguma dessas informações estiver faltando no meu contexto. Assim que eu fornecer tudo, gere um rascunho completo cobrindo todos esses 9 pontos.`;
+    navigator.clipboard.writeText(template);
+    alert('Prompt copiado para a área de transferência! Cole no ChatGPT ou Claude.');
   };
 
   const selectedEstimation = estimations?.find(e => e.id === parentId);
@@ -235,6 +274,22 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
 
           {currentMarkdown ? (
             <>
+              {pendingTopics.length > 0 && (
+                <Callout.Root color="amber" mb="3">
+                  <Callout.Icon>
+                    <AlertTriangle size={18} />
+                  </Callout.Icon>
+                  <Callout.Text>
+                    <strong>Atenção! A IA detectou informações faltando.</strong> Os seguintes tópicos do template oficial não puderam ser preenchidos com o requisito fornecido:
+                    <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                      {pendingTopics.map((topic, idx) => (
+                        <li key={idx}><strong>{topic}</strong></li>
+                      ))}
+                    </ul>
+                    Recomendamos preencher manualmente esses campos na edição direta ou fornecer mais contexto.
+                  </Callout.Text>
+                </Callout.Root>
+              )}
               <Grid columns="2" gap="4">
                 {/* Lado Esquerdo - Editor */}
                 <Flex direction="column" gap="3">
@@ -267,9 +322,14 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
             </>
           ) : (
             <Box pt="3">
-              <Text as="div" size="2" mb="2" color="gray">
-                Descreva o que o sistema deve fazer. Não se preocupe com formatação.
-              </Text>
+              <Flex justify="between" align="center" mb="2">
+                <Text as="div" size="2" color="gray">
+                  Descreva o que o sistema deve fazer. Não se preocupe com formatação.
+                </Text>
+                <Button variant="soft" color="indigo" size="1" onClick={() => setIsPromptHelperOpen(true)}>
+                  <Info size={14} /> Usar IA Externa
+                </Button>
+              </Flex>
               <div style={{ border: '1px solid var(--gray-6)', borderRadius: 'var(--border-radius)' }}>
                 <RichTextEditor value={requirements} onChange={setRequirements} />
               </div>
@@ -309,6 +369,40 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
                 handleGenerate();
             }} style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', color: 'white' }}>
               <Wand2 size={16} /> Ajustar com IA
+            </Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* Prompt Helper Modal */}
+      <Dialog.Root open={isPromptHelperOpen} onOpenChange={setIsPromptHelperOpen}>
+        <Dialog.Content maxWidth="650px" onInteractOutside={(e) => e.preventDefault()}>
+          <Dialog.Title>Preparar Demanda com IA Externa</Dialog.Title>
+          <Dialog.Description size="2" mb="4">
+            Para garantir que a Especificação Funcional não fique com tópicos pendentes, você pode usar ferramentas como <strong>ChatGPT</strong> ou <strong>Claude</strong> para preparar e refinar a demanda antes de colar aqui.
+          </Dialog.Description>
+          
+          <Box p="4" style={{ backgroundColor: 'var(--gray-3)', borderRadius: 'var(--border-radius)', fontFamily: 'monospace', fontSize: '13px', whiteSpace: 'pre-wrap' }}>
+            Por favor, atue como um Engenheiro de Requisitos Sênior. Estou prestes a criar uma Especificação Funcional e preciso que você me ajude a extrair, organizar e detalhar todas as informações necessárias baseadas no contexto que vou te fornecer.
+            {'\n\n'}
+            O documento final deverá OBRIGATORIAMENTE conter informações claras e objetivas para os seguintes tópicos:
+            {'\n'}1. Objetivo do Sistema/Funcionalidade
+            {'\n'}2. Escopo (O que faz e o que não faz)
+            {'\n'}3. Atores e Perfis de Usuário
+            {'\n'}4. Requisitos Funcionais
+            {'\n'}5. Requisitos Não Funcionais
+            {'\n'}6. Regras de Negócio
+            {'\n'}7. Casos de Uso
+            {'\n'}8. Critérios de Aceite (BDD)
+            {'\n'}9. Integrações e Dependências
+            {'\n\n'}
+            Faça-me perguntas se alguma dessas informações estiver faltando no meu contexto.
+          </Box>
+
+          <Flex gap="3" mt="4" justify="end">
+            <Button variant="soft" color="gray" onClick={() => setIsPromptHelperOpen(false)}>Fechar</Button>
+            <Button onClick={copyPromptTemplate} style={{ background: 'linear-gradient(90deg, #10b981, #059669)', color: 'white' }}>
+              <Copy size={16} /> Copiar Prompt
             </Button>
           </Flex>
         </Dialog.Content>

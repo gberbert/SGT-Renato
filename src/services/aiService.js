@@ -47,7 +47,7 @@ REGRAS CRÍTICAS DE GERAÇÃO:
 5. Não adicione saudações, conclusões ou explicações fora do Markdown.
     `.trim();
   } else {
-    finalPrompt = `
+      finalPrompt = `
 ${initialPrompt}
 
 --- REQUISITOS DO USUÁRIO E CONTEXTO ---
@@ -55,11 +55,13 @@ ${finalRequirements}
 
 REGRAS CRÍTICAS DE GERAÇÃO:
 1. ESTRUTURA RIGOROSA: A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown, seguindo RIGOROSAMENTE o TEMPLATE E A ESTRUTURA fornecidos nas suas instruções iniciais.
-2. RETENÇÃO TOTAL (PROIBIDO RESUMIR): É terminantemente PROIBIDO resumir, abreviar ou parafrasear. Se o usuário forneceu textos densos, cenários BDD, regras de negócio ou Critérios de Aceite, você DEVE preservar as sentenças originais (copiar e colar o texto base) e APENAS EXPANDIR adicionando novos cenários ou detalhes que faltaram. Nunca condense listas.
-3. DIAGRAMAS E VISUAL: É OBRIGATÓRIO gerar e preservar diagramas visuais (Mermaid) para fluxos de sistema, sequência, estados ou casos de uso pertinentes aos requisitos.
-4. AUTO-CORREÇÃO DE SINTAXE (CRÍTICO): A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos "usecaseDiagram", "actor" ou PlantUML. Caso haja diagramas de uso na origem, converta-os OBRIGATORIAMENTE para um Diagrama de Fluxo (flowchart TD/LR) em sintaxe Mermaid válida.
-5. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
-6. Não adicione saudações, conclusões verbais ou explicações fora do Markdown.
+2. OBRIGATORIEDADE DE TÓPICOS (CRÍTICO): Você DEVE incluir TODOS os tópicos e subtópicos listados no template original. É expressamente proibido omitir ou pular tópicos.
+3. INFORMAÇÕES AUSENTES: Se os "Requisitos do Usuário" não fornecerem informações suficientes para preencher um determinado tópico do template, você DEVE gerar o título do tópico normalmente e inserir como conteúdo exatamente este texto: "[PENDENTE: Informação ausente no requisito original]".
+4. RETENÇÃO TOTAL (PROIBIDO RESUMIR): É terminantemente PROIBIDO resumir, abreviar ou parafrasear. Se o usuário forneceu textos densos, cenários BDD, regras de negócio ou Critérios de Aceite, você DEVE preservar as sentenças originais (copiar e colar o texto base) e APENAS EXPANDIR adicionando novos cenários ou detalhes que faltaram. Nunca condense listas.
+5. DIAGRAMAS E VISUAL: É OBRIGATÓRIO gerar e preservar diagramas visuais (Mermaid) para fluxos de sistema, sequência, estados ou casos de uso pertinentes aos requisitos.
+6. AUTO-CORREÇÃO DE SINTAXE (CRÍTICO): A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos "usecaseDiagram", "actor" ou PlantUML. Caso haja diagramas de uso na origem, converta-os OBRIGATORIAMENTE para um Diagrama de Fluxo (flowchart TD/LR) em sintaxe Mermaid válida.
+7. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
+8. Não adicione saudações, conclusões verbais ou explicações fora do Markdown.
     `.trim();
   }
 
