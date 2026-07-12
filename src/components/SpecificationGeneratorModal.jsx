@@ -37,9 +37,48 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       setRequirements('');
       setUserAdjustments('');
       setAttachments([]);
-      setTopicStatus([]);
     }
   }, [initialSpec, isOpen]);
+
+  // Real-time Checklist Validation
+  useEffect(() => {
+    if (currentMarkdown) {
+      const expectedTopics = [
+        "Sumário", "Plano de comunicação", "Objetivo", "Contexto e Justificativa de Negócio",
+        "Escopo Funcional", "Requisitos Funcionais", "Requisitos Não Funcionais",
+        "Regras de Negócio", "Premissas, restrições, riscos e dependências",
+        "Critérios de Aceite", "Anexos funcionais", "Glossário"
+      ];
+      
+      const lines = currentMarkdown.split('\n');
+      
+      const statusMap = expectedTopics.map(topicName => {
+         // Encontrar o tópico no markdown (ignorando case e espaços)
+         const topicRegex = new RegExp(`^#+\\s*(?:\\d+\\.)?\\s*${topicName.replace(/[.*+?^$\\{\\}()|[\\]\\\\]/g, '\\\\$&')}`, 'i');
+         const topicIndex = lines.findIndex(line => line.match(topicRegex));
+         
+         if (topicIndex === -1) {
+           return { name: topicName, status: 'ausente' };
+         }
+         
+         // Olhar o conteúdo até o próximo tópico
+         let hasPending = false;
+         for (let i = topicIndex + 1; i < lines.length; i++) {
+            if (lines[i].startsWith('#')) break; // Próximo tópico
+            if (lines[i].includes('[PENDENTE: Informação ausente no requisito original]')) {
+              hasPending = true;
+              break;
+            }
+         }
+         
+         return { name: topicName, status: hasPending ? 'pendente' : 'concluido' };
+      });
+      
+      setTopicStatus(statusMap);
+    } else {
+      setTopicStatus([]);
+    }
+  }, [currentMarkdown]);
 
   useEffect(() => {
     const unsub = subscribeToAISettings((data) => {
@@ -124,41 +163,7 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
       );
 
       const executionStatus = markdownResponse && markdownResponse.trim() !== '' ? 'concluido' : 'pendente';
-      
-      // Validação de tópicos obrigatórios
-      if (markdownResponse) {
-        const expectedTopics = [
-          "Sumário", "Plano de comunicação", "Objetivo", "Contexto e Justificativa de Negócio",
-          "Escopo Funcional", "Requisitos Funcionais", "Requisitos Não Funcionais",
-          "Regras de Negócio", "Premissas, restrições, riscos e dependências",
-          "Critérios de Aceite", "Anexos funcionais", "Glossário"
-        ];
-        
-        const lines = markdownResponse.split('\n');
-        
-        const statusMap = expectedTopics.map(topicName => {
-           // Encontrar o tópico no markdown
-           const topicIndex = lines.findIndex(line => line.match(new RegExp(`^#+\\s*(?:\\d+\\.)?\\s*${topicName}`, 'i')));
-           
-           if (topicIndex === -1) {
-             return { name: topicName, status: 'ausente' };
-           }
-           
-           // Olhar o conteúdo até o próximo tópico
-           let hasPending = false;
-           for (let i = topicIndex + 1; i < lines.length; i++) {
-              if (lines[i].startsWith('#')) break; // Próximo tópico
-              if (lines[i].includes('[PENDENTE: Informação ausente no requisito original]')) {
-                hasPending = true;
-                break;
-              }
-           }
-           
-           return { name: topicName, status: hasPending ? 'pendente' : 'concluido' };
-        });
-        
-        setTopicStatus(statusMap);
-      }
+
 
       await saveSpecification({
         id: initialSpec?.id,
