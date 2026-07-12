@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.117] - 2026-07-12
+- **Bugfix (Capacity Planning):** Corrigido bug de mapeamento visual no Kanban de planejamento onde Especificações Técnicas (ET) e Funcionais (EF) recém-criadas pelo sistema não apareciam na lista de pendentes caso o usuário de destino fosse "Não Atribuído" em vez de nulo ou "Sem responsável". O filtro de mapeamento agora considera `assignee` e o fallback para `authorName`.
+
 ## [0.1.116] - 2026-07-12
 - **Documentation:** Updated the UML Sequence diagrams in the Help Flow (`HelpFlow.jsx`) to separate the T-Shirt step and explicitly show the automated generation of Development cards for Estimations per system/functionality.
 
