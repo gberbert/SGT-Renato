@@ -422,9 +422,9 @@ const CapacityPlanning = ({ userRole }) => {
       : dem.system;
 
     allActivities.push(
-      ...relatedEfs.map(ef => { pushedEfIds.add(ef.id); return { id: ef.id, type: 'ef', title: ef.title, hours: efHours, original: ef, planningStatus: ef.planningStatus || 'Pendente', assignee: ef.authorName, demandaCode: dCode, sistema: est.system || est.sistema } }),
-      ...relatedEts.map(et => { pushedEtIds.add(et.id); return { id: et.id, type: 'et', title: et.title, hours: 8, original: et, planningStatus: et.planningStatus || 'Pendente', assignee: et.authorName, demandaCode: dCode, sistema: est.system || est.sistema } }),
-      ...relatedAtivs.map(a => { pushedAtivIds.add(a.id); return { id: a.id, type: 'atividade', title: a.title, hours: a.estimatedHours || ativHours, original: a, planningStatus: a.planningStatus || 'Pendente', assignee: a.assignee, demandaCode: dCode, sistema: (a.associatedSystems && a.associatedSystems.length > 0) ? a.associatedSystems.map(s => s.system).join(', ') : (a.system || demandaSystems) } })
+      ...relatedEfs.map(ef => { pushedEfIds.add(ef.id); return { id: ef.id, type: 'ef', title: ef.title, hours: efHours, original: ef, planningStatus: ef.planningStatus || 'Pendente', assignee: ef.assignee || ef.authorName || 'Não Atribuído', demandaCode: dCode, sistema: est.system || est.sistema } }),
+      ...relatedEts.map(et => { pushedEtIds.add(et.id); return { id: et.id, type: 'et', title: et.title, hours: 8, original: et, planningStatus: et.planningStatus || 'Pendente', assignee: et.assignee || et.authorName || 'Não Atribuído', demandaCode: dCode, sistema: est.system || est.sistema } }),
+      ...relatedAtivs.map(a => { pushedAtivIds.add(a.id); return { id: a.id, type: 'atividade', title: a.title, hours: a.estimatedHours || ativHours, original: a, planningStatus: a.planningStatus || 'Pendente', assignee: a.assignee || 'Sem responsável', demandaCode: dCode, sistema: (a.associatedSystems && a.associatedSystems.length > 0) ? a.associatedSystems.map(s => s.system).join(', ') : (a.system || demandaSystems) } })
     );
   });
 
@@ -441,22 +441,22 @@ const CapacityPlanning = ({ userRole }) => {
 
   dEfs.forEach(ef => {
     if (!pushedEfIds.has(ef.id)) {
-      allActivities.push({ id: ef.id, type: 'ef', title: ef.title, hours: 8, original: ef, planningStatus: ef.planningStatus || 'Pendente', assignee: ef.authorName, demandaCode: 'Orfã', sistema: '' });
+      allActivities.push({ id: ef.id, type: 'ef', title: ef.title, hours: 8, original: ef, planningStatus: ef.planningStatus || 'Pendente', assignee: ef.assignee || ef.authorName || 'Não Atribuído', demandaCode: 'Orfã', sistema: '' });
     }
   });
 
   dEts.forEach(et => {
     if (!pushedEtIds.has(et.id)) {
-      allActivities.push({ id: et.id, type: 'et', title: et.title, hours: 8, original: et, planningStatus: et.planningStatus || 'Pendente', assignee: et.authorName, demandaCode: 'Orfã', sistema: '' });
+      allActivities.push({ id: et.id, type: 'et', title: et.title, hours: 8, original: et, planningStatus: et.planningStatus || 'Pendente', assignee: et.assignee || et.authorName || 'Não Atribuído', demandaCode: 'Orfã', sistema: '' });
     }
   });
 
   const pendingActivities = allActivities.filter(a => {
     if (a.type === 'atividade') return !a.assignee || a.assignee === 'Sem responsável' || a.planningStatus !== 'Planejada';
-    if (a.type === 'ef') return a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
-    if (a.type === 'et') return a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
-    if (a.type === 'tshirt') return a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
-    return !a.original.assignee || a.planningStatus !== 'Planejada';
+    if (a.type === 'ef') return !a.assignee || a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
+    if (a.type === 'et') return !a.assignee || a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
+    if (a.type === 'tshirt') return !a.assignee || a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
+    return !a.assignee || !a.original.assignee || a.planningStatus !== 'Planejada';
   });
 
   // Get Squad members
