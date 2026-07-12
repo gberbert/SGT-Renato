@@ -100,15 +100,10 @@ REGRAS CRÍTICAS DE GERAÇÃO:
   };
 
   try {
-    result = await tryGenerateWithModel("gemini-3.5-pro");
-  } catch (err0) {
-    console.warn("Falha com gemini-3.5-pro, tentando fallback gemini-2.5-pro...", err0);
-    try {
-      result = await tryGenerateWithModel("gemini-2.5-pro");
-    } catch (err) {
-      console.error("Falha com os modelos gemini-3.5-pro e gemini-2.5-pro.", err);
-      throw err;
-    }
+    result = await tryGenerateWithModel("gemini-3.1-pro-preview");
+  } catch (err) {
+    console.error("Falha ao gerar com gemini-3.1-pro-preview.", err);
+    throw err;
   }
 
   try {
