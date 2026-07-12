@@ -43,7 +43,8 @@ REGRAS CRÍTICAS DE GERAÇÃO:
 1. ESTRUTURA RIGOROSA: A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown. Aplique os ajustes solicitados seguindo rigorosamente a estrutura e template originais.
 2. RETENÇÃO TOTAL: NUNCA resuma, abrevie ou simplifique. Mantenha 100% da complexidade, fluxos e regras de negócio.
 3. DIAGRAMAS E VISUAL: Sempre preserve e expanda os diagramas visuais (Mermaid) e tabelas.
-4. Não adicione saudações, conclusões ou explicações fora do Markdown.
+4. AUTO-CORREÇÃO DE SINTAXE (CRÍTICO): O sistema renderiza apenas "Mermaid.js" padrão. Não utilize "usecaseDiagram" ou "actor" (sintaxe PlantUML). Se houver fluxos de caso de uso, converta-os OBRIGATORIAMENTE para "flowchart TD" ou "flowchart LR" no formato Mermaid válido.
+5. Não adicione saudações, conclusões ou explicações fora do Markdown.
     `.trim();
   } else {
     finalPrompt = `
@@ -56,8 +57,9 @@ REGRAS CRÍTICAS DE GERAÇÃO:
 1. ESTRUTURA RIGOROSA: A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown, seguindo RIGOROSAMENTE o TEMPLATE E A ESTRUTURA fornecidos nas suas instruções iniciais.
 2. RETENÇÃO TOTAL: NUNCA resuma, abrevie ou simplifique os requisitos e contextos fornecidos. Você deve absorver, refletir e organizar 100% da complexidade original.
 3. DIAGRAMAS E VISUAL: É OBRIGATÓRIO gerar e preservar diagramas visuais (Mermaid) para fluxos de sistema, sequência, estados ou casos de uso pertinentes aos requisitos.
-4. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
-5. Não adicione saudações, conclusões verbais ou explicações fora do Markdown.
+4. AUTO-CORREÇÃO DE SINTAXE (CRÍTICO): A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos "usecaseDiagram", "actor" ou PlantUML. Caso haja diagramas de uso na origem, converta-os OBRIGATORIAMENTE para um Diagrama de Fluxo (flowchart TD/LR) em sintaxe Mermaid válida.
+5. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
+6. Não adicione saudações, conclusões verbais ou explicações fora do Markdown.
     `.trim();
   }
 
