@@ -8,6 +8,7 @@ import { subscribeToAllocations } from '../services/allocationService';
 import { subscribeToAISettings, saveAISettings } from '../services/settingsService';
 import TechSpecGeneratorModal from './TechSpecGeneratorModal';
 import TechSpecViewerModal from './TechSpecViewerModal';
+import PdfExportWizard from './PdfExportWizard';
 import { auth } from '../firebase';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToProjects } from '../services/projectService';
@@ -27,6 +28,7 @@ const TechSpecs = ({ userRole }) => {
   const [showConfig, setShowConfig] = useState(false);
   
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [exportWizardOpen, setExportWizardOpen] = useState(false);
   const [currentSpec, setCurrentSpec] = useState(null);
   const [currentTab, setCurrentTab] = useState('pendente');
 
@@ -246,6 +248,9 @@ const TechSpecs = ({ userRole }) => {
                       ) : (
                         <Badge color="green"><CheckCircle2 size={14}/> Concluído</Badge>
                       )}
+                      <Button variant="soft" color="indigo" size="1" onClick={() => { setCurrentSpec(spec); setExportWizardOpen(true); }}>
+                        <Download size={14} /> PDF
+                      </Button>
                       <Button variant="soft" size="1" onClick={() => handleEdit(spec)}>Editar</Button>
                       <IconButton color="red" variant="soft" size="1" onClick={() => handleDelete(spec.id)}>
                         <Trash2 size={14} />
@@ -274,6 +279,16 @@ const TechSpecs = ({ userRole }) => {
         isOpen={viewerOpen}
         onClose={() => setViewerOpen(false)}
         spec={currentSpec}
+      />
+
+      <PdfExportWizard
+        isOpen={exportWizardOpen}
+        onClose={() => setExportWizardOpen(false)}
+        spec={currentSpec}
+        parentEstimativa={estimations.find(e => e.id === currentSpec?.parentId)}
+        parentDemanda={tickets.find(t => t.id === estimations.find(e => e.id === currentSpec?.parentId)?.ticketId)}
+        projects={projects}
+        squads={globalSquads}
       />
     </div>
   );

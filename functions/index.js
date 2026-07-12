@@ -129,18 +129,29 @@ ${initialPrompt}
 ${finalRequirements}
 
 REGRAS CRÍTICAS DE GERAÇÃO:
-1. ESTRUTURA RIGOROSA (9 TÓPICOS): A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown, contendo OBRIGATORIAMENTE OS 9 TÓPICOS ABAIXO, NA ORDEM EXATA:
-   1. Objetivo (Detalhar a solução técnica descrevendo arquitetura, componentes, integrações, alterações, dados, etc)
-   2. Visão técnica da solução (Solução técnica proposta de forma objetiva, sem regras funcionais)
-   3. Arquitetura (Registrar arquitetura, componentes, pipelines. Usar mermaid para desenhos. Incluir: Arquitetura da Solução, Detalhamento das Alterações Técnicas, Configurações Específicas, Pipelines de Build/Deploy)
-   4. Detalhamento das alterações técnicas (Alterações em frontend, backend/serviços, jobs, relatórios, logs, tratamento de erro)
-   5. Dados e banco de dados (Bancos de dados, Tabelas, Procedures afetados)
-   6. Estratégia de testes técnicos (Tabela com Unitário, Integração, API, Performance, Segurança, Regressão)
-   7. Impactos, riscos e dependências técnicas (Tabela de riscos RT-001 e listar dependências técnicas, de negócio, impacto em sistemas, usuários e infraestrutura)
-   8. Referências e anexos técnicos (Links para documentos, demandas relacionadas)
-   9. Glossário técnico (Tabela com Termo/sigla e Definição)
+1. ESTRUTURA RIGOROSA (9 TÓPICOS): A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown. OS TÍTULOS DOS TÓPICOS DEVEM SER EXATAMENTE ESTES (NÃO MUDE UMA VÍRGULA):
+   # 1. Objetivo
+   # 2. Visão técnica da solução
+   # 3. Arquitetura
+   # 4. Detalhamento das alterações técnicas
+   # 5. Dados e banco de dados
+   # 6. Estratégia de testes técnicos
+   # 7. Impactos, riscos e dependências técnicas
+   # 8. Referências e anexos técnicos
+   # 9. Glossário técnico
 
-2. INFORMAÇÕES AUSENTES: Se os "Requisitos do Usuário" não fornecerem informações suficientes para preencher um determinado tópico do template, você DEVE gerar o título do tópico normalmente (Ex: "# 5. Dados e banco de dados") e inserir como conteúdo exatamente este texto: "[PENDENTE: Informação técnica ausente no requisito original]".
+2. CONTEÚDO DE CADA TÓPICO: Siga as diretrizes abaixo para preencher cada um dos tópicos acima:
+   - Objetivo: Detalhar a solução técnica descrevendo arquitetura, componentes, integrações, alterações, dados, etc.
+   - Visão técnica da solução: Solução técnica proposta de forma objetiva, sem regras funcionais.
+   - Arquitetura: Registrar arquitetura, componentes, pipelines. Usar mermaid para desenhos. Incluir: Arquitetura da Solução, Detalhamento das Alterações Técnicas, Configurações Específicas, Pipelines de Build/Deploy.
+   - Detalhamento das alterações técnicas: Alterações em frontend, backend/serviços, jobs, relatórios, logs, tratamento de erro.
+   - Dados e banco de dados: Bancos de dados, Tabelas, Procedures afetados.
+   - Estratégia de testes técnicos: Tabela com Unitário, Integração, API, Performance, Segurança, Regressão.
+   - Impactos, riscos e dependências técnicas: Tabela de riscos RT-001 e listar dependências técnicas, de negócio, impacto em sistemas, usuários e infraestrutura.
+   - Referências e anexos técnicos: Links para documentos, demandas relacionadas.
+   - Glossário técnico: Tabela com Termo/sigla e Definição.
+
+3. INFORMAÇÕES AUSENTES: Se os "Requisitos do Usuário" não fornecerem informações suficientes para preencher um determinado tópico do template, você DEVE gerar o título do tópico normalmente e inserir como conteúdo exatamente este texto: "[PENDENTE: Informação técnica ausente no requisito original]".
 3. NÍVEL DE DETALHE EXTREMO: Defina nomes de tabelas, atributos de banco de dados, payloads de API (JSON), endpoints, verbos HTTP e códigos de status esperados quando for pertinente.
 4. DIAGRAMAS E VISUAL: Use a sessão 3 para gerar e preservar diagramas visuais (Mermaid). A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos PlantUML.
 5. Não adicione saudações, conclusões verbais ou explicações fora do Markdown. Não crie um tópico de Sumário, pois o sistema já gera índices automaticamente.
