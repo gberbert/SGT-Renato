@@ -159,7 +159,8 @@ const SpecificationGeneratorModal = ({ isOpen, onClose, tickets, estimations, us
         enrichedRequirements,
         hasPrevious ? currentMarkdown : null,
         hasPrevious ? userAdjustments : null,
-        attachments
+        attachments,
+        'EF'
       );
 
       const executionStatus = markdownResponse && markdownResponse.trim() !== '' ? 'concluido' : 'pendente';

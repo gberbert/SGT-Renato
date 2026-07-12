@@ -9,9 +9,10 @@ import { functions } from "../firebase";
  * @param {string} previousMarkdown (Opcional) A versão atual do markdown, para ajustes.
  * @param {string} userAdjustments (Opcional) Sugestões de ajuste do usuário.
  * @param {Array} attachments (Opcional) Array de anexos { name, mimeType, data, text }.
+ * @param {string} specType (Opcional) Tipo de especificação ('EF' ou 'ET').
  * @returns {Promise<string>} O markdown gerado pela IA.
  */
-export const generateFunctionalSpecification = async (apiKey, initialPrompt, userRequirements, previousMarkdown = null, userAdjustments = null, attachments = []) => {
+export const generateFunctionalSpecification = async (apiKey, initialPrompt, userRequirements, previousMarkdown = null, userAdjustments = null, attachments = [], specType = 'EF') => {
   if (!apiKey) {
     throw new Error("API Key do Gemini não está configurada.");
   }
@@ -25,7 +26,8 @@ export const generateFunctionalSpecification = async (apiKey, initialPrompt, use
       userRequirements,
       previousMarkdown,
       userAdjustments,
-      attachments
+      attachments,
+      specType
     });
 
     if (result && result.data && result.data.text) {

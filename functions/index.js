@@ -84,7 +84,7 @@ exports.generateFunctionalSpec = onCall({
     timeoutSeconds: 540,
     memory: "512MiB"
 }, async (request) => {
-    const { apiKey, initialPrompt, userRequirements, previousMarkdown, userAdjustments, attachments } = request.data;
+    const { apiKey, initialPrompt, userRequirements, previousMarkdown, userAdjustments, attachments, specType = 'EF' } = request.data;
 
     if (!apiKey) {
         throw new HttpsError("invalid-argument", "API Key do Gemini não está configurada.");
@@ -103,8 +103,53 @@ exports.generateFunctionalSpec = onCall({
         }
     });
 
-    if (previousMarkdown && userAdjustments) {
-        finalPrompt = `
+    if (specType === 'ET') {
+        if (previousMarkdown && userAdjustments) {
+            finalPrompt = `
+${initialPrompt}
+
+--- VERSÃO ATUAL DA ESPECIFICAÇÃO TÉCNICA ---
+${previousMarkdown}
+
+--- SOLICITAÇÃO DE AJUSTE DO USUÁRIO ---
+${userAdjustments}
+
+REGRAS CRÍTICAS DE GERAÇÃO:
+1. ESTRUTURA RIGOROSA: A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown. Aplique os ajustes solicitados seguindo rigorosamente a estrutura e template originais.
+2. RETENÇÃO TOTAL (PROIBIDO RESUMIR): É terminantemente PROIBIDO resumir, abreviar ou parafrasear o conteúdo original. Se o usuário forneceu listas, regras ou critérios, você deve COPIAR EXATAMENTE o texto original (Ctrl+C / Ctrl+V) e apenas adicionar/expandir novos pontos.
+3. DIAGRAMAS E VISUAL: Sempre preserve e expanda os diagramas visuais (Mermaid) e tabelas.
+4. AUTO-CORREÇÃO DE SINTAXE (CRÍTICO): O sistema renderiza apenas "Mermaid.js" padrão. Não utilize "usecaseDiagram" ou "actor" (sintaxe PlantUML). Se houver fluxos de arquitetura, converta-os OBRIGATORIAMENTE para "flowchart TD" ou "flowchart LR" no formato Mermaid válido.
+5. Não adicione saudações, conclusões ou explicações fora do Markdown.
+            `.trim();
+        } else {
+            finalPrompt = `
+${initialPrompt}
+
+--- REQUISITOS DO USUÁRIO E CONTEXTO ---
+${finalRequirements}
+
+REGRAS CRÍTICAS DE GERAÇÃO:
+1. ESTRUTURA RIGOROSA (9 TÓPICOS): A sua resposta deve ser APENAS o conteúdo da Especificação em formato Markdown, contendo OBRIGATORIAMENTE OS 9 TÓPICOS ABAIXO, NA ORDEM EXATA:
+   1. Objetivo (Detalhar a solução técnica descrevendo arquitetura, componentes, integrações, alterações, dados, etc)
+   2. Visão técnica da solução (Solução técnica proposta de forma objetiva, sem regras funcionais)
+   3. Arquitetura (Registrar arquitetura, componentes, pipelines. Usar mermaid para desenhos. Incluir: Arquitetura da Solução, Detalhamento das Alterações Técnicas, Configurações Específicas, Pipelines de Build/Deploy)
+   4. Detalhamento das alterações técnicas (Alterações em frontend, backend/serviços, jobs, relatórios, logs, tratamento de erro)
+   5. Dados e banco de dados (Bancos de dados, Tabelas, Procedures afetados)
+   6. Estratégia de testes técnicos (Tabela com Unitário, Integração, API, Performance, Segurança, Regressão)
+   7. Impactos, riscos e dependências técnicas (Tabela de riscos RT-001 e listar dependências técnicas, de negócio, impacto em sistemas, usuários e infraestrutura)
+   8. Referências e anexos técnicos (Links para documentos, demandas relacionadas)
+   9. Glossário técnico (Tabela com Termo/sigla e Definição)
+
+2. INFORMAÇÕES AUSENTES: Se os "Requisitos do Usuário" não fornecerem informações suficientes para preencher um determinado tópico do template, você DEVE gerar o título do tópico normalmente (Ex: "# 5. Dados e banco de dados") e inserir como conteúdo exatamente este texto: "[PENDENTE: Informação técnica ausente no requisito original]".
+3. NÍVEL DE DETALHE EXTREMO: Defina nomes de tabelas, atributos de banco de dados, payloads de API (JSON), endpoints, verbos HTTP e códigos de status esperados quando for pertinente.
+4. DIAGRAMAS E VISUAL: Use a sessão 3 para gerar e preservar diagramas visuais (Mermaid). A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos PlantUML.
+5. Não adicione saudações, conclusões verbais ou explicações fora do Markdown. Não crie um tópico de Sumário, pois o sistema já gera índices automaticamente.
+            `.trim();
+        }
+    } else {
+        // EF Rules
+        if (previousMarkdown && userAdjustments) {
+            finalPrompt = `
 ${initialPrompt}
 
 --- VERSÃO ATUAL DA ESPECIFICAÇÃO ---
@@ -119,9 +164,9 @@ REGRAS CRÍTICAS DE GERAÇÃO:
 3. DIAGRAMAS E VISUAL: Sempre preserve e expanda os diagramas visuais (Mermaid) e tabelas.
 4. AUTO-CORREÇÃO DE SINTAXE (CRÍTICO): O sistema renderiza apenas "Mermaid.js" padrão. Não utilize "usecaseDiagram" ou "actor" (sintaxe PlantUML). Se houver fluxos de caso de uso, converta-os OBRIGATORIAMENTE para "flowchart TD" ou "flowchart LR" no formato Mermaid válido.
 5. Não adicione saudações, conclusões ou explicações fora do Markdown.
-        `.trim();
-    } else {
-        finalPrompt = `
+            `.trim();
+        } else {
+            finalPrompt = `
 ${initialPrompt}
 
 --- REQUISITOS DO USUÁRIO E CONTEXTO ---
@@ -147,19 +192,23 @@ REGRAS CRÍTICAS DE GERAÇÃO:
 4. DIAGRAMAS E VISUAL: Use a sessão 7 para gerar e preservar diagramas visuais (Mermaid). A renderização aceita APENAS sintaxe padrão do Mermaid.js. Não suportamos "usecaseDiagram", "actor" ou PlantUML. Caso haja diagramas de uso na origem, converta-os OBRIGATORIAMENTE para um Diagrama de Fluxo (flowchart TD/LR) em sintaxe Mermaid válida.
 5. ENROBUSTECIMENTO: Transforme anotações em uma especificação de nível Sênior/Especialista. Expanda os conceitos com casos de borda (sad paths), tratamentos de erro, regras de validação e requisitos não-funcionais (performance, segurança).
 6. Não adicione saudações, conclusões verbais ou explicações fora do Markdown. Não crie um tópico de Sumário, pois o sistema já gera índices automaticamente.
-        `.trim();
+            `.trim();
+        }
     }
 
     const tryGenerateWithModel = async (modelName) => {
         const model = genAI.getGenerativeModel({ model: modelName });
         
-        const pdfAttachments = validAttachments.filter(a => a.mimeType === 'application/pdf');
+        // Separa os anexos que devem ser enviados via inlineData (imagens e PDFs)
+        const mediaAttachments = validAttachments.filter(a => 
+            a.mimeType === 'application/pdf' || a.mimeType.startsWith('image/')
+        );
         
-        if (pdfAttachments.length === 0) {
+        if (mediaAttachments.length === 0) {
             return await model.generateContent(finalPrompt);
         } else {
             const promptParts = [ finalPrompt ];
-            pdfAttachments.forEach(att => {
+            mediaAttachments.forEach(att => {
                 if (att.data) {
                     promptParts.push({
                         inlineData: {
