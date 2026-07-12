@@ -87,15 +87,15 @@ REGRAS CRÍTICAS DE GERAÇÃO:
   };
 
   try {
-    result = await tryGenerateWithModel("gemini-2.5-pro");
+    result = await tryGenerateWithModel("gemini-1.5-pro");
   } catch (err0) {
-    console.warn("Falha com gemini-2.5-pro, tentando gemini-2.5-flash...", err0);
+    console.warn("Falha com gemini-1.5-pro, tentando gemini-1.5-flash...", err0);
     try {
-      result = await tryGenerateWithModel("gemini-2.5-flash");
+      result = await tryGenerateWithModel("gemini-1.5-flash");
     } catch (err) {
-      console.warn("Falha com gemini-2.5-flash, tentando gemini-2.0-pro-exp...", err);
+      console.warn("Falha com gemini-1.5-flash, tentando gemini-pro...", err);
       try {
-        result = await tryGenerateWithModel("gemini-2.0-pro-exp");
+        result = await tryGenerateWithModel("gemini-pro");
       } catch (err2) {
         throw err2;
       }
