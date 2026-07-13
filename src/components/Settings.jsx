@@ -268,7 +268,7 @@ const Settings = () => {
   };
 
   const openNewSystemModal = () => {
-    setSystemData({ name: '' });
+    setSystemData({ name: '', projectId: '' });
     setIsSystemModalOpen(true);
   };
 
@@ -280,9 +280,20 @@ const Settings = () => {
   const handleSaveSystem = async (e) => {
     e.preventDefault();
     if (!systemData.name.trim()) return;
+    if (!systemData.projectId) {
+      alert("Por favor, selecione um Projeto para associar.");
+      return;
+    }
     setSavingSystem(true);
     try {
-      await saveSystem(systemData);
+      if (systemData.id) {
+        await saveSystem(systemData);
+      } else {
+        const names = systemData.name.split('\n').map(n => n.trim()).filter(n => n);
+        for (const name of names) {
+          await saveSystem({ name, projectId: systemData.projectId });
+        }
+      }
       setIsSystemModalOpen(false);
     } catch (err) {
       alert("Erro ao salvar sistema.");
@@ -588,13 +599,17 @@ const Settings = () => {
                   <Table.Header>
                     <Table.Row>
                       <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Projeto</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
-                    {systems.map(sys => (
+                    {systems.map(sys => {
+                      const proj = projects.find(p => p.id === sys.projectId);
+                      return (
                       <Table.Row key={sys.id} align="center">
                         <Table.Cell><Text weight="bold">{sys.name}</Text></Table.Cell>
+                        <Table.Cell>{proj ? proj.name : '-'}</Table.Cell>
                         <Table.Cell justify="end">
                           <Flex gap="2" justify="end">
                             <Button size="1" variant="soft" onClick={() => openEditSystemModal(sys)}>
@@ -606,7 +621,8 @@ const Settings = () => {
                           </Flex>
                         </Table.Cell>
                       </Table.Row>
-                    ))}
+                      );
+                    })}
                   </Table.Body>
                 </Table.Root>
               )}
@@ -1084,13 +1100,37 @@ const Settings = () => {
           <form onSubmit={handleSaveSystem}>
             <Flex direction="column" gap="3">
               <label>
-                <Text as="div" size="2" mb="1" weight="bold">Nome</Text>
-                <TextField.Root 
-                  value={systemData.name} 
-                  onChange={(e) => setSystemData({...systemData, name: e.target.value})} 
-                  placeholder="Ex: Totem, PP"
-                  required 
-                />
+                <Text as="div" size="2" mb="1" weight="bold">Projeto <span style={{ color: 'red' }}>*</span></Text>
+                <Select.Root 
+                  value={systemData.projectId || ''} 
+                  onValueChange={(val) => setSystemData({...systemData, projectId: val})}
+                >
+                  <Select.Trigger placeholder="Selecione um projeto" />
+                  <Select.Content>
+                    {projects.map(p => (
+                      <Select.Item key={p.id} value={p.id}>{p.name}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome <span style={{ color: 'red' }}>*</span></Text>
+                {systemData.id ? (
+                  <TextField.Root 
+                    value={systemData.name} 
+                    onChange={(e) => setSystemData({...systemData, name: e.target.value})} 
+                    placeholder="Ex: Totem"
+                    required 
+                  />
+                ) : (
+                  <TextArea 
+                    value={systemData.name} 
+                    onChange={(e) => setSystemData({...systemData, name: e.target.value})} 
+                    placeholder="Cole a lista de sistemas, um por linha..."
+                    rows={6}
+                    required 
+                  />
+                )}
               </label>
             </Flex>
             <Flex gap="3" mt="4" justify="end">
