@@ -509,7 +509,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
                              return `${d}/${m}/${y}`;
                           };
                           return (
-                          <Table.Row key={t.id} align="center" style={{ cursor: 'pointer' }} onClick={() => onCardClick(t.id)}>
+                          <Table.Row key={t.id} align="center" style={{ cursor: 'pointer' }} onClick={() => onCardClick(t)}>
                             <Table.Cell><Text weight="bold" color="indigo">{t.code}</Text></Table.Cell>
                             <Table.Cell>{t.title}</Table.Cell>
                             <Table.Cell>
