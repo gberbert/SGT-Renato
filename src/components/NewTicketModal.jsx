@@ -24,7 +24,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     endDate: '',
     parentDemandaId: '',
     environment: '',
-    reporter: ''
+    reporter: '',
+    jiraDatesFlow: {}
   });
   const [associatedSystems, setAssociatedSystems] = useState([]);
 
@@ -135,7 +136,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         endDate: jiraData.jiraDueDate || prev.endDate,
         environment: jiraData.jiraEnvironment || prev.environment,
         reporter: jiraData.jiraCreator || prev.reporter,
-        component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component
+        component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
+        jiraDatesFlow: jiraData.jiraDatesFlow || {}
       }));
       setDescription(jiraData.description || description);
       alert(`Dados do Jira importados com sucesso!\nTicket: ${jiraData.title}`);
@@ -165,21 +167,31 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     }
   };
 
-  const handleSelectJiraTicket = (jiraData) => {
-    setFormData(prev => ({
-      ...prev,
-      externalTicket: jiraData.code,
-      title: jiraData.title || prev.title,
-      priority: jiraData.priority?.toLowerCase().includes('alta') ? 'high' : 
-                jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium',
-      type: jiraData.jiraType ? (ticketTypes.find(t => t.name.toLowerCase() === jiraData.jiraType.toLowerCase())?.name || prev.type) : prev.type,
-      endDate: jiraData.jiraDueDate || prev.endDate,
-      environment: jiraData.jiraEnvironment || prev.environment,
-      reporter: jiraData.jiraCreator || prev.reporter,
-      component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component
-    }));
-    setDescription(jiraData.description || description);
-    setIsJiraSearchOpen(false);
+  const handleSelectJiraTicket = async (jiraDataInfo) => {
+    setLoadingJiraSearch(true);
+    try {
+      const jiraData = await fetchJiraTicket(jiraDataInfo.code);
+      setFormData(prev => ({
+        ...prev,
+        externalTicket: jiraData.code,
+        title: jiraData.title || prev.title,
+        priority: jiraData.priority?.toLowerCase().includes('alta') ? 'high' : 
+                  jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium',
+        type: jiraData.jiraType ? (ticketTypes.find(t => t.name.toLowerCase() === jiraData.jiraType.toLowerCase())?.name || prev.type) : prev.type,
+        endDate: jiraData.jiraDueDate || prev.endDate,
+        environment: jiraData.jiraEnvironment || prev.environment,
+        reporter: jiraData.jiraCreator || prev.reporter,
+        component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
+        jiraDatesFlow: jiraData.jiraDatesFlow || {}
+      }));
+      setDescription(jiraData.description || description);
+      setIsJiraSearchOpen(false);
+    } catch (error) {
+      console.error(error);
+      alert("Falha ao buscar dados detalhados do ticket: " + error.message);
+    } finally {
+      setLoadingJiraSearch(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -243,6 +255,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         endDate: formData.endDate,
         environment: formData.environment,
         reporter: formData.reporter,
+        jiraDatesFlow: formData.jiraDatesFlow || {},
         customData: customData,
         parentId: currentBoard === 'atividades' ? formData.parentDemandaId : parentId,
         board: currentBoard,
@@ -267,7 +280,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         endDate: '',
         parentDemandaId: '',
         environment: '',
-        reporter: ''
+        reporter: '',
+        jiraDatesFlow: {}
       });
       setAssociatedSystems([]);
       setDescription('');
@@ -518,6 +532,44 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
                 users={users}
               />
             </Box>
+
+            {currentBoard === 'demandas' && (
+              <Box style={{ backgroundColor: 'var(--indigo-2)', padding: '16px', borderRadius: '8px', border: '1px solid var(--indigo-5)', marginTop: '8px', marginBottom: '8px' }}>
+                <Flex align="center" gap="2" mb="3">
+                  <Text as="div" size="3" weight="bold" color="indigo">Fluxo de Datas Jira</Text>
+                </Flex>
+                <Grid columns="3" gap="3">
+                  {[
+                    { key: 'dataAnaliseTshirt', label: 'Análise T-Shirt' },
+                    { key: 'tshirtEnviada', label: 'T-Shirt Enviada' },
+                    { key: 'aprovacao1', label: 'Aprovação (Atend.)' },
+                    { key: 'planejamentoSLA', label: 'Planejamento SLA' },
+                    { key: 'planejamentoEnviado', label: 'Planejamento Enviado' },
+                    { key: 'deadlineAprovacao', label: 'Deadline Aprovação' },
+                    { key: 'aprovacao2', label: 'Aprovação (EF/SR)' },
+                    { key: 'inicioDemanda', label: 'Início Demanda' },
+                    { key: 'dataEntregaPlanejada', label: 'Entrega Planejada' },
+                    { key: 'dataEntrega', label: 'Data Entrega' },
+                    { key: 'aprovacaoHomologacao', label: 'Ap. Homologação' },
+                  ].map(field => (
+                    <Box key={field.key}>
+                      <Text as="div" size="1" mb="1" weight="bold" color="gray">{field.label}</Text>
+                      <TextField.Root 
+                        type="date"
+                        value={formData.jiraDatesFlow?.[field.key] || ''}
+                        onChange={(e) => {
+                           const newVal = e.target.value;
+                           setFormData(prev => ({
+                             ...prev,
+                             jiraDatesFlow: { ...(prev.jiraDatesFlow || {}), [field.key]: newVal }
+                           }));
+                        }}
+                      />
+                    </Box>
+                  ))}
+                </Grid>
+              </Box>
+            )}
             
             {/* Dynamic Custom Fields */}
             {customFields.map(field => {

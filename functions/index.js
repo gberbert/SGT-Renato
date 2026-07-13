@@ -275,7 +275,7 @@ exports.importJiraTicket = onCall({
     }
 
     const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
-    const jiraUrl = `https://${domain}/rest/api/3/issue/${ticketKey}`;
+    const jiraUrl = `https://${domain}/rest/api/3/issue/${ticketKey}?expand=changelog`;
 
     try {
         const response = await fetch(jiraUrl, {
@@ -293,6 +293,50 @@ exports.importJiraTicket = onCall({
 
         const data = await response.json();
         const fields = data.fields || {};
+        const changelog = data.changelog || { histories: [] };
+
+        const formatDate = (isoString) => {
+            if (!isoString) return '';
+            return isoString.split('T')[0];
+        };
+
+        const jiraDatesFlow = {
+            dataAnaliseTshirt: formatDate(fields.created),
+            tshirtEnviada: '',
+            aprovacao1: '',
+            planejamentoSLA: '',
+            planejamentoEnviado: '',
+            deadlineAprovacao: '',
+            aprovacao2: formatDate(fields.customfield_10259),
+            inicioDemanda: formatDate(fields.customfield_10260),
+            dataEntregaPlanejada: '',
+            dataEntrega: '',
+            aprovacaoHomologacao: formatDate(fields.customfield_10432)
+        };
+
+        const sortedHistories = [...(changelog.histories || [])].sort((a, b) => new Date(a.created) - new Date(b.created));
+        for (const history of sortedHistories) {
+            const items = history.items || [];
+            for (const item of items) {
+                if (item.field === 'status') {
+                    const statusStr = (item.toString || '').toLowerCase().trim();
+                    const dateStr = formatDate(history.created);
+                    
+                    if (statusStr === 'aprovação interna ti' && !jiraDatesFlow.tshirtEnviada) {
+                        jiraDatesFlow.tshirtEnviada = dateStr;
+                    }
+                    if (statusStr === 'planejamento atendimento' && !jiraDatesFlow.aprovacao1) {
+                        jiraDatesFlow.aprovacao1 = dateStr;
+                    }
+                    if (statusStr === 'aprovação gerencial' && !jiraDatesFlow.planejamentoEnviado) {
+                        jiraDatesFlow.planejamentoEnviado = dateStr;
+                    }
+                    if (statusStr === 'aprovação qa' && !jiraDatesFlow.dataEntrega) {
+                        jiraDatesFlow.dataEntrega = dateStr;
+                    }
+                }
+            }
+        }
         
         // Tratar ADF (Atlassian Document Format) para extrair texto
         let description = '';
@@ -330,7 +374,8 @@ exports.importJiraTicket = onCall({
             jiraEnvironment: (typeof fields.environment === 'string') ? fields.environment : '',
             jiraLabels: fields.labels || [],
             createdAt: fields.created,
-            rawUrl: `https://${domain}/browse/${data.key}`
+            rawUrl: `https://${domain}/browse/${data.key}`,
+            jiraDatesFlow
         };
     } catch (error) {
         console.error("Erro na integração com Jira:", error);
