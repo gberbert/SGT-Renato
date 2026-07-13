@@ -139,6 +139,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
         jiraDatesFlow: jiraData.jiraDatesFlow || {}
       }));
+      if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
+        setAssociatedSystems(jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 })));
+      }
       setDescription(jiraData.description || description);
       alert(`Dados do Jira importados com sucesso!\nTicket: ${jiraData.title}`);
     } catch (error) {
@@ -184,6 +187,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
         jiraDatesFlow: jiraData.jiraDatesFlow || {}
       }));
+      if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
+        setAssociatedSystems(jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 })));
+      }
       setDescription(jiraData.description || description);
       setIsJiraSearchOpen(false);
     } catch (error) {

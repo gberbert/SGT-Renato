@@ -375,7 +375,8 @@ exports.importJiraTicket = onCall({
             jiraLabels: fields.labels || [],
             createdAt: fields.created,
             rawUrl: `https://${domain}/browse/${data.key}`,
-            jiraDatesFlow
+            jiraDatesFlow,
+            jiraAssociatedSystems: Array.isArray(fields.customfield_10325) ? fields.customfield_10325.map(s => s.value) : []
         };
     } catch (error) {
         console.error("Erro na integração com Jira:", error);
