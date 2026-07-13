@@ -323,8 +323,12 @@ exports.importJiraTicket = onCall({
             description: description || '',
             priority: fields.priority?.name || 'Média',
             status: fields.status?.name || 'Aguardando Atendimento',
-            jiraCreator: fields.creator?.displayName || '',
+            jiraCreator: fields.creator?.displayName || fields.reporter?.displayName || '',
             jiraAssignee: fields.assignee?.displayName || '',
+            jiraType: fields.issuetype?.name || '',
+            jiraDueDate: fields.duedate || '',
+            jiraEnvironment: (typeof fields.environment === 'string') ? fields.environment : '',
+            jiraLabels: fields.labels || [],
             createdAt: fields.created,
             rawUrl: `https://${domain}/browse/${data.key}`
         };

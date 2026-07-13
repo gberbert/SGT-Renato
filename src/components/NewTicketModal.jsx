@@ -22,7 +22,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     assignee: '',
     startDate: '',
     endDate: '',
-    parentDemandaId: ''
+    parentDemandaId: '',
+    environment: '',
+    reporter: ''
   });
   const [associatedSystems, setAssociatedSystems] = useState([]);
 
@@ -128,7 +130,12 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         ...prev,
         title: jiraData.title || prev.title,
         priority: jiraData.priority?.toLowerCase().includes('alta') ? 'high' : 
-                  jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium'
+                  jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium',
+        type: jiraData.jiraType ? (ticketTypes.find(t => t.name.toLowerCase() === jiraData.jiraType.toLowerCase())?.name || prev.type) : prev.type,
+        endDate: jiraData.jiraDueDate || prev.endDate,
+        environment: jiraData.jiraEnvironment || prev.environment,
+        reporter: jiraData.jiraCreator || prev.reporter,
+        component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component
       }));
       setDescription(jiraData.description || description);
       alert(`Dados do Jira importados com sucesso!\nTicket: ${jiraData.title}`);
@@ -199,6 +206,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         component: formData.component,
         startDate: formData.startDate,
         endDate: formData.endDate,
+        environment: formData.environment,
+        reporter: formData.reporter,
         customData: customData,
         parentId: currentBoard === 'atividades' ? formData.parentDemandaId : parentId,
         board: currentBoard,
@@ -221,7 +230,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         assignee: '',
         startDate: '',
         endDate: '',
-        parentDemandaId: ''
+        parentDemandaId: '',
+        environment: '',
+        reporter: ''
       });
       setAssociatedSystems([]);
       setDescription('');
@@ -435,6 +446,27 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
                   name="endDate" 
                   value={formData.endDate}
                   onChange={handleChange}
+                />
+              </Box>
+            </Flex>
+            
+            <Flex gap="4">
+              <Box style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Relator (Origem Jira)</Text>
+                <TextField.Root 
+                  name="reporter" 
+                  value={formData.reporter}
+                  onChange={handleChange}
+                  placeholder="Ex: Nome do Relator"
+                />
+              </Box>
+              <Box style={{ flex: 1 }}>
+                <Text as="div" size="2" mb="1" weight="bold">Ambiente (Jira)</Text>
+                <TextField.Root 
+                  name="environment" 
+                  value={formData.environment}
+                  onChange={handleChange}
+                  placeholder="Ex: Produção"
                 />
               </Box>
             </Flex>
