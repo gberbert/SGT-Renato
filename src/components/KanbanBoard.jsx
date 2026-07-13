@@ -18,7 +18,7 @@ import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToAllocations } from '../services/allocationService';
 import { auth } from '../firebase';
-import { Filter } from 'lucide-react';
+import { Loader2, LayoutList, List, LayoutGrid, Filter } from 'lucide-react';
 import { Button, Flex, Select, Text, Table, Badge, Card, Dialog, Grid, TextField, ScrollArea } from '@radix-ui/themes';
 
 const DEFAULT_COLUMNS = [
