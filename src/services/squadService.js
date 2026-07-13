@@ -21,7 +21,6 @@ export const subscribeToProjectSquads = (projectId, callback, onError) => {
   if (projectId === undefined) {
     return () => {};
   }
-  const squadsCollection = collection(db, SQUADS_COLLECTION);
   const q = projectId === 'all' 
     ? query(squadsCollection, orderBy('createdAt', 'desc'))
     : query(squadsCollection, where('projectId', '==', projectId));
