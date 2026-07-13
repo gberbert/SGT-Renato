@@ -216,6 +216,10 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   };
 
   const handleDeleteTicket = async () => {
+    if (!ticket || !ticket.id) {
+      alert("Erro: O ticket selecionado não possui um ID válido para ser excluído.");
+      return;
+    }
     if (window.confirm('Tem certeza que deseja excluir este ticket?')) {
       const userName = auth.currentUser?.displayName || 'Sistema';
       try {

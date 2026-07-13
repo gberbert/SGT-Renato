@@ -244,6 +244,10 @@ export const updateTicket = async (ticketId, updates, userName = 'Sistema') => {
 };
 
 export const deleteTicket = async (ticketId, userName = 'Sistema') => {
+  if (!ticketId) {
+    console.error("Tentativa de excluir ticket sem ID");
+    return;
+  }
   try {
     const ticketRef = doc(db, COLLECTION_NAME, ticketId);
     await deleteDoc(ticketRef);
