@@ -422,3 +422,15 @@ export const fetchJiraTicket = async (ticketKey) => {
     throw error;
   }
 };
+
+export const searchJiraTickets = async () => {
+  try {
+    const functions = getFunctions(app);
+    const searchJira = httpsCallable(functions, 'searchJiraTickets');
+    const result = await searchJira();
+    return result.data;
+  } catch (error) {
+    console.error("Erro ao pesquisar no Jira:", error);
+    throw error;
+  }
+};

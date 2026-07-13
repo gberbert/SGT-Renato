@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid, IconButton } from '@radix-ui/themes';
-import { createTicket, subscribeToTickets, fetchJiraTicket } from '../services/ticketService';
+import { createTicket, subscribeToTickets, fetchJiraTicket, searchJiraTickets } from '../services/ticketService';
 import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields, subscribeToWorkflows } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { auth } from '../firebase';
 import RichTextEditor from './RichTextEditor';
-import { Loader2, Plus, Trash2, Download } from 'lucide-react';
+import { Loader2, Plus, Trash2, Download, Search } from 'lucide-react';
 
 const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'demandas' }) => {
   const [loading, setLoading] = useState(false);
@@ -147,6 +147,41 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     }
   };
 
+  const [isJiraSearchOpen, setIsJiraSearchOpen] = useState(false);
+  const [jiraSearchResults, setJiraSearchResults] = useState([]);
+  const [loadingJiraSearch, setLoadingJiraSearch] = useState(false);
+
+  const handleOpenJiraSearch = async () => {
+    setIsJiraSearchOpen(true);
+    setLoadingJiraSearch(true);
+    try {
+      const results = await searchJiraTickets();
+      setJiraSearchResults(results);
+    } catch (error) {
+      console.error(error);
+      alert("Falha ao buscar demandas no Jira: " + error.message);
+    } finally {
+      setLoadingJiraSearch(false);
+    }
+  };
+
+  const handleSelectJiraTicket = (jiraData) => {
+    setFormData(prev => ({
+      ...prev,
+      externalTicket: jiraData.code,
+      title: jiraData.title || prev.title,
+      priority: jiraData.priority?.toLowerCase().includes('alta') ? 'high' : 
+                jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium',
+      type: jiraData.jiraType ? (ticketTypes.find(t => t.name.toLowerCase() === jiraData.jiraType.toLowerCase())?.name || prev.type) : prev.type,
+      endDate: jiraData.jiraDueDate || prev.endDate,
+      environment: jiraData.jiraEnvironment || prev.environment,
+      reporter: jiraData.jiraCreator || prev.reporter,
+      component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component
+    }));
+    setDescription(jiraData.description || description);
+    setIsJiraSearchOpen(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.projectId || !formData.externalTicket?.trim() || !formData.type) {
@@ -247,6 +282,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
   };
 
   return (
+    <>
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Content maxWidth="600px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Dialog.Title>{currentBoard === 'atividades' ? 'Nova Atividade' : 'Nova Demanda'}</Dialog.Title>
@@ -306,6 +342,9 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
                   onChange={handleChange}
                 >
                   <TextField.Slot side="right" pr="1">
+                    <IconButton size="1" variant="soft" color="indigo" type="button" onClick={handleOpenJiraSearch} disabled={loadingJiraSearch} title="Pesquisar Demandas no Jira" mr="1" style={{ marginRight: '4px' }}>
+                      <Search size={14} />
+                    </IconButton>
                     <IconButton size="1" variant="soft" color="blue" type="button" onClick={handleImportJira} disabled={loadingJira} title="Importar dados do Jira">
                       {loadingJira ? <Loader2 className="spinner-icon" size={14} /> : <Download size={14} />}
                     </IconButton>
@@ -537,6 +576,39 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         </form>
       </Dialog.Content>
     </Dialog.Root>
+
+    <Dialog.Root open={isJiraSearchOpen} onOpenChange={setIsJiraSearchOpen}>
+      <Dialog.Content maxWidth="700px" style={{ zIndex: 9999 }}>
+        <Dialog.Title>Demandas Corporativas (Jira)</Dialog.Title>
+        <Dialog.Description size="2" mb="4" color="gray">
+          Selecione uma demanda para preencher automaticamente o formulário.
+        </Dialog.Description>
+        
+        {loadingJiraSearch ? (
+          <Flex justify="center" p="6"><Loader2 className="spinner-icon" size={32} /></Flex>
+        ) : (
+          <Flex direction="column" gap="3" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {jiraSearchResults.length === 0 ? (
+              <Text>Nenhuma demanda encontrada no filtro.</Text>
+            ) : (
+              jiraSearchResults.map(issue => (
+                <Box key={issue.code} p="3" style={{ border: '1px solid var(--gray-5)', borderRadius: '8px', cursor: 'pointer' }} onClick={() => handleSelectJiraTicket(issue)}>
+                  <Flex justify="between" mb="1">
+                    <Text weight="bold">{issue.code}</Text>
+                    <Text size="1" color="gray">{issue.status}</Text>
+                  </Flex>
+                  <Text size="2">{issue.title}</Text>
+                </Box>
+              ))
+            )}
+          </Flex>
+        )}
+        <Flex gap="3" mt="5" justify="end">
+          <Button variant="soft" color="gray" onClick={() => setIsJiraSearchOpen(false)}>Cancelar</Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+    </>
   );
 };
 

@@ -337,3 +337,85 @@ exports.importJiraTicket = onCall({
         throw new HttpsError("internal", "Falha de Leitura do Jira: " + error.message);
     }
 });
+
+exports.searchJiraTickets = onCall({
+    maxInstances: 10,
+    timeoutSeconds: 30,
+    memory: "256MiB"
+}, async (request) => {
+    const token = process.env.JIRA_API_TOKEN;
+    const email = process.env.JIRA_USER_EMAIL;
+    const domain = process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
+
+    if (!token || !email) {
+        throw new HttpsError("failed-precondition", "Credenciais do Jira não configuradas no servidor.");
+    }
+
+    const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
+    // JQL from user request
+    const jql = 'project = DEMANDA AND type = Solicitação AND "empresa[dropdown]" IN ("NTT Ltda", "NTT DATA", "GLOBAL NTT") AND "torre de atuação da demanda[dropdown]" = "SISTEMAS CORPORATIVOS" AND status != Cancelada ORDER BY created DESC';
+    const jiraUrl = `https://${domain}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=50`;
+
+    try {
+        const response = await fetch(jiraUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': authHeader,
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Jira retornou ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+        const issues = data.issues || [];
+
+        return issues.map(issue => {
+            const fields = issue.fields || {};
+            
+            let description = '';
+            if (fields.description) {
+               if (typeof fields.description === 'string') {
+                   description = fields.description;
+               } else if (fields.description.content) {
+                   description = fields.description.content.map(block => {
+                       if (block.type === 'paragraph' && block.content) {
+                           return block.content.map(textNode => textNode.text || '').join('');
+                       }
+                       if (block.type === 'bulletList' && block.content) {
+                           return block.content.map(li => {
+                              if (li.content && li.content[0] && li.content[0].content) {
+                                 return '- ' + li.content[0].content.map(t => t.text || '').join('');
+                              }
+                              return '- item';
+                           }).join('\n');
+                       }
+                       return '';
+                   }).filter(t => t.length > 0).join('\n\n');
+               }
+            }
+
+            return {
+                code: issue.key,
+                title: fields.summary || '',
+                description: description || '',
+                priority: fields.priority?.name || 'Média',
+                status: fields.status?.name || 'Aguardando Atendimento',
+                jiraCreator: fields.creator?.displayName || fields.reporter?.displayName || '',
+                jiraAssignee: fields.assignee?.displayName || '',
+                jiraType: fields.issuetype?.name || '',
+                jiraDueDate: fields.duedate || '',
+                jiraEnvironment: (typeof fields.environment === 'string') ? fields.environment : '',
+                jiraLabels: fields.labels || [],
+                createdAt: fields.created,
+                rawUrl: `https://${domain}/browse/${issue.key}`
+            };
+        });
+    } catch (error) {
+        console.error("Erro ao pesquisar no Jira:", error);
+        throw new HttpsError("internal", "Falha de Pesquisa no Jira: " + error.message);
+    }
+});
