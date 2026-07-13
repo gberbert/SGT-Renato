@@ -1,6 +1,7 @@
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc, getDocs, where } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage, auth } from '../firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db, storage, auth, app } from '../firebase';
 import { createNotification } from './notificationService';
 
 const COLLECTION_NAME = 'tickets';
@@ -410,3 +411,14 @@ export const subscribeToEstimationsByTicketId = (ticketId, callback) => {
   });
 };
 
+export const fetchJiraTicket = async (ticketKey) => {
+  try {
+    const functions = getFunctions(app);
+    const importJira = httpsCallable(functions, 'importJiraTicket');
+    const result = await importJira({ ticketKey });
+    return result.data;
+  } catch (error) {
+    console.error("Erro ao importar do Jira:", error);
+    throw error;
+  }
+};

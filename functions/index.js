@@ -254,3 +254,82 @@ REGRAS CRÍTICAS DE GERAÇÃO:
         throw new HttpsError("internal", "Erro ao processar a resposta do Gemini: " + error.message);
     }
 });
+
+exports.importJiraTicket = onCall({
+    maxInstances: 10,
+    timeoutSeconds: 30,
+    memory: "256MiB"
+}, async (request) => {
+    const { ticketKey } = request.data;
+
+    if (!ticketKey) {
+        throw new HttpsError("invalid-argument", "Chave do ticket (ticketKey) não fornecida.");
+    }
+
+    const token = process.env.JIRA_API_TOKEN;
+    const email = process.env.JIRA_USER_EMAIL;
+    const domain = process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
+
+    if (!token || !email) {
+        throw new HttpsError("failed-precondition", "Credenciais do Jira não configuradas no servidor.");
+    }
+
+    const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
+    const jiraUrl = `https://${domain}/rest/api/3/issue/${ticketKey}`;
+
+    try {
+        const response = await fetch(jiraUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': authHeader,
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Jira retornou ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+        const fields = data.fields || {};
+        
+        // Tratar ADF (Atlassian Document Format) para extrair texto
+        let description = '';
+        if (fields.description) {
+           if (typeof fields.description === 'string') {
+               description = fields.description;
+           } else if (fields.description.content) {
+               description = fields.description.content.map(block => {
+                   if (block.type === 'paragraph' && block.content) {
+                       return block.content.map(textNode => textNode.text || '').join('');
+                   }
+                   if (block.type === 'bulletList' && block.content) {
+                       return block.content.map(li => {
+                          if (li.content && li.content[0] && li.content[0].content) {
+                             return '- ' + li.content[0].content.map(t => t.text || '').join('');
+                          }
+                          return '- item';
+                       }).join('\n');
+                   }
+                   return '';
+               }).filter(t => t.length > 0).join('\n\n');
+           }
+        }
+
+        return {
+            code: data.key,
+            title: fields.summary || '',
+            description: description || '',
+            priority: fields.priority?.name || 'Média',
+            status: fields.status?.name || 'Aguardando Atendimento',
+            jiraCreator: fields.creator?.displayName || '',
+            jiraAssignee: fields.assignee?.displayName || '',
+            createdAt: fields.created,
+            rawUrl: `https://${domain}/browse/${data.key}`
+        };
+    } catch (error) {
+        console.error("Erro na integração com Jira:", error);
+        throw new HttpsError("internal", "Falha de Leitura do Jira: " + error.message);
+    }
+});

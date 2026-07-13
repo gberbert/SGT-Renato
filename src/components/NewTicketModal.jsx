@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid, IconButton } from '@radix-ui/themes';
-import { createTicket, subscribeToTickets } from '../services/ticketService';
+import { createTicket, subscribeToTickets, fetchJiraTicket } from '../services/ticketService';
 import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields, subscribeToWorkflows } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { auth } from '../firebase';
 import RichTextEditor from './RichTextEditor';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Download } from 'lucide-react';
 
 const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'demandas' }) => {
   const [loading, setLoading] = useState(false);
@@ -113,6 +113,31 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
       updated[index][field] = value;
     }
     setAssociatedSystems(updated);
+  };
+
+  const [loadingJira, setLoadingJira] = useState(false);
+  const handleImportJira = async () => {
+    if (!formData.externalTicket || !formData.externalTicket.trim()) {
+      alert("Por favor, digite a chave do ticket do Jira (Ex: PROJ-123) no campo Ticket Externo.");
+      return;
+    }
+    setLoadingJira(true);
+    try {
+      const jiraData = await fetchJiraTicket(formData.externalTicket.trim());
+      setFormData(prev => ({
+        ...prev,
+        title: jiraData.title || prev.title,
+        priority: jiraData.priority?.toLowerCase().includes('alta') ? 'high' : 
+                  jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium'
+      }));
+      setDescription(jiraData.description || description);
+      alert(`Dados do Jira importados com sucesso!\nTicket: ${jiraData.title}`);
+    } catch (error) {
+      console.error(error);
+      alert("Falha ao importar do Jira: " + error.message);
+    } finally {
+      setLoadingJira(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -268,7 +293,13 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
                   placeholder="Ex: DEMANDA-123"
                   value={formData.externalTicket}
                   onChange={handleChange}
-                />
+                >
+                  <TextField.Slot side="right" pr="1">
+                    <IconButton size="1" variant="soft" color="blue" type="button" onClick={handleImportJira} disabled={loadingJira} title="Importar dados do Jira">
+                      {loadingJira ? <Loader2 className="spinner-icon" size={14} /> : <Download size={14} />}
+                    </IconButton>
+                  </TextField.Slot>
+                </TextField.Root>
               </Box>
             </Flex>
 
