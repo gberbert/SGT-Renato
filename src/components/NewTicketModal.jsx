@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, TextField, Select, Box, Grid, IconButton } from '@radix-ui/themes';
 import { createTicket, subscribeToTickets, fetchJiraTicket, searchJiraTickets } from '../services/ticketService';
-import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields, subscribeToWorkflows } from '../services/settingsService';
+import { subscribeToTicketTypes, subscribeToUsers, subscribeToSystems, subscribeToComponents, subscribeToCustomFields, subscribeToWorkflows, saveSystem } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { auth } from '../firebase';
@@ -141,6 +141,12 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
       }));
       if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
         setAssociatedSystems(jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 })));
+        
+        jiraData.jiraAssociatedSystems.forEach(sysName => {
+          if (!systems.some(s => s.name === sysName)) {
+            saveSystem({ name: sysName, projectId: formData.projectId || '' }).catch(console.error);
+          }
+        });
       }
       setDescription(jiraData.description || description);
       alert(`Dados do Jira importados com sucesso!\nTicket: ${jiraData.title}`);
@@ -189,6 +195,12 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
       }));
       if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
         setAssociatedSystems(jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 })));
+        
+        jiraData.jiraAssociatedSystems.forEach(sysName => {
+          if (!systems.some(s => s.name === sysName)) {
+            saveSystem({ name: sysName, projectId: formData.projectId || '' }).catch(console.error);
+          }
+        });
       }
       setDescription(jiraData.description || description);
       setIsJiraSearchOpen(false);
