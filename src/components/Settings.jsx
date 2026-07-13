@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Box, Text, Card, Flex, Button, Table, Badge, Dialog, TextField, Select, IconButton } from '@radix-ui/themes';
+import { Tabs, Box, Text, Card, Flex, Button, Table, Badge, Dialog, TextField, Select, IconButton, TextArea } from '@radix-ui/themes';
 import { 
   subscribeToTicketTypes, saveTicketType, deleteTicketType, 
   subscribeToWorkflows, saveWorkflow, deleteWorkflow, 
