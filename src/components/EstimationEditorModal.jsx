@@ -233,6 +233,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
       
       // -- NOVIDADE: Atualiza o Ticket atrelado --
       // Busca todas as estimativas deste ticket para garantir a soma correta
+      if (selectedTicketId === undefined) return;
       const q = query(collection(db, 'estimations'), where('ticketId', '==', selectedTicketId));
       const querySnapshot = await getDocs(q);
       
@@ -303,6 +304,7 @@ const EstimationEditorModal = ({ open, onOpenChange, dbRules, systems, tickets, 
         }
 
         // Busca atividades auto-geradas por esta estimativa
+        if (targetEstimationId === undefined) return;
         const actQuery = query(
           collection(db, 'tickets'), 
           where('board', '==', 'atividades'), 

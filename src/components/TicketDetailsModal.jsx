@@ -143,6 +143,7 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
       // Sincronizar campo Squad para as Atividades filhas automaticamente
       if (field === 'squadId' && (!ticket.board || ticket.board === 'demandas')) {
         try {
+          if (ticket.id === undefined) return;
           const q = query(
             collection(db, 'tickets'), 
             where('parentId', '==', ticket.id),

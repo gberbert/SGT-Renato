@@ -397,6 +397,9 @@ export const subscribeToWorkLogs = (ticketId, callback) => {
 };
 
 export const subscribeToEstimationsByTicketId = (ticketId, callback) => {
+  if (ticketId === undefined) {
+    return () => {};
+  }
   const q = query(
     collection(db, 'estimations'),
     where('ticketId', '==', ticketId)

@@ -19,7 +19,9 @@ export const createNotification = async (userId, title, message, link = null, ad
 };
 
 export const subscribeToUserNotifications = (userId, callback, onNewNotification = null) => {
-  if (!userId) return () => {};
+  if (userId === undefined) {
+    return () => {};
+  }
   
   const q = query(
     collection(db, 'notifications'),

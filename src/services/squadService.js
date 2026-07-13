@@ -18,8 +18,12 @@ export const createSquad = async (squadData) => {
 };
 
 export const subscribeToProjectSquads = (projectId, callback, onError) => {
+  if (projectId === undefined) {
+    return () => {};
+  }
+  const squadsCollection = collection(db, SQUADS_COLLECTION);
   const q = projectId === 'all' 
-    ? query(squadsCollection)
+    ? query(squadsCollection, orderBy('createdAt', 'desc'))
     : query(squadsCollection, where('projectId', '==', projectId));
   
   return onSnapshot(q, (snapshot) => {
