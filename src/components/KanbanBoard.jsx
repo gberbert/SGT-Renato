@@ -39,7 +39,10 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
   const [viewMode, setViewMode] = useState('list'); // 'kanban' | 'list'
   const [projects, setProjects] = useState([]);
   const [workflows, setWorkflows] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('all');
+  const [selectedProjectId, setSelectedProjectId] = useState(() => {
+    return localStorage.getItem('lastSelectedProjectId') || 'all';
+  });
+  const [systemsModalData, setSystemsModalData] = useState(null);
   
   const [squads, setSquads] = useState([]);
   const [globalSquads, setGlobalSquads] = useState([]);
@@ -138,6 +141,12 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     }
     const unsub = subscribeToProjectSquads(selectedProjectId, setSquads, console.error);
     return () => unsub();
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      localStorage.setItem('lastSelectedProjectId', selectedProjectId);
+    }
   }, [selectedProjectId]);
 
   const sensors = useSensors(
@@ -351,6 +360,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     : [null];
 
   return (
+    <>
     <div className="kanban-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="kanban-header">
         <Flex align="center" gap="2" className="kanban-filters">
@@ -513,12 +523,16 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
                             <Table.Cell><Text weight="bold" color="indigo">{t.code}</Text></Table.Cell>
                             <Table.Cell>{t.title}</Table.Cell>
                             <Table.Cell>
-                              {(t.associatedSystems && t.associatedSystems.length > 0) ? (
-                                <Flex gap="1" wrap="wrap">
-                                  {t.associatedSystems.map((sys, idx) => (
-                                    <Badge key={idx} color="blue" variant="soft">{sys.system}</Badge>
-                                  ))}
-                                </Flex>
+                              {t.associatedSystems && t.associatedSystems.length > 0 ? (
+                                t.associatedSystems.length === 1 ? (
+                                  <Badge color="blue" variant="soft" style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {t.associatedSystems[0].system}
+                                  </Badge>
+                                ) : (
+                                  <Button size="1" variant="soft" color="blue" onClick={(e) => { e.stopPropagation(); setSystemsModalData(t.associatedSystems); }}>
+                                    Ver Sistemas ({t.associatedSystems.length})
+                                  </Button>
+                                )
                               ) : '-'}
                             </Table.Cell>
                             <Table.Cell>
@@ -605,6 +619,23 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
         )}
       </div>
     </div>
+      
+      <Dialog.Root open={!!systemsModalData} onOpenChange={(open) => !open && setSystemsModalData(null)}>
+        <Dialog.Content maxWidth="400px">
+          <Dialog.Title>Sistemas Associados</Dialog.Title>
+          <Flex direction="column" gap="2" mt="2">
+            {systemsModalData?.map((s, i) => (
+              <Badge key={i} color="blue" variant="soft" size="2" style={{ padding: '8px', justifyContent: 'flex-start' }}>
+                {s.system}
+              </Badge>
+            ))}
+          </Flex>
+          <Flex justify="end" mt="4">
+            <Button variant="soft" color="gray" onClick={() => setSystemsModalData(null)}>Fechar</Button>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
+    </>
   );
 };
 

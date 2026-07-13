@@ -70,6 +70,15 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
   }, []);
 
   useEffect(() => {
+    if (isOpen) {
+      const lastProj = localStorage.getItem('lastSelectedProjectId');
+      if (lastProj && lastProj !== 'all') {
+        setFormData(prev => ({ ...prev, projectId: lastProj }));
+      }
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     setFormData(prev => ({ ...prev, squadId: '' }));
     if (!formData.projectId) {
       setSquads([]);
