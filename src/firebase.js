@@ -15,7 +15,7 @@ export const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 
 // Conectar explicitamente ao banco de dados nomeado como "default" (sem parênteses)
 export const db = getFirestore(app, "default");
