@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Button, Text, Flex, Callout } from '@radix-ui/themes';
+import { Button, Text, Flex, Callout, Dialog } from '@radix-ui/themes';
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, createAuthUser } from '../firebase';
 import { Upload, Info, Loader2 } from 'lucide-react';
@@ -146,7 +146,22 @@ export default function ImportUsersCSV() {
       // Save squads
       for (const sqName in squadsByName) {
         const sq = squadsByName[sqName];
-        await updateDoc(doc(db, 'squads', sq.id), { users: sq.users });
+        
+        // Remove duplicates, ghost records, and fix legacy `userId` keys
+        const uniqueUsers = [];
+        const seenIds = new Set();
+        sq.users.forEach(u => {
+           const uid = u.id || u.userId;
+           if (uid && !seenIds.has(uid)) {
+               seenIds.add(uid);
+               uniqueUsers.push({ 
+                 id: uid, 
+                 role: u.role === 'desenvolvedor' ? 'Developer' : (u.role || 'Developer') 
+               });
+           }
+        });
+
+        await updateDoc(doc(db, 'squads', sq.id), { users: uniqueUsers });
       }
 
       setMessage({ type: 'success', text: `Importação concluída! ${added} novos criados, ${updated} atualizados.` });
@@ -199,20 +214,17 @@ export default function ImportUsersCSV() {
         </Callout.Root>
       )}
 
-      {loading && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          color: 'white'
-        }}>
-          <Loader2 size={80} className="spinner-icon" style={{ animation: 'spin 1.5s linear infinite', marginBottom: '30px' }} />
-          <Text size="7" weight="bold">Processando Importação...</Text>
-          <Text size="5" mt="4">Criando usuários e vinculando Squads.</Text>
-          <Text size="4" mt="4" color="gray">O Firebase pode pausar alguns segundos por segurança anti-spam.</Text>
-          <Text size="4" color="red" weight="bold">NÃO feche ou recarregue a aba!</Text>
-        </div>
-      )}
+      <Dialog.Root open={loading}>
+        <Dialog.Content style={{ maxWidth: 500, background: 'var(--blue-3)', border: '2px dashed var(--blue-8)' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <Flex direction="column" align="center" justify="center" gap="3" p="4">
+            <Loader2 size={64} className="spinner-icon" color="var(--blue-11)" style={{ animation: 'spin 1.5s linear infinite' }} />
+            <Text size="6" weight="bold" style={{ color: 'var(--blue-11)' }}>Processando Importação...</Text>
+            <Text size="4" style={{ color: 'var(--blue-11)' }}>Criando usuários e vinculando Squads.</Text>
+            <Text size="3" mt="2" color="ruby" weight="bold">O Firebase pode pausar alguns segundos por segurança anti-spam.</Text>
+            <Text size="3" color="ruby" weight="bold">NÃO feche ou recarregue a aba!</Text>
+          </Flex>
+        </Dialog.Content>
+      </Dialog.Root>
     </Flex>
   );
 }
