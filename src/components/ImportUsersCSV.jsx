@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button, Text, Flex, Callout } from '@radix-ui/themes';
 import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db, createAuthUser } from '../firebase';
-import { Upload, Info } from 'lucide-react';
+import { Upload, Info, Loader2 } from 'lucide-react';
 
 export default function ImportUsersCSV() {
   const [loading, setLoading] = useState(false);
@@ -164,8 +164,8 @@ export default function ImportUsersCSV() {
           <Text color="gray" size="2">Ordem: Nome;Nome Resumido;Email;SiglaDaSquad</Text>
         </Flex>
         <Button disabled={loading} onClick={() => fileInputRef.current?.click()}>
-          <Upload size={16} />
-          {loading ? 'Processando...' : 'Selecionar Arquivo CSV'}
+          {loading ? <Loader2 size={16} className="spinner-icon" /> : <Upload size={16} />}
+          {loading ? 'Processando Usuários...' : 'Selecionar Arquivo CSV'}
         </Button>
       </Flex>
 
