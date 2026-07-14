@@ -83,9 +83,9 @@ export default function ImportUsersCSV() {
                 tempPassword,
                 createdAt: serverTimestamp()
              });
-             // Limpar as squads antigas vinculadas ao ID fantasma
+              // Limpar as squads antigas vinculadas ao ID fantasma
              for (const sqName in squadsByName) {
-                squadsByName[sqName].users = squadsByName[sqName].users.filter(u => u.userId !== oldDoc.id);
+                squadsByName[sqName].users = squadsByName[sqName].users.filter(u => u.id !== oldDoc.id);
              }
              added++;
           } else {
@@ -117,13 +117,13 @@ export default function ImportUsersCSV() {
           const sq = squadsByName[sqName];
           if (sqName === squadName) {
             // Target squad: add if not present
-            const existingIdx = sq.users.findIndex(u => u.userId === userId);
+            const existingIdx = sq.users.findIndex(u => u.id === userId);
             if (existingIdx === -1) {
-              sq.users.push({ userId, role: 'desenvolvedor' });
+              sq.users.push({ id: userId, role: 'Developer' });
             }
           } else {
             // Other squad: remove if present
-            sq.users = sq.users.filter(u => u.userId !== userId);
+            sq.users = sq.users.filter(u => u.id !== userId);
           }
         }
       }
