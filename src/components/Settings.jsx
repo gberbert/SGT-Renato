@@ -11,7 +11,9 @@ import {
   subscribeToAISettings, saveAISettings
 } from '../services/settingsService';
 import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key } from 'lucide-react';
+import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
+import ImportUsersCSV from './ImportUsersCSV';
 import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
@@ -529,10 +531,12 @@ const Settings = () => {
                   <Text as="h2" size="4" weight="bold">Gestão de Usuários</Text>
                   <Text color="gray" as="p">Gerencie os usuários, papéis e os nomes exibidos.</Text>
                 </Box>
-                <Button onClick={openNewUserModal}>
+                <Button size="3" onClick={() => setIsUserModalOpen(true)}>
+                  <Plus size={18} />
                   Novo Usuário
                 </Button>
               </Flex>
+              <ImportUsersCSV />
               {loadingUsers ? <Loader2 className="spinner-icon" /> : (
                 <Table.Root variant="surface">
                   <Table.Header>
