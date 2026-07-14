@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button, Text, Flex, Callout } from '@radix-ui/themes';
-import { collection, doc, setDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { db, createAuthUser } from '../firebase';
 import { Upload, Info } from 'lucide-react';
 
 export default function ImportUsersCSV() {
@@ -54,18 +54,59 @@ export default function ImportUsersCSV() {
         const squadName = parts[3].trim().toUpperCase();
 
         let userId = null;
+        let isNewAuth = false;
+        const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
+        let authUid = null;
+        
+        try {
+           authUid = await createAuthUser(email, tempPassword, false);
+           isNewAuth = true;
+        } catch (err) {
+           if (err.code === 'auth/email-already-in-use') {
+              isNewAuth = false;
+           } else {
+              throw err;
+           }
+        }
+
         if (usersByEmail[email]) {
-          userId = usersByEmail[email].id;
-          await updateDoc(doc(db, 'users', userId), { name, shortName });
-          updated++;
+          const oldDoc = usersByEmail[email];
+          if (isNewAuth) {
+             // O usuário existia apenas no Firestore (documento "fantasma" criado erroneamente), vamos deletar e recriar corretamente com o ID do Auth
+             await deleteDoc(doc(db, 'users', oldDoc.id));
+             userId = authUid;
+             await setDoc(doc(db, 'users', userId), {
+                displayName: name,
+                shortName,
+                email,
+                role: 'user',
+                tempPassword,
+                createdAt: serverTimestamp()
+             });
+             // Limpar as squads antigas vinculadas ao ID fantasma
+             for (const sqName in squadsByName) {
+                squadsByName[sqName].users = squadsByName[sqName].users.filter(u => u.userId !== oldDoc.id);
+             }
+             added++;
+          } else {
+             // O usuário já existe no Auth e no Firestore (ou no Auth antigo e estamos apenas atualizando)
+             userId = oldDoc.id;
+             await updateDoc(doc(db, 'users', userId), { displayName: name, shortName });
+             updated++;
+          }
         } else {
-          const userRef = doc(collection(db, 'users'));
-          userId = userRef.id;
-          await setDoc(userRef, {
-            name,
+          // Não existe no Firestore
+          userId = authUid;
+          if (!userId) {
+             console.warn(`Email ${email} já existe no Auth mas não no Firestore. Não é possível descobrir o UID. Pulando...`);
+             continue;
+          }
+          await setDoc(doc(db, 'users', userId), {
+            displayName: name,
             shortName,
             email,
             role: 'user',
+            tempPassword,
             createdAt: serverTimestamp()
           });
           added++;
