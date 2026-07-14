@@ -58,16 +58,31 @@ export default function ImportUsersCSV() {
         const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
         let authUid = null;
         
-        try {
-           authUid = await createAuthUser(email, tempPassword, false);
-           isNewAuth = true;
-        } catch (err) {
-           if (err.code === 'auth/email-already-in-use') {
-              isNewAuth = false;
-           } else {
-              throw err;
+        const createWithRetry = async (em, pass, retries = 3) => {
+           for (let r = 0; r < retries; r++) {
+              try {
+                 const uid = await createAuthUser(em, pass, false);
+                 // Delay para evitar bloqueio por anti-spam do Firebase
+                 await new Promise(resolve => setTimeout(resolve, 1500));
+                 return { uid, isNew: true };
+              } catch (e) {
+                 if (e.code === 'auth/email-already-in-use') {
+                    return { uid: null, isNew: false };
+                 }
+                 if (e.code === 'auth/too-many-requests') {
+                    console.log("Rate limit hit. Esperando 3 segundos...");
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    continue;
+                 }
+                 throw e;
+              }
            }
-        }
+           throw new Error("Muitas requisições (auth/too-many-requests). O Firebase bloqueou temporariamente a criação. Aguarde 1 minuto e tente novamente.");
+        };
+
+        const authResult = await createWithRetry(email, tempPassword);
+        authUid = authResult.uid;
+        isNewAuth = authResult.isNew;
 
         if (usersByEmail[email]) {
           const oldDoc = usersByEmail[email];
@@ -178,9 +193,18 @@ export default function ImportUsersCSV() {
       />
 
       {message && (
-        <Callout.Root color={message.type === 'error' ? 'red' : 'green'} size="1" mt="2">
-          <Callout.Icon><Info size={14} /></Callout.Icon>
-          <Callout.Text>{message.text}</Callout.Text>
+        <Callout.Root color={message.type === 'error' ? 'red' : 'green'} size="2" mt="4">
+          <Callout.Icon><Info size={16} /></Callout.Icon>
+          <Callout.Text weight="bold">{message.text}</Callout.Text>
+        </Callout.Root>
+      )}
+
+      {loading && (
+        <Callout.Root color="blue" size="2" mt="4">
+          <Flex align="center" gap="3">
+            <Loader2 size={24} className="spinner-icon" style={{ animation: 'spin 1s linear infinite' }} />
+            <Text weight="bold" size="3">Processando arquivo CSV e vinculando Squads... Por favor, aguarde!</Text>
+          </Flex>
         </Callout.Root>
       )}
     </Flex>
