@@ -58,26 +58,26 @@ export default function ImportUsersCSV() {
         const tempPassword = Math.random().toString(36).slice(-8) + "Aa1@";
         let authUid = null;
         
-        const createWithRetry = async (em, pass, retries = 3) => {
+        const createWithRetry = async (em, pass, retries = 5) => {
            for (let r = 0; r < retries; r++) {
               try {
                  const uid = await createAuthUser(em, pass, false);
-                 // Delay para evitar bloqueio por anti-spam do Firebase
-                 await new Promise(resolve => setTimeout(resolve, 1500));
+                 // Delay maior para evitar bloqueio por anti-spam do Firebase
+                 await new Promise(resolve => setTimeout(resolve, 2500));
                  return { uid, isNew: true };
               } catch (e) {
                  if (e.code === 'auth/email-already-in-use') {
                     return { uid: null, isNew: false };
                  }
                  if (e.code === 'auth/too-many-requests') {
-                    console.log("Rate limit hit. Esperando 3 segundos...");
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    console.log("Rate limit hit. Esperando 10 segundos...");
+                    await new Promise(resolve => setTimeout(resolve, 10000));
                     continue;
                  }
                  throw e;
               }
            }
-           throw new Error("Muitas requisições (auth/too-many-requests). O Firebase bloqueou temporariamente a criação. Aguarde 1 minuto e tente novamente.");
+           throw new Error("Muitas requisições (auth/too-many-requests). O Firebase bloqueou temporariamente a criação. Aguarde uns 2 minutos e tente novamente com os que faltaram.");
         };
 
         const authResult = await createWithRetry(email, tempPassword);
@@ -200,12 +200,18 @@ export default function ImportUsersCSV() {
       )}
 
       {loading && (
-        <Callout.Root color="blue" size="2" mt="4">
-          <Flex align="center" gap="3">
-            <Loader2 size={24} className="spinner-icon" style={{ animation: 'spin 1s linear infinite' }} />
-            <Text weight="bold" size="3">Processando arquivo CSV e vinculando Squads... Por favor, aguarde!</Text>
-          </Flex>
-        </Callout.Root>
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          color: 'white'
+        }}>
+          <Loader2 size={80} className="spinner-icon" style={{ animation: 'spin 1.5s linear infinite', marginBottom: '30px' }} />
+          <Text size="7" weight="bold">Processando Importação...</Text>
+          <Text size="5" mt="4">Criando usuários e vinculando Squads.</Text>
+          <Text size="4" mt="4" color="gray">O Firebase pode pausar alguns segundos por segurança anti-spam.</Text>
+          <Text size="4" color="red" weight="bold">NÃO feche ou recarregue a aba!</Text>
+        </div>
       )}
     </Flex>
   );
