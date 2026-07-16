@@ -367,6 +367,90 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
     ? [...new Set(filteredTickets.map(t => t.assignee || 'Sem responsável'))] 
     : [null];
 
+  const handleCargaFull = async () => {
+    setIsCargaFullLoading(true);
+    try {
+      setCargaFullProgress({ current: 0, total: 0, text: 'Buscando lista de tickets no Jira...' });
+      const results = await searchJiraTickets(); 
+      
+      if (!results || results.length === 0) {
+        alert("Nenhuma demanda encontrada no Jira para importação.");
+        return;
+      }
+      
+      setCargaFullProgress({ current: 0, total: results.length, text: 'Iniciando upsert...' });
+      
+      let count = 0;
+      for (const issue of results) {
+        try {
+          setCargaFullProgress({ current: count + 1, total: results.length, text: `Importando: ${issue.code}` });
+          
+          const jiraData = await fetchJiraTicket(issue.code);
+          
+          const proj = projects.find(p => p.id === (selectedProjectId === 'all' ? (projects[0]?.id || 'unknown') : selectedProjectId));
+          let startColumnId = 'col-backlog';
+          if (proj) {
+            const targetWorkflowId = board === 'atividades' ? proj.workflowAtividadesId : proj.workflowId;
+            const flow = workflows.find(w => w.id === targetWorkflowId);
+            if (flow && flow.columns && flow.columns.length > 0) {
+              startColumnId = flow.columns[0].id;
+            } else if (flow && flow.columnsStr) {
+              const firstColName = flow.columnsStr.split(',')[0].trim();
+              startColumnId = `col-${firstColName.toLowerCase().replace(/\s+/g, '-')}`;
+            }
+          }
+          
+          let associatedSystems = [];
+          if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
+             associatedSystems = jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 }));
+          }
+          
+          const ticketData = {
+            code: board === 'demandas' ? jiraData.code : `ATV-${jiraData.code}`,
+            title: jiraData.title,
+            description: jiraData.description || '',
+            type: jiraData.jiraType || 'Demanda', 
+            priority: jiraData.priority?.toLowerCase().includes('alta') ? 'high' : 
+                      jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium',
+            columnId: startColumnId,
+            projectId: proj?.id || 'unknown',
+            squadIds: [],
+            assignee: jiraData.jiraAssignee || 'Sem responsável',
+            externalTicket: jiraData.code,
+            associatedSystems: associatedSystems,
+            estimatedHours: 0,
+            storyPoints: 0,
+            component: jiraData.jiraLabels?.length > 0 ? jiraData.jiraLabels[0] : '',
+            startDate: '',
+            endDate: jiraData.jiraDueDate || '',
+            environment: jiraData.jiraEnvironment || '',
+            reporter: jiraData.jiraCreator || '',
+            jiraStatus: jiraData.status || '',
+            jiraDatesFlow: jiraData.jiraDatesFlow || {},
+            customData: {},
+            parentId: '',
+            board: board,
+            comments: 0
+          };
+          
+          await createTicket(ticketData);
+          count++;
+        } catch (err) {
+          console.error(`Erro ao importar ticket ${issue.code}`, err);
+        }
+      }
+      
+      alert(`Carga Full concluída com sucesso! ${count} demandas importadas.`);
+      
+    } catch (error) {
+      console.error(error);
+      alert("Erro na Carga Full: " + error.message);
+    } finally {
+      setIsCargaFullLoading(false);
+      setCargaFullProgress({ current: 0, total: 0, text: '' });
+    }
+  };
+
   return (
     <>
     <div className="kanban-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
