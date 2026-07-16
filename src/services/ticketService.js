@@ -112,12 +112,34 @@ export const subscribeToSubtasks = (parentId, callback) => {
 
 export const createTicket = async (ticketData) => {
   try {
+    const userName = auth?.currentUser?.displayName || 'Sistema';
+
+    // Se for uma demanda e tiver um código, verifica se já existe para fazer Upsert
+    if (ticketData.board === 'demandas' && ticketData.code) {
+      const q = query(collection(db, COLLECTION_NAME), where('code', '==', ticketData.code), where('board', '==', 'demandas'));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        const existingDoc = snapshot.docs[0];
+        const docRef = doc(db, COLLECTION_NAME, existingDoc.id);
+        
+        const dataToUpdate = { ...ticketData, updatedAt: new Date() };
+        delete dataToUpdate.columnId; // Não reseta a coluna do Kanban onde ela já se encontra
+        delete dataToUpdate.comments; // Não reseta a contagem de comentários
+        delete dataToUpdate.createdAt;
+        
+        await updateDoc(docRef, dataToUpdate);
+        await logTicketAction(existingDoc.id, 'Atualizou a demanda através da importação do Jira (Upsert)', ticketData.assignee || userName);
+        
+        return existingDoc.id;
+      }
+    }
+
     const docRef = await addDoc(collection(db, COLLECTION_NAME), {
       ...ticketData,
       createdAt: new Date(),
       updatedAt: new Date()
     });
-    const userName = auth?.currentUser?.displayName || 'Sistema';
     await logTicketAction(docRef.id, 'Criou o ticket', ticketData.assignee || userName);
     
     // Automação: Se for uma demanda, cria automaticamente Estimativa e EF para cada sistema
