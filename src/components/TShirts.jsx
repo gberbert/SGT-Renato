@@ -103,7 +103,8 @@ const TShirts = ({ userRole }) => {
                 
                 if (userRole === 'squad_leader') {
                   const allowedSquadIds = globalSquads.filter(s => s.leaderId === auth.currentUser?.uid).map(s => s.id);
-                  if (!allowedSquadIds.includes(ticket.squadId)) return false;
+                  const tIds = ticket.squadIds || (ticket.squadId ? [ticket.squadId] : []);
+                  if (!tIds.some(id => allowedSquadIds.includes(id))) return false;
                 }
                 
                 return true;

@@ -209,7 +209,9 @@ const Specifications = ({ userRole }) => {
               
               if (userRole === 'squad_leader') {
                 const allowedSquadIds = globalSquads.filter(s => s.leaderId === auth.currentUser?.uid).map(s => s.id);
-                if (!parentDemanda || !allowedSquadIds.includes(parentDemanda.squadId)) return false;
+                if (!parentDemanda) return false;
+                const pIds = parentDemanda.squadIds || (parentDemanda.squadId ? [parentDemanda.squadId] : []);
+                if (!pIds.some(id => allowedSquadIds.includes(id))) return false;
               }
               
               return true;

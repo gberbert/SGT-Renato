@@ -300,11 +300,14 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     : tickets.filter(t => t.projectId === selectedProjectId);
 
   if (selectedSquadId !== 'all') {
-    filteredTickets = filteredTickets.filter(t => t.squadId === selectedSquadId);
+    filteredTickets = filteredTickets.filter(t => t.squadIds?.includes(selectedSquadId) || t.squadId === selectedSquadId);
   }
 
   if (isLeader) {
-    filteredTickets = filteredTickets.filter(t => allowedSquadIds.includes(t.squadId));
+    filteredTickets = filteredTickets.filter(t => {
+       const sIds = t.squadIds || (t.squadId ? [t.squadId] : []);
+       return sIds.some(id => allowedSquadIds.includes(id));
+    });
   }
 
   const isUser = userRole === 'user' && auth.currentUser;
@@ -349,7 +352,9 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     }
     return {
       ...t,
-      squadName: squads.find(sq => sq.id === t.squadId)?.name,
+      squadName: (t.squadIds && t.squadIds.length > 0) 
+        ? t.squadIds.map(id => squads.find(sq => sq.id === id)?.name).filter(Boolean).join(', ')
+        : (squads.find(sq => sq.id === t.squadId)?.name),
       parentTitle: parentObj ? (parentObj.externalTicket || parentObj.code) : null,
       parentCode: parentObj ? (parentObj.externalTicket || parentObj.code) : null
     };

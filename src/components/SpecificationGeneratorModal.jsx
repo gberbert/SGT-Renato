@@ -231,7 +231,9 @@ Faça-me perguntas se alguma dessas informações estiver faltando no meu contex
   const selectedEstimation = estimations?.find(e => e.id === parentId);
   const selectedTicket = tickets?.find(t => t.id === selectedEstimation?.ticketId);
   const selectedProject = projects?.find(p => p.id === selectedTicket?.projectId);
-  const selectedSquad = squads?.find(s => s.id === selectedTicket?.squadId);
+  const selectedSquads = (selectedTicket?.squadIds && selectedTicket?.squadIds.length > 0)
+    ? selectedTicket.squadIds.map(id => squads?.find(s => s.id === id)).filter(Boolean)
+    : [squads?.find(s => s.id === selectedTicket?.squadId)].filter(Boolean);
 
   const mockSpecData = {
     cliente: selectedProject?.cliente || 'CPFL',

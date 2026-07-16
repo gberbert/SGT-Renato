@@ -102,14 +102,14 @@ const MyActivities = ({ user }) => {
     tshirts.forEach(ts => {
       if (ts.executionStatus === 'em_revisao' || ts.executionStatus === 'concluido') {
         const dem = tickets.find(t => t.id === ts.ticketId);
-        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(ts, 'tshirt', `T-Shirt: ${dem.title}`, 'Aprovação: T-Shirt', <Shirt size={16} color="var(--orange-9)" />);
+        if (dem && (dem.squadIds?.some(id => leaderSquadIds.includes(id)) || leaderSquadIds.includes(dem.squadId))) addReviewItem(ts, 'tshirt', `T-Shirt: ${dem.title}`, 'Aprovação: T-Shirt', <Shirt size={16} color="var(--orange-9)" />);
       }
     });
 
     estimations.forEach(est => {
       if (est.executionStatus === 'em_revisao' || est.executionStatus === 'concluido') {
         const dem = tickets.find(t => t.id === est.ticketId);
-        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(est, 'estimativa', `Estimativa: ${dem.title}`, 'Aprovação: Estimativa', <Calculator size={16} color="var(--orange-9)" />);
+        if (dem && (dem.squadIds?.some(id => leaderSquadIds.includes(id)) || leaderSquadIds.includes(dem.squadId))) addReviewItem(est, 'estimativa', `Estimativa: ${dem.title}`, 'Aprovação: Estimativa', <Calculator size={16} color="var(--orange-9)" />);
       }
     });
 
@@ -117,7 +117,7 @@ const MyActivities = ({ user }) => {
       if (spec.executionStatus === 'em_revisao' || spec.executionStatus === 'concluido') {
         const parentEstimativa = estimations.find(e => e.id === spec.parentId);
         const dem = tickets.find(t => t.id === parentEstimativa?.ticketId);
-        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(spec, 'ef', spec.title, 'Aprovação: Espec. Funcional', <FileText size={16} color="var(--orange-9)" />);
+        if (dem && (dem.squadIds?.some(id => leaderSquadIds.includes(id)) || leaderSquadIds.includes(dem.squadId))) addReviewItem(spec, 'ef', spec.title, 'Aprovação: Espec. Funcional', <FileText size={16} color="var(--orange-9)" />);
       }
     });
 
@@ -125,7 +125,7 @@ const MyActivities = ({ user }) => {
       if (spec.executionStatus === 'em_revisao' || spec.executionStatus === 'concluido') {
         const parentEstimativa = estimations.find(e => e.id === spec.parentId);
         const dem = tickets.find(t => t.id === parentEstimativa?.ticketId);
-        if (dem && leaderSquadIds.includes(dem.squadId)) addReviewItem(spec, 'et', spec.title, 'Aprovação: Espec. Técnica', <FileCode size={16} color="var(--orange-9)" />);
+        if (dem && (dem.squadIds?.some(id => leaderSquadIds.includes(id)) || leaderSquadIds.includes(dem.squadId))) addReviewItem(spec, 'et', spec.title, 'Aprovação: Espec. Técnica', <FileCode size={16} color="var(--orange-9)" />);
       }
     });
   }

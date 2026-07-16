@@ -108,7 +108,10 @@ const CapacityPlanning = ({ userRole }) => {
   let demands = tickets.filter(t => (t.board || 'demandas') === 'demandas' && t.columnId !== 'col-done' && t.columnId !== 'col-concluido');
   
   if (isLeader) {
-    demands = demands.filter(d => allowedSquadIds.includes(d.squadId));
+    demands = demands.filter(d => {
+      const dIds = d.squadIds || (d.squadId ? [d.squadId] : []);
+      return dIds.some(id => allowedSquadIds.includes(id));
+    });
   }
   
   const demandsWithPendingActivities = demands.filter(d => {
@@ -331,7 +334,9 @@ const CapacityPlanning = ({ userRole }) => {
             </Table.Header>
             <Table.Body>
               {demandsWithPendingActivities.map(d => {
-                const sq = squads.find(s => s.id === d.squadId);
+                const sqName = (d.squadIds && d.squadIds.length > 0)
+                  ? d.squadIds.map(id => squads.find(s => s.id === id)?.name).filter(Boolean).join(', ')
+                  : squads.find(s => s.id === d.squadId)?.name;
                 return (
                   <Table.Row key={d.id} align="center">
                     <Table.Cell>
@@ -340,7 +345,7 @@ const CapacityPlanning = ({ userRole }) => {
                         <Text weight="bold">{d.title}</Text>
                       </Flex>
                     </Table.Cell>
-                    <Table.Cell>{sq?.name || '-'}</Table.Cell>
+                    <Table.Cell>{sqName || '-'}</Table.Cell>
                     <Table.Cell>
                       <Badge color={d.priority === 'high' ? 'red' : d.priority === 'medium' ? 'orange' : 'green'}>
                         {d.priority === 'high' ? 'Alta' : d.priority === 'medium' ? 'Média' : 'Baixa'}
@@ -474,11 +479,14 @@ const CapacityPlanning = ({ userRole }) => {
       squadMembers = users;
     }
   } else {
-    const squad = squads.find(s => s.id === selectedDemanda.squadId);
+    const dSquadIds = selectedDemanda.squadIds || (selectedDemanda.squadId ? [selectedDemanda.squadId] : []);
+    const relatedSquads = squads.filter(s => dSquadIds.includes(s.id));
     squadMembers = users.filter(u => {
-      const inUsers = squad?.users?.some(su => su.id === u.id);
-      const inMembers = squad?.members?.includes(u.id);
-      return inUsers || inMembers || u.squadId === squad?.id;
+      return relatedSquads.some(squad => {
+        const inUsers = squad?.users?.some(su => su.id === u.id);
+        const inMembers = squad?.members?.includes(u.id);
+        return inUsers || inMembers || u.squadId === squad?.id;
+      });
     });
   }
 

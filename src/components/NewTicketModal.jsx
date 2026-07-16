@@ -16,7 +16,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     type: 'Task',
     priority: 'medium',
     projectId: '',
-    squadId: '',
+    squadIds: [],
     externalTicket: '',
     component: '',
     assignee: '',
@@ -79,7 +79,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
   }, [isOpen]);
 
   useEffect(() => {
-    setFormData(prev => ({ ...prev, squadId: '' }));
+    setFormData(prev => ({ ...prev, squadIds: [] }));
     if (!formData.projectId) {
       setSquads([]);
       return;
@@ -96,15 +96,6 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
   const handleSelectChange = (name, value) => {
     setFormData(prev => {
       const updated = { ...prev, [name]: value };
-      if (name === 'squadId' && value) {
-        const squad = squads.find(s => s.id === value);
-        if (squad && squad.leaderId) {
-          const leader = users.find(u => u.id === squad.leaderId);
-          if (leader) {
-            updated.assignee = leader.shortName || leader.displayName || leader.email;
-          }
-        }
-      }
       return updated;
     });
   };
@@ -228,8 +219,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
       return;
     }
 
-    if (!formData.squadId && squads.length > 0) {
-      alert("Por favor, selecione uma Squad.");
+    if ((!formData.squadIds || formData.squadIds.length === 0) && squads.length > 0) {
+      alert("Por favor, selecione pelo menos uma Squad.");
       return;
     }
 
@@ -271,7 +262,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         priority: formData.priority,
         columnId: startColumnId,
         projectId: formData.projectId,
-        squadId: formData.squadId,
+        squadIds: formData.squadIds || [],
         assignee: formData.assignee || 'Sem responsável',
         externalTicket: formData.externalTicket,
         associatedSystems: associatedSystems,
@@ -362,15 +353,36 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
 
               {squads.length > 0 && (
                 <Box style={{ flex: '1 1 200px' }}>
-                  <Text as="div" size="2" mb="1" weight="bold">Squad <span style={{ color: 'red' }}>*</span></Text>
-                  <Select.Root value={formData.squadId} onValueChange={(v) => handleSelectChange('squadId', v)}>
-                    <Select.Trigger placeholder="Selecione a Squad..." style={{ width: '100%' }} />
-                    <Select.Content>
+                  <Text as="div" size="2" mb="1" weight="bold">Squads <span style={{ color: 'red' }}>*</span></Text>
+                  <div style={{ border: '1px solid var(--gray-5)', borderRadius: '4px', padding: '8px', maxHeight: '100px', overflowY: 'auto' }}>
+                    <Flex direction="column" gap="1">
                       {squads.map(s => (
-                        <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
+                        <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            type="checkbox"
+                            checked={formData.squadIds?.includes(s.id)}
+                            onChange={(e) => {
+                               let newIds = formData.squadIds || [];
+                               if (e.target.checked) {
+                                  newIds = [...newIds, s.id];
+                                  // Auto-assign se for a primeira squad selecionada
+                                  if (newIds.length === 1 && s.leaderId) {
+                                    const leader = users.find(u => u.id === s.leaderId);
+                                    if (leader) {
+                                      setFormData(prev => ({ ...prev, assignee: leader.shortName || leader.displayName || leader.email }));
+                                    }
+                                  }
+                               } else {
+                                  newIds = newIds.filter(id => id !== s.id);
+                               }
+                               setFormData(prev => ({ ...prev, squadIds: newIds }));
+                            }}
+                          />
+                          <Text size="2">{s.name}</Text>
+                        </label>
                       ))}
-                    </Select.Content>
-                  </Select.Root>
+                    </Flex>
+                  </div>
                 </Box>
               )}
 
