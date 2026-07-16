@@ -474,6 +474,13 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
                   </Select.Content>
                 </Select.Root>
               </Box>
+
+              {formData.jiraStatus && (
+                <Box style={{ flex: 1 }}>
+                  <Text as="div" size="2" mb="1" weight="bold">Status Jira</Text>
+                  <TextField.Root value={formData.jiraStatus} disabled />
+                </Box>
+              )}
             </Flex>
 
             <Flex gap="4">
