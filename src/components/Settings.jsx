@@ -13,7 +13,7 @@ import {
 import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key } from 'lucide-react';
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
-import ImportUsersCSV from './ImportUsersCSV';
+import ImportDataExcel from './ImportDataExcel';
 import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
@@ -536,7 +536,7 @@ const Settings = () => {
                   Novo Usuário
                 </Button>
               </Flex>
-              <ImportUsersCSV />
+              <ImportDataExcel />
               {loadingUsers ? <Loader2 className="spinner-icon" /> : (
                 <Table.Root variant="surface">
                   <Table.Header>
