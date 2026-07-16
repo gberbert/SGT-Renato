@@ -17,7 +17,8 @@ import { subscribeToWorkflows, subscribeToSystems } from '../services/settingsSe
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToAllocations } from '../services/allocationService';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { getDocs, collection } from 'firebase/firestore';
 import { Loader2, LayoutList, List, LayoutGrid, Filter, Plus, Download } from 'lucide-react';
 import { Button, Flex, Select, Text, Table, Badge, Card, Dialog, Grid, TextField, ScrollArea } from '@radix-ui/themes';
 
@@ -409,9 +410,17 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
           if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
              associatedSystems = jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 }));
              
+             // Forçar carregamento direto do banco para evitar estados assíncronos vazios
+             const systemsSnap = await getDocs(collection(db, 'systems'));
+             const systemsList = systemsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+             
+             const squadsSnap = await getDocs(collection(db, 'squads'));
+             const squadsList = squadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+             
              jiraData.jiraAssociatedSystems.forEach(sysName => {
-               const matchedSystem = systems.find(s => s.name === sysName);
-               if (matchedSystem && matchedSystem.squadId && globalSquads.some(sq => sq.id === matchedSystem.squadId)) {
+               const normalizedSysName = (sysName || '').trim().toLowerCase();
+               const matchedSystem = systemsList.find(s => (s.name || '').trim().toLowerCase() === normalizedSysName);
+               if (matchedSystem && matchedSystem.squadId && squadsList.some(sq => sq.id === matchedSystem.squadId)) {
                   newSquadIds.add(matchedSystem.squadId);
                }
              });

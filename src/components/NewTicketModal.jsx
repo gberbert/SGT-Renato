@@ -196,7 +196,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
       const newSquadIds = new Set(formData.squadIds || []);
       if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
         jiraData.jiraAssociatedSystems.forEach(sysName => {
-          const matchedSystem = systems.find(s => s.name === sysName);
+          const normalizedSysName = (sysName || '').trim().toLowerCase();
+          const matchedSystem = systems.find(s => (s.name || '').trim().toLowerCase() === normalizedSysName);
           if (matchedSystem && matchedSystem.squadId && squads.some(sq => sq.id === matchedSystem.squadId)) {
              newSquadIds.add(matchedSystem.squadId);
           }
