@@ -35,19 +35,19 @@ export default function ImportDataExcel() {
 
     squadsSnap.docs.forEach(d => {
       const data = d.data();
-      if (data.name) state.squadsByName[data.name.toUpperCase()] = { id: d.id, ...data, users: data.users || [], systemIds: data.systemIds || [] };
+      if (data.name) state.squadsByName[data.name.trim().toUpperCase()] = { id: d.id, ...data, users: data.users || [], systemIds: data.systemIds || [] };
       state.squadsById[d.id] = { id: d.id, ...data };
     });
 
     projectsSnap.docs.forEach(d => {
       const data = d.data();
-      if (data.name) state.projectsByName[data.name.toUpperCase()] = { id: d.id, ...data };
+      if (data.name) state.projectsByName[data.name.trim().toUpperCase()] = { id: d.id, ...data };
       state.projectsById[d.id] = { id: d.id, ...data };
     });
 
     systemsSnap.docs.forEach(d => {
       const data = d.data();
-      if (data.name) state.systemsByName[data.name.toUpperCase()] = { id: d.id, ...data };
+      if (data.name) state.systemsByName[data.name.trim().toUpperCase()] = { id: d.id, ...data };
       state.systemsById[d.id] = { id: d.id, ...data };
     });
 
