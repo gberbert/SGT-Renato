@@ -1,0 +1,1338 @@
+[
+  {
+    "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_14679.cmdb.label,customfield_14679.cmdb.objectKey,customfield_14679.cmdb.attributes,customfield_10079.cmdb.label,customfield_10079.cmdb.objectKey,customfield_10079.cmdb.attributes,customfield_12128.cmdb.label,customfield_12128.cmdb.objectKey,customfield_12128.cmdb.attributes,customfield_10962.cmdb.label,customfield_10962.cmdb.objectKey,customfield_10962.cmdb.attributes,customfield_10963.cmdb.label,customfield_10963.cmdb.objectKey,customfield_10963.cmdb.attributes,customfield_10960.cmdb.label,customfield_10960.cmdb.objectKey,customfield_10960.cmdb.attributes,customfield_10961.cmdb.label,customfield_10961.cmdb.objectKey,customfield_10961.cmdb.attributes,customfield_10954.cmdb.label,customfield_10954.cmdb.objectKey,customfield_10954.cmdb.attributes,customfield_10955.cmdb.label,customfield_10955.cmdb.objectKey,customfield_10955.cmdb.attributes,customfield_10957.cmdb.label,customfield_10957.cmdb.objectKey,customfield_10957.cmdb.attributes,customfield_10958.cmdb.label,customfield_10958.cmdb.objectKey,customfield_10958.cmdb.attributes,customfield_10959.cmdb.label,customfield_10959.cmdb.objectKey,customfield_10959.cmdb.attributes,customfield_10148.cmdb.label,customfield_10148.cmdb.objectKey,customfield_10148.cmdb.attributes,customfield_14183.cmdb.label,customfield_14183.cmdb.objectKey,customfield_14183.cmdb.attributes,customfield_10382.cmdb.label,customfield_10382.cmdb.objectKey,customfield_10382.cmdb.attributes,customfield_10384.cmdb.label,customfield_10384.cmdb.objectKey,customfield_10384.cmdb.attributes,customfield_10810.cmdb.label,customfield_10810.cmdb.objectKey,customfield_10810.cmdb.attributes,customfield_10811.cmdb.label,customfield_10811.cmdb.objectKey,customfield_10811.cmdb.attributes,customfield_10812.cmdb.label,customfield_10812.cmdb.objectKey,customfield_10812.cmdb.attributes,customfield_10371.cmdb.label,customfield_10371.cmdb.objectKey,customfield_10371.cmdb.attributes,customfield_10010.requestTypePractice,customfield_14975.cmdb.label,customfield_14975.cmdb.objectKey,customfield_14975.cmdb.attributes,customfield_10135.cmdb.label,customfield_10135.cmdb.objectKey,customfield_10135.cmdb.attributes,customfield_14974.cmdb.label,customfield_14974.cmdb.objectKey,customfield_14974.cmdb.attributes,customfield_10247.cmdb.label,customfield_10247.cmdb.objectKey,customfield_10247.cmdb.attributes,customfield_10368.cmdb.label,customfield_10368.cmdb.objectKey,customfield_10368.cmdb.attributes,customfield_10807.cmdb.label,customfield_10807.cmdb.objectKey,customfield_10807.cmdb.attributes,customfield_10480.cmdb.label,customfield_10480.cmdb.objectKey,customfield_10480.cmdb.attributes,customfield_10240.cmdb.label,customfield_10240.cmdb.objectKey,customfield_10240.cmdb.attributes,customfield_14842.cmdb.label,customfield_14842.cmdb.objectKey,customfield_14842.cmdb.attributes,customfield_10357.cmdb.label,customfield_10357.cmdb.objectKey,customfield_10357.cmdb.attributes,customfield_10478.cmdb.label,customfield_10478.cmdb.objectKey,customfield_10478.cmdb.attributes,customfield_10479.cmdb.label,customfield_10479.cmdb.objectKey,customfield_10479.cmdb.attributes,customfield_10358.cmdb.label,customfield_10358.cmdb.objectKey,customfield_10358.cmdb.attributes,customfield_10914.cmdb.label,customfield_10914.cmdb.objectKey,customfield_10914.cmdb.attributes,customfield_12095.cmdb.label,customfield_12095.cmdb.objectKey,customfield_12095.cmdb.attributes,customfield_15007.cmdb.label,customfield_15007.cmdb.objectKey,customfield_15007.cmdb.attributes,customfield_10347.cmdb.label,customfield_10347.cmdb.objectKey,customfield_10347.cmdb.attributes,customfield_14380.cmdb.label,customfield_14380.cmdb.objectKey,customfield_14380.cmdb.attributes,customfield_10336.cmdb.label,customfield_10336.cmdb.objectKey,customfield_10336.cmdb.attributes,customfield_16676.cmdb.label,customfield_16676.cmdb.objectKey,customfield_16676.cmdb.attributes,customfield_18613.cmdb.label,customfield_18613.cmdb.objectKey,customfield_18613.cmdb.attributes,customfield_10326.cmdb.label,customfield_10326.cmdb.objectKey,customfield_10326.cmdb.attributes,customfield_10684.cmdb.label,customfield_10684.cmdb.objectKey,customfield_10684.cmdb.attributes,customfield_10677.cmdb.label,customfield_10677.cmdb.objectKey,customfield_10677.cmdb.attributes,customfield_10678.cmdb.label,customfield_10678.cmdb.objectKey,customfield_10678.cmdb.attributes,customfield_10679.cmdb.label,customfield_10679.cmdb.objectKey,customfield_10679.cmdb.attributes,customfield_10670.cmdb.label,customfield_10670.cmdb.objectKey,customfield_10670.cmdb.attributes,customfield_13146.cmdb.label,customfield_13146.cmdb.objectKey,customfield_13146.cmdb.attributes,customfield_10671.cmdb.label,customfield_10671.cmdb.objectKey,customfield_10671.cmdb.attributes,customfield_10792.cmdb.label,customfield_10792.cmdb.objectKey,customfield_10792.cmdb.attributes,customfield_13147.cmdb.label,customfield_13147.cmdb.objectKey,customfield_13147.cmdb.attributes,customfield_15205.cmdb.label,customfield_15205.cmdb.objectKey,customfield_15205.cmdb.attributes,customfield_10665.cmdb.label,customfield_10665.cmdb.objectKey,customfield_10665.cmdb.attributes,customfield_10666.cmdb.label,customfield_10666.cmdb.objectKey,customfield_10666.cmdb.attributes,customfield_10667.cmdb.label,customfield_10667.cmdb.objectKey,customfield_10667.cmdb.attributes,customfield_10668.cmdb.label,customfield_10668.cmdb.objectKey,customfield_10668.cmdb.attributes,customfield_10669.cmdb.label,customfield_10669.cmdb.objectKey,customfield_10669.cmdb.attributes,customfield_10663.cmdb.label,customfield_10663.cmdb.objectKey,customfield_10663.cmdb.attributes,customfield_10664.cmdb.label,customfield_10664.cmdb.objectKey,customfield_10664.cmdb.attributes,customfield_10413.cmdb.label,customfield_10413.cmdb.objectKey,customfield_10413.cmdb.attributes,customfield_10415.cmdb.label,customfield_10415.cmdb.objectKey,customfield_10415.cmdb.attributes,customfield_10090.cmdb.label,customfield_10090.cmdb.objectKey,customfield_10090.cmdb.attributes,customfield_15668.cmdb.label,customfield_15668.cmdb.objectKey,customfield_15668.cmdb.attributes,customfield_15669.cmdb.label,customfield_15669.cmdb.objectKey,customfield_15669.cmdb.attributes,customfield_10402.cmdb.label,customfield_10402.cmdb.objectKey,customfield_10402.cmdb.attributes,customfield_10405.cmdb.label,customfield_10405.cmdb.objectKey,customfield_10405.cmdb.attributes,customfield_10409.cmdb.label,customfield_10409.cmdb.objectKey,customfield_10409.cmdb.attributes,customfield_10080.cmdb.label,customfield_10080.cmdb.objectKey,customfield_10080.cmdb.attributes,customfield_10081.cmdb.label,customfield_10081.cmdb.objectKey,customfield_10081.cmdb.attributes,customfield_10082.cmdb.label,customfield_10082.cmdb.objectKey,customfield_10082.cmdb.attributes,customfield_10084.cmdb.label,customfield_10084.cmdb.objectKey,customfield_10084.cmdb.attributes,customfield_12143.cmdb.label,customfield_12143.cmdb.objectKey,customfield_12143.cmdb.attributes,customfield_10085.cmdb.label,customfield_10085.cmdb.objectKey,customfield_10085.cmdb.attributes,customfield_12144.cmdb.label,customfield_12144.cmdb.objectKey,customfield_12144.cmdb.attributes",
+    "id": "321785",
+    "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785",
+    "key": "TI-22822",
+    "fields": {
+      "customfield_10191": null,
+      "customfield_10192": null,
+      "customfield_10071": null,
+      "customfield_10072": null,
+      "customfield_10193": null,
+      "customfield_10194": null,
+      "customfield_10074": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10131",
+        "value": "N1",
+        "id": "10131"
+      },
+      "customfield_10195": null,
+      "customfield_10196": null,
+      "customfield_10075": null,
+      "customfield_10197": null,
+      "customfield_10076": null,
+      "customfield_10077": null,
+      "customfield_10198": null,
+      "statusCategory": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/statuscategory/3",
+        "id": 3,
+        "key": "done",
+        "colorName": "green",
+        "name": "Itens concluídos"
+      },
+      "customfield_10199": null,
+      "customfield_10870": null,
+      "customfield_10871": null,
+      "customfield_14679": [],
+      "customfield_10079": [],
+      "resolution": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/resolution/10005",
+        "id": "10005",
+        "description": "Cancelado",
+        "name": "Cancelado"
+      },
+      "customfield_10872": null,
+      "customfield_10873": null,
+      "customfield_12128": [],
+      "customfield_10745": null,
+      "customfield_10746": null,
+      "lastViewed": null,
+      "customfield_18580": null,
+      "customfield_10180": null,
+      "customfield_10181": null,
+      "customfield_10061": [],
+      "customfield_10182": null,
+      "customfield_10062": null,
+      "customfield_14421": null,
+      "customfield_10184": null,
+      "customfield_14422": null,
+      "customfield_10185": null,
+      "customfield_10186": null,
+      "customfield_14420": null,
+      "customfield_10187": null,
+      "customfield_10188": null,
+      "customfield_19314": null,
+      "labels": [],
+      "customfield_14418": null,
+      "customfield_14419": null,
+      "customfield_10975": "https://jiracpfl.atlassian.net/wiki/spaces/MegProj/pages/410222599/Fase+1+Inicia+o+-+Cadastro+da+DOD",
+      "customfield_14416": null,
+      "customfield_14417": null,
+      "aggregatetimeoriginalestimate": null,
+      "issuelinks": [
+        {
+          "id": "46614",
+          "self": "https://jiracpfl.atlassian.net/rest/api/3/issueLink/46614",
+          "type": {
+            "id": "10003",
+            "name": "1. Relação",
+            "inward": "Relacionado por",
+            "outward": "Relacionado a",
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issueLinkType/10003"
+          },
+          "outwardIssue": {
+            "id": "301515",
+            "key": "SERVICE-209280",
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/301515",
+            "fields": {
+              "summary": "Atualização CDE Covid/ Escassez Hídrica ",
+              "status": {
+                "self": "https://jiracpfl.atlassian.net/rest/api/3/status/6",
+                "description": "Fechado",
+                "iconUrl": "https://jiracpfl.atlassian.net/images/icons/statuses/closed.png",
+                "name": "Fechado",
+                "id": "6",
+                "statusCategory": {
+                  "self": "https://jiracpfl.atlassian.net/rest/api/3/statuscategory/3",
+                  "id": 3,
+                  "key": "done",
+                  "colorName": "green",
+                  "name": "Itens concluídos"
+                }
+              },
+              "priority": {
+                "self": "https://jiracpfl.atlassian.net/rest/api/3/priority/3",
+                "iconUrl": "https://jiracpfl.atlassian.net/images/icons/priorities/medium_new.svg",
+                "name": "3-Medio",
+                "id": "3"
+              },
+              "issuetype": {
+                "self": "https://jiracpfl.atlassian.net/rest/api/3/issuetype/10030",
+                "id": "10030",
+                "description": "Para interrupções do sistema ou incidentes. Criado pelo Jira Service Management.",
+                "iconUrl": "https://jiracpfl.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10573?size=medium",
+                "name": "[System] Incidente",
+                "subtask": false,
+                "avatarId": 10573,
+                "hierarchyLevel": 0
+              }
+            }
+          }
+        }
+      ],
+      "assignee": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+        "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+        "avatarUrls": {
+          "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+          "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+          "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+          "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+        },
+        "displayName": "Rogerio Cavalcanti Lins Junior",
+        "active": true,
+        "timeZone": "Etc/GMT+3",
+        "accountType": "atlassian"
+      },
+      "components": [],
+      "customfield_10050": null,
+      "customfield_10171": null,
+      "customfield_10051": null,
+      "customfield_10052": null,
+      "customfield_10174": null,
+      "customfield_10053": null,
+      "customfield_10054": null,
+      "customfield_10055": {
+        "id": "9",
+        "name": "Time to resolution",
+        "_links": {
+          "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/request/321785/sla/9"
+        },
+        "completedCycles": [
+          {
+            "startTime": {
+              "iso8601": "2025-03-25T15:19:45-0300",
+              "jira": "2025-03-25T15:19:45.657-0300",
+              "friendly": "25/mar/25 3:19 PM",
+              "epochMillis": 1742926785657
+            },
+            "stopTime": {
+              "iso8601": "2025-09-18T14:30:42-0300",
+              "jira": "2025-09-18T14:30:42.846-0300",
+              "friendly": "18/set/25 2:30 PM",
+              "epochMillis": 1758216642846
+            },
+            "breachTime": {
+              "iso8601": "2025-05-09T15:19:45-0300",
+              "jira": "2025-05-09T15:19:45.657-0300",
+              "friendly": "09/mai/25 3:19 PM",
+              "epochMillis": 1746814785657
+            },
+            "breached": true,
+            "goalDuration": {
+              "millis": 864000000,
+              "friendly": "240h"
+            },
+            "elapsedTime": {
+              "millis": 3239750788,
+              "friendly": "899h 55m"
+            },
+            "remainingTime": {
+              "millis": -2375750788,
+              "friendly": "-659h 55m"
+            }
+          }
+        ],
+        "slaDisplayFormat": "NEW_SLA_FORMAT"
+      },
+      "customfield_10176": null,
+      "customfield_10298": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10846",
+        "value": "Não",
+        "id": "10846"
+      },
+      "customfield_10177": null,
+      "customfield_10056": {
+        "id": "10",
+        "name": "Time to first response",
+        "_links": {
+          "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/request/321785/sla/10"
+        },
+        "completedCycles": [],
+        "slaDisplayFormat": "OLD_SLA_FORMAT"
+      },
+      "customfield_14414": null,
+      "customfield_10178": null,
+      "customfield_10057": null,
+      "customfield_14415": null,
+      "customfield_10299": null,
+      "customfield_18579": null,
+      "customfield_10179": null,
+      "customfield_14413": null,
+      "customfield_10059": null,
+      "customfield_10049": null,
+      "customfield_10962": [],
+      "customfield_10963": [],
+      "customfield_10844": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/12597",
+        "value": "NTT Data -  AMS",
+        "id": "12597"
+      },
+      "customfield_10969": null,
+      "subtasks": [],
+      "customfield_10281": null,
+      "customfield_10040": null,
+      "customfield_10041": [
+        {
+          "name": "TI - Gerente de Problema",
+          "groupId": "505143cc-bef5-4224-a8e6-ed1a7c18b42e",
+          "self": "https://jiracpfl.atlassian.net/rest/api/3/group?groupId=505143cc-bef5-4224-a8e6-ed1a7c18b42e"
+        }
+      ],
+      "customfield_10042": [
+        {
+          "id": "ari:cloud:graph::service/0f184fb4-ea3a-4fd0-9181-ff98aebc564c/96af8d74-24df-11ee-88f6-0abe3f4a6601"
+        }
+      ],
+      "reporter": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A1d73a19f-87ff-4442-bde2-415fc534c840",
+        "accountId": "712020:1d73a19f-87ff-4442-bde2-415fc534c840",
+        "avatarUrls": {
+          "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/48",
+          "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/24",
+          "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/16",
+          "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/32"
+        },
+        "displayName": "Joyce Silva Santos",
+        "active": true,
+        "timeZone": "Brazil/East",
+        "accountType": "atlassian"
+      },
+      "customfield_10043": null,
+      "customfield_10044": null,
+      "customfield_10045": null,
+      "customfield_14645": null,
+      "customfield_10046": null,
+      "customfield_10167": null,
+      "customfield_10960": [],
+      "customfield_18447": null,
+      "customfield_10168": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10244",
+        "value": "Cancelado pelo solicitante",
+        "id": "10244"
+      },
+      "customfield_10961": [],
+      "customfield_10048": null,
+      "customfield_10039": {
+        "languageCode": "pt",
+        "displayName": "português"
+      },
+      "customfield_10954": [],
+      "customfield_10955": [],
+      "customfield_10957": [],
+      "customfield_10958": [],
+      "customfield_10959": [],
+      "progress": {
+        "progress": 0,
+        "total": 0
+      },
+      "votes": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/TI-22822/votes",
+        "votes": 0,
+        "hasVoted": false
+      },
+      "worklog": {
+        "startAt": 0,
+        "maxResults": 20,
+        "total": 2,
+        "worklogs": [
+          {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/worklog/39943",
+            "author": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+              },
+              "displayName": "Rogerio Cavalcanti Lins Junior",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "updateAuthor": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+              },
+              "displayName": "Rogerio Cavalcanti Lins Junior",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "created": "2025-09-03T15:02:40.044-0300",
+            "updated": "2025-09-03T15:02:40.044-0300",
+            "started": "2025-09-03T14:41:00.000-0300",
+            "timeSpent": "0m",
+            "timeSpentSeconds": 0,
+            "id": "39943",
+            "issueId": "321785"
+          },
+          {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/worklog/40238",
+            "author": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+              },
+              "displayName": "Rogerio Cavalcanti Lins Junior",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "updateAuthor": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+              },
+              "displayName": "Rogerio Cavalcanti Lins Junior",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "comment": {
+              "type": "doc",
+              "version": 1,
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Foi solicitado atualização do chamado para evidenciar o pedido de encerramento, porém estarei anexando abaixo o print da conversa que nós tivemos na quarta feira dia 03/09/2025."
+                    }
+                  ]
+                },
+                {
+                  "type": "mediaSingle",
+                  "attrs": {
+                    "layout": "align-start"
+                  },
+                  "content": [
+                    {
+                      "type": "media",
+                      "attrs": {
+                        "type": "file",
+                        "id": "5c701919-26ef-4754-83ed-4bd7ca7d83e2",
+                        "alt": "image-20250908-192421.png",
+                        "collection": "",
+                        "height": 646,
+                        "width": 1040
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "created": "2025-09-08T16:27:03.036-0300",
+            "updated": "2025-09-08T16:27:03.036-0300",
+            "started": "2025-09-08T16:16:00.000-0300",
+            "timeSpent": "0m",
+            "timeSpentSeconds": 0,
+            "id": "40238",
+            "issueId": "321785"
+          }
+        ]
+      },
+      "issuetype": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/issuetype/10012",
+        "id": "10012",
+        "description": "Problema",
+        "iconUrl": "https://jiracpfl.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10613?size=medium",
+        "name": "Problema",
+        "subtask": false,
+        "avatarId": 10613,
+        "hierarchyLevel": 0
+      },
+      "customfield_10150": null,
+      "customfield_10030": null,
+      "project": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/project/10002",
+        "id": "10002",
+        "key": "TI",
+        "name": "Tecnologia da Informação",
+        "projectTypeKey": "service_desk",
+        "simplified": false,
+        "avatarUrls": {
+          "48x48": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10604",
+          "24x24": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10604?size=small",
+          "16x16": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10604?size=xsmall",
+          "32x32": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/project/avatar/10604?size=medium"
+        }
+      },
+      "customfield_10031": [],
+      "customfield_10152": null,
+      "customfield_10032": null,
+      "customfield_10153": "10041_*:*_2_*:*_14014550788_*|*_10043_*:*_2_*:*_1275195808_*|*_10049_*:*_1_*:*_0",
+      "customfield_10033": null,
+      "customfield_10154": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10218",
+        "value": "Baixo",
+        "id": "10218"
+      },
+      "customfield_10034": [
+        {
+          "id": "182048",
+          "name": "Aguardando Aprovação Lider de Torre",
+          "finalDecision": "declined",
+          "canAnswerApproval": false,
+          "approvers": [
+            {
+              "approver": {
+                "accountId": "712020:73caef6f-b951-4688-bca9-73048bb9c157",
+                "displayName": "Fabio Almeida Barbosa",
+                "active": true,
+                "timeZone": "Etc/GMT+3",
+                "_links": {
+                  "jiraRest": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A73caef6f-b951-4688-bca9-73048bb9c157",
+                  "avatarUrls": {
+                    "48x48": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                    "24x24": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                    "16x16": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                    "32x32": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png"
+                  },
+                  "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A73caef6f-b951-4688-bca9-73048bb9c157"
+                }
+              },
+              "approverDecision": "declined"
+            }
+          ],
+          "createdDate": {
+            "iso8601": "2025-09-03T15:02:41-0300",
+            "jira": "2025-09-03T15:02:41.788-0300",
+            "friendly": "03/set/25 3:02 PM",
+            "epochMillis": 1756922561788
+          },
+          "completedDate": {
+            "iso8601": "2025-09-08T11:14:06-0300",
+            "jira": "2025-09-08T11:14:06.654-0300",
+            "friendly": "08/set/25 11:14 AM",
+            "epochMillis": 1757340846654
+          },
+          "_links": {
+            "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/request/321785/approval/182048"
+          }
+        },
+        {
+          "id": "183649",
+          "name": "Aguardando Aprovação Lider de Torre",
+          "finalDecision": "approved",
+          "canAnswerApproval": false,
+          "approvers": [
+            {
+              "approver": {
+                "accountId": "712020:73caef6f-b951-4688-bca9-73048bb9c157",
+                "displayName": "Fabio Almeida Barbosa",
+                "active": true,
+                "timeZone": "Etc/GMT+3",
+                "_links": {
+                  "jiraRest": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A73caef6f-b951-4688-bca9-73048bb9c157",
+                  "avatarUrls": {
+                    "48x48": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                    "24x24": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                    "16x16": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                    "32x32": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png"
+                  },
+                  "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A73caef6f-b951-4688-bca9-73048bb9c157"
+                }
+              },
+              "approverDecision": "approved"
+            }
+          ],
+          "createdDate": {
+            "iso8601": "2025-09-08T16:27:05-0300",
+            "jira": "2025-09-08T16:27:05.154-0300",
+            "friendly": "08/set/25 4:27 PM",
+            "epochMillis": 1757359625154
+          },
+          "completedDate": {
+            "iso8601": "2025-09-18T14:28:52-0300",
+            "jira": "2025-09-18T14:28:52.019-0300",
+            "friendly": "18/set/25 2:28 PM",
+            "epochMillis": 1758216532019
+          },
+          "_links": {
+            "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/request/321785/approval/183649"
+          }
+        }
+      ],
+      "customfield_10278": null,
+      "customfield_14512": {
+        "id": "91",
+        "name": "Tempo de Revisão",
+        "_links": {
+          "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/request/321785/sla/91"
+        },
+        "completedCycles": [],
+        "slaDisplayFormat": "NEW_SLA_FORMAT"
+      },
+      "customfield_10940": "Para adicionar um novo Impacto Organizacional clique em *\"⚡Ações\"* e em seguida em \"Novo Impacto Organizacional\"\r\n\r\nPara adicionar um Plano de Ação para um Impacto Organizacional clique em *\"⚡Ações\"* e em seguida em \"Nova Ação Impacto Organizacional\"",
+      "customfield_10027": null,
+      "customfield_10148": [],
+      "customfield_10941": "Para criar uma Atividade de Cronograma clique em *\"⚡Ações\"* e em seguida em \"Criar Atividade de Cronograma\"",
+      "customfield_10028": null,
+      "customfield_10029": null,
+      "customfield_10945": "*{color:red}Atenção, para poder avançar com fase de Gerenciamento de Custos, os valores a serem planejados precisam estar iguais aos valores aprovados, você informar o valor planejado nos campos abaixo!{color}*",
+      "resolutiondate": "2025-09-18T14:30:42.824-0300",
+      "customfield_10948": "*{color:red}Atenção, para poder avançar para a Fase 3 - Execução, precisa ter planejado todo o Gerenciamento de Custos e seu status de estar como Planejado!\r\nTambém é necessário ter planejado todo o Gerenciamento de Cronograma e ter salvo a Baseline!{color}*",
+      "customfield_14183": [],
+      "watches": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/TI-22822/watchers",
+        "watchCount": 5,
+        "isWatching": false
+      },
+      "customfield_10382": [],
+      "customfield_10020": null,
+      "customfield_10384": [],
+      "customfield_10021": null,
+      "customfield_10022": null,
+      "customfield_14744": null,
+      "customfield_10023": null,
+      "customfield_10144": "Inverstigação não será mais necessária conforme evidência anexa na RCA",
+      "customfield_10024": "2025-08-01T09:52:16.101-0300",
+      "customfield_18546": null,
+      "customfield_10025": "10041_*:*_2_*:*_14014550788_*|*_10043_*:*_2_*:*_1275195808_*|*_10049_*:*_1_*:*_0",
+      "customfield_10026": "Problems",
+      "customfield_10016": null,
+      "customfield_10017": null,
+      "customfield_10810": [],
+      "customfield_10811": [],
+      "customfield_10019": "0|i1fb9f:",
+      "customfield_10812": [],
+      "customfield_10938": "Para adicionar um novo Risco clique em *\"⚡Ações\"* e em seguida em \"Cadastrar Novo Risco\"\r\n\r\nPara adicionar um plano de ação para o risco, clique em *\"⚡Ações\"* e em seguida em \"Cadastrar Novo Plano de Ação\"",
+      "customfield_10939": "Para adicionar um novo tipo de comunicação clique em *\"⚡Ações\"* e em seguida em \"Adicionar Comunicação\"",
+      "updated": "2025-09-18T14:30:47.121-0300",
+      "timeoriginalestimate": null,
+      "customfield_10371": [],
+      "customfield_10250": null,
+      "customfield_10251": null,
+      "customfield_10130": null,
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "A atualização de conta covid e escassez hídrica está rodando em datas diferentes e valores duplicados (todos os meses o mesmo valor). É necessário verificar a regra da atualização para contabilização."
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10010": {
+        "_links": {
+          "jiraRest": "https://jiracpfl.atlassian.net/rest/api/2/issue/321785",
+          "web": "https://jiracpfl.atlassian.net/servicedesk/customer/portal/3/TI-22822",
+          "agent": "https://jiracpfl.atlassian.net/browse/TI-22822",
+          "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/request/321785"
+        },
+        "requestType": {
+          "_expands": [
+            "field"
+          ],
+          "id": "84",
+          "_links": {
+            "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/servicedesk/3/requesttype/84"
+          },
+          "name": "Problemas",
+          "description": "",
+          "helpText": "",
+          "defaultName": "Problemas",
+          "issueTypeId": "10012",
+          "serviceDeskId": "3",
+          "portalId": "3",
+          "groupIds": [],
+          "icon": {
+            "id": "10512",
+            "_links": {
+              "iconUrls": {
+                "48x48": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10512?size=large",
+                "24x24": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10512?size=small",
+                "16x16": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10512?size=xsmall",
+                "32x32": "https://jiracpfl.atlassian.net/rest/api/3/universal_avatar/view/type/SD_REQTYPE/avatar/10512?size=medium"
+              }
+            }
+          }
+        },
+        "currentStatus": {
+          "status": "Cancelado",
+          "statusCategory": "DONE",
+          "statusDate": {
+            "iso8601": "2025-09-18T14:30:42-0300",
+            "jira": "2025-09-18T14:30:42.846-0300",
+            "friendly": "18/set/25 2:30 PM",
+            "epochMillis": 1758216642846
+          }
+        }
+      },
+      "customfield_10132": null,
+      "customfield_14975": [],
+      "customfield_14612": null,
+      "customfield_14976": null,
+      "customfield_10135": [],
+      "customfield_10014": null,
+      "customfield_14611": null,
+      "customfield_14974": [],
+      "timetracking": {
+        "remainingEstimate": "0m",
+        "timeSpent": "0m",
+        "remainingEstimateSeconds": 0,
+        "timeSpentSeconds": 0
+      },
+      "customfield_10015": null,
+      "customfield_10247": [],
+      "customfield_10368": [],
+      "customfield_10005": null,
+      "customfield_10126": null,
+      "customfield_10006": null,
+      "customfield_10369": null,
+      "customfield_10248": null,
+      "customfield_10007": null,
+      "customfield_10008": null,
+      "customfield_10800": 0,
+      "customfield_10129": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Após análise dos processos envolvidos nos jobs de escassez hídrica e COVID, conclui-se que não há necessidade de ajustes nos parâmetros ou na lógica de execução. Ambos os jobs são processados mensalmente, no início de cada mês, com input para a conta 2110242099, considerando o mesmo período de apuração e utilizando a mesma taxa SELIC, conforme parametrização da tabela TCURR. Essa configuração garante a consistência dos valores calculados, sem divergências relevantes."
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10009": null,
+      "customfield_10807": [],
+      "summary": "A atualização de conta covid e escassez hídrica está rodando em datas diferentes e valores duplicados (todos os meses o mesmo valor). É necessário verificar a regra da atualização para contabilização. ",
+      "customfield_10480": [],
+      "customfield_10481": null,
+      "customfield_10240": [],
+      "customfield_18648": null,
+      "customfield_10361": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/11495",
+        "value": "Não",
+        "id": "11495"
+      },
+      "customfield_10120": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10181",
+        "value": "Não",
+        "id": "10181"
+      },
+      "customfield_10241": null,
+      "customfield_10242": null,
+      "customfield_10121": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "O incidente SERVICE-209280 foi aberto com o objetivo de verificar a consistência entre os valores e as datas de lançamento dos jobs de escassez hídrica e COVID. Durante a análise, constatou-se que ambos os jobs são executados mensalmente, no início de cada mês, com foco na conta 2110242099, considerando o mesmo período e utilizando a mesma taxa SELIC para o cálculo.\n\nA diferença na data de lançamento já havia sido identificada anteriormente e registrada no próprio incidente. Para aprofundar a verificação da igualdade dos valores, foi criado o problema TI-22822.\n\nObs: Durante contato via Teams, foi solicitado o encerramento do problema TI-22822."
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10001": null,
+      "customfield_10122": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "Por que os jobs de escassez hídrica e COVID são executados no mesmo dia?\nPara garantir consistência no processamento e facilitar a comparação entre os dados apurados. Executá-los simultaneamente evita discrepâncias temporais e assegura que ambos utilizem os mesmos parâmetros de cálculo, como a taxa SELIC vigente.\n\nPor que a conta 2110242099 é usada como input para ambos os jobs?\nEssa conta provavelmente representa um agrupamento específico de dados ou lançamentos financeiros relevantes para ambos os cenários (escassez hídrica e COVID). Usar a mesma conta como input garante que os cálculos sejam feitos sobre a mesma base de dados, promovendo uniformidade nos resultados.\n\n Por que o job de escassez hídrica ajusta a data de lançamento para o último dia do mês anterior?\nEsse ajuste pode estar relacionado a uma regra de negócio específica, como a necessidade de refletir os impactos da escassez hídrica no mês anterior ao reconhecimento contábil. Pode também ser uma forma de alinhar o lançamento com o período de competência, sem afetar o valor calculado.\n\nPor que essa diferença de data de lançamento não impacta os valores calculados?\nPorque o cálculo é baseado na taxa SELIC parametrizada na tabela TCURR, que é aplicada de forma uniforme independentemente da data exata de lançamento. Como os períodos avaliados são os mesmos, a diferença de data não altera o resultado final.\n\nPor que não foram identificadas inconsistências no processamento dos jobs?\nOs parâmetros utilizados (como conta, período, taxa SELIC e lógica de cálculo) estão alinhados entre os dois jobs. A única diferença — a data de lançamento — não afeta os valores, o que indica que o sistema está operando conforme esperado e com integridade nos dados."
+              }
+            ]
+          }
+        ]
+      },
+      "customfield_10123": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10183",
+        "value": "Não",
+        "id": "10183"
+      },
+      "customfield_10002": [],
+      "customfield_10365": null,
+      "customfield_10003": null,
+      "customfield_10366": null,
+      "customfield_15139": null,
+      "customfield_14842": [],
+      "customfield_10004": null,
+      "customfield_10115": null,
+      "customfield_10357": [],
+      "customfield_10478": [],
+      "customfield_10479": [],
+      "customfield_10358": [],
+      "environment": null,
+      "customfield_10239": null,
+      "customfield_10118": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10179",
+        "value": "Não",
+        "id": "10179"
+      },
+      "duedate": null,
+      "customfield_10914": [],
+      "customfield_10915": 0,
+      "customfield_10917": "Para adicionar os stakeholders clique em *\"⚡Ações\" e em seguida em \"Adicionar Stakeholder\"*",
+      "comment": {
+        "comments": [
+          {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/comment/935490",
+            "id": "935490",
+            "author": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Aefc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "accountId": "712020:efc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "24x24": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "16x16": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "32x32": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png"
+              },
+              "displayName": "Ellen Brenda Micherino de Araujo",
+              "active": true,
+              "timeZone": "Brazil/East",
+              "accountType": "atlassian"
+            },
+            "body": {
+              "type": "doc",
+              "version": 1,
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Em investigação"
+                    }
+                  ]
+                }
+              ]
+            },
+            "updateAuthor": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Aefc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "accountId": "712020:efc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "24x24": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "16x16": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "32x32": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png"
+              },
+              "displayName": "Ellen Brenda Micherino de Araujo",
+              "active": true,
+              "timeZone": "Brazil/East",
+              "accountType": "atlassian"
+            },
+            "created": "2025-08-01T09:52:16.101-0300",
+            "updated": "2025-08-01T09:52:16.101-0300",
+            "jsdPublic": false
+          },
+          {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/comment/1005511",
+            "id": "1005511",
+            "author": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Aefc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "accountId": "712020:efc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "24x24": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "16x16": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "32x32": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png"
+              },
+              "displayName": "Ellen Brenda Micherino de Araujo",
+              "active": true,
+              "timeZone": "Brazil/East",
+              "accountType": "atlassian"
+            },
+            "body": {
+              "type": "doc",
+              "version": 1,
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "29/08: Em investigação, equipe empenhada no fim de semana para investigação."
+                    }
+                  ]
+                }
+              ]
+            },
+            "updateAuthor": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Aefc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "accountId": "712020:efc71f31-7aba-47fc-97e9-8d74ef44f41a",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "24x24": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "16x16": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png",
+                "32x32": "https://secure.gravatar.com/avatar/fd1fdcd7514a33b4dc9b724477a7ad8e?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FEA-4.png"
+              },
+              "displayName": "Ellen Brenda Micherino de Araujo",
+              "active": true,
+              "timeZone": "Brazil/East",
+              "accountType": "atlassian"
+            },
+            "created": "2025-08-29T09:37:38.830-0300",
+            "updated": "2025-08-29T09:37:38.830-0300",
+            "jsdPublic": false
+          },
+          {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/comment/1018148",
+            "id": "1018148",
+            "author": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+              "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+                "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+                "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+                "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+              },
+              "displayName": "Automation for Jira",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "app"
+            },
+            "body": {
+              "type": "doc",
+              "version": 1,
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Status atualizado para aguardando aprovação de: Fabio Almeida Barbosa, WELLINGTON GABRIEL DOS SANTOS, JULIANA MARIA DE SOUZA ALEXANDRE FERNANDES"
+                    }
+                  ]
+                }
+              ]
+            },
+            "updateAuthor": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=557058%3Af58131cb-b67d-43c7-b30d-6b58d40bd077",
+              "accountId": "557058:f58131cb-b67d-43c7-b30d-6b58d40bd077",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+                "24x24": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+                "16x16": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+                "32x32": "https://secure.gravatar.com/avatar/600529a9c8bfef89daa848e6db28ed2d?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+              },
+              "displayName": "Automation for Jira",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "app"
+            },
+            "created": "2025-09-03T15:02:48.321-0300",
+            "updated": "2025-09-03T15:02:48.321-0300",
+            "jsdPublic": true
+          },
+          {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/comment/1027384",
+            "id": "1027384",
+            "author": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A73caef6f-b951-4688-bca9-73048bb9c157",
+              "accountId": "712020:73caef6f-b951-4688-bca9-73048bb9c157",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                "24x24": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                "16x16": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                "32x32": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png"
+              },
+              "displayName": "Fabio Almeida Barbosa",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "body": {
+              "type": "doc",
+              "version": 1,
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Para garantir maior clareza e aderência ao processo de gestão de problemas, solicito que a causa raiz seja reescrita utilizando a metodologia dos "
+                    },
+                    {
+                      "type": "text",
+                      "text": "5 Porquês (5PQs)",
+                      "marks": [
+                        {
+                          "type": "strong"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "text": "."
+                    },
+                    {
+                      "type": "hardBreak"
+                    },
+                    {
+                      "type": "hardBreak"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Inserir evidencia da solicitação de cancelamento da RCA"
+                    }
+                  ]
+                }
+              ]
+            },
+            "updateAuthor": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A73caef6f-b951-4688-bca9-73048bb9c157",
+              "accountId": "712020:73caef6f-b951-4688-bca9-73048bb9c157",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                "24x24": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                "16x16": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png",
+                "32x32": "https://secure.gravatar.com/avatar/1d1a093cab25e4f1f5b69a71e7d963f9?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FFB-6.png"
+              },
+              "displayName": "Fabio Almeida Barbosa",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "created": "2025-09-08T11:14:03.333-0300",
+            "updated": "2025-09-08T11:14:03.333-0300",
+            "jsdPublic": false
+          },
+          {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/comment/1029510",
+            "id": "1029510",
+            "author": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+              },
+              "displayName": "Rogerio Cavalcanti Lins Junior",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "body": {
+              "type": "doc",
+              "version": 1,
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Foi solicitado atualização do chamado para evidenciar o pedido de encerramento, porém estarei anexando abaixo o print da conversa que nós tivemos na quarta feira dia 03/09/2025."
+                    }
+                  ]
+                },
+                {
+                  "type": "mediaSingle",
+                  "attrs": {
+                    "layout": "align-start"
+                  },
+                  "content": [
+                    {
+                      "type": "media",
+                      "attrs": {
+                        "type": "file",
+                        "id": "5c701919-26ef-4754-83ed-4bd7ca7d83e2",
+                        "alt": "image-20250908-192421.png",
+                        "collection": "",
+                        "height": 646,
+                        "width": 1040
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "updateAuthor": {
+              "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+              "avatarUrls": {
+                "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+                "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+              },
+              "displayName": "Rogerio Cavalcanti Lins Junior",
+              "active": true,
+              "timeZone": "Etc/GMT+3",
+              "accountType": "atlassian"
+            },
+            "created": "2025-09-08T16:27:03.098-0300",
+            "updated": "2025-09-08T16:27:03.098-0300",
+            "jsdPublic": true
+          }
+        ],
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/issue/321785/comment",
+        "maxResults": 5,
+        "total": 5,
+        "startAt": 0
+      },
+      "customfield_10919": null,
+      "statuscategorychangedate": "2025-09-18T14:30:42.901-0300",
+      "customfield_12095": [],
+      "customfield_19725": null,
+      "customfield_10351": null,
+      "fixVersions": [],
+      "customfield_10111": null,
+      "customfield_10112": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10171",
+        "value": "Recorrência",
+        "id": "10171"
+      },
+      "customfield_18513": null,
+      "customfield_10113": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10174",
+        "value": "Não",
+        "id": "10174"
+      },
+      "customfield_10114": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/10176",
+        "value": "Recorrente",
+        "id": "10176"
+      },
+      "customfield_14710": null,
+      "customfield_15007": [],
+      "customfield_10588": null,
+      "customfield_10347": [],
+      "customfield_10226": null,
+      "customfield_10348": null,
+      "customfield_10227": null,
+      "customfield_10228": null,
+      "customfield_10229": "\r\n{panel:title=CRIAÇÃO DE SOLICITAÇÃO DE MUDANÇAS}\r\nA criação de solicitações de mudança deve ser feita através do link abaixo: \r\n* [Criar uma Solicitação de mudanças|https://jiracpfl.atlassian.net/jira/servicedesk/projects/TSD/forms/form/direct/12/10034?requestTypeId=112]\r\n{panel}\r\n",
+      "customfield_10905": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/customFieldOption/12746",
+        "value": "Não",
+        "id": "12746"
+      },
+      "customfield_10907": null,
+      "customfield_10909": null,
+      "customfield_14380": [],
+      "customfield_10340": "SP",
+      "customfield_10341": null,
+      "priority": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/priority/3",
+        "iconUrl": "https://jiracpfl.atlassian.net/images/icons/priorities/medium_new.svg",
+        "name": "3-Medio",
+        "id": "3"
+      },
+      "customfield_10342": null,
+      "customfield_10343": null,
+      "customfield_10344": null,
+      "customfield_10224": null,
+      "customfield_10345": null,
+      "customfield_10214": null,
+      "customfield_10336": [],
+      "customfield_10215": null,
+      "customfield_10337": null,
+      "customfield_10338": null,
+      "customfield_10339": null,
+      "timeestimate": 0,
+      "customfield_10218": null,
+      "versions": [],
+      "status": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/status/10004",
+        "description": "Cancelado",
+        "iconUrl": "https://jiracpfl.atlassian.net/images/icons/status_generic.gif",
+        "name": "Cancelado",
+        "id": "10004",
+        "statusCategory": {
+          "self": "https://jiracpfl.atlassian.net/rest/api/3/statuscategory/3",
+          "id": 3,
+          "key": "done",
+          "colorName": "green",
+          "name": "Itens concluídos"
+        }
+      },
+      "customfield_18614": null,
+      "customfield_16676": [],
+      "customfield_18615": null,
+      "customfield_10450": null,
+      "customfield_10452": null,
+      "customfield_10210": null,
+      "customfield_10211": null,
+      "customfield_10333": null,
+      "customfield_18613": [],
+      "customfield_10203": null,
+      "customfield_10204": null,
+      "customfield_10205": null,
+      "customfield_10326": [],
+      "customfield_10206": null,
+      "customfield_10207": null,
+      "customfield_10449": null,
+      "aggregatetimeestimate": 0,
+      "customfield_10209": null,
+      "creator": {
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3A1d73a19f-87ff-4442-bde2-415fc534c840",
+        "accountId": "712020:1d73a19f-87ff-4442-bde2-415fc534c840",
+        "avatarUrls": {
+          "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/48",
+          "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/24",
+          "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/16",
+          "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/712020:1d73a19f-87ff-4442-bde2-415fc534c840/e0de8803-78d0-4dd7-8e3c-c6c51fedbaac/32"
+        },
+        "displayName": "Joyce Silva Santos",
+        "active": true,
+        "timeZone": "Brazil/East",
+        "accountType": "atlassian"
+      },
+      "customfield_18846": null,
+      "aggregateprogress": {
+        "progress": 0,
+        "total": 0
+      },
+      "customfield_10683": null,
+      "customfield_10321": null,
+      "customfield_10684": [],
+      "customfield_10200": null,
+      "customfield_10322": null,
+      "customfield_10201": null,
+      "customfield_10202": null,
+      "customfield_10444": null,
+      "customfield_10313": null,
+      "customfield_10676": null,
+      "customfield_14913": null,
+      "customfield_14914": null,
+      "customfield_10314": null,
+      "customfield_10677": [],
+      "customfield_10678": [],
+      "customfield_14911": null,
+      "customfield_14912": null,
+      "customfield_10679": [],
+      "customfield_14915": null,
+      "customfield_14916": null,
+      "timespent": 0,
+      "customfield_10670": [],
+      "customfield_13146": [],
+      "customfield_10671": [],
+      "customfield_10792": [],
+      "customfield_19926": null,
+      "aggregatetimespent": 0,
+      "customfield_10430": null,
+      "customfield_14910": null,
+      "customfield_13147": [],
+      "customfield_10312": null,
+      "customfield_14479": {
+        "id": "90",
+        "name": "Tempo de Retenção RCA",
+        "_links": {
+          "self": "https://jiracpfl.atlassian.net/rest/servicedeskapi/request/321785/sla/90"
+        },
+        "completedCycles": [
+          {
+            "startTime": {
+              "iso8601": "2025-03-25T15:19:45-0300",
+              "jira": "2025-03-25T15:19:45.657-0300",
+              "friendly": "25/mar/25 3:19 PM",
+              "epochMillis": 1742926785657
+            },
+            "stopTime": {
+              "iso8601": "2025-09-18T14:30:42-0300",
+              "jira": "2025-09-18T14:30:42.846-0300",
+              "friendly": "18/set/25 2:30 PM",
+              "epochMillis": 1758216642846
+            },
+            "breachTime": {
+              "iso8601": "2025-06-23T15:19:45-0300",
+              "jira": "2025-06-23T15:19:45.657-0300",
+              "friendly": "23/jun/25 3:19 PM",
+              "epochMillis": 1750702785657
+            },
+            "breached": true,
+            "goalDuration": {
+              "millis": 7776000000,
+              "friendly": "2.160h"
+            },
+            "elapsedTime": {
+              "millis": 14014550788,
+              "friendly": "3.892h 55m"
+            },
+            "remainingTime": {
+              "millis": -6238550788,
+              "friendly": "-1.732h 55m"
+            }
+          }
+        ],
+        "slaDisplayFormat": "NEW_SLA_FORMAT"
+      },
+      "customfield_15205": [],
+      "customfield_10665": [],
+      "customfield_10666": [],
+      "customfield_10424": 0,
+      "customfield_10788": null,
+      "customfield_10667": [],
+      "customfield_10668": [],
+      "customfield_10789": null,
+      "customfield_10669": [],
+      "customfield_10427": "2025-09-12",
+      "customfield_10428": "2025-09-12",
+      "customfield_10429": "2025-09-15",
+      "workratio": -1,
+      "customfield_14909": null,
+      "issuerestriction": {
+        "issuerestrictions": {},
+        "shouldDisplay": false
+      },
+      "created": "2025-03-25T15:19:45.657-0300",
+      "customfield_10663": [],
+      "customfield_10664": [],
+      "customfield_10413": [],
+      "customfield_10414": "SAP CCS - ACC",
+      "customfield_10777": "*{color:red}Atenção, para poder avançar para a Fase 3 - Execução, os valores a serem planejados precisam estar igual a 0!{color}*",
+      "customfield_10415": [
+        {
+          "workspaceId": "4fc8c668-3c28-445a-921f-4cd66d1f865e",
+          "id": "4fc8c668-3c28-445a-921f-4cd66d1f865e:230917",
+          "objectId": "230917"
+        }
+      ],
+      "customfield_10416": null,
+      "customfield_10417": null,
+      "customfield_10418": null,
+      "customfield_10090": [
+        {
+          "workspaceId": "4fc8c668-3c28-445a-921f-4cd66d1f865e",
+          "id": "4fc8c668-3c28-445a-921f-4cd66d1f865e:136416",
+          "objectId": "136416"
+        }
+      ],
+      "customfield_15668": [],
+      "customfield_15669": [],
+      "customfield_14578": null,
+      "customfield_10402": [],
+      "customfield_10887": "2025-09-18T14:30:00.000-0300",
+      "security": null,
+      "customfield_10888": null,
+      "customfield_10405": [],
+      "attachment": [
+        {
+          "self": "https://jiracpfl.atlassian.net/rest/api/3/attachment/315477",
+          "id": "315477",
+          "filename": "image-20250908-192421.png",
+          "author": {
+            "self": "https://jiracpfl.atlassian.net/rest/api/3/user?accountId=712020%3Acb87afe8-57b1-40d3-8d06-f984897b4fbc",
+            "accountId": "712020:cb87afe8-57b1-40d3-8d06-f984897b4fbc",
+            "avatarUrls": {
+              "48x48": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+              "24x24": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+              "16x16": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png",
+              "32x32": "https://secure.gravatar.com/avatar/98cf0457808110d40de8f76919884bb7?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FRJ-2.png"
+            },
+            "displayName": "Rogerio Cavalcanti Lins Junior",
+            "active": true,
+            "timeZone": "Etc/GMT+3",
+            "accountType": "atlassian"
+          },
+          "created": "2025-09-08T16:27:02.538-0300",
+          "size": 97862,
+          "mimeType": "image/png",
+          "content": "https://jiracpfl.atlassian.net/rest/api/3/attachment/content/315477",
+          "thumbnail": "https://jiracpfl.atlassian.net/rest/api/3/attachment/thumbnail/315477"
+        }
+      ],
+      "customfield_10889": null,
+      "customfield_10409": [],
+      "customfield_10080": [],
+      "customfield_10081": [],
+      "customfield_10082": [],
+      "customfield_19692": null,
+      "customfield_10083": {
+        "name": "TI_SAPCCS_ACC",
+        "groupId": "4da322b8-538c-43b5-9c57-726622abdcd2",
+        "self": "https://jiracpfl.atlassian.net/rest/api/3/group?groupId=4da322b8-538c-43b5-9c57-726622abdcd2"
+      },
+      "customfield_10084": [],
+      "customfield_12143": [],
+      "customfield_10085": [],
+      "customfield_12144": [],
+      "customfield_10089": null,
+      "customfield_10882": null,
+      "customfield_10400": null,
+      "customfield_10874": null,
+      "customfield_10875": null,
+      "customfield_18480": null
+    }
+  }
+]
