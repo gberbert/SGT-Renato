@@ -197,26 +197,32 @@ export default function ImportDataExcel() {
              for (let r = 0; r < retries; r++) {
                 try {
                    const uid = await createAuthUser(em, pass, false);
-                   await new Promise(resolve => setTimeout(resolve, 2500));
+                   await new Promise(resolve => setTimeout(resolve, 1000));
                    return { uid, isNew: true };
                 } catch (e) {
                    if (e.code === 'auth/email-already-in-use') {
                       return { uid: null, isNew: false };
                    }
-                   if (e.code === 'auth/too-many-requests') {
-                      console.log("Rate limit hit. Esperando 10 segundos...");
-                      await new Promise(resolve => setTimeout(resolve, 10000));
+                   if (e.code === 'auth/too-many-requests' || e.code === 'auth/network-request-failed') {
+                      console.log(`Erro de rede/rate limit (${e.code}). Esperando 5 segundos...`);
+                      await new Promise(resolve => setTimeout(resolve, 5000));
                       continue;
                    }
                    throw e;
                 }
              }
-             throw new Error("Muitas requisições (auth/too-many-requests).");
+             throw new Error("Muitas requisições (auth/too-many-requests ou network-request-failed).");
           };
 
-          const authResult = await createWithRetry(email, tempPassword);
-          authUid = authResult.uid;
-          isNewAuth = authResult.isNew;
+          let authUid = null;
+          let isNewAuth = false;
+
+          // Se o usuário já existe na base, evitamos bater no Firebase Auth para não tomar Rate Limit
+          if (!state.usersByEmail[email]) {
+             const authResult = await createWithRetry(email, tempPassword);
+             authUid = authResult.uid;
+             isNewAuth = authResult.isNew;
+          }
 
           const payload = {
             displayName: name,
