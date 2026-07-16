@@ -212,6 +212,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
+    const originalSnapshot = activeTicket;
     setActiveTicket(null);
 
     if (!over) return;
@@ -230,7 +231,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
     }
 
     if (targetColumnId) {
-      const activeTicketOriginal = active.data.current?.ticket || tickets.find(t => t.id === activeId);
+      const activeTicketOriginal = originalSnapshot || active.data.current?.ticket || tickets.find(t => t.id === activeId);
       
       let finalColumnId = targetColumnId;
       let finalAssignee = null;
@@ -243,7 +244,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
       if (activeTicketOriginal) {
          try {
            const userName = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuário SGT';
-           const originalColumnId = active.data.current?.ticket?.columnId || activeTicketOriginal.columnId;
+           const originalColumnId = activeTicketOriginal.columnId;
            
            if (originalColumnId !== finalColumnId) {
              const isLastColumn = columns.length > 0 && columns[columns.length - 1].id === finalColumnId;
