@@ -24,6 +24,7 @@ const KanbanColumn = ({ column, tickets, allTickets, onCardClick }) => {
         className={`column-body ${isOver ? 'column-body-over' : ''}`}
       >
         <SortableContext 
+          id={column.id}
           items={tickets.map(t => t.id)} 
           strategy={verticalListSortingStrategy}
         >

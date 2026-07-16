@@ -188,7 +188,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
       const activeIndex = tickets.findIndex(t => t.id === activeId);
       const overIndex = tickets.findIndex(t => t.id === overId);
       
-      if (tickets[activeIndex].columnId !== tickets[overIndex].columnId) {
+      if (activeIndex !== -1 && overIndex !== -1 && tickets[activeIndex].columnId !== tickets[overIndex].columnId) {
         setTickets((prev) => {
           const newTickets = [...prev];
           newTickets[activeIndex] = {
@@ -202,7 +202,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
 
     if (isOverColumn) {
       const activeIndex = tickets.findIndex(t => t.id === activeId);
-      if (tickets[activeIndex].columnId !== overId) {
+      if (activeIndex !== -1 && tickets[activeIndex].columnId !== overId) {
         setTickets((prev) => {
           const newTickets = [...prev];
           newTickets[activeIndex] = {
