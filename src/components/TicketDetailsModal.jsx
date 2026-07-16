@@ -630,6 +630,12 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                       <Text as="div" size="2" weight="bold" mb="1" color="gray">Prioridade</Text>
                       <Text as="div" size="3" style={{ textTransform: 'capitalize' }}>{ticket.priority}</Text>
                     </Box>
+                    {ticket.jiraStatus && (
+                      <Box>
+                        <Text as="div" size="2" weight="bold" mb="1" color="gray">Status Jira</Text>
+                        <Badge color="cyan" variant="soft" size="2">{ticket.jiraStatus}</Badge>
+                      </Box>
+                    )}
                     <Box>
                       <Text as="div" size="2" weight="bold" mb="1" color="gray">Data de Início</Text>
                       <TextField.Root 

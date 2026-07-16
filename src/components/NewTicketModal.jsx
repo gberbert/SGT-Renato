@@ -25,6 +25,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     parentDemandaId: '',
     environment: '',
     reporter: '',
+    jiraStatus: '',
     jiraDatesFlow: {}
   });
   const [associatedSystems, setAssociatedSystems] = useState([]);
@@ -146,6 +147,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         endDate: jiraData.jiraDueDate || prev.endDate,
         environment: jiraData.jiraEnvironment || prev.environment,
         reporter: jiraData.jiraCreator || prev.reporter,
+        jiraStatus: jiraData.status || prev.jiraStatus,
         component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
         jiraDatesFlow: jiraData.jiraDatesFlow || {},
         squadIds: Array.from(newSquadIds)
@@ -211,6 +213,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         endDate: jiraData.jiraDueDate || prev.endDate,
         environment: jiraData.jiraEnvironment || prev.environment,
         reporter: jiraData.jiraCreator || prev.reporter,
+        jiraStatus: jiraData.status || prev.jiraStatus,
         component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
         jiraDatesFlow: jiraData.jiraDatesFlow || {},
         squadIds: Array.from(newSquadIds)
@@ -295,6 +298,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         endDate: formData.endDate,
         environment: formData.environment,
         reporter: formData.reporter,
+        jiraStatus: formData.jiraStatus,
         jiraDatesFlow: formData.jiraDatesFlow || {},
         customData: customData,
         parentId: currentBoard === 'atividades' ? formData.parentDemandaId : parentId,
@@ -321,6 +325,7 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         parentDemandaId: '',
         environment: '',
         reporter: '',
+        jiraStatus: '',
         jiraDatesFlow: {}
       });
       setAssociatedSystems([]);
