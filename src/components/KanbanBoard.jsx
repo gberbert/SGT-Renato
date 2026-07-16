@@ -13,7 +13,7 @@ import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
 import { subscribeToTickets, updateTicketStatus, updateTicket, searchJiraTickets, fetchJiraTicket, createTicket } from '../services/ticketService';
-import { subscribeToWorkflows } from '../services/settingsService';
+import { subscribeToWorkflows, subscribeToSystems } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToAllocations } from '../services/allocationService';
@@ -43,6 +43,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
     return localStorage.getItem('lastSelectedProjectId') || 'all';
   });
   const [systemsModalData, setSystemsModalData] = useState(null);
+  const [systems, setSystems] = useState([]);
   
   const [squads, setSquads] = useState([]);
   const [globalSquads, setGlobalSquads] = useState([]);
@@ -98,6 +99,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
 
     const unsubscribeGlobalSquads = subscribeToProjectSquads('all', setGlobalSquads, console.error);
     const unsubscribeAllocations = subscribeToAllocations(setAllocations);
+    const unsubscribeSystems = subscribeToSystems(setSystems);
 
     return () => {
       unsubscribeTickets();
@@ -105,6 +107,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
       unsubscribeProjects();
       unsubscribeGlobalSquads();
       unsubscribeAllocations();
+      unsubscribeSystems();
     };
   }, []);
 
@@ -401,8 +404,17 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
           }
           
           let associatedSystems = [];
+          const newSquadIds = new Set();
+          
           if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
              associatedSystems = jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 }));
+             
+             jiraData.jiraAssociatedSystems.forEach(sysName => {
+               const matchedSystem = systems.find(s => s.name === sysName);
+               if (matchedSystem && matchedSystem.squadId && globalSquads.some(sq => sq.id === matchedSystem.squadId)) {
+                  newSquadIds.add(matchedSystem.squadId);
+               }
+             });
           }
           
           const ticketData = {
@@ -414,7 +426,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
                       jiraData.priority?.toLowerCase().includes('crítica') ? 'critical' : 'medium',
             columnId: startColumnId,
             projectId: proj?.id || 'unknown',
-            squadIds: [],
+            squadIds: Array.from(newSquadIds),
             assignee: jiraData.jiraAssignee || 'Sem responsável',
             externalTicket: jiraData.code,
             associatedSystems: associatedSystems,
