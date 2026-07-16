@@ -214,9 +214,6 @@ export default function ImportDataExcel() {
              throw new Error("Muitas requisições (auth/too-many-requests ou network-request-failed).");
           };
 
-          let authUid = null;
-          let isNewAuth = false;
-
           // Se o usuário já existe na base, evitamos bater no Firebase Auth para não tomar Rate Limit
           if (!state.usersByEmail[email]) {
              const authResult = await createWithRetry(email, tempPassword);
