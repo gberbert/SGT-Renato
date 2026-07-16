@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   DndContext, 
+  pointerWithin,
   closestCorners, 
   KeyboardSensor, 
   PointerSensor, 
@@ -785,7 +786,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
           <div className="kanban-board" style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '32px' }}>
             <DndContext 
               sensors={sensors}
-              collisionDetection={closestCorners}
+              collisionDetection={pointerWithin}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
