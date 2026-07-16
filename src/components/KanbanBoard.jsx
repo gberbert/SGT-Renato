@@ -12,13 +12,13 @@ import {
 import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
-import { subscribeToTickets, updateTicketStatus, updateTicket } from '../services/ticketService';
+import { subscribeToTickets, updateTicketStatus, updateTicket, searchJiraTickets, fetchJiraTicket, createTicket } from '../services/ticketService';
 import { subscribeToWorkflows } from '../services/settingsService';
 import { subscribeToProjects } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToAllocations } from '../services/allocationService';
 import { auth } from '../firebase';
-import { Loader2, LayoutList, List, LayoutGrid, Filter } from 'lucide-react';
+import { Loader2, LayoutList, List, LayoutGrid, Filter, Plus, Download } from 'lucide-react';
 import { Button, Flex, Select, Text, Table, Badge, Card, Dialog, Grid, TextField, ScrollArea } from '@radix-ui/themes';
 
 const DEFAULT_COLUMNS = [
@@ -29,7 +29,7 @@ const DEFAULT_COLUMNS = [
   { id: 'col-done', title: 'Concluído', statusId: 'col-done' }
 ];
 
-const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
+const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen }) => {
   const [tickets, setTickets] = useState([]);
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +60,9 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
     dateStart: '',
     dateEnd: ''
   });
+
+  const [isCargaFullLoading, setIsCargaFullLoading] = useState(false);
+  const [cargaFullProgress, setCargaFullProgress] = useState({ current: 0, total: 0, text: '' });
 
   useEffect(() => {
     let ticketsLoaded = false;
@@ -324,9 +327,9 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
   });
 
   filteredTickets = filteredTickets.filter(t => {
-    if (advancedFilters.system && (!t.associatedSystems || !t.associatedSystems.some(s => s.system.toLowerCase().includes(advancedFilters.system.toLowerCase())))) return false;
+    if (advancedFilters.system && (!t.associatedSystems || !t.associatedSystems.some(s => s.system?.toLowerCase().includes(advancedFilters.system.toLowerCase())))) return false;
     if (advancedFilters.priority && t.priority !== advancedFilters.priority && advancedFilters.priority !== 'all') return false;
-    if (advancedFilters.type && t.type !== advancedFilters.type && advancedFilters.type !== 'all') return false;
+    if (advancedFilters.type && t.type?.toLowerCase() !== advancedFilters.type.toLowerCase() && advancedFilters.type !== 'all') return false;
     if (advancedFilters.assignee && (!t.assignee || !t.assignee.toLowerCase().includes(advancedFilters.assignee.toLowerCase()))) return false;
     if (advancedFilters.status && t.columnId !== advancedFilters.status && advancedFilters.status !== 'all') return false;
     if (advancedFilters.sprint && (!t.sprint || !t.sprint.toLowerCase().includes(advancedFilters.sprint.toLowerCase()))) return false;
@@ -450,7 +453,22 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
 
         </Flex>
 
-        <Flex gap="2" className="kanban-actions">
+        <Flex gap="2" className="kanban-actions" align="center">
+          <Button color="indigo" onClick={() => setIsModalOpen && setIsModalOpen(board)}>
+            <Plus size={16} /> <span className="hide-on-mobile">Nova Demanda</span>
+          </Button>
+
+          <Button color="green" onClick={handleCargaFull} disabled={isCargaFullLoading}>
+            {isCargaFullLoading ? <Loader2 size={16} className="spin" /> : <Download size={16} />}
+            <span className="hide-on-mobile">{isCargaFullLoading ? 'Carregando...' : 'Carga Full'}</span>
+          </Button>
+          
+          {isCargaFullLoading && (
+            <Text size="2" color="gray" style={{ whiteSpace: 'nowrap' }}>
+              {cargaFullProgress.text} ({cargaFullProgress.current}/{cargaFullProgress.total})
+            </Text>
+          )}
+
           {viewMode === 'kanban' && (
             <Button 
               variant={useSwimlanes ? 'solid' : 'soft'} 

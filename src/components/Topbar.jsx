@@ -111,9 +111,7 @@ const Topbar = ({ toggleSidebar, setIsModalOpen, setSelectedTicket, handleLogout
           </DropdownMenu.Content>
         </DropdownMenu.Root>
 
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(currentBoard)}>
-          <Plus size={18} /> <span className="hide-on-mobile">{currentBoard === 'atividades' ? 'Nova Atividade' : 'Nova Demanda'}</span>
-        </button>
+
         <button className="btn-icon" onClick={handleLogout} title="Sair">
           <LogOut size={20} />
         </button>

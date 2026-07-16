@@ -148,8 +148,8 @@ function App() {
           <section className="view-container">
             <Routes>
               <Route path="/" element={<Dashboard userRole={userRole} />} />
-              <Route path="/demandas" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="demandas" />} />
-              <Route path="/atividades" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="atividades" />} />
+              <Route path="/demandas" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="demandas" setIsModalOpen={setIsModalOpen} />} />
+              <Route path="/atividades" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="atividades" setIsModalOpen={setIsModalOpen} />} />
               <Route path="/roadmap" element={<Roadmap userRole={userRole} />} />
               <Route path="/projetos" element={<Projects userRole={userRole} />} />
               <Route path="/especificacoes" element={<Specifications userRole={userRole} />} />

@@ -412,7 +412,7 @@ exports.searchJiraTickets = onCall({
             },
             body: JSON.stringify({
                 jql: jql,
-                maxResults: 50,
+                maxResults: 100,
                 fields: ["summary", "description", "priority", "status", "creator", "reporter", "assignee", "issuetype", "duedate", "environment", "labels", "created"]
             })
         });
