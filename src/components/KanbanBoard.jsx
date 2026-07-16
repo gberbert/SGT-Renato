@@ -19,7 +19,7 @@ import { subscribeToProjectSquads } from '../services/squadService';
 import { subscribeToAllocations } from '../services/allocationService';
 import { auth, db } from '../firebase';
 import { getDocs, collection } from 'firebase/firestore';
-import { Loader2, LayoutList, List, LayoutGrid, Filter, Plus, Download } from 'lucide-react';
+import { Loader2, LayoutList, List, LayoutGrid, Filter, Plus, Download, Search } from 'lucide-react';
 import { Button, Flex, Select, Text, Table, Badge, Card, Dialog, Grid, TextField, ScrollArea } from '@radix-ui/themes';
 
 const DEFAULT_COLUMNS = [
@@ -52,16 +52,8 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
   const [selectedSquadId, setSelectedSquadId] = useState('all');
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [advancedFilters, setAdvancedFilters] = useState({
-    system: '',
-    priority: '',
-    type: '',
-    assignee: '',
-    status: '',
-    sprint: '',
-    dateStart: '',
-    dateEnd: ''
-  });
+  const [advancedFilters, setAdvancedFilters] = useState({ system: '', priority: '', type: '', assignee: '', status: '', sprint: '', dateStart: '', dateEnd: '', jiraStatus: '' });
+  const [quickSearch, setQuickSearch] = useState('');
 
   const [isCargaFullLoading, setIsCargaFullLoading] = useState(false);
   const [cargaFullProgress, setCargaFullProgress] = useState({ current: 0, total: 0, text: '' });
@@ -334,10 +326,18 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
     if (advancedFilters.system && (!t.associatedSystems || !t.associatedSystems.some(s => s.system?.toLowerCase().includes(advancedFilters.system.toLowerCase())))) return false;
     if (advancedFilters.priority && t.priority !== advancedFilters.priority && advancedFilters.priority !== 'all') return false;
     if (advancedFilters.type && t.type?.toLowerCase() !== advancedFilters.type.toLowerCase() && advancedFilters.type !== 'all') return false;
-    if (advancedFilters.assignee && (!t.assignee || !t.assignee.toLowerCase().includes(advancedFilters.assignee.toLowerCase()))) return false;
+    if (advancedFilters.assignee && (!t.assignee || t.assignee !== advancedFilters.assignee) && advancedFilters.assignee !== 'all') return false;
     if (advancedFilters.status && t.columnId !== advancedFilters.status && advancedFilters.status !== 'all') return false;
+    if (advancedFilters.jiraStatus && t.jiraStatus !== advancedFilters.jiraStatus && advancedFilters.jiraStatus !== 'all') return false;
     if (advancedFilters.sprint && (!t.sprint || !t.sprint.toLowerCase().includes(advancedFilters.sprint.toLowerCase()))) return false;
     
+    if (quickSearch) {
+       const term = quickSearch.toLowerCase();
+       const matchesCode = t.code?.toLowerCase().includes(term);
+       const matchesTitle = t.title?.toLowerCase().includes(term);
+       if (!matchesCode && !matchesTitle) return false;
+    }
+
     if (advancedFilters.dateStart) {
        const ticketDate = t.createdAt ? t.createdAt.toDate() : new Date();
        if (ticketDate < new Date(advancedFilters.dateStart)) return false;
@@ -370,6 +370,8 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
   const assignees = useSwimlanes 
     ? [...new Set(filteredTickets.map(t => t.assignee || 'Sem responsável'))] 
     : [null];
+  const uniqueTypes = [...new Set(tickets.map(t => t.type).filter(Boolean))];
+  const uniqueJiraStatuses = [...new Set(tickets.map(t => t.jiraStatus).filter(Boolean))];
 
   const handleCargaFull = async () => {
     setIsCargaFullLoading(true);
@@ -498,10 +500,19 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
             </Select.Root>
           )}
 
+          <TextField.Root 
+            placeholder="Pesquisa rápida (Cód ou Desc)..." 
+            value={quickSearch} 
+            onChange={(e) => setQuickSearch(e.target.value)}
+            style={{ width: '250px' }}
+          >
+            <TextField.Slot><Search size={16}/></TextField.Slot>
+          </TextField.Root>
+
           <Dialog.Root open={isFilterOpen} onOpenChange={setIsFilterOpen}>
             <Dialog.Trigger>
               <Button variant="soft" color="indigo" className="kanban-btn">
-                <Filter size={16} /> Filtros
+                <Filter size={16} /> Filtros Avançados
               </Button>
             </Dialog.Trigger>
             <Dialog.Content maxWidth="500px">
@@ -509,11 +520,27 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
               <Grid columns="2" gap="3" mt="3">
                 <Flex direction="column" gap="1">
                   <Text size="2" weight="bold">Responsável</Text>
-                  <TextField.Root placeholder="Ex: João" value={advancedFilters.assignee} onChange={e => setAdvancedFilters(prev => ({...prev, assignee: e.target.value}))} />
+                  <Select.Root value={advancedFilters.assignee || 'all'} onValueChange={val => setAdvancedFilters(prev => ({...prev, assignee: val === 'all' ? '' : val}))}>
+                    <Select.Trigger />
+                    <Select.Content>
+                      <Select.Item value="all">Todos</Select.Item>
+                      {assignees.map(a => (
+                        <Select.Item key={a} value={a}>{a}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
                 </Flex>
                 <Flex direction="column" gap="1">
                   <Text size="2" weight="bold">Sistema</Text>
-                  <TextField.Root placeholder="Ex: SAP" value={advancedFilters.system} onChange={e => setAdvancedFilters(prev => ({...prev, system: e.target.value}))} />
+                  <Select.Root value={advancedFilters.system || 'all'} onValueChange={val => setAdvancedFilters(prev => ({...prev, system: val === 'all' ? '' : val}))}>
+                    <Select.Trigger />
+                    <Select.Content>
+                      <Select.Item value="all">Todos</Select.Item>
+                      {systems.map(s => (
+                        <Select.Item key={s.id} value={s.name}>{s.name}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
                 </Flex>
                 <Flex direction="column" gap="1">
                   <Text size="2" weight="bold">Prioridade</Text>
@@ -529,13 +556,37 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
                   </Select.Root>
                 </Flex>
                 <Flex direction="column" gap="1">
-                  <Text size="2" weight="bold">Status</Text>
+                  <Text size="2" weight="bold">Tipo</Text>
+                  <Select.Root value={advancedFilters.type || 'all'} onValueChange={val => setAdvancedFilters(prev => ({...prev, type: val === 'all' ? '' : val}))}>
+                    <Select.Trigger />
+                    <Select.Content>
+                      <Select.Item value="all">Todos</Select.Item>
+                      {uniqueTypes.map(t => (
+                        <Select.Item key={t} value={t}>{t}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </Flex>
+                <Flex direction="column" gap="1">
+                  <Text size="2" weight="bold">Status SGT (Coluna)</Text>
                   <Select.Root value={advancedFilters.status || 'all'} onValueChange={val => setAdvancedFilters(prev => ({...prev, status: val === 'all' ? '' : val}))}>
                     <Select.Trigger />
                     <Select.Content>
                       <Select.Item value="all">Todos</Select.Item>
                       {columns.map(col => (
                         <Select.Item key={col.id} value={col.statusId}>{col.title}</Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Root>
+                </Flex>
+                <Flex direction="column" gap="1">
+                  <Text size="2" weight="bold">Status Jira</Text>
+                  <Select.Root value={advancedFilters.jiraStatus || 'all'} onValueChange={val => setAdvancedFilters(prev => ({...prev, jiraStatus: val === 'all' ? '' : val}))}>
+                    <Select.Trigger />
+                    <Select.Content>
+                      <Select.Item value="all">Todos</Select.Item>
+                      {uniqueJiraStatuses.map(js => (
+                        <Select.Item key={js} value={js}>{js}</Select.Item>
                       ))}
                     </Select.Content>
                   </Select.Root>
@@ -550,7 +601,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
                 </Flex>
               </Grid>
               <Flex justify="end" gap="3" mt="4">
-                <Button variant="soft" color="gray" onClick={() => setAdvancedFilters({ system: '', priority: '', type: '', assignee: '', status: '', sprint: '', dateStart: '', dateEnd: '' })}>Limpar Filtros</Button>
+                <Button variant="soft" color="gray" onClick={() => { setAdvancedFilters({ system: '', priority: '', type: '', assignee: '', status: '', sprint: '', dateStart: '', dateEnd: '', jiraStatus: '' }); setQuickSearch(''); }}>Limpar Filtros</Button>
                 <Button onClick={() => setIsFilterOpen(false)}>Aplicar</Button>
               </Flex>
             </Dialog.Content>
