@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { MessageSquare, User, GitMerge, Bot } from 'lucide-react';
 
-const KanbanCard = ({ ticket, subtasksCount = 0, onCardClick }) => {
+const KanbanCard = ({ ticket, subtasksCount = 0, onCardClick, isOverlay = false }) => {
   const {
     attributes,
     listeners,
@@ -34,7 +34,7 @@ const KanbanCard = ({ ticket, subtasksCount = 0, onCardClick }) => {
     }
   };
 
-  if (isDragging) {
+  if (isDragging && !isOverlay) {
     return (
       <div 
         ref={setNodeRef} 
@@ -46,10 +46,10 @@ const KanbanCard = ({ ticket, subtasksCount = 0, onCardClick }) => {
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
+      ref={isOverlay ? undefined : setNodeRef}
+      style={isOverlay ? { cursor: 'grabbing', opacity: 1, zIndex: 9999 } : style}
+      {...(isOverlay ? {} : attributes)}
+      {...(isOverlay ? {} : listeners)}
       className={`kanban-card glass-panel ${ticket.isBlocked ? 'blocked-ticket' : ''}`}
       onClick={() => onCardClick && onCardClick(ticket)}
     >

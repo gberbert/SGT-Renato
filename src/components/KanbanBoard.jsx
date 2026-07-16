@@ -825,7 +825,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
               ))}
 
               <DragOverlay dropAnimation={dropAnimation}>
-                {activeTicket ? <KanbanCard ticket={activeTicket} /> : null}
+                {activeTicket ? <KanbanCard ticket={activeTicket} isOverlay={true} /> : null}
               </DragOverlay>
             </DndContext>
           </div>
