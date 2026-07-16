@@ -502,6 +502,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
                           <Table.ColumnHeaderCell>Responsável</Table.ColumnHeaderCell>
                           <Table.ColumnHeaderCell>Prioridade</Table.ColumnHeaderCell>
                           <Table.ColumnHeaderCell>Tipo</Table.ColumnHeaderCell>
+                          <Table.ColumnHeaderCell>Status Jira</Table.ColumnHeaderCell>
                           <Table.ColumnHeaderCell>Criação</Table.ColumnHeaderCell>
                           <Table.ColumnHeaderCell>Análise T-Shirt</Table.ColumnHeaderCell>
                           <Table.ColumnHeaderCell>T-Shirt Enviada</Table.ColumnHeaderCell>
@@ -546,6 +547,9 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas' }) => {
                             <Table.Cell>{t.assignee || 'Sem responsável'}</Table.Cell>
                             <Table.Cell style={{ textTransform: 'capitalize' }}>{t.priority || '-'}</Table.Cell>
                             <Table.Cell>{t.type || '-'}</Table.Cell>
+                            <Table.Cell>
+                              {t.jiraStatus ? <Badge color="cyan" variant="soft" size="1">{t.jiraStatus}</Badge> : '-'}
+                            </Table.Cell>
                             <Table.Cell>{t.createdAt ? new Date(t.createdAt.toDate()).toLocaleDateString() : '-'}</Table.Cell>
                             <Table.Cell>{fDate(t.jiraDatesFlow?.dataAnaliseTshirt)}</Table.Cell>
                             <Table.Cell>{fDate(t.jiraDatesFlow?.tshirtEnviada)}</Table.Cell>
