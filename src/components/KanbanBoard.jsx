@@ -118,12 +118,32 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
     if (proj && targetWorkflowId) {
       const flow = workflows.find(w => w.id === targetWorkflowId);
       if (flow && flow.columns && flow.columns.length > 0) {
-        setColumns(flow.columns);
+        const idCounts = {};
+        const safeCols = flow.columns.map(c => {
+          let baseId = c.id;
+          if (idCounts[baseId] !== undefined) {
+            idCounts[baseId]++;
+            baseId = `${baseId}-${idCounts[baseId]}`;
+          } else {
+            idCounts[baseId] = 0;
+          }
+          return { ...c, id: baseId, statusId: baseId };
+        });
+        setColumns(safeCols);
       } else if (flow && flow.columnsStr) {
-        const cols = flow.columnsStr.split(',').map(c => {
+        const idCounts = {};
+        const cols = flow.columnsStr.split(',').map((c, index) => {
           const title = c.trim();
-          const id = `col-${title.toLowerCase().replace(/\s+/g, '-')}`;
-          return { id, title, statusId: id };
+          let baseId = `col-${title.toLowerCase().replace(/\s+/g, '-')}`;
+          
+          if (idCounts[baseId] !== undefined) {
+            idCounts[baseId]++;
+            baseId = `${baseId}-${idCounts[baseId]}`;
+          } else {
+            idCounts[baseId] = 0;
+          }
+          
+          return { id: baseId, title, statusId: baseId };
         });
         setColumns(cols);
       } else {
@@ -185,33 +205,35 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
     if (!isActiveTicket) return;
 
     if (isOverTicket) {
-      const activeIndex = tickets.findIndex(t => t.id === activeId);
-      const overIndex = tickets.findIndex(t => t.id === overId);
-      
-      if (activeIndex !== -1 && overIndex !== -1 && tickets[activeIndex].columnId !== tickets[overIndex].columnId) {
-        setTickets((prev) => {
+      setTickets((prev) => {
+        const activeIndex = prev.findIndex(t => t.id === activeId);
+        const overIndex = prev.findIndex(t => t.id === overId);
+        
+        if (activeIndex !== -1 && overIndex !== -1 && prev[activeIndex].columnId !== prev[overIndex].columnId) {
           const newTickets = [...prev];
           newTickets[activeIndex] = {
             ...newTickets[activeIndex],
-            columnId: tickets[overIndex].columnId
+            columnId: prev[overIndex].columnId
           };
           return arrayMove(newTickets, activeIndex, overIndex);
-        });
-      }
+        }
+        return prev;
+      });
     }
 
     if (isOverColumn) {
-      const activeIndex = tickets.findIndex(t => t.id === activeId);
-      if (activeIndex !== -1 && tickets[activeIndex].columnId !== overId) {
-        setTickets((prev) => {
+      setTickets((prev) => {
+        const activeIndex = prev.findIndex(t => t.id === activeId);
+        if (activeIndex !== -1 && prev[activeIndex].columnId !== overId) {
           const newTickets = [...prev];
           newTickets[activeIndex] = {
             ...newTickets[activeIndex],
             columnId: overId
           };
           return arrayMove(newTickets, activeIndex, activeIndex);
-        });
-      }
+        }
+        return prev;
+      });
     }
   };
 
