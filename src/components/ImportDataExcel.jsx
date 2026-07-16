@@ -298,11 +298,16 @@ export default function ImportDataExcel() {
       if (sysSheetName) {
         const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sysSheetName]);
         for (const row of rows) {
-          const sysName = (row['Sistemas'] || '').trim();
+          const keys = Object.keys(row);
+          const sysKeyExcel = keys.find(k => k.trim().toLowerCase() === 'sistemas') || 'Sistemas';
+          const sqKeyExcel = keys.find(k => k.trim().toLowerCase() === 'squad') || 'Squad';
+          const projKeyExcel = keys.find(k => k.trim().toLowerCase() === 'projeto') || 'Projeto';
+
+          const sysName = (row[sysKeyExcel] || '').trim();
           if (!sysName) continue;
 
-          const squadName = (row['Squad'] || '').trim();
-          const projName = (row['Projeto'] || '').trim();
+          const squadName = (row[sqKeyExcel] || '').trim();
+          const projName = (row[projKeyExcel] || '').trim();
 
           let squadId = null;
           let projectId = null;
@@ -370,7 +375,7 @@ export default function ImportDataExcel() {
         const sq = state.squadsByName[sqKey];
         const uniqueUsers = [];
         const seenIds = new Set();
-        sq.users.forEach(u => {
+        (sq.users || []).forEach(u => {
            const uid = u.id || u.userId;
            if (uid && !seenIds.has(uid)) {
                seenIds.add(uid);
