@@ -35,7 +35,7 @@ export default function ImportDataExcel() {
 
     squadsSnap.docs.forEach(d => {
       const data = d.data();
-      if (data.name) state.squadsByName[data.name.toUpperCase()] = { id: d.id, ...data, users: data.users || [] };
+      if (data.name) state.squadsByName[data.name.toUpperCase()] = { id: d.id, ...data, users: data.users || [], systemIds: data.systemIds || [] };
       state.squadsById[d.id] = { id: d.id, ...data };
     });
 
@@ -150,9 +150,10 @@ export default function ImportDataExcel() {
         const docRef = await addDoc(collection(db, 'squads'), {
           name: squadName.trim(),
           users: [],
+          systemIds: [],
           createdAt: serverTimestamp()
         });
-        const newSquad = { id: docRef.id, name: squadName.trim(), users: [] };
+        const newSquad = { id: docRef.id, name: squadName.trim(), users: [], systemIds: [] };
         state.squadsByName[key] = newSquad;
         state.squadsById[docRef.id] = newSquad;
         return newSquad;
@@ -287,23 +288,7 @@ export default function ImportDataExcel() {
         }
       }
 
-      // Save Squads Users updates
-      for (const sqKey in state.squadsByName) {
-        const sq = state.squadsByName[sqKey];
-        const uniqueUsers = [];
-        const seenIds = new Set();
-        sq.users.forEach(u => {
-           const uid = u.id || u.userId;
-           if (uid && !seenIds.has(uid)) {
-               seenIds.add(uid);
-               uniqueUsers.push({ 
-                 id: uid, 
-                 role: u.role === 'desenvolvedor' ? 'Developer' : (u.role || 'Developer') 
-               });
-           }
-        });
-        await updateDoc(doc(db, 'squads', sq.id), { users: uniqueUsers });
-      }
+      // O update de squads ocorrerá após os sistemas
 
       // 2. Process "Sistemas x Squads"
       const sysSheetName = workbook.SheetNames.find(s => s.toLowerCase().includes('sistemas'));
@@ -330,11 +315,23 @@ export default function ImportDataExcel() {
           }
 
           const sysKey = sysName.toUpperCase();
+          let systemIdToUse = null;
+
           if (state.systemsByName[sysKey]) {
             // Update
             const sysDoc = state.systemsByName[sysKey];
+            systemIdToUse = sysDoc.id;
             const updates = {};
-            if (squadId && sysDoc.squadId !== squadId) updates.squadId = squadId;
+            if (squadId && sysDoc.squadId !== squadId) {
+                updates.squadId = squadId;
+                if (sysDoc.squadId && state.squadsById[sysDoc.squadId]) {
+                   const oldSqNameKey = state.squadsById[sysDoc.squadId].name.toUpperCase();
+                   const oldSq = state.squadsByName[oldSqNameKey];
+                   if (oldSq && oldSq.systemIds) {
+                       oldSq.systemIds = oldSq.systemIds.filter(id => id !== systemIdToUse);
+                   }
+                }
+            }
             if (projectId && sysDoc.projectId !== projectId) updates.projectId = projectId;
             
             if (Object.keys(updates).length > 0) {
@@ -349,10 +346,41 @@ export default function ImportDataExcel() {
               projectId: projectId || null,
               createdAt: serverTimestamp()
             });
+            systemIdToUse = docRef.id;
             state.systemsByName[sysKey] = { id: docRef.id, name: sysName, squadId, projectId };
             addedSystems++;
           }
+
+          if (squadId && state.squadsById[squadId]) {
+            const sqNameKey = state.squadsById[squadId].name.toUpperCase();
+            const sq = state.squadsByName[sqNameKey];
+            if (!sq.systemIds) sq.systemIds = [];
+            if (!sq.systemIds.includes(systemIdToUse)) {
+               sq.systemIds.push(systemIdToUse);
+            }
+          }
         }
+      }
+
+      // Save Squads Users and Systems updates
+      for (const sqKey in state.squadsByName) {
+        const sq = state.squadsByName[sqKey];
+        const uniqueUsers = [];
+        const seenIds = new Set();
+        sq.users.forEach(u => {
+           const uid = u.id || u.userId;
+           if (uid && !seenIds.has(uid)) {
+               seenIds.add(uid);
+               uniqueUsers.push({ 
+                 id: uid, 
+                 role: u.role === 'desenvolvedor' ? 'Developer' : (u.role || 'Developer') 
+               });
+           }
+        });
+        await updateDoc(doc(db, 'squads', sq.id), { 
+          users: uniqueUsers, 
+          systemIds: sq.systemIds || [] 
+        });
       }
 
       setMessage({ type: 'success', text: `Importação concluída! Usuários: ${addedUsers} criados, ${updatedUsers} atualizados. Sistemas: ${addedSystems} criados, ${updatedSystems} atualizados.` });
