@@ -127,6 +127,16 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     setLoadingJira(true);
     try {
       const jiraData = await fetchJiraTicket(formData.externalTicket.trim());
+      const newSquadIds = new Set(formData.squadIds || []);
+      if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
+        jiraData.jiraAssociatedSystems.forEach(sysName => {
+          const matchedSystem = systems.find(s => s.name === sysName);
+          if (matchedSystem && matchedSystem.squadId && squads.some(sq => sq.id === matchedSystem.squadId)) {
+             newSquadIds.add(matchedSystem.squadId);
+          }
+        });
+      }
+
       setFormData(prev => ({
         ...prev,
         title: jiraData.title || prev.title,
@@ -137,7 +147,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         environment: jiraData.jiraEnvironment || prev.environment,
         reporter: jiraData.jiraCreator || prev.reporter,
         component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
-        jiraDatesFlow: jiraData.jiraDatesFlow || {}
+        jiraDatesFlow: jiraData.jiraDatesFlow || {},
+        squadIds: Array.from(newSquadIds)
       }));
       if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
         setAssociatedSystems(jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 })));
@@ -180,6 +191,16 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
     setLoadingJiraSearch(true);
     try {
       const jiraData = await fetchJiraTicket(jiraDataInfo.code);
+      const newSquadIds = new Set(formData.squadIds || []);
+      if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
+        jiraData.jiraAssociatedSystems.forEach(sysName => {
+          const matchedSystem = systems.find(s => s.name === sysName);
+          if (matchedSystem && matchedSystem.squadId && squads.some(sq => sq.id === matchedSystem.squadId)) {
+             newSquadIds.add(matchedSystem.squadId);
+          }
+        });
+      }
+
       setFormData(prev => ({
         ...prev,
         externalTicket: jiraData.code,
@@ -191,7 +212,8 @@ const NewTicketModal = ({ isOpen, onClose, parentId = null, currentBoard = 'dema
         environment: jiraData.jiraEnvironment || prev.environment,
         reporter: jiraData.jiraCreator || prev.reporter,
         component: (jiraData.jiraLabels && jiraData.jiraLabels.length > 0) ? (components.find(c => c.name.toLowerCase() === jiraData.jiraLabels[0].toLowerCase())?.name || prev.component) : prev.component,
-        jiraDatesFlow: jiraData.jiraDatesFlow || {}
+        jiraDatesFlow: jiraData.jiraDatesFlow || {},
+        squadIds: Array.from(newSquadIds)
       }));
       if (jiraData.jiraAssociatedSystems && jiraData.jiraAssociatedSystems.length > 0) {
         setAssociatedSystems(jiraData.jiraAssociatedSystems.map(sys => ({ system: sys, hours: 0 })));
