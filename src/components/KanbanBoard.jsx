@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   DndContext, 
   closestCorners, 
@@ -36,6 +36,8 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTicket, setActiveTicket] = useState(null);
+  const activeTicketRef = useRef(null);
+  
   const [useSwimlanes, setUseSwimlanes] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'kanban' | 'list'
   const [projects, setProjects] = useState([]);
@@ -162,7 +164,10 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
   const handleDragStart = (event) => {
     const { active } = event;
     const ticket = tickets.find(t => t.id === active.id);
-    if (ticket) setActiveTicket(ticket);
+    if (ticket) {
+      setActiveTicket(ticket);
+      activeTicketRef.current = ticket;
+    }
   };
 
   const handleDragOver = (event) => {
@@ -212,8 +217,9 @@ const KanbanBoard = ({ onCardClick, userRole, board = 'demandas', setIsModalOpen
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
-    const originalSnapshot = activeTicket;
+    const originalSnapshot = activeTicketRef.current;
     setActiveTicket(null);
+    activeTicketRef.current = null;
 
     if (!over) return;
 
