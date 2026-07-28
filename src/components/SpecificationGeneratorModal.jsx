@@ -216,7 +216,7 @@ O documento final deverá OBRIGATORIAMENTE conter informações claras e objetiv
 4. Escopo Funcional
 5. Requisitos Funcionais (Para cada um, incluir Descrição, Atores, Resultado esperado e uma tabela de alterações de tela/relatório)
 6. Requisitos Não Funcionais (Listar explicitly o que NÃO será tratado na demanda)
-7. Diagramas e Fluxos Visuais (Gerar diagramas estruturais em Mermaid.js)
+7. Diagramas e Fluxos Visuais (Gerar diagramas estruturais em Mermaid.js. MUITO IMPORTANTE: Envolva SEMPRE os textos dos nós com aspas duplas para evitar erros de sintaxe, ex: id1["Meu Texto (com parênteses)"])
 8. Regras de Negócio (Fluxo principal, exceções, validações e permissões)
 9. Premissas, restrições, riscos e dependências (Separar Premissas e Restrições em tabelas claras)
 10. Critérios de Aceite
@@ -445,7 +445,7 @@ Faça-me perguntas se alguma dessas informações estiver faltando no meu contex
             {'\n'}4. Escopo Funcional
             {'\n'}5. Requisitos Funcionais (Ações, atores, resultados esperados e tabela de campos/elementos)
             {'\n'}6. Requisitos Não Funcionais (O que não será tratado na demanda)
-            {'\n'}7. Diagramas e Fluxos Visuais (Gerar diagramas estruturais em Mermaid.js)
+            {'\n'}7. Diagramas e Fluxos Visuais (Gerar diagramas estruturais em Mermaid.js. MUITO IMPORTANTE: Envolva os textos dos nós com aspas duplas, ex: id1["Meu Texto"])
             {'\n'}8. Regras de Negócio (Validações, permissões, exceções)
             {'\n'}9. Premissas, restrições, riscos e dependências
             {'\n'}10. Critérios de Aceite

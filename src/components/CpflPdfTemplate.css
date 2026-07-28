@@ -166,10 +166,14 @@
 
 .pdf-content-page table {
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   margin-top: 10px;
   margin-bottom: 20px;
   font-size: 10pt;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .pdf-content-page th {
@@ -177,12 +181,16 @@
   color: white !important;
   border: 1px solid #0055a4 !important;
   padding: 8px !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .pdf-content-page td {
   border: 1px solid #0055a4 !important;
   padding: 8px !important;
   background-color: #fff !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .pdf-content-page mark, .pdf-content-page [style*="background-color: yellow"] {
