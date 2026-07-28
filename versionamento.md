@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.190] - 2026-07-28
+- **Features:** Added a dynamic search field to the User Management screen in the Admin area, allowing filtering by display name, email, and short name.
+
 ## [0.1.117] - 2026-07-12
 - **Bugfix (Capacity Planning):** Corrigido bug de mapeamento visual no Kanban de planejamento onde Especificações Técnicas (ET) e Funcionais (EF) recém-criadas pelo sistema não apareciam na lista de pendentes caso o usuário de destino fosse "Não Atribuído" em vez de nulo ou "Sem responsável". O filtro de mapeamento agora considera `assignee` e o fallback para `authorName`.
 

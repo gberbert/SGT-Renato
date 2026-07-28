@@ -10,7 +10,7 @@ import {
   subscribeToAutomations, saveAutomation, deleteAutomation,
   subscribeToAISettings, saveAISettings
 } from '../services/settingsService';
-import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key } from 'lucide-react';
+import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search } from 'lucide-react';
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import ImportDataExcel from './ImportDataExcel';
@@ -28,6 +28,7 @@ const Settings = () => {
 
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   const [systems, setSystems] = useState([]);
   const [loadingSystems, setLoadingSystems] = useState(true);
@@ -536,6 +537,20 @@ const Settings = () => {
                   Novo Usuário
                 </Button>
               </Flex>
+
+              <Flex mb="4" align="center" gap="3">
+                <TextField.Root
+                  placeholder="Pesquisar usuários (nome, e-mail, nome resumido)..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                  style={{ flexGrow: 1 }}
+                >
+                  <TextField.Slot>
+                    <Search size={16} />
+                  </TextField.Slot>
+                </TextField.Root>
+              </Flex>
+
               <ImportDataExcel />
               {loadingUsers ? <Loader2 className="spinner-icon" /> : (
                 <Table.Root variant="surface">
@@ -549,7 +564,16 @@ const Settings = () => {
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
-                    {users.map(u => (
+                    {users
+                      .filter(u => {
+                        const term = userSearchTerm.toLowerCase();
+                        return (
+                          (u.displayName || '').toLowerCase().includes(term) ||
+                          (u.email || '').toLowerCase().includes(term) ||
+                          (u.shortName || '').toLowerCase().includes(term)
+                        );
+                      })
+                      .map(u => (
                       <Table.Row key={u.id} align="center">
                         <Table.Cell>
                           <Flex direction="column">
