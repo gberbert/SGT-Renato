@@ -26,6 +26,24 @@ const CodeRenderer = ({ inline, children = [], className, ...props }) => {
 
   useEffect(() => {
     if (container && isMermaid && code) {
+      let cleanCode = code;
+      if (typeof cleanCode === 'string') {
+        cleanCode = cleanCode
+          .replace(/&quot;/g, '"')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#39;/g, "'")
+          .replace(/\u00A0/g, ' '); // Non-breaking spaces to regular spaces
+
+        // Fix subgraph "Title with spaces" -> subgraph sg_X ["Title with spaces"]
+        let sgCount = 0;
+        cleanCode = cleanCode.replace(/subgraph\s+"([^"]+)"/g, (m, title) => {
+          sgCount++;
+          return `subgraph sg_${sgCount} ["${title}"]`;
+        });
+      }
+
       try {
         mermaid.initialize({
           startOnLoad: false,
@@ -33,7 +51,7 @@ const CodeRenderer = ({ inline, children = [], className, ...props }) => {
           securityLevel: 'loose'
         });
         
-        mermaid.render(demoid.current, code).then(({ svg, bindFunctions }) => {
+        mermaid.render(demoid.current, cleanCode).then(({ svg, bindFunctions }) => {
           container.innerHTML = svg;
           if (bindFunctions) bindFunctions(container);
         }).catch(e => {
