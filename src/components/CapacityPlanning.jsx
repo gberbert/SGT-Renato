@@ -66,6 +66,7 @@ const CapacityPlanning = ({ userRole }) => {
   const [isRecurrent, setIsRecurrent] = useState(false);
   const [recurrentEndDate, setRecurrentEndDate] = useState('');
   const [includeWeekends, setIncludeWeekends] = useState(false);
+  const [activityTypeFilter, setActivityTypeFilter] = useState('tshirt');
 
   const shiftCalendar = (days) => {
     setCalendarStartDate(prev => {
@@ -463,6 +464,11 @@ const CapacityPlanning = ({ userRole }) => {
     return false;
   });
 
+  const filteredPendingActivities = pendingActivities.filter(a => {
+    if (activityTypeFilter === 'all') return true;
+    return a.type === activityTypeFilter;
+  });
+
   // Get Squad members
   let squadMembers = [];
   if (selectedDemanda === 'all') {
@@ -506,18 +512,33 @@ const CapacityPlanning = ({ userRole }) => {
           </Button>
           <Text size="5" weight="bold">Planejamento: {selectedDemanda === 'all' ? 'Calendário Geral' : selectedDemanda.code}</Text>
         </Flex>
-        {pendingActivities.length > 0 && (
-          <Badge 
-            color="blue" 
-            variant="soft" 
-            size="2" 
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-            onClick={() => setIsPendingExpanded(!isPendingExpanded)}
-          >
-            Atividades Pendentes ({pendingActivities.length})
-            {isPendingExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </Badge>
-        )}
+        
+        <Flex align="center" gap="4">
+          <Select.Root value={activityTypeFilter} onValueChange={setActivityTypeFilter} size="2">
+            <Select.Trigger placeholder="Tipo de Atividade" />
+            <Select.Content>
+              <Select.Item value="all">Todos os Tipos</Select.Item>
+              <Select.Item value="tshirt">T-Shirt</Select.Item>
+              <Select.Item value="estimativa">Estimativas</Select.Item>
+              <Select.Item value="ef">Espec. Funcional (EF)</Select.Item>
+              <Select.Item value="et">Espec. Técnica (ET)</Select.Item>
+              <Select.Item value="atividade">Desenvolvimento</Select.Item>
+            </Select.Content>
+          </Select.Root>
+
+          {pendingActivities.length > 0 && (
+            <Badge 
+              color="blue" 
+              variant="soft" 
+              size="2" 
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              onClick={() => setIsPendingExpanded(!isPendingExpanded)}
+            >
+              Pendentes ({filteredPendingActivities.length}/{pendingActivities.length})
+              {isPendingExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </Badge>
+          )}
+        </Flex>
       </Flex>
 
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -525,7 +546,9 @@ const CapacityPlanning = ({ userRole }) => {
         {pendingActivities.length > 0 && isPendingExpanded && (
           <ScrollArea style={{ maxHeight: '140px', paddingBottom: '8px' }}>
             <Flex gap="2" wrap="wrap" style={{ padding: '4px' }}>
-              {pendingActivities.map(a => (
+              {filteredPendingActivities.length === 0 ? (
+                <Text size="2" color="gray" style={{ padding: '8px' }}>Nenhuma atividade do tipo selecionado pendente.</Text>
+              ) : filteredPendingActivities.map(a => (
                 <DraggableActivity key={a.id} id={a.id} activity={a}>
                   <Card size="1" style={{ minWidth: '200px', maxWidth: '200px', backgroundColor: 'var(--surface)', padding: '8px', cursor: 'grab' }}>
                     <Flex align="center" justify="between" mb="1" wrap="wrap" gap="1">
