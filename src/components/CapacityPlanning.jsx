@@ -405,7 +405,7 @@ const CapacityPlanning = ({ userRole }) => {
     const demandaSystems = (dem.associatedSystems && dem.associatedSystems.length > 0) 
       ? dem.associatedSystems.map(s => s.system).join(', ') 
       : dem.system;
-    allActivities.push({ id: ts.id, type: 'tshirt', title: 'T-Shirt', hours: 1, original: ts, planningStatus: ts.planningStatus || 'Pendente', assignee: ts.assignee, demandaCode: dem.code, sistema: demandaSystems });
+    allActivities.push({ id: ts.id, type: 'tshirt', title: 'T-Shirt', hours: 1, original: ts, planningStatus: ts.planningStatus || 'Pendente', assignee: ts.assignee || 'Não Atribuído', demandaCode: dem.code, sistema: demandaSystems });
   });
 
   dEsts.forEach(est => {
@@ -413,7 +413,7 @@ const CapacityPlanning = ({ userRole }) => {
     if (!dem) return;
     const dCode = dem.code;
 
-    allActivities.push({ id: est.id, type: 'estimativa', title: 'Estimativa de Esforço', hours: 1, original: est, planningStatus: est.planningStatus || 'Pendente', demandaCode: dCode, sistema: est.system || est.sistema });
+    allActivities.push({ id: est.id, type: 'estimativa', title: 'Estimativa de Esforço', hours: 1, original: est, planningStatus: est.planningStatus || 'Pendente', assignee: est.assignee || 'Não Atribuído', demandaCode: dCode, sistema: est.system || est.sistema });
     
     const efHours = est.sumEF ? Math.round(est.sumEF * 0.3) : 8;
     const ativHours = est.sumEt ? Math.round(est.sumEt * 0.3) : 8;
@@ -440,7 +440,7 @@ const CapacityPlanning = ({ userRole }) => {
       const demandaSystems = (dem?.associatedSystems && dem.associatedSystems.length > 0) 
         ? dem.associatedSystems.map(s => s.system).join(', ') 
         : dem?.system || '';
-      allActivities.push({ id: a.id, type: 'atividade', title: a.title, hours: a.estimatedHours || 8, original: a, planningStatus: a.planningStatus || 'Pendente', assignee: a.assignee, demandaCode: dem?.code || 'Orfã/Avulsa', sistema: (a.associatedSystems && a.associatedSystems.length > 0) ? a.associatedSystems.map(s => s.system).join(', ') : (a.system || demandaSystems) });
+      allActivities.push({ id: a.id, type: 'atividade', title: a.title, hours: a.estimatedHours || 8, original: a, planningStatus: a.planningStatus || 'Pendente', assignee: a.assignee || 'Sem responsável', demandaCode: dem?.code || 'Orfã/Avulsa', sistema: (a.associatedSystems && a.associatedSystems.length > 0) ? a.associatedSystems.map(s => s.system).join(', ') : (a.system || demandaSystems) });
     }
   });
 
@@ -457,11 +457,10 @@ const CapacityPlanning = ({ userRole }) => {
   });
 
   const pendingActivities = allActivities.filter(a => {
-    if (a.type === 'atividade') return !a.assignee || a.assignee === 'Sem responsável' || a.planningStatus !== 'Planejada';
-    if (a.type === 'ef') return !a.assignee || a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
-    if (a.type === 'et') return !a.assignee || a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
-    if (a.type === 'tshirt') return !a.assignee || a.assignee === 'Não Atribuído' || a.planningStatus !== 'Planejada';
-    return !a.assignee || !a.original.assignee || a.planningStatus !== 'Planejada';
+    if (a.planningStatus !== 'Planejada') return true;
+    const assignee = a.assignee || a.original?.assignee;
+    if (!assignee || assignee === 'Sem responsável' || assignee === 'Não Atribuído') return true;
+    return false;
   });
 
   // Get Squad members
