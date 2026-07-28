@@ -326,6 +326,27 @@
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    box-sizing: border-box !important;
+  }
+  
+  .pdf-container {
+    min-width: auto !important;
+    width: 100% !important;
+  }
+
+  .pdf-page {
+    min-height: auto !important;
+  }
+
+  .pdf-table {
+    table-layout: fixed;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .pdf-table th, .pdf-table td {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   .pdf-cover-page, .pdf-back-cover-page {
