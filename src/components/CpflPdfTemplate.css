@@ -204,7 +204,9 @@
 
 .print-content-table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .print-content-table td {
@@ -336,9 +338,12 @@
 
   .pdf-page {
     min-height: auto !important;
+    padding: 0 5mm !important;
   }
 
   .pdf-table {
+    width: 100% !important;
+    max-width: 100% !important;
     table-layout: fixed;
     word-break: break-word;
     overflow-wrap: break-word;

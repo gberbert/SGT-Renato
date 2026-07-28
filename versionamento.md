@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.193] - 2026-07-28
+- **Bugfix (PDF Print Margins):** Fixed the right margin cutoff issue entirely by enforcing `table-layout: fixed` and `max-width: 100%` on the outermost `.print-content-table` and adjusting `.pdf-page` padding to `0 5mm !important` during print.
+
 ## [0.1.192] - 2026-07-28
 - **Bugfix (PDF Print CSS):** Fixed `min-width: 800px` causing print dialogs to overflow the A4 boundaries on the right margin. Implemented global `box-sizing: border-box` and `min-width: auto` on `@media print` query in `CpflPdfTemplate.css`.
 
