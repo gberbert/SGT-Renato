@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.194] - 2026-07-28
+- **Bugfix (Mermaid):** Removed the experimental Regex Sanitizer from `CodeRenderer.jsx` as it was corrupting correctly quoted Mermaid nodes by nesting quotes around parentheses. The solution relies strictly on the updated AI prompt which forces proper quotes on generation.
+
 ## [0.1.193] - 2026-07-28
 - **Bugfix (PDF Print Margins):** Fixed the right margin cutoff issue entirely by enforcing `table-layout: fixed` and `max-width: 100%` on the outermost `.print-content-table` and adjusting `.pdf-page` padding to `0 5mm !important` during print.
 

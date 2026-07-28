@@ -26,17 +26,6 @@ const CodeRenderer = ({ inline, children = [], className, ...props }) => {
 
   useEffect(() => {
     if (container && isMermaid && code) {
-      // Basic sanitization to fix AI-generated unquoted labels that contain special characters
-      let sanitizedCode = code;
-      try {
-        sanitizedCode = sanitizedCode.replace(/\[([^"\]]+)\]/g, '["$1"]');
-        sanitizedCode = sanitizedCode.replace(/\{([^"\}]+)\}/g, '{"$1"}');
-        sanitizedCode = sanitizedCode.replace(/(?<!\()\(([^"\)]+)\)(?!\))/g, '("$1")');
-        sanitizedCode = sanitizedCode.replace(/\(\(([^"\)]+)\)\)/g, '(("$1"))');
-      } catch (e) {
-        console.warn("Mermaid sanitization regex failed", e);
-      }
-
       try {
         mermaid.initialize({
           startOnLoad: false,
@@ -44,7 +33,7 @@ const CodeRenderer = ({ inline, children = [], className, ...props }) => {
           securityLevel: 'loose'
         });
         
-        mermaid.render(demoid.current, sanitizedCode).then(({ svg, bindFunctions }) => {
+        mermaid.render(demoid.current, code).then(({ svg, bindFunctions }) => {
           container.innerHTML = svg;
           if (bindFunctions) bindFunctions(container);
         }).catch(e => {
