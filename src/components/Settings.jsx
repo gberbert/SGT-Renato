@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Tabs, Box, Text, Card, Flex, Button, Table, Badge, Dialog, TextField, Select, IconButton, TextArea } from '@radix-ui/themes';
 import { 
   subscribeToTicketTypes, saveTicketType, deleteTicketType, 
@@ -14,12 +15,14 @@ import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search }
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import ImportDataExcel from './ImportDataExcel';
+import OperacaoJiraSettings from './operacao/OperacaoJiraSettings';
 import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
 import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
 
-const Settings = () => {
+const Settings = ({ userRole = 'admin' }) => {
+  const [searchParams] = useSearchParams();
   const [ticketTypes, setTicketTypes] = useState([]);
   const [loadingTypes, setLoadingTypes] = useState(true);
   
@@ -51,7 +54,12 @@ const Settings = () => {
   const [configBoard, setConfigBoard] = useState('demandas');
 
   // Active Tab State (Responsive Menu)
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'users');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
 
   // New/Edit Type Modal State
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
@@ -502,6 +510,7 @@ const Settings = () => {
               <Tabs.Trigger value="automations">Automações</Tabs.Trigger>
               <Tabs.Trigger value="ai"><Zap size={14} style={{ display: 'inline', marginRight: 4 }}/> IA (Gemini)</Tabs.Trigger>
               <Tabs.Trigger value="rbac"><Shield size={14} style={{ display: 'inline', marginRight: 4 }}/> RBAC</Tabs.Trigger>
+              <Tabs.Trigger value="jiraOperacao"><Database size={14} style={{ display: 'inline', marginRight: 4 }}/> Jira Operação</Tabs.Trigger>
             </Tabs.List>
           </Box>
 
@@ -520,6 +529,7 @@ const Settings = () => {
                 <Select.Item value="automations">Automações</Select.Item>
                 <Select.Item value="ai">IA (Gemini)</Select.Item>
                 <Select.Item value="rbac">RBAC (Acessos)</Select.Item>
+                <Select.Item value="jiraOperacao">Jira Operação</Select.Item>
               </Select.Content>
             </Select.Root>
           </Box>
@@ -1016,6 +1026,10 @@ const Settings = () => {
                   <Text color="gray">Selecione um projeto acima para gerenciar os acessos.</Text>
                 </Card>
               )}
+            </Tabs.Content>
+
+            <Tabs.Content value="jiraOperacao">
+              <OperacaoJiraSettings userRole={userRole} />
             </Tabs.Content>
           </Box>
         </Tabs.Root>

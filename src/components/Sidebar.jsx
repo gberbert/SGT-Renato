@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  LayoutDashboard, FolderDot, KanbanSquare, Settings, LogOut, Download, Moon, Sun, 
-  Menu, X, Check, Share, Bell, Calculator, Route, FileText, Shirt, FileCode, ListChecks, HelpCircle, ChevronDown, ChevronRight
+  FolderDot, KanbanSquare, Settings, Download, 
+  Menu, X, Check, Share, Calculator, Route, FileText, Shirt, FileCode, ListChecks, HelpCircle, ChevronDown, ChevronRight, Radar
 } from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 import { auth } from '../firebase';
 import { requestFCMToken } from '../services/notificationService';
 import { subscribeToUsers } from '../services/settingsService';
 import UserDetailsModal from './UserDetailsModal';
-
 const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
@@ -21,7 +20,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   );
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [fullUser, setFullUser] = useState(null);
-  const [isDemandasOpen, setIsDemandasOpen] = useState(true);
+  const [isDemandasOpen, setIsDemandasOpen] = useState(false);
 
   useEffect(() => {
     let unsubUsers;
@@ -95,6 +94,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   }, [user]);
 
   let menuItems = [
+    { name: 'Radar Operação', icon: <Radar size={20} />, path: '/' },
     { name: 'Minhas Atividades', icon: <ListChecks size={20} />, path: '/minhas-atividades' },
     { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas', isDemandasParent: true },
     { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap', isChild: true },
@@ -106,11 +106,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   ];
 
   if (userRole === 'admin' || userRole === 'squad_leader') {
-    menuItems = [
-      { name: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
-      { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' },
-      ...menuItems
-    ];
+    menuItems.splice(1, 0, { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' });
   }
 
   return (
@@ -133,7 +129,8 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
             return (
             <li key={index}>
               <NavLink 
-                to={item.path} 
+                to={item.path}
+                end={item.path === '/'}
                 onClick={(e) => {
                   if (item.isDemandasParent) {
                     setIsDemandasOpen(!isDemandasOpen);

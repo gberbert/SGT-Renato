@@ -1,5 +1,74 @@
 # Versionamento do Projeto
 
+## [0.1.218] - 2026-08-19
+- **Perf (Radar Operação):** painel montado a partir de `operacao_stats/summary` (1 read); drill-down por escopo sob demanda; subtotais por issue type persistidos na carga (`byIssueTypeByEscopo` + `radarByEscopo`).
+- **Fix (Carga):** reset de stats não apaga mais agregados; gravação única de stats no fim da carga; fallback com count queries quando escopos ausentes.
+
+## [0.1.217] - 2026-08-17
+- **Perf (Firestore):** carga de tickets só ao abrir o Radar; removidos writes extras em pais; fingerprint de cache usa apenas `lastSyncAt` final.
+
+## [0.1.216] - 2026-08-17
+- **Fix (Radar Operação):** coluna TICKETS_VINCULADOS usa Linked work items do Jira (parent, issuelinks, subtasks) e filhos via parentKey.
+
+## [0.1.215] - 2026-08-17
+- **Radar Operação:** campo `agingDays` em `tickets_global` (data atual − created_at); colunas AGING e TICKETS_VINCULADOS na tabela drill-down.
+
+## [0.1.214] - 2026-08-17
+- **Perf (Radar Operação):** carga de tickets em background persiste ao navegar no app; cache local por usuário (IndexedDB + sessionStorage) evita recarga completa na mesma máquina/sessão.
+
+## [0.1.213] - 2026-08-17
+- **Fix (Radar Operação):** badge de carregamento ao lado do total geral; corrige reset prematuro de `ticketsLoading` na carga em background.
+
+## [0.1.212] - 2026-08-17
+- **UX (Radar Operação):** badge de carregamento ao lado dos totais; subtotais por issue type nas caixas de escopo; removida meta redundante nas raias.
+
+## [0.1.211] - 2026-08-17
+- **UX (Radar Operação):** tabela drill-down com hierarquia pai/filho via `parentKey` e expansão por ticket pai.
+
+## [0.1.210] - 2026-08-17
+- **UX (Radar Operação):** coluna ISSUETYPE e filtro por ISSUE_KEY na tabela drill-down.
+
+## [0.1.209] - 2026-08-17
+- **Fix (Radar Operação):** restaura totais por escopo — leitura correta de `byEscopo` no Firestore e preservação dos KPIs durante carga em background.
+
+## [0.1.208] - 2026-08-17
+- **Nav:** Radar Operação como tela inicial (`/`); menu Dashboard removido.
+
+## [0.1.207] - 2026-08-17
+- **Perf (Radar Operação):** totais por escopo carregam via `operacao_stats/summary`; detalhes dos tickets em background para filtros e drill-down.
+- **Fix:** import `doc` em `operacaoRadarService.js` (tela em branco no dev local).
+
+## [0.1.206] - 2026-08-17
+- **Refactor (módulo único):** removido portal pós-login; Radar Operação no menu principal; Configuração/Carga Jira na aba Jira Operação em Configurações.
+
+## [0.1.205] - 2026-08-15
+- **UX (Radar Operação):** busca textual nos combobox de filtros, botão limpar filtros, rodapé com usuário autenticado e rotas Config/Carga restritas a Admin.
+
+## [0.1.204] - 2026-08-15
+- **Feature (Radar Operação):** Visão Geral com filtros (grupo, squad, status), total consolidado, KPIs por escopo clicáveis e tabela drill-down de tickets.
+
+## [0.1.203] - 2026-08-15
+- **UI (Operação Carga):** Painel de progresso com barra, percentual grande, lote atual e mini-barras por escopo.
+
+## [0.1.202] - 2026-08-15
+- **Bugfix (Operação JQL):** Corrigido parêntese faltante na consulta PROBLEMAS (`fixProblemasJql`) que causava erro 400 do Jira na prévia/carga.
+
+## [0.1.201] - 2026-08-15
+- **Refactor (Operação AMS):** Carga Jira orquestrada pelo frontend (padrão Kanban): lê Jira via `searchJiraTickets` estendida e grava em `tickets_global`, `escopo`, `grupo_atendimento` e `operacao_stats/summary` direto no Firestore.
+- **Cloud Functions:** `searchJiraTickets` agora aceita `approximateCount` e `operacao` (sem depender das functions novas dedicadas).
+- **UI:** Visão Geral lê stats direto do Firestore; Carga exibe aviso de deploy único de functions.
+
+## [0.1.200] - 2026-08-15
+- **Feature (Operação AMS — Fase 0 + Fase 1):** Carga Jira amplificada com 6 JQLs (`jqls_carga.txt`), preview com contagem aproximada, sync chunked para Firestore (`tickets_global`, `escopo`, `grupo_atendimento`, `jira_sync_runs`, `operacao_stats/summary`).
+- **Cloud Functions:** `getJiraGlobalJqlConfig`, `previewJiraGlobalCarga`, `startJiraGlobalSync`, `processJiraGlobalSyncStep`, `getJiraGlobalSyncStatus`, `getOperacaoStats`.
+- **UI Operação:** Menu Configuração Jira (JQLs read-only), tela Carga com prévia e progresso, Visão Geral com stats agregados.
+- **Mitigação ~31k tickets:** documentos enxutos (sem `raw_fields`), batch writes, sync por escopo com `pageToken`, agregados em 1 doc para evitar leituras massivas no painel.
+
+## [0.1.199] - 2026-08-13
+- **Feature (Module Portal):** Added a post-login module selector so users can choose between **Gestão de Demandas** (existing SGT workflow) and **Operação AMS** (new operational shell prepared for future imports).
+- **Architecture:** Introduced `ModulePortal`, `ModuleGuard`, `DemandasLayout`, and `OperacaoLayout` with session-based module routing (`sgt_active_module`).
+- **Navigation:** Added "Trocar módulo" action in both module sidebars; logout now clears the selected module.
+
 ## [0.1.197] - 2026-07-28
 - **Feature (Capacity Planning):** Added a new filter by Activity Type (T-Shirt, Estimativa, EF, ET, Desenvolvimento) in the Capacity Planning screen. The filter defaults to "T-Shirt" to streamline initial planning. The pending activities badge now displays the count of filtered items versus total pending items (e.g., "Pendentes (2/10)").
 

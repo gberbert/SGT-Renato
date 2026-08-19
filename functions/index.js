@@ -384,11 +384,47 @@ exports.importJiraTicket = onCall({
     }
 });
 
+const jiraGlobalSync = require("./jiraGlobalSync");
+const { getFirestore } = require("firebase-admin/firestore");
+
 exports.searchJiraTickets = onCall({
     maxInstances: 10,
-    timeoutSeconds: 30,
-    memory: "256MiB"
+    timeoutSeconds: 120,
+    memory: "512MiB"
 }, async (request) => {
+    const payload = request.data || {};
+
+    if (payload.approximateCount === true) {
+        if (!payload.jql) {
+            throw new HttpsError("invalid-argument", "jql é obrigatório para contagem aproximada.");
+        }
+        try {
+            const count = await jiraGlobalSync.getApproxCount(payload.jql);
+            return { count, approximate: true };
+        } catch (error) {
+            console.error("Erro na contagem Jira:", error);
+            throw new HttpsError("failed-precondition", error.message || "Falha ao consultar contagem no Jira.");
+        }
+    }
+
+    if (payload.operacao === true) {
+        if (!payload.jql) {
+            throw new HttpsError("invalid-argument", "jql é obrigatório para carga operação.");
+        }
+        try {
+            return await jiraGlobalSync.searchOperacaoIssues({
+                jql: payload.jql,
+                nextPageToken: payload.nextPageToken || null,
+                escopo: payload.escopo || null,
+                syncBatch: payload.syncBatch || payload.escopo || null,
+                maxResults: payload.maxResults || 50,
+            });
+        } catch (error) {
+            console.error("Erro na busca operação Jira:", error);
+            throw new HttpsError("failed-precondition", error.message || "Falha ao buscar tickets no Jira.");
+        }
+    }
+
     const token = process.env.JIRA_API_TOKEN;
     const email = process.env.JIRA_USER_EMAIL;
     const domain = process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
@@ -469,5 +505,109 @@ exports.searchJiraTickets = onCall({
     } catch (error) {
         console.error("Erro ao pesquisar no Jira:", error);
         throw new HttpsError("internal", "Falha de Pesquisa no Jira: " + error.message);
+    }
+});
+
+const OPERACAO_SYNC_OPTIONS = {
+    maxInstances: 3,
+    timeoutSeconds: 540,
+    memory: "1GiB",
+};
+
+async function assertOperacaoAdmin(request) {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Autenticação necessária.");
+    }
+    const userDoc = await getFirestore(undefined, "default").collection("users").doc(request.auth.uid).get();
+    if (!userDoc.exists || userDoc.data().role !== "admin") {
+        throw new HttpsError("permission-denied", "Apenas administradores podem gerenciar a carga Jira global.");
+    }
+}
+
+exports.getJiraGlobalJqlConfig = onCall(OPERACAO_SYNC_OPTIONS, async (request) => {
+    await assertOperacaoAdmin(request);
+    try {
+        return await jiraGlobalSync.getJqlConfig();
+    } catch (error) {
+        console.error("Erro ao carregar config JQL:", error);
+        throw new HttpsError("internal", error.message);
+    }
+});
+
+exports.previewJiraGlobalCarga = onCall(OPERACAO_SYNC_OPTIONS, async (request) => {
+    await assertOperacaoAdmin(request);
+    try {
+        return await jiraGlobalSync.previewCarga();
+    } catch (error) {
+        console.error("Erro no preview Jira global:", error);
+        throw new HttpsError("internal", error.message);
+    }
+});
+
+exports.startJiraGlobalSync = onCall(OPERACAO_SYNC_OPTIONS, async (request) => {
+    await assertOperacaoAdmin(request);
+    const { totalEstimated } = request.data || {};
+    try {
+        return await jiraGlobalSync.createSyncRun({
+            startedBy: request.auth.uid,
+            totalEstimated: totalEstimated || 0,
+        });
+    } catch (error) {
+        console.error("Erro ao iniciar sync Jira global:", error);
+        throw new HttpsError("internal", error.message);
+    }
+});
+
+exports.processJiraGlobalSyncStep = onCall(OPERACAO_SYNC_OPTIONS, async (request) => {
+    await assertOperacaoAdmin(request);
+    const { runId } = request.data || {};
+    if (!runId) {
+        throw new HttpsError("invalid-argument", "runId é obrigatório.");
+    }
+    try {
+        return await jiraGlobalSync.processSyncStep(runId);
+    } catch (error) {
+        console.error("Erro no passo de sync Jira global:", error);
+        const db = getFirestore(undefined, "default");
+        await db.collection("jira_sync_runs").doc(runId).set({
+            status: "error",
+            error: error.message,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        throw new HttpsError("internal", error.message);
+    }
+});
+
+exports.getJiraGlobalSyncStatus = onCall({
+    maxInstances: 10,
+    timeoutSeconds: 30,
+    memory: "256MiB",
+}, async (request) => {
+    await assertOperacaoAdmin(request);
+    const { runId } = request.data || {};
+    if (!runId) {
+        throw new HttpsError("invalid-argument", "runId é obrigatório.");
+    }
+    try {
+        return await jiraGlobalSync.getSyncStatus(runId);
+    } catch (error) {
+        console.error("Erro ao consultar status sync:", error);
+        throw new HttpsError("internal", error.message);
+    }
+});
+
+exports.getOperacaoStats = onCall({
+    maxInstances: 10,
+    timeoutSeconds: 30,
+    memory: "256MiB",
+}, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Autenticação necessária.");
+    }
+    try {
+        return await jiraGlobalSync.getOperacaoStats();
+    } catch (error) {
+        console.error("Erro ao carregar stats operação:", error);
+        throw new HttpsError("internal", error.message);
     }
 });

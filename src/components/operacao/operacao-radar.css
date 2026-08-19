@@ -1,0 +1,395 @@
+.operacao-radar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.operacao-radar-header h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+.operacao-radar-header p {
+  color: var(--text-muted);
+  max-width: 42rem;
+  margin: 0;
+}
+
+.operacao-radar-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.operacao-combobox-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.operacao-combobox-trigger:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.operacao-combobox-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.operacao-radar-filters.is-disabled {
+  opacity: 0.85;
+}
+
+.operacao-radar-summary-value:disabled,
+.operacao-radar-lane-value:disabled {
+  opacity: 0.85;
+  cursor: wait;
+}
+
+.operacao-combobox-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  box-shadow: var(--glass-shadow);
+  padding: 0.35rem;
+}
+
+.operacao-combobox-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.25rem 0.2rem 0.45rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--glass-border);
+  margin-bottom: 0.25rem;
+}
+
+.operacao-combobox-search input {
+  font: inherit;
+}
+
+.operacao-combobox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.operacao-combobox-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.operacao-radar-filter-actions {
+  grid-column: 1 / -1;
+}
+
+.operacao-radar-filter-summary {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.operacao-radar-clear-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.65rem;
+  color: var(--text-muted);
+}
+
+.operacao-radar-clear-filters:hover {
+  color: var(--text-main);
+}
+
+.operacao-radar-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.operacao-radar-summary-row {
+  align-items: center;
+}
+
+.operacao-radar-loading-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #67e8f9;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.operacao-radar-loading-icon {
+  animation: operacao-radar-spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes operacao-radar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.operacao-radar-summary-value {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  color: #22d3ee;
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.operacao-radar-summary-value:hover {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+
+.operacao-radar-summary-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.operacao-radar-lanes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.operacao-radar-lane {
+  position: relative;
+  padding: 1.1rem 1rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.operacao-radar-lane::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--lane-color, #22d3ee);
+}
+
+.operacao-radar-lane.selected {
+  border-color: var(--lane-color, #22d3ee);
+  box-shadow: 0 0 0 1px var(--lane-color, #22d3ee);
+}
+
+.operacao-radar-lane-value {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+  color: var(--lane-color, #22d3ee);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.1;
+}
+
+.operacao-radar-lane-label {
+  margin-top: 0.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.operacao-radar-lane-issue-types {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.operacao-radar-lane-issue-types li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.operacao-radar-lane-issue-type-name {
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operacao-radar-lane-issue-type-total {
+  font-weight: 600;
+  color: var(--text-main);
+  flex-shrink: 0;
+}
+
+.operacao-radar-lane-issue-types-pending {
+  display: block;
+  margin-top: 0.65rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.operacao-radar-tickets-panel {
+  padding: 1.25rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.operacao-radar-tickets-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.operacao-radar-drill-filter {
+  min-width: 240px;
+  max-width: 320px;
+  flex: 1;
+}
+
+.operacao-radar-tickets-table-wrap {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+}
+
+.operacao-radar-tickets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.operacao-radar-tickets-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-surface);
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.operacao-radar-tickets-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: top;
+}
+
+.operacao-radar-tickets-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.operacao-radar-tickets-key {
+  color: var(--info);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.operacao-radar-tickets-key-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 180px;
+}
+
+.operacao-radar-tickets-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.operacao-radar-tickets-expand:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+}
+
+.operacao-radar-tickets-expand.placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.operacao-radar-tickets-child-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.operacao-radar-tickets-row-child td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.operacao-radar-tickets-key:hover {
+  text-decoration: underline;
+}
+
+.operacao-radar-tickets-summary {
+  max-width: 360px;
+}
+
+.operacao-radar-tickets-linked {
+  min-width: 180px;
+  max-width: 280px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  white-space: normal;
+}
+
+.operacao-radar-loading {
+  padding: 1rem;
+  color: var(--text-muted);
+}
