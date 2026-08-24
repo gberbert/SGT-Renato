@@ -25,6 +25,11 @@ const TICKET_FIELD_DEFINITIONS = {
     "Torre de Atuação",
   ],
   fornecedores_dropdown: ["Fornecedores", "fornecedores"],
+  quantidade_reaberturas: [
+    "Quantidade de Reaberturas",
+    "quantidade de reaberturas",
+    "Quantidade de Reaberturas[Number]",
+  ],
 };
 
 const ESCOPO_SEED = [

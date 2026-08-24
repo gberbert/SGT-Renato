@@ -678,31 +678,6 @@ exports.getOperacaoRadarBootstrap = onCall(
                 return value;
             };
 
-            const computeRadarEscoposFromTickets = (tickets) => {
-                const counts = {};
-                for (const item of ESCOPO_RADAR_ORDER) counts[item.key] = 0;
-
-                for (const ticket of tickets) {
-                    const key = normalizeEscopoKey(ticket.escopo);
-                    if (!key) continue;
-                    if (counts[key] == null) counts[key] = 0;
-                    counts[key] += 1;
-                }
-
-                const escopos = ESCOPO_RADAR_ORDER
-                    .filter((item) => Number(counts[item.key]) > 0)
-                    .map((item) => ({
-                        key: item.key,
-                        label: item.label,
-                        color: item.color,
-                        total: Number(counts[item.key]),
-                        issueTypes: [],
-                    }));
-
-                const total = tickets.length;
-                return { total, escopos };
-            };
-
             const buildStatusOptionsFromStats = (st) => {
                 const byStatus = st?.byStatus || {};
                 return Object.entries(byStatus)
@@ -735,66 +710,43 @@ exports.getOperacaoRadarBootstrap = onCall(
 
             let statuses = buildStatusOptionsFromStats(stats);
 
-            // Se byStatus vier vazio, calculamos statuses no back varrendo tickets_global (sem varrer no front)
-            if (!Array.isArray(statuses) || statuses.length === 0) {
-                const statusSet = new Map();
+            // Se byStatus vier vazio no doc agregado, NÃO varremos tickets_global (custoso/lento).
+            // O painel exibirá sem opções de status até a próxima carga popular operacao_stats/summary.
+            if (!Array.isArray(statuses)) statuses = [];
 
-                // paginando por documentId (similar ao front)
-                const PAGE_SIZE = 500;
-                let lastId = null;
-
-                while (true) {
-                    let q = db.collection("tickets_global").orderBy("__name__").limit(PAGE_SIZE);
-                    if (lastId) {
-                        q = db.collection("tickets_global").orderBy("__name__").startAfter(lastId).limit(PAGE_SIZE);
-                    }
-
-                    const snap = await q.get();
-                    if (snap.empty) break;
-
-                    snap.docs.forEach((d) => {
-                        const data = d.data() || {};
-                        const s = data.status ? String(data.status).trim() : '';
-                        if (!s) return;
-                        statusSet.set(s, (statusSet.get(s) || 0) + 1);
-                    });
-
-                    const lastDoc = snap.docs[snap.docs.length - 1];
-                    lastId = lastDoc;
-                    if (snap.size < PAGE_SIZE) break;
-                }
-
-                statuses = [...statusSet.entries()]
-                    .map(([nome, total]) => ({ id: nome, nome, total }))
-                    .filter((item) => item.total > 0)
-                    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
-            }
-
-            // squads totals por grupo: igual front (precisa dos tickets pra calcular totais por squad)
-            // para manter performance, não calculamos squad.total aqui (o front faz de forma pesada quando filtra)
-            // mas precisamos manter o formato:
+            // squads totals por grupo: não calculado aqui por performance (feito no front quando filtra)
             squadOptions.forEach((sq) => { sq.total = 0; });
 
             // squadGrupoMap (precisa serializável). No front espera Map, mas no bootstrap é colocado na store.
-            // Vamos serializar como array e reconstruir no front (ajuste na store pode ser necessário).
             const squadGrupoMapSerializable = {};
             for (const [k, v] of squadGrupoMap.entries()) squadGrupoMapSerializable[k] = v;
 
-            // statsRadar: se ainda nulo, faça fallback pesado calculando escopos a partir de tickets_global
+            // statsRadar: se ainda nulo, usa contagens agregadas por escopo (6 aggregation queries,
+            // baratas e rápidas — NÃO faz full-scan de tickets_global).
             if (!statsRadar) {
-                const tickets = [];
-                const PAGE_SIZE = 500;
-                let lastDoc = null;
-                while (true) {
-                    let q = db.collection("tickets_global").orderBy("__name__").limit(PAGE_SIZE);
-                    if (lastDoc) q = db.collection("tickets_global").orderBy("__name__").startAfter(lastDoc).limit(PAGE_SIZE);
-                    const snap = await q.get();
-                    if (snap.empty) break;
-                    snap.docs.forEach((d) => tickets.push(d.data() || {}));
-                    lastDoc = snap.docs[snap.docs.length - 1];
-                    if (snap.size < PAGE_SIZE) break;
-                }
-                statsRadar = computeRadarEscoposFromTickets(tickets);
+                const countEntries = await Promise.all(
+                    ESCOPO_RADAR_ORDER.map(async (item) => {
+                        const snap = await db
+                            .collection("tickets_global")
+                            .where("escopo", "==", item.key)
+                            .count()
+                            .get();
+                        return [item.key, snap.data().count || 0];
+                    })
+                );
+                const countsByKey = Object.fromEntries(countEntries);
+                statsRadar = {
+                    total: Object.values(countsByKey).reduce((a, b) => a + b, 0),
+                    escopos: ESCOPO_RADAR_ORDER
+                        .filter((item) => countsByKey[item.key] > 0)
+                        .map((item) => ({
+                            key: item.key,
+                            label: item.label,
+                            color: item.color,
+                            total: countsByKey[item.key],
+                            issueTypes: [],
+                        })),
+                };
             }
 
             return {

@@ -363,6 +363,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     demandaFast: extracted.demanda_fast || null,
     torreAtuacao: extracted.torre_atuacao || null,
     fornecedoresDropdown: extracted.fornecedores_dropdown || null,
+    reopenCount: Number(extracted.quantidade_reaberturas) || 0,
     labels,
     components,
     parentKey,

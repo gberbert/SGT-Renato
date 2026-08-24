@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Flex, Text, Callout, Progress, TextField, Tabs } from '@radix-ui/themes';
+import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
 import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
+import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
+import OperacaoEscopoTimelineChart from './OperacaoEscopoTimelineChart';
+import OperacaoEfficiencyChart from './OperacaoEfficiencyChart';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
 import { formatCallableError } from '../../utils/callableError';
 import {
@@ -45,6 +48,7 @@ const OperacaoHome = () => {
   }, [ensureRadarBootstrap]);
 
   const [filters, setFilters] = useState(createRadarFilterState);
+  const [activeEscopoTab, setActiveEscopoTab] = useState('GERAL');
 
   const [ticketsCache, setTicketsCache] = useState(null);
   const [ticketsCacheLoading, setTicketsCacheLoading] = useState(false);
@@ -110,7 +114,13 @@ const OperacaoHome = () => {
 
   const hasData = Boolean(statsRadar?.total);
   const filterActive =
-    filters.grupos.size > 0 || filters.squads.size > 0 || filters.statuses.size > 0;
+    filters.grupos.size > 0 ||
+    filters.squads.size > 0 ||
+    filters.statuses.size > 0 ||
+    Boolean(filters.createdAt?.start) ||
+    Boolean(filters.createdAt?.end) ||
+    Boolean(filters.resolvedAt?.start) ||
+    Boolean(filters.resolvedAt?.end);
 
   const filtersReady =
     Array.isArray(filterOptions?.grupos) &&
@@ -253,6 +263,8 @@ const OperacaoHome = () => {
         grupos: [...filters.grupos].sort(),
         squads: [...filters.squads].sort(),
         statuses: [...filters.statuses].sort(),
+        createdAt: filters.createdAt,
+        resolvedAt: filters.resolvedAt,
       });
 
       const radarCacheKey = `operacao_radar_filtered_${statsFingerprint}_${filtrosFingerprint}`;
@@ -302,6 +314,10 @@ const OperacaoHome = () => {
     filters.grupos.size,
     filters.squads.size,
     filters.statuses.size,
+    filters.createdAt?.start,
+    filters.createdAt?.end,
+    filters.resolvedAt?.start,
+    filters.resolvedAt?.end,
     squadGrupoMap,
   ]);
 
@@ -448,6 +464,22 @@ const OperacaoHome = () => {
                 formatMeta={(item) => `${formatNumber(item.total)} tickets`}
               />
 
+              <Box style={{ paddingRight: '0.75rem', borderRight: '1px solid var(--glass-border)' }}>
+                <OperacaoDateRangeFilter
+                  label="DATA DE CRIAÇÃO (CREATED_AT)"
+                  value={filters.createdAt}
+                  onChange={(value) => updateFilter('createdAt', value)}
+                  disabled={shouldBlockFilters}
+                />
+              </Box>
+
+              <OperacaoDateRangeFilter
+                label="DATA DE RESOLUÇÃO (RESOLVED_AT)"
+                value={filters.resolvedAt}
+                onChange={(value) => updateFilter('resolvedAt', value)}
+                disabled={shouldBlockFilters}
+              />
+
               <Flex
                 className="operacao-radar-filter-actions"
                 align="center"
@@ -459,7 +491,7 @@ const OperacaoHome = () => {
                   Filtros globais desativados para reduzir leituras do Firestore. Clique em um escopo
                   para carregar a tabela de tickets daquele grupo.
                 </Text>
-                {(filters.grupos.size > 0 || filters.squads.size > 0 || filters.statuses.size > 0) && (
+                {filterActive && (
                   <button
                     type="button"
                     className="operacao-radar-clear-filters btn btn-ghost"
@@ -472,62 +504,134 @@ const OperacaoHome = () => {
             </Box>
           </Box>
 
-          <Flex gap="4" align="start">
-            {/* LEFT: somente total consolidado (sem abas, sem lanes por escopo) */}
-            <Box style={{ flex: 1, minWidth: 320 }}>
-              <Box mt="1" className="operacao-radar-summary">
-                <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
-                  <button
-                    type="button"
-                    className="operacao-radar-summary-value"
-                    title="Ver tickets"
-                    onClick={() => openDrill('', 'Todos os escopos')}
-                    disabled={drillLoading}
-                  >
-                    {formatNumber(radar.total)}
-                  </button>
-                </Flex>
-                <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
-              </Box>
+          <RadixTabs.Root
+            value={activeEscopoTab}
+            onValueChange={(next) => {
+              setActiveEscopoTab(next);
+              setDrillEscopo(null);
+              setDrillLabel('');
+              setDrillIssueKeyQuery('');
+              setExpandedParents(new Set());
+              setDrillTickets([]);
+              setDrillError('');
+            }}
+            mb="4"
+          >
+            <RadixTabs.List>
+              <RadixTabs.Trigger value="GERAL">Geral</RadixTabs.Trigger>
+              <RadixTabs.Trigger value="PROBLEMAS">Problemas</RadixTabs.Trigger>
+              <RadixTabs.Trigger value="DEMANDA">Demandas</RadixTabs.Trigger>
+              <RadixTabs.Trigger value="INCIDENTE">Incidentes</RadixTabs.Trigger>
+              <RadixTabs.Trigger value="SOLICITACAO">Solicitações</RadixTabs.Trigger>
+              <RadixTabs.Trigger value="CATALOGO">Catálogo</RadixTabs.Trigger>
+              <RadixTabs.Trigger value="EFICIENCIA">Eficiência</RadixTabs.Trigger>
+            </RadixTabs.List>
+          </RadixTabs.Root>
 
-              {/* Tiles por escopo (como no layout do print) */}
-              <Box className="operacao-radar-lanes" mt="4" style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-                {geralCards.map((card) => (
-                  <button
-                    key={card.key}
-                    type="button"
-                    className="operacao-radar-summary-value"
-                    onClick={() => openDrill(card.key, card.label)}
-                    disabled={drillLoading}
-                    style={{
-                      width: 210,
-                      height: 86,
-                      borderRadius: 16,
-                      border: `1px solid rgba(255,255,255,0.08)`,
-                      background: 'rgba(255,255,255,0.02)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      justifyContent: 'center',
-                      padding: 16,
-                      gap: 6,
-                      cursor: 'pointer',
-                    }}
-                    title={`Ver tickets de ${card.label}`}
-                  >
-                    <Text
-                      size="7"
-                      weight="bold"
-                      style={{ margin: 0, color: card.color, lineHeight: 1 }}
-                    >
-                      {formatNumber(card.total)}
-                    </Text>
-                    <Text size="2" color="gray" style={{ margin: 0, textTransform: 'uppercase' }}>
-                      {card.label}
-                    </Text>
-                  </button>
-                ))}
-              </Box>
+          <Flex gap="4" align="start">
+            <Box style={{ flex: 1, minWidth: 320 }}>
+              {activeEscopoTab === 'GERAL' ? (
+                <>
+                  <Box mt="1" className="operacao-radar-summary">
+                    <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
+                      <button
+                        type="button"
+                        className="operacao-radar-summary-value"
+                        title="Ver tickets"
+                        onClick={() => openDrill('', 'Todos os escopos')}
+                        disabled={drillLoading}
+                      >
+                        {formatNumber(radar.total)}
+                      </button>
+                    </Flex>
+                    <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
+                  </Box>
+
+                  <Box className="operacao-radar-lanes" mt="4" style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+                    {geralCards.map((card) => (
+                      <button
+                        key={card.key}
+                        type="button"
+                        className="operacao-radar-summary-value"
+                        onClick={() => openDrill(card.key, card.label)}
+                        disabled={drillLoading}
+                        style={{
+                          width: 210,
+                          height: 86,
+                          borderRadius: 16,
+                          border: `1px solid rgba(255,255,255,0.08)`,
+                          background: 'rgba(255,255,255,0.02)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          justifyContent: 'center',
+                          padding: 16,
+                          gap: 6,
+                          cursor: 'pointer',
+                        }}
+                        title={`Ver tickets de ${card.label}`}
+                      >
+                        <Text
+                          size="7"
+                          weight="bold"
+                          style={{ margin: 0, color: card.color, lineHeight: 1 }}
+                        >
+                          {formatNumber(card.total)}
+                        </Text>
+                        <Text size="2" color="gray" style={{ margin: 0, textTransform: 'uppercase' }}>
+                          {card.label}
+                        </Text>
+                      </button>
+                    ))}
+                  </Box>
+                </>
+              ) : activeEscopoTab === 'EFICIENCIA' ? (
+                (() => {
+                  const filteredTicketsAll = Array.isArray(ticketsCache)
+                    ? filterTickets(ticketsCache, filters, squadGrupoMap || new Map())
+                    : [];
+                  return <OperacaoEfficiencyChart tickets={filteredTicketsAll} />;
+                })()
+              ) : (
+                (() => {
+                  const tabCard = geralCards.find((c) => c.key === activeEscopoTab) || {
+                    key: activeEscopoTab,
+                    label: activeEscopoTab,
+                    total: 0,
+                    color: '#22d3ee',
+                  };
+                  const escopoTickets = Array.isArray(ticketsCache)
+                    ? filterTickets(
+                        ticketsCache.filter(
+                          (t) => String(t.escopo || '').toUpperCase() === String(activeEscopoTab).toUpperCase()
+                        ),
+                        filters,
+                        squadGrupoMap || new Map()
+                      )
+                    : [];
+                  return (
+                    <>
+                      <Box mt="1" className="operacao-radar-summary">
+                        <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
+                          <button
+                            type="button"
+                            className="operacao-radar-summary-value"
+                            title={`Ver tickets de ${tabCard.label}`}
+                            onClick={() => openDrill(tabCard.key, tabCard.label)}
+                            disabled={drillLoading}
+                            style={{ color: tabCard.color }}
+                          >
+                            {formatNumber(tabCard.total)}
+                          </button>
+                        </Flex>
+                        <Text className="operacao-radar-summary-label">Tickets em {tabCard.label}</Text>
+                      </Box>
+
+                      <OperacaoEscopoTimelineChart tickets={escopoTickets} />
+                    </>
+                  );
+                })()
+              )}
 
               {drillEscopo !== null && (
                 <Box className="operacao-radar-tickets-panel">

@@ -130,7 +130,26 @@ export function createRadarFilterState() {
     grupos: new Set(),
     squads: new Set(),
     statuses: new Set(),
+    createdAt: { start: '', end: '' },
+    resolvedAt: { start: '', end: '' },
   };
+}
+
+function matchesDateRange(value, range) {
+  if (!range?.start && !range?.end) return true;
+  if (!value) return false;
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return false;
+
+  if (range.start) {
+    const startTime = new Date(`${range.start}T00:00:00`).getTime();
+    if (!Number.isNaN(startTime) && time < startTime) return false;
+  }
+  if (range.end) {
+    const endTime = new Date(`${range.end}T23:59:59.999`).getTime();
+    if (!Number.isNaN(endTime) && time > endTime) return false;
+  }
+  return true;
 }
 
 function matchesGrupoFilter(ticket, selectedGrupos) {
@@ -159,7 +178,9 @@ export function filterTickets(tickets, filters, squadGrupoMap) {
     (t) =>
       matchesGrupoFilter(t, filters.grupos) &&
       matchesSquadFilter(t, filters.squads, squadGrupoMap) &&
-      matchesStatusFilter(t, filters.statuses)
+      matchesStatusFilter(t, filters.statuses) &&
+      matchesDateRange(t.createdAt, filters.createdAt) &&
+      matchesDateRange(t.resolvedAt, filters.resolvedAt)
   );
 }
 
@@ -638,6 +659,9 @@ function mapFirestoreTicketDoc(d) {
     grupoSolucionador: data.grupoSolucionador,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
+    resolvedAt: data.resolvedAt || null,
+    reopenCount: Number(data.reopenCount) || 0,
+    status: data.status,
   };
 }
 
