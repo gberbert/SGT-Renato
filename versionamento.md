@@ -1,5 +1,10 @@
 # Versionamento do Projeto
 
+## [0.1.226] - 2026-08-24
+- **Feature (Organograma):** Nova tela `/organograma` (`src/components/Organograma.jsx`) — visão em cards por squad, destacando o membro com papel `GP` (foto + nome), no layout escuro com destaque ciano solicitado. Ao clicar no card de uma squad, abre um modal com contagem por papel (roles herdados de `squad.users[].role`) e lista de integrantes agrupados por papel, refletindo em tempo real a coleção `squads` (mesma fonte de dados usada em `SquadDetailsModal`/`Team`).
+- **Navegação:** Novo item "Organograma" na Sidebar (ícone `Network`), controlado pela mesma permissão `TEAM_VIEW` já usada pelo item "Team" — perfis que já veem "Team" passam a ver "Organograma" automaticamente, sem necessidade de reconfigurar perfis de permissão.
+- **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.
+
 ## [0.1.225] - 2026-08-24
 - **Feature (Radar Operação — Aba Eficiência):** Nova aba "Eficiência" no Radar Operação com gráfico de barras empilhadas comparando tickets resolvidos **sem reabertura** vs **com reabertura** (campo Jira `Quantidade de Reaberturas` → `reopenCount` no Firestore, reaberto quando > 0), sobreposto por uma linha de % de eficiência (resolução sem reabertura / total resolvido), agrupável por Dia/Semana/Mês/Trimestre/Quarter/Ano. Cards de resumo (Resolvidos, Sem reabertura, Com reabertura, % Eficiência) considerando o período/filtros ativos. A aba usa tickets de todos os escopos (métrica transversal), respeitando os filtros de grupo/squad/status/datas aplicados acima das abas.
 - **Backend (Ingestão Jira):** Adicionado `quantidade_reaberturas` em `TICKET_FIELD_DEFINITIONS` (`functions/jqlCarga.js`) mapeando o customfield Jira "Quantidade de Reaberturas" (`customfield_10915`, tipo Number); persistido como `reopenCount` em cada documento de `tickets_global` na carga (`functions/jiraGlobalSync.js`). Tickets sincronizados antes desta mudança ficam com `reopenCount` ausente/0 até a próxima carga.

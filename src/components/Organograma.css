@@ -1,0 +1,181 @@
+.organograma-page {
+  --org-accent: #38bdf8;
+  --org-accent-glow: rgba(56, 189, 248, 0.35);
+}
+
+.organograma-title-accent {
+  color: var(--org-accent);
+}
+
+.organograma-hint {
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  max-width: 380px;
+  text-align: right;
+}
+
+.organograma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.organograma-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  text-align: center;
+}
+
+.organograma-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--org-accent);
+  box-shadow: 0 0 0 1px var(--org-accent), 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.organograma-card-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 2px solid var(--org-accent);
+  box-shadow: 0 0 16px var(--org-accent-glow);
+  margin-bottom: 6px;
+}
+
+.organograma-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.organograma-card-name {
+  color: var(--text-main);
+}
+
+.organograma-card-squad {
+  color: var(--org-accent);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+}
+
+.organograma-card-badge {
+  margin-top: 4px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--org-accent);
+  color: var(--org-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* Modal */
+.organograma-modal {
+  background: var(--bg-surface, #0f172a);
+}
+
+.organograma-modal-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 2px solid var(--org-accent);
+  box-shadow: 0 0 14px var(--org-accent-glow);
+  flex-shrink: 0;
+}
+
+.organograma-modal-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.organograma-modal-squad {
+  color: var(--org-accent);
+  text-transform: uppercase;
+  font-size: 0.95rem;
+}
+
+.organograma-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.organograma-modal-close:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.organograma-modal-body {
+  display: flex;
+  gap: 24px;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.015);
+  flex-wrap: wrap;
+}
+
+.organograma-modal-counts {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 140px;
+}
+
+.organograma-modal-count-value {
+  color: var(--org-accent);
+  line-height: 1;
+}
+
+.organograma-modal-count-label {
+  letter-spacing: 0.05em;
+}
+
+.organograma-modal-list {
+  flex: 1;
+  min-width: 220px;
+  border-left: 1px solid var(--glass-border);
+  padding-left: 24px;
+}
+
+.organograma-modal-role-title {
+  color: var(--org-accent);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.organograma-modal-member {
+  color: var(--text-main);
+  line-height: 1.5;
+}

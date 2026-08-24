@@ -19,6 +19,7 @@ import HelpFlow from '../components/HelpFlow';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import OperacaoHome from '../components/operacao/OperacaoHome';
 import Team from '../components/Team';
+import Organograma from '../components/Organograma';
 import SecopsPermissionsLayout from './SecopsPermissionsLayout';
 import { getTicketById } from '../services/ticketService';
 
@@ -88,6 +89,7 @@ const DemandasLayout = ({
             <Route path="/planejamento" element={(userRole === 'admin' || userRole === 'squad_leader') ? <CapacityPlanning userRole={userRole} /> : <Navigate to="/" replace />} />
             <Route path="/secops/permissions" element={<SecopsPermissionsLayout userRole={userRole} />} />
             <Route path="/team" element={<Team userRole={userRole} />} />
+            <Route path="/organograma" element={<Organograma userRole={userRole} />} />
             <Route path="/minhas-atividades" element={<MyActivities userRole={userRole} user={user} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
