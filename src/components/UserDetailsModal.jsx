@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, Flex, Box, Avatar, Text, Badge, Card, Button } from '@radix-ui/themes';
+import { Dialog, Flex, Box, Avatar, Text, Badge, Card, Button, Select } from '@radix-ui/themes';
 import { Camera, Sun, Moon, Bell } from 'lucide-react';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -7,6 +7,7 @@ import { updateUser } from '../services/settingsService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { userHasFunctionPermission } from '../services/permissionService';
 import { PermissionFunctionKeys } from '../services/permissionKeys';
+import { SELECT_OPTIONS_BY_KEY } from '../utils/userFieldOptions';
 
 const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notificationPermission, handleNotificationRequest, mode = "edit" }) => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -47,7 +48,6 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
       } catch (e) {
         console.error(e);
         if (cancelled) return;
-        // fallback seguro: não mostrar
         setCanSeeCsr(false);
         setCanSeeRatecard(false);
       }
@@ -118,11 +118,8 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
     ],
   };
 
-  const formatValue = (v) => {
-    if (v === null || v === undefined || v === "") return "-";
-    if (typeof v === "object") return JSON.stringify(v);
-    return String(v);
-  };
+  const isDateField = (key) => key === "dataNascimento" || key === "dataInicio";
+  const isSelectField = (key) => Object.prototype.hasOwnProperty.call(SELECT_OPTIONS_BY_KEY, key);
 
   const toInputDateValue = (value) => {
     if (!value) return "";
@@ -148,23 +145,24 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
 
   const toPersistValue = (key, value) => {
     if (isDateField(key)) {
-      // value no draft pode vir como Date, Timestamp, ou string
       if (typeof value === "string") return fromInputDateValue(value);
       if (!value) return null;
       if (typeof value === "object" && typeof value.toDate === "function") return value.toDate();
       if (value instanceof Date) return value;
-      // fallback
       const d = new Date(value);
       return Number.isNaN(d.getTime()) ? null : d;
     }
     return value ?? null;
   };
 
-  const isDateField = (key) => key === "dataNascimento" || key === "dataInicio";
-
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content style={{ maxWidth: 520 }}>
+    <Dialog.Root open={open} onOpenChange={(next) => { if (next === false) return; onOpenChange(next); }}>
+      <Dialog.Content
+        style={{ maxWidth: 520 }}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <Dialog.Title>Detalhes do Membro</Dialog.Title>
         <Flex gap="4" align="center" mb="5" mt="2">
           <Box position="relative">
@@ -233,6 +231,7 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
               })
               .map(([key, label]) => {
                 const v = draftUser?.[key];
+                const readOnly = mode === "view" || key === "role";
                 return (
                   <Card key={key} size="1" variant="surface">
                     <Flex direction="column" gap="1">
@@ -240,47 +239,62 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
                         {label}
                       </Text>
 
-                    {isDateField(key) ? (
-                      <input
-                        type="date"
-                        value={toInputDateValue(v)}
-                        readOnly={mode === "view"}
-                        disabled={mode === "view"}
-                        onChange={(e) => {
-                          const next = e.target.value; // YYYY-MM-DD (string) no draft
-                          setDraftUser((prev) => ({ ...prev, [key]: next }));
-                        }}
-                        style={{
-                          width: "100%",
-                          height: 34,
-                          borderRadius: 8,
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid var(--glass-border)",
-                          color: "var(--text)",
-                          padding: "0 10px",
-                        }}
-                      />
-                    ) : (
-                      <input
-                        value={v ?? ""}
-                        readOnly={mode === "view" || key === "role"}
-                        disabled={mode === "view" || key === "role"}
-                        onChange={(e) => setDraftUser((prev) => ({ ...prev, [key]: e.target.value }))}
-                        style={{
-                          width: "100%",
-                          height: 34,
-                          borderRadius: 8,
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid var(--glass-border)",
-                          color: "var(--text)",
-                          padding: "0 10px",
-                        }}
-                      />
-                    )}
-                  </Flex>
-                </Card>
-              );
-            })}
+                      {isDateField(key) ? (
+                        <input
+                          type="date"
+                          value={toInputDateValue(v)}
+                          readOnly={readOnly}
+                          disabled={readOnly}
+                          onChange={(e) => {
+                            const next = e.target.value;
+                            setDraftUser((prev) => ({ ...prev, [key]: next }));
+                          }}
+                          style={{
+                            width: "100%",
+                            height: 34,
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--text)",
+                            padding: "0 10px",
+                          }}
+                        />
+                      ) : isSelectField(key) ? (
+                        <Select.Root
+                          value={v || ""}
+                          onValueChange={(next) => setDraftUser((prev) => ({ ...prev, [key]: next }))}
+                          disabled={readOnly}
+                        >
+                          <Select.Trigger style={{ width: "100%" }} placeholder="Selecione..." />
+                          <Select.Content>
+                            {SELECT_OPTIONS_BY_KEY[key].map((opt) => (
+                              <Select.Item key={opt} value={opt}>
+                                {opt}
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Root>
+                      ) : (
+                        <input
+                          value={v ?? ""}
+                          readOnly={readOnly}
+                          disabled={readOnly}
+                          onChange={(e) => setDraftUser((prev) => ({ ...prev, [key]: e.target.value }))}
+                          style={{
+                            width: "100%",
+                            height: 34,
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--text)",
+                            padding: "0 10px",
+                          }}
+                        />
+                      )}
+                    </Flex>
+                  </Card>
+                );
+              })}
           </Flex>
         </Box>
 

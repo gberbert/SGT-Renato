@@ -1,5 +1,10 @@
 # Versionamento do Projeto
 
+## [0.1.220] - 2026-08-24
+- **UX (Modal Detalhes do Membro):** Campos `STATUS`, `FOUNDATION`, `UF`, `CONTRATO`, `CARGO`, `SENIORIDADE`, `SENIORIDADE RATECARD` e `PERFIL RATECARD` no `UserDetailsModal.jsx` passaram de inputs de texto livre para `Select` do Radix UI com listas fixas de opções, ordenadas alfabeticamente (novo arquivo `src/utils/userFieldOptions.js`).
+- **Bugfix (Modal Detalhes do Membro):** Corrigido fechamento indesejado do modal ao interagir com os novos combobox (clique fora/`Escape` disparava `onOpenChange(false)` do Radix Dialog). O fechamento agora só ocorre pelo botão "Fechar" (`onPointerDownOutside`, `onInteractOutside` e `onEscapeKeyDown` interceptados com `preventDefault`).
+- **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.
+
 ## [0.1.219] - 2026-08-24
 - **Feature (Team & Permissões):** Novo módulo `Team` (visão de equipe consolidada com dados de CSR/Ratecard) e sistema de perfis de permissão (`PermissionsManager.jsx`, `permissionService.js`, `permissionKeys.js`) controlando visibilidade de itens de menu na Sidebar via `allowedFunctions` por perfil.
 - **Backend (Cloud Functions):** Nova função `getOperacaoRadarBootstrap` (Admin SDK) que monta o bootstrap do Radar Operação (stats, squads, grupos, filtros) no servidor, evitando varredura pesada de `tickets_global` no browser. Nova função HTTP `enrichUsersFromTeamHttp` para enriquecer usuários a partir da coleção `team` (protegida por checagem de admin via Bearer token).
