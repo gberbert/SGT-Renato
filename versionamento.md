@@ -1,5 +1,11 @@
 # Versionamento do Projeto
 
+## [0.1.219] - 2026-08-24
+- **Feature (Team & Permissões):** Novo módulo `Team` (visão de equipe consolidada com dados de CSR/Ratecard) e sistema de perfis de permissão (`PermissionsManager.jsx`, `permissionService.js`, `permissionKeys.js`) controlando visibilidade de itens de menu na Sidebar via `allowedFunctions` por perfil.
+- **Backend (Cloud Functions):** Nova função `getOperacaoRadarBootstrap` (Admin SDK) que monta o bootstrap do Radar Operação (stats, squads, grupos, filtros) no servidor, evitando varredura pesada de `tickets_global` no browser. Nova função HTTP `enrichUsersFromTeamHttp` para enriquecer usuários a partir da coleção `team` (protegida por checagem de admin via Bearer token).
+- **Fix (Cloud Functions):** Removido `require("firebase/firestore")` morto/inexistente dentro de `getOperacaoRadarBootstrap` (a função já usa exclusivamente o Admin SDK via `getFirestore`).
+- **Deploy:** Build de produção + deploy de `hosting` e `functions` no projeto `sgt-renato`.
+
 ## [0.1.218] - 2026-08-19
 - **Perf (Radar Operação):** painel montado a partir de `operacao_stats/summary` (1 read); drill-down por escopo sob demanda; subtotais por issue type persistidos na carga (`byIssueTypeByEscopo` + `radarByEscopo`).
 - **Fix (Carga):** reset de stats não apaga mais agregados; gravação única de stats no fim da carga; fallback com count queries quando escopos ausentes.

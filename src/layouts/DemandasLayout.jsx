@@ -18,6 +18,8 @@ import MyActivities from '../components/MyActivities';
 import HelpFlow from '../components/HelpFlow';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import OperacaoHome from '../components/operacao/OperacaoHome';
+import Team from '../components/Team';
+import SecopsPermissionsLayout from './SecopsPermissionsLayout';
 import { getTicketById } from '../services/ticketService';
 
 const DemandasLayout = ({
@@ -69,7 +71,7 @@ const DemandasLayout = ({
 
         <section className="view-container">
           <Routes>
-            <Route path="/" element={<OperacaoHome userRole={userRole} />} />
+            <Route index element={<OperacaoHome userRole={userRole} />} />
             <Route path="/radar-operacao" element={<Navigate to="/" replace />} />
             <Route path="/demandas" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="demandas" setIsModalOpen={setIsModalOpen} />} />
             <Route path="/atividades" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="atividades" setIsModalOpen={setIsModalOpen} />} />
@@ -84,6 +86,8 @@ const DemandasLayout = ({
             <Route path="/ajuda" element={<HelpFlow />} />
             <Route path="/configuracoes" element={userRole === 'admin' ? <Settings userRole={userRole} /> : <Navigate to="/" replace />} />
             <Route path="/planejamento" element={(userRole === 'admin' || userRole === 'squad_leader') ? <CapacityPlanning userRole={userRole} /> : <Navigate to="/" replace />} />
+            <Route path="/secops/permissions" element={<SecopsPermissionsLayout userRole={userRole} />} />
+            <Route path="/team" element={<Team userRole={userRole} />} />
             <Route path="/minhas-atividades" element={<MyActivities userRole={userRole} user={user} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

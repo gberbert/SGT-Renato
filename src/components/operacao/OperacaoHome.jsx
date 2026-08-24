@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Flex, Text, Callout, Progress, TextField } from '@radix-ui/themes';
+import { Box, Flex, Text, Callout, Progress, TextField, Tabs } from '@radix-ui/themes';
 import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
@@ -7,10 +7,12 @@ import { formatCallableError } from '../../utils/callableError';
 import {
   createRadarFilterState,
   fetchTicketsForDrill,
+  fetchTicketsGlobalForRadar,
+  filterTickets,
   flattenDrillHierarchy,
   getEscopoRadarMeta,
-  getFilterSummary,
   prepareDrillHierarchy,
+  computeRadarEscopos,
 } from '../../services/operacaoRadarService';
 import './operacao-radar.css';
 
@@ -31,9 +33,11 @@ const OperacaoHome = () => {
     bootLoading,
     error,
     statsRadar,
+    statsFingerprint,
     filterOptions,
     ensureRadarBootstrap,
     refreshRadar,
+    squadGrupoMap,
   } = useOperacaoRadar();
 
   useEffect(() => {
@@ -41,6 +45,11 @@ const OperacaoHome = () => {
   }, [ensureRadarBootstrap]);
 
   const [filters, setFilters] = useState(createRadarFilterState);
+
+  const [ticketsCache, setTicketsCache] = useState(null);
+  const [ticketsCacheLoading, setTicketsCacheLoading] = useState(false);
+
+  const [computedRadar, setComputedRadar] = useState(null);
   const [drillEscopo, setDrillEscopo] = useState(null);
   const [drillLabel, setDrillLabel] = useState('');
   const [drillIssueKeyQuery, setDrillIssueKeyQuery] = useState('');
@@ -50,9 +59,42 @@ const OperacaoHome = () => {
   const [drillError, setDrillError] = useState('');
 
   const radar = useMemo(
-    () => statsRadar || { total: 0, escopos: [] },
-    [statsRadar]
+    () => computedRadar || statsRadar || { total: 0, escopos: [] },
+    [computedRadar, statsRadar]
   );
+
+  const radarDataReady =
+    !ticketsCacheLoading && Array.isArray(ticketsCache) && ticketsCache.length > 0;
+
+  // Feedback visual de progresso (estimado) durante o bootstrap
+  const [bootProgress, setBootProgress] = useState(0);
+
+  useEffect(() => {
+    if (!bootLoading) {
+      setBootProgress(100);
+      const t = setTimeout(() => setBootProgress(0), 400);
+      return () => clearTimeout(t);
+    }
+
+    setBootProgress(5);
+
+    const start = Date.now();
+    const durationMs = 2500; // UX: estimativa até 2.5s
+
+    const id = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const ratio = Math.min(0.98, elapsed / durationMs);
+      const next = Math.round(5 + ratio * 90);
+
+      setBootProgress((prev) => {
+        const prevN = Number.isFinite(prev) ? prev : 0;
+        const nextN = Number.isFinite(next) ? next : 5;
+        return Math.max(prevN, nextN);
+      });
+    }, 100);
+
+    return () => clearInterval(id);
+  }, [bootLoading]);
 
   const drillHierarchy = useMemo(() => {
     if (drillEscopo === null) {
@@ -70,24 +112,49 @@ const OperacaoHome = () => {
   const filterActive =
     filters.grupos.size > 0 || filters.squads.size > 0 || filters.statuses.size > 0;
 
-  const openDrill = useCallback(async (escopoKey, label) => {
-    setDrillIssueKeyQuery('');
-    setExpandedParents(new Set());
-    setDrillEscopo(escopoKey);
-    setDrillLabel(label);
-    setDrillTickets([]);
-    setDrillError('');
-    setDrillLoading(true);
+  const filtersReady =
+    Array.isArray(filterOptions?.grupos) &&
+    filterOptions.grupos.length > 0 &&
+    Array.isArray(filterOptions?.squads) &&
+    filterOptions.squads.length > 0 &&
+    Array.isArray(filterOptions?.statuses) &&
+    filterOptions.statuses.length > 0;
 
-    try {
-      const tickets = await fetchTicketsForDrill({ escopoKey: escopoKey || null });
-      setDrillTickets(tickets);
-    } catch (err) {
-      setDrillError(formatCallableError(err));
-    } finally {
-      setDrillLoading(false);
-    }
-  }, []);
+  const shouldBlockFilters = bootLoading || ticketsCacheLoading || !filtersReady;
+
+  const openDrill = useCallback(
+    async (escopoKey, label) => {
+      setDrillIssueKeyQuery('');
+      setExpandedParents(new Set());
+      setDrillEscopo(escopoKey);
+      setDrillLabel(label);
+      setDrillTickets([]);
+      setDrillError('');
+      setDrillLoading(true);
+
+      try {
+        if (!Array.isArray(ticketsCache)) {
+          setDrillTickets([]);
+          return;
+        }
+
+        // filtra somente no recorte do escopo e aplica filtros atuais em memória
+        const baseTickets = escopoKey
+          ? ticketsCache.filter(
+              (t) => String(t.escopo || '').toUpperCase() === String(escopoKey).toUpperCase()
+            )
+          : ticketsCache;
+
+        const filteredTickets = filterTickets(baseTickets, filters, squadGrupoMap || new Map());
+        setDrillTickets(filteredTickets);
+      } catch (err) {
+        setDrillError(formatCallableError(err));
+      } finally {
+        setDrillLoading(false);
+      }
+    },
+    [ticketsCache, filters, squadGrupoMap]
+  );
 
   const toggleParentExpand = (issueKey) => {
     setExpandedParents((prev) => {
@@ -111,6 +178,181 @@ const OperacaoHome = () => {
     setDrillTickets([]);
     setDrillError('');
   };
+
+  // 1) Ao entrar na tela Radar, carregar tickets_global uma vez (memória + cache)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function ensureTicketsCache() {
+      if (!statsFingerprint) return;
+      if (!hasData) return;
+      if (ticketsCacheLoading) return;
+      if (Array.isArray(ticketsCache) && ticketsCache.length >= 0) return;
+
+      const ticketsCacheKey = `operacao_radar_tickets_${statsFingerprint}`;
+      const cached = (() => {
+        try {
+          return sessionStorage.getItem(ticketsCacheKey);
+        } catch {
+          return null;
+        }
+      })();
+
+      let cachedTickets = null;
+      if (cached) {
+        try {
+          cachedTickets = JSON.parse(cached);
+        } catch {
+          cachedTickets = null;
+        }
+      }
+
+      if (Array.isArray(cachedTickets)) {
+        setTicketsCache(cachedTickets);
+        return;
+      }
+
+      setTicketsCacheLoading(true);
+      try {
+        const loaded = await fetchTicketsGlobalForRadar();
+        if (cancelled) return;
+
+        setTicketsCache(loaded);
+        try {
+          sessionStorage.setItem(ticketsCacheKey, JSON.stringify(loaded));
+        } catch {
+          // ignore
+        }
+      } finally {
+        if (!cancelled) setTicketsCacheLoading(false);
+      }
+    }
+
+    ensureTicketsCache();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsFingerprint, hasData]);
+
+  // 2) Ao filtrar, recomputa totais/lanes a partir do tickets em memória
+  useEffect(() => {
+    let cancelled = false;
+
+    async function ensureTicketsAndCompute() {
+      if (!statsFingerprint) return;
+      if (!filterActive) {
+        setComputedRadar(null);
+        return;
+      }
+
+      if (!Array.isArray(ticketsCache)) return;
+
+      const filtrosFingerprint = JSON.stringify({
+        grupos: [...filters.grupos].sort(),
+        squads: [...filters.squads].sort(),
+        statuses: [...filters.statuses].sort(),
+      });
+
+      const radarCacheKey = `operacao_radar_filtered_${statsFingerprint}_${filtrosFingerprint}`;
+      const cachedRadar = (() => {
+        try {
+          return sessionStorage.getItem(radarCacheKey);
+        } catch {
+          return null;
+        }
+      })();
+
+      if (cachedRadar) {
+        try {
+          const parsed = JSON.parse(cachedRadar);
+          if (parsed && Array.isArray(parsed?.escopos)) {
+            setComputedRadar(parsed);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const filteredTickets = filterTickets(ticketsCache, filters, squadGrupoMap || new Map());
+      const nextRadar = computeRadarEscopos(filteredTickets);
+
+      if (!cancelled) {
+        setComputedRadar(nextRadar);
+        try {
+          sessionStorage.setItem(radarCacheKey, JSON.stringify(nextRadar));
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    ensureTicketsAndCompute();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    filterActive,
+    statsFingerprint,
+    ticketsCache,
+    filters.grupos.size,
+    filters.squads.size,
+    filters.statuses.size,
+    squadGrupoMap,
+  ]);
+
+  const problemsTotal = useMemo(() => {
+    return (radar.escopos || []).find((e) => e.key === 'PROBLEMAS')?.total || 0;
+  }, [radar.escopos]);
+
+  const demandasTotal = useMemo(() => {
+    return (
+      (radar.escopos || []).find((e) => e.key === 'DEMANDA FAST')?.total || 0
+    ) + (
+      (radar.escopos || []).find((e) => e.key === 'DEMANDA')?.total || 0
+    );
+  }, [radar.escopos]);
+
+  const incidentesTotal = useMemo(() => {
+    return (radar.escopos || []).find((e) => e.key === 'INCIDENTE')?.total || 0;
+  }, [radar.escopos]);
+
+  const solicitacoesTotal = useMemo(() => {
+    return (radar.escopos || []).find((e) => e.key === 'SOLICITACAO')?.total || 0;
+  }, [radar.escopos]);
+
+  const geralCards = useMemo(() => {
+    const escopos = radar.escopos || [];
+    const findTotal = (key) => escopos.find((e) => e.key === key)?.total || 0;
+
+    return [
+      { key: 'PROBLEMAS', label: 'PROBLEMAS', total: findTotal('PROBLEMAS'), color: '#ff4d4f' },
+      {
+        key: 'DEMANDA_FAST',
+        label: 'DEMANDA FAST',
+        total: findTotal('DEMANDA FAST'),
+        color: '#ff9f43',
+      },
+      { key: 'DEMANDA', label: 'DEMANDA', total: findTotal('DEMANDA'), color: '#1f77b4' },
+      { key: 'INCIDENTE', label: 'INCIDENTE', total: findTotal('INCIDENTE'), color: '#2ecc71' },
+      {
+        key: 'SOLICITACAO',
+        label: 'SOLICITACAO',
+        total: findTotal('SOLICITACAO'),
+        color: '#00c2ff',
+      },
+      {
+        key: 'CATALOGO',
+        label: 'CATÁLOGO',
+        total: findTotal('CATALOGODEP') || findTotal('CATÁLOGO'),
+        color: '#a855f7',
+      },
+    ];
+  }, [radar.escopos]);
 
   return (
     <Box p="5" className="operacao-radar-panel">
@@ -143,12 +385,20 @@ const OperacaoHome = () => {
         </Callout.Root>
       )}
 
-      {bootLoading && (
-        <Box mb="4">
+      {(bootLoading || ticketsCacheLoading) && (
+        <Box mb="4" className="operacao-radar-boot-progress">
           <Text size="2" color="gray" mb="2">
-            Carregando totais do radar…
+            {bootLoading ? 'Carregando totais do radar… ' : 'Aguarde enquanto consolidamos os dados… '}
+            {bootLoading && (
+              <Text as="span" size="2" color="indigo">
+                {bootProgress}%
+              </Text>
+            )}
           </Text>
-          <Progress />
+          <Progress value={bootLoading ? bootProgress : 60} />
+          <Text size="1" color="gray" mt="2">
+            Enquanto os dados estão sendo processados, os filtros ficam bloqueados para evitar travamentos.
+          </Text>
         </Box>
       )}
 
@@ -163,251 +413,259 @@ const OperacaoHome = () => {
 
       {!bootLoading && hasData && (
         <>
-          <Box className="operacao-radar-filters is-disabled">
-            <OperacaoMultiCombobox
-              label="GRUPO DE ATENDIMENTO"
-              placeholder="Todos os grupos"
-              options={filterOptions.grupos}
-              selected={filters.grupos}
-              onChange={(value) => updateFilter('grupos', value)}
-              formatMeta={(item) => `${formatNumber(item.total)} tickets`}
-              disabled
-            />
-            <OperacaoMultiCombobox
-              label="SQUAD"
-              placeholder="Todas as squads"
-              options={filterOptions.squads}
-              selected={filters.squads}
-              onChange={(value) => updateFilter('squads', value)}
-              formatOption={(item) =>
-                item.sigla ? `${item.sigla} — ${item.nome}` : item.nome
-              }
-              formatMeta={(item) => `${formatNumber(item.total)} tickets`}
-              disabled
-            />
-            <OperacaoMultiCombobox
-              label="STATUS DO TICKET"
-              placeholder="Todos os status"
-              options={filterOptions.statuses}
-              selected={filters.statuses}
-              onChange={(value) => updateFilter('statuses', value)}
-              formatMeta={(item) => `${formatNumber(item.total)} tickets`}
-              disabled
-            />
-            <Flex
-              className="operacao-radar-filter-actions"
-              align="center"
-              justify="between"
-              wrap="wrap"
-              gap="2"
+          {/* Filters ABOVE tabs */}
+          <Box mb="4">
+            <Box
+              className="operacao-radar-filters"
+              style={{ opacity: shouldBlockFilters ? 0.6 : 1 }}
             >
-              <Text className="operacao-radar-filter-summary">
-                Filtros globais desativados para reduzir leituras do Firestore. Clique em um escopo
-                para carregar a tabela de tickets daquele grupo.
-              </Text>
-              {filterActive && (
-                <button
-                  type="button"
-                  className="operacao-radar-clear-filters btn btn-ghost"
-                  onClick={clearFilters}
-                >
-                  <XCircle size={16} /> Limpar filtros
-                </button>
-              )}
-            </Flex>
-          </Box>
+              <OperacaoMultiCombobox
+                label="GRUPO DE ATENDIMENTO"
+                placeholder="Todos os grupos"
+                options={filterOptions.grupos}
+                selected={filters.grupos}
+                onChange={(value) => updateFilter('grupos', value)}
+                disabled={shouldBlockFilters}
+                formatMeta={(item) => `${formatNumber(item.total)} tickets`}
+              />
+              <OperacaoMultiCombobox
+                label="SQUAD"
+                placeholder="Todas as squads"
+                options={filterOptions.squads}
+                selected={filters.squads}
+                onChange={(value) => updateFilter('squads', value)}
+                disabled={shouldBlockFilters}
+                formatOption={(item) => (item.sigla ? `${item.sigla} — ${item.nome}` : item.nome)}
+                formatMeta={(item) => `${formatNumber(item.total)} tickets`}
+              />
+              <OperacaoMultiCombobox
+                label="STATUS DO TICKET"
+                placeholder="Todos os status"
+                options={filterOptions.statuses}
+                selected={filters.statuses}
+                onChange={(value) => updateFilter('statuses', value)}
+                disabled={shouldBlockFilters}
+                formatMeta={(item) => `${formatNumber(item.total)} tickets`}
+              />
 
-          <Box className="operacao-radar-summary">
-            <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
-              <button
-                type="button"
-                className="operacao-radar-summary-value"
-                title="Ver tickets de todos os escopos"
-                onClick={() => openDrill('', 'Todos os escopos')}
-                disabled={drillLoading}
+              <Flex
+                className="operacao-radar-filter-actions"
+                align="center"
+                justify="between"
+                wrap="wrap"
+                gap="2"
               >
-                {formatNumber(radar.total)}
-              </button>
-            </Flex>
-            <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
+                <Text className="operacao-radar-filter-summary">
+                  Filtros globais desativados para reduzir leituras do Firestore. Clique em um escopo
+                  para carregar a tabela de tickets daquele grupo.
+                </Text>
+                {(filters.grupos.size > 0 || filters.squads.size > 0 || filters.statuses.size > 0) && (
+                  <button
+                    type="button"
+                    className="operacao-radar-clear-filters btn btn-ghost"
+                    onClick={clearFilters}
+                  >
+                    <XCircle size={16} /> Limpar filtros
+                  </button>
+                )}
+              </Flex>
+            </Box>
           </Box>
 
-          <Box className="operacao-radar-lanes">
-            {radar.escopos.length === 0 ? (
-              <Text className="operacao-radar-loading">Nenhum ticket registrado nos escopos.</Text>
-            ) : (
-              radar.escopos.map((item) => (
-                <article
-                  key={item.key}
-                  className={`operacao-radar-lane${drillEscopo === item.key ? ' selected' : ''}`}
-                  style={{ '--lane-color': item.color }}
-                >
-                  <Flex align="baseline" gap="2" wrap="wrap">
-                    <button
-                      type="button"
-                      className="operacao-radar-lane-value"
-                      title={`Ver tickets de ${item.label}`}
-                      onClick={() => openDrill(item.key, item.label)}
-                      disabled={drillLoading && drillEscopo === item.key}
-                    >
-                      {formatNumber(item.total)}
-                    </button>
-                    {drillLoading && drillEscopo === item.key && (
-                      <Text className="operacao-radar-loading-badge" size="1">
-                        <Loader2 size={12} className="operacao-radar-loading-icon" aria-hidden="true" />
-                        Carregando…
-                      </Text>
-                    )}
-                  </Flex>
-                  <Text className="operacao-radar-lane-label">{item.label}</Text>
-                  {item.issueTypes?.length > 0 ? (
-                    <ul className="operacao-radar-lane-issue-types">
-                      {item.issueTypes.map((issueType) => (
-                        <li key={`${item.key}-${issueType.name}`}>
-                          <span className="operacao-radar-lane-issue-type-name">{issueType.name}</span>
-                          <span className="operacao-radar-lane-issue-type-total">
-                            {formatNumber(issueType.total)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </article>
-              ))
-            )}
-          </Box>
-
-          {drillEscopo !== null && (
-            <Box className="operacao-radar-tickets-panel">
-              <Flex className="operacao-radar-tickets-header" align="center" justify="between" wrap="wrap" gap="3">
-                <Box>
-                  <Text size="4" weight="bold">
-                    Tickets · {drillLabel || getEscopoRadarMeta(drillEscopo).label}
-                  </Text>
-                  <Text size="2" color="gray">
-                    {drillLoading
-                      ? 'Consultando tickets no Firestore…'
-                      : `${formatNumber(drillHierarchy.totalTickets)} ticket(s)${drillRows.length < drillHierarchy.totalTickets ? ` · ${formatNumber(drillRows.length)} exibido(s)` : ''}`}
-                  </Text>
-                </Box>
-                <Box className="operacao-radar-drill-filter">
-                  <Text size="1" weight="bold" color="gray" mb="1" style={{ letterSpacing: '0.06em' }}>
-                    ISSUE_KEY
-                  </Text>
-                  <TextField.Root
-                    size="2"
-                    placeholder="Filtrar por chave (ex: PROB-483)"
-                    value={drillIssueKeyQuery}
-                    onChange={(event) => setDrillIssueKeyQuery(event.target.value)}
-                    style={{ minWidth: 240 }}
+          <Flex gap="4" align="start">
+            {/* LEFT: somente total consolidado (sem abas, sem lanes por escopo) */}
+            <Box style={{ flex: 1, minWidth: 320 }}>
+              <Box mt="1" className="operacao-radar-summary">
+                <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
+                  <button
+                    type="button"
+                    className="operacao-radar-summary-value"
+                    title="Ver tickets"
+                    onClick={() => openDrill('', 'Todos os escopos')}
                     disabled={drillLoading}
                   >
-                    <TextField.Slot>
-                      <Search size={14} />
-                    </TextField.Slot>
-                  </TextField.Root>
-                </Box>
-              </Flex>
+                    {formatNumber(radar.total)}
+                  </button>
+                </Flex>
+                <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
+              </Box>
 
-              {drillError && (
-                <Callout.Root color="red" mb="3">
-                  <Callout.Text>{drillError}</Callout.Text>
-                </Callout.Root>
-              )}
+              {/* Tiles por escopo (como no layout do print) */}
+              <Box className="operacao-radar-lanes" mt="4" style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+                {geralCards.map((card) => (
+                  <button
+                    key={card.key}
+                    type="button"
+                    className="operacao-radar-summary-value"
+                    onClick={() => openDrill(card.key, card.label)}
+                    disabled={drillLoading}
+                    style={{
+                      width: 210,
+                      height: 86,
+                      borderRadius: 16,
+                      border: `1px solid rgba(255,255,255,0.08)`,
+                      background: 'rgba(255,255,255,0.02)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      justifyContent: 'center',
+                      padding: 16,
+                      gap: 6,
+                      cursor: 'pointer',
+                    }}
+                    title={`Ver tickets de ${card.label}`}
+                  >
+                    <Text
+                      size="7"
+                      weight="bold"
+                      style={{ margin: 0, color: card.color, lineHeight: 1 }}
+                    >
+                      {formatNumber(card.total)}
+                    </Text>
+                    <Text size="2" color="gray" style={{ margin: 0, textTransform: 'uppercase' }}>
+                      {card.label}
+                    </Text>
+                  </button>
+                ))}
+              </Box>
 
-              {drillLoading ? (
-                <Box mt="3">
-                  <Progress />
-                </Box>
-              ) : drillHierarchy.totalTickets === 0 ? (
-                <Text size="2" color="gray">
-                  {drillIssueKeyQuery.trim()
-                    ? `Nenhum ticket com issue_key contendo "${drillIssueKeyQuery.trim()}".`
-                    : 'Nenhum ticket encontrado para esta seleção.'}
-                </Text>
-              ) : (
-                <Box className="operacao-radar-tickets-table-wrap">
-                  <table className="operacao-radar-tickets-table">
-                    <thead>
-                      <tr>
-                        <th>ISSUE_KEY</th>
-                        <th>ISSUETYPE</th>
-                        <th>SUMMARY</th>
-                        <th>STATUS</th>
-                        <th>PRIORITY</th>
-                        <th>CREATED_AT</th>
-                        <th>AGING</th>
-                        <th>UPDATE_AT</th>
-                        <th>TICKETS_VINCULADOS</th>
-                        <th>GRUPO_SUPORTE</th>
-                        <th>ESCOPO</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {drillRows.map((ticket) => (
-                        <tr
-                          key={ticket.issueKey}
-                          className={ticket.depth > 0 ? 'operacao-radar-tickets-row-child' : undefined}
-                        >
-                          <td
-                            className="operacao-radar-tickets-key-cell"
-                            style={{ paddingLeft: `${0.75 + ticket.depth * 1.35}rem` }}
-                          >
-                            {ticket.hasChildren ? (
-                              <button
-                                type="button"
-                                className="operacao-radar-tickets-expand"
-                                title={
-                                  ticket.isExpanded
-                                    ? 'Recolher tickets filhos'
-                                    : `Expandir ${formatNumber(ticket.childCount)} ticket(s) filho(s)`
-                                }
-                                aria-expanded={ticket.isExpanded}
-                                onClick={() => toggleParentExpand(ticket.issueKey)}
+              {drillEscopo !== null && (
+                <Box className="operacao-radar-tickets-panel">
+                  <Flex className="operacao-radar-tickets-header" align="center" justify="between" wrap="wrap" gap="3">
+                    <Box>
+                      <Text size="4" weight="bold">
+                        Tickets · {drillLabel || getEscopoRadarMeta(drillEscopo).label}
+                      </Text>
+                      <Text size="2" color="gray">
+                        {drillLoading
+                          ? 'Consultando tickets no Firestore…'
+                          : `${formatNumber(drillHierarchy.totalTickets)} ticket(s)${
+                              drillRows.length < drillHierarchy.totalTickets
+                                ? ` · ${formatNumber(drillRows.length)} exibido(s)`
+                                : ''
+                            }`}
+                      </Text>
+                    </Box>
+                    <Box className="operacao-radar-drill-filter">
+                      <Text size="1" weight="bold" color="gray" mb="1" style={{ letterSpacing: '0.06em' }}>
+                        ISSUE_KEY
+                      </Text>
+                      <TextField.Root
+                        size="2"
+                        placeholder="Filtrar por chave (ex: PROB-483)"
+                        value={drillIssueKeyQuery}
+                        onChange={(event) => setDrillIssueKeyQuery(event.target.value)}
+                        style={{ minWidth: 240 }}
+                        disabled={drillLoading}
+                      >
+                        <TextField.Slot>
+                          <Search size={14} />
+                        </TextField.Slot>
+                      </TextField.Root>
+                    </Box>
+                  </Flex>
+
+                  {drillError && (
+                    <Callout.Root color="red" mb="3">
+                      <Callout.Text>{drillError}</Callout.Text>
+                    </Callout.Root>
+                  )}
+
+                  {drillLoading ? (
+                    <Box mt="3">
+                      <Progress />
+                    </Box>
+                  ) : drillHierarchy.totalTickets === 0 ? (
+                    <Text size="2" color="gray">
+                      {drillIssueKeyQuery.trim()
+                        ? `Nenhum ticket com issue_key contendo "${drillIssueKeyQuery.trim()}".`
+                        : 'Nenhum ticket encontrado para esta seleção.'}
+                    </Text>
+                  ) : (
+                    <Box className="operacao-radar-tickets-table-wrap">
+                      <table className="operacao-radar-tickets-table">
+                        <thead>
+                          <tr>
+                            <th>ISSUE_KEY</th>
+                            <th>ISSUETYPE</th>
+                            <th>SUMMARY</th>
+                            <th>STATUS</th>
+                            <th>PRIORITY</th>
+                            <th>CREATED_AT</th>
+                            <th>AGING</th>
+                            <th>UPDATE_AT</th>
+                            <th>TICKETS_VINCULADOS</th>
+                            <th>GRUPO_SUPORTE</th>
+                            <th>ESCOPO</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {drillRows.map((ticket) => (
+                            <tr
+                              key={ticket.issueKey}
+                              className={ticket.depth > 0 ? 'operacao-radar-tickets-row-child' : undefined}
+                            >
+                              <td
+                                className="operacao-radar-tickets-key-cell"
+                                style={{ paddingLeft: `${0.75 + ticket.depth * 1.35}rem` }}
                               >
-                                {ticket.isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                              </button>
-                            ) : (
-                              <span className="operacao-radar-tickets-expand placeholder" aria-hidden="true" />
-                            )}
-                            {ticket.issueUrl ? (
-                              <a
-                                className="operacao-radar-tickets-key"
-                                href={ticket.issueUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {ticket.issueKey}
-                              </a>
-                            ) : (
-                              ticket.issueKey
-                            )}
-                            {ticket.hasChildren && !ticket.isExpanded && (
-                              <span className="operacao-radar-tickets-child-count">
-                                {formatNumber(ticket.childCount)} filho(s)
-                              </span>
-                            )}
-                          </td>
-                          <td>{ticket.issueType || '—'}</td>
-                          <td className="operacao-radar-tickets-summary">{ticket.summary || '—'}</td>
-                          <td>{ticket.status || '—'}</td>
-                          <td>{ticket.priority || '—'}</td>
-                          <td>{formatDateTime(ticket.createdAt)}</td>
-                          <td>{ticket.agingDays != null ? `${formatNumber(ticket.agingDays)} d` : '—'}</td>
-                          <td>{formatDateTime(ticket.updatedAt)}</td>
-                          <td className="operacao-radar-tickets-linked">
-                            {ticket.linkedTicketsLabel || '—'}
-                          </td>
-                          <td>{ticket.grupoSuporte || '—'}</td>
-                          <td>{ticket.escopo || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                                {ticket.hasChildren ? (
+                                  <button
+                                    type="button"
+                                    className="operacao-radar-tickets-expand"
+                                    title={
+                                      ticket.isExpanded
+                                        ? 'Recolher tickets filhos'
+                                        : `Expandir ${formatNumber(ticket.childCount)} ticket(s) filho(s)`
+                                    }
+                                    aria-expanded={ticket.isExpanded}
+                                    onClick={() => toggleParentExpand(ticket.issueKey)}
+                                  >
+                                    {ticket.isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                  </button>
+                                ) : (
+                                  <span className="operacao-radar-tickets-expand placeholder" aria-hidden="true" />
+                                )}
+                                {ticket.issueUrl ? (
+                                  <a
+                                    className="operacao-radar-tickets-key"
+                                    href={ticket.issueUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {ticket.issueKey}
+                                  </a>
+                                ) : (
+                                  ticket.issueKey
+                                )}
+                                {ticket.hasChildren && !ticket.isExpanded && (
+                                  <span className="operacao-radar-tickets-child-count">
+                                    {formatNumber(ticket.childCount)} filho(s)
+                                  </span>
+                                )}
+                              </td>
+                              <td>{ticket.issueType || '—'}</td>
+                              <td className="operacao-radar-tickets-summary">{ticket.summary || '—'}</td>
+                              <td>{ticket.status || '—'}</td>
+                              <td>{ticket.priority || '—'}</td>
+                              <td>{formatDateTime(ticket.createdAt)}</td>
+                              <td>{ticket.agingDays != null ? `${formatNumber(ticket.agingDays)} d` : '—'}</td>
+                              <td>{formatDateTime(ticket.updatedAt)}</td>
+                              <td className="operacao-radar-tickets-linked">{ticket.linkedTicketsLabel || '—'}</td>
+                              <td>{ticket.grupoSuporte || '—'}</td>
+                              <td>{ticket.escopo || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </Box>
+                  )}
                 </Box>
               )}
             </Box>
-          )}
+
+            {/* RIGHT: removido (fica apenas 1 coluna com tiles) */}
+          </Flex>
         </>
       )}
     </Box>

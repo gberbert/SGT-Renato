@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  FolderDot, KanbanSquare, Settings, Download, 
-  Menu, X, Check, Share, Calculator, Route, FileText, Shirt, FileCode, ListChecks, HelpCircle, ChevronDown, ChevronRight, Radar
+import {
+  FolderDot,
+  KanbanSquare,
+  Settings,
+  Download,
+  Menu,
+  X,
+  Check,
+  Share,
+  Calculator,
+  Route,
+  FileText,
+  Shirt,
+  FileCode,
+  ListChecks,
+  HelpCircle,
+  ChevronDown,
+  ChevronRight,
+  Radar,
+  Users,
 } from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 import { auth } from '../firebase';
 import { requestFCMToken } from '../services/notificationService';
 import { subscribeToUsers } from '../services/settingsService';
 import UserDetailsModal from './UserDetailsModal';
+import { getPermissionProfile } from '../services/permissionService';
+import { PermissionFunctionKeys } from '../services/permissionKeys';
+
 const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
@@ -93,20 +113,43 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
     }
   }, [user]);
 
+  const [allowedFunctions, setAllowedFunctions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAllowed() {
+      if (!userRole) return;
+
+      // permissionProfiles.profileId é o "id" (que você configurou no SECOPS)
+      const profile = await getPermissionProfile(userRole);
+      const af = Array.isArray(profile?.allowedFunctions) ? profile.allowedFunctions : [];
+      if (!cancelled) setAllowedFunctions(af);
+    }
+    loadAllowed();
+    return () => {
+      cancelled = true;
+    };
+  }, [userRole]);
+
+  const has = (fnKey) => allowedFunctions.includes(fnKey);
+
   let menuItems = [
-    { name: 'Radar Operação', icon: <Radar size={20} />, path: '/' },
-    { name: 'Minhas Atividades', icon: <ListChecks size={20} />, path: '/minhas-atividades' },
-    { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas', isDemandasParent: true },
-    { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap', isChild: true },
-    { name: 'T-Shirt', icon: <Shirt size={20} />, path: '/t-shirt', isChild: true },
-    { name: 'Estimativas', icon: <Calculator size={20} />, path: '/estimativas', isChild: true },
-    { name: 'Espec. Func.', icon: <FileText size={20} />, path: '/especificacoes', isChild: true },
-    { name: 'Espec. Técnica', icon: <FileCode size={20} />, path: '/espec-tecnica', isChild: true },
-    { name: 'Desenvolvimento', icon: <Check size={20} />, path: '/atividades', isChild: true }
+    { name: 'Radar Operação', icon: <Radar size={20} />, path: '/', requiredFn: PermissionFunctionKeys.RADAR_VIEW },
+    { name: 'Minhas Atividades', icon: <ListChecks size={20} />, path: '/minhas-atividades', requiredFn: PermissionFunctionKeys.MINHAS_ATIVIDADES_VIEW },
+    { name: 'Team', icon: <Users size={20} />, path: '/team', requiredFn: PermissionFunctionKeys.TEAM_VIEW },
+    { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas', isDemandasParent: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
+    { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
+    { name: 'T-Shirt', icon: <Shirt size={20} />, path: '/t-shirt', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
+    { name: 'Estimativas', icon: <Calculator size={20} />, path: '/estimativas', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
+    { name: 'Espec. Func.', icon: <FileText size={20} />, path: '/especificacoes', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
+    { name: 'Espec. Técnica', icon: <FileCode size={20} />, path: '/espec-tecnica', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
+    { name: 'Desenvolvimento', icon: <Check size={20} />, path: '/atividades', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
   ];
 
-  if (userRole === 'admin' || userRole === 'squad_leader') {
-    menuItems.splice(1, 0, { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos' });
+  // "Projetos" (antes era admin/squad_leader). Agora será permitido via ADMIN_ALL ou SETTINGS_VIEW/PLANEJAMENTO_VIEW.
+  // Ajuste se você quiser uma chave específica.
+  if (has(PermissionFunctionKeys.ADMIN_ALL) || has(PermissionFunctionKeys.SETTINGS_VIEW)) {
+    menuItems.splice(1, 0, { name: 'Projetos', icon: <FolderDot size={20} />, path: '/projetos', requiredFn: PermissionFunctionKeys.ADMIN_ALL });
   }
 
   return (
@@ -125,10 +168,13 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
         <ul>
           {menuItems.map((item, index) => {
             if (item.isChild && !isDemandasOpen) return null;
-            
+
+            // aplica permissões por allowedFunctions
+            if (item.requiredFn && !has(item.requiredFn)) return null;
+
             return (
             <li key={index}>
-              <NavLink 
+              <NavLink
                 to={item.path}
                 end={item.path === '/'}
                 onClick={(e) => {
@@ -187,12 +233,13 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
               <HelpCircle size={20} /> Ajuda
             </NavLink>
           </li>
-          {(userRole === 'admin' || userRole === 'squad_leader') && (
+          {(has(PermissionFunctionKeys.SETTINGS_VIEW) || has(PermissionFunctionKeys.PLANEJAMENTO_VIEW) || has(PermissionFunctionKeys.ADMIN_ALL)) && (
             <>
               <li className="divider"></li>
-              {userRole === 'admin' && (
+
+              {has(PermissionFunctionKeys.SETTINGS_VIEW) || has(PermissionFunctionKeys.ADMIN_ALL) ? (
                 <li>
-                  <NavLink 
+                  <NavLink
                     to="/configuracoes"
                     onClick={() => {
                       if (isOpen) toggleSidebar();
@@ -205,35 +252,38 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                       borderRadius: 'var(--border-radius)',
                       color: 'var(--text-muted)',
                       fontWeight: 500,
-                      textDecoration: 'none'
+                      textDecoration: 'none',
                     }}
                   >
                     <Settings size={20} /> Configurações
                   </NavLink>
                 </li>
-              )}
-              <li>
-                <NavLink 
-                  to="/planejamento"
-                  onClick={() => {
-                    if (isOpen) toggleSidebar();
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    borderRadius: 'var(--border-radius)',
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                    textDecoration: 'none',
-                    color: 'inherit'
-                  }}
-                  className={({ isActive }) => isActive ? "active-link" : ""}
-                >
-                  <Calculator size={20} /> Planejamento
-                </NavLink>
-              </li>
+              ) : null}
+
+              {has(PermissionFunctionKeys.PLANEJAMENTO_VIEW) || has(PermissionFunctionKeys.ADMIN_ALL) ? (
+                <li>
+                  <NavLink
+                    to="/planejamento"
+                    onClick={() => {
+                      if (isOpen) toggleSidebar();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--border-radius)',
+                      fontWeight: 500,
+                      transition: 'all 0.2s ease',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                    }}
+                    className={({ isActive }) => (isActive ? 'active-link' : '')}
+                  >
+                    <Calculator size={20} /> Planejamento
+                  </NavLink>
+                </li>
+              ) : null}
             </>
           )}
         </ul>

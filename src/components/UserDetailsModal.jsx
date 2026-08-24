@@ -5,22 +5,61 @@ import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateUser } from '../services/settingsService';
 import { subscribeToProjectSquads } from '../services/squadService';
+import { userHasFunctionPermission } from '../services/permissionService';
+import { PermissionFunctionKeys } from '../services/permissionKeys';
 
-const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notificationPermission, handleNotificationRequest }) => {
+const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notificationPermission, handleNotificationRequest, mode = "edit" }) => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [squads, setSquads] = useState([]);
   const [localUser, setLocalUser] = useState(user);
+  const [draftUser, setDraftUser] = useState(user);
+  const [activeTab, setActiveTab] = useState("DADOS PESSOAIS");
+
+  const [canSeeCsr, setCanSeeCsr] = useState(true);
+  const [canSeeRatecard, setCanSeeRatecard] = useState(true);
 
   useEffect(() => {
     setLocalUser(user);
+    setDraftUser(user);
   }, [user]);
 
   useEffect(() => {
-    if (open) {
-      const unsub = subscribeToProjectSquads('all', setSquads);
-      return () => unsub();
+    if (!open) return;
+
+    const role = localUser?.role;
+    if (!role) {
+      setCanSeeCsr(false);
+      setCanSeeRatecard(false);
+      return;
     }
-  }, [open]);
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [csrOk, rateOk] = await Promise.all([
+          userHasFunctionPermission(role, PermissionFunctionKeys.USER_CSR_VIEW),
+          userHasFunctionPermission(role, PermissionFunctionKeys.USER_RATECARD_VIEW),
+        ]);
+        if (cancelled) return;
+        setCanSeeCsr(!!csrOk);
+        setCanSeeRatecard(!!rateOk);
+      } catch (e) {
+        console.error(e);
+        if (cancelled) return;
+        // fallback seguro: não mostrar
+        setCanSeeCsr(false);
+        setCanSeeRatecard(false);
+      }
+    })();
+
+    const unsub = subscribeToProjectSquads('all', setSquads);
+    return () => {
+      cancelled = true;
+      if (typeof unsub === "function") unsub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, localUser?.role]);
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
@@ -30,7 +69,7 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
       const storageRef = ref(storage, `profiles/${localUser.id}`);
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
-      
+
       await updateUser(localUser.id, { photoURL: url });
       setLocalUser(prev => ({ ...prev, photoURL: url }));
     } catch (error) {
@@ -43,9 +82,89 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
 
   if (!localUser) return null;
 
+  const tabs = [
+    "DADOS PESSOAIS",
+    "CONTRATAÇÃO",
+    "RATECARD",
+    "SISTEMA",
+  ];
+
+  const fieldsByTab = {
+    "DADOS PESSOAIS": [
+      ["sapId", "SAP"],
+      ["status", "STATUS"],
+      ["displayName", "NOME"],
+      ["shortName", "NOME RESUMIDO"],
+      ["email", "EMAIL"],
+      ["cidade", "CIDADE"],
+      ["uf", "UF"],
+      ["dataNascimento", "NASCIMENTO"],
+    ],
+    "CONTRATAÇÃO": [
+      ["dataInicio", "INÍCIO NTT"],
+      ["contract", "CONTRATO"],
+      ["foundation", "FOUNDATION"],
+      ["perfilNTT", "CARGO"],
+      ["seniority", "SENIORIDADE"],
+      ["csr", "CSR"],
+    ],
+    "RATECARD": [
+      ["perfilRatecard", "PERFIL RATECARD"],
+      ["rcSeniority", "SENIORIDADE RATECARD"],
+      ["rc", "RATE CARD"],
+    ],
+    "SISTEMA": [
+      ["role", "PERFIL ACESSO"],
+    ],
+  };
+
+  const formatValue = (v) => {
+    if (v === null || v === undefined || v === "") return "-";
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  };
+
+  const toInputDateValue = (value) => {
+    if (!value) return "";
+    try {
+      if (typeof value === "object" && typeof value.toDate === "function") {
+        const d = value.toDate();
+        return d.toISOString().slice(0, 10);
+      }
+      const d = value instanceof Date ? value : new Date(value);
+      if (!d || Number.isNaN(d.getTime())) return "";
+      return d.toISOString().slice(0, 10);
+    } catch {
+      return "";
+    }
+  };
+
+  const fromInputDateValue = (value) => {
+    if (!value) return null;
+    const d = new Date(`${value}T00:00:00.000Z`);
+    if (!d || Number.isNaN(d.getTime())) return null;
+    return d;
+  };
+
+  const toPersistValue = (key, value) => {
+    if (isDateField(key)) {
+      // value no draft pode vir como Date, Timestamp, ou string
+      if (typeof value === "string") return fromInputDateValue(value);
+      if (!value) return null;
+      if (typeof value === "object" && typeof value.toDate === "function") return value.toDate();
+      if (value instanceof Date) return value;
+      // fallback
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    return value ?? null;
+  };
+
+  const isDateField = (key) => key === "dataNascimento" || key === "dataInicio";
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content style={{ maxWidth: 400 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <Dialog.Content style={{ maxWidth: 520 }}>
         <Dialog.Title>Detalhes do Membro</Dialog.Title>
         <Flex gap="4" align="center" mb="5" mt="2">
           <Box position="relative">
@@ -61,9 +180,9 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
             <Badge color="indigo" mt="2">{localUser.role || 'Membro'}</Badge>
           </Box>
         </Flex>
-        
+
         <Text as="div" weight="bold" mb="2">Squads Atuais</Text>
-        <Flex direction="column" gap="2">
+        <Flex direction="column" gap="2" mb="4">
           {(() => {
             const userSquads = squads.filter(s => {
               const inUsers = s.users?.some(su => su.id === localUser.id);
@@ -85,7 +204,86 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
             });
           })()}
         </Flex>
-        
+
+        <Flex gap="2" mb="3" wrap="wrap">
+          {tabs.map((t) => {
+            const selected = activeTab === t;
+            return (
+              <Button
+                key={t}
+                type="button"
+                variant={selected ? "solid" : "soft"}
+                size="1"
+                onClick={() => setActiveTab(t)}
+                style={{ cursor: "pointer" }}
+              >
+                {t}
+              </Button>
+            );
+          })}
+        </Flex>
+
+        <Box mb="4">
+          <Flex direction="column" gap="2">
+            {fieldsByTab[activeTab]
+              .filter(([key]) => {
+                if (key === "csr" && !canSeeCsr) return false;
+                if (key === "rc" && !canSeeRatecard) return false;
+                return true;
+              })
+              .map(([key, label]) => {
+                const v = draftUser?.[key];
+                return (
+                  <Card key={key} size="1" variant="surface">
+                    <Flex direction="column" gap="1">
+                      <Text size="1" color="gray" style={{ textTransform: "uppercase" }}>
+                        {label}
+                      </Text>
+
+                    {isDateField(key) ? (
+                      <input
+                        type="date"
+                        value={toInputDateValue(v)}
+                        readOnly={mode === "view"}
+                        disabled={mode === "view"}
+                        onChange={(e) => {
+                          const next = e.target.value; // YYYY-MM-DD (string) no draft
+                          setDraftUser((prev) => ({ ...prev, [key]: next }));
+                        }}
+                        style={{
+                          width: "100%",
+                          height: 34,
+                          borderRadius: 8,
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--text)",
+                          padding: "0 10px",
+                        }}
+                      />
+                    ) : (
+                      <input
+                        value={v ?? ""}
+                        readOnly={mode === "view" || key === "role"}
+                        disabled={mode === "view" || key === "role"}
+                        onChange={(e) => setDraftUser((prev) => ({ ...prev, [key]: e.target.value }))}
+                        style={{
+                          width: "100%",
+                          height: 34,
+                          borderRadius: 8,
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid var(--glass-border)",
+                          color: "var(--text)",
+                          padding: "0 10px",
+                        }}
+                      />
+                    )}
+                  </Flex>
+                </Card>
+              );
+            })}
+          </Flex>
+        </Box>
+
         {toggleTheme && (
           <>
             <Text as="div" weight="bold" mt="4" mb="2">Preferências</Text>
@@ -98,7 +296,7 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
                   </Flex>
                 </Card>
               )}
-              
+
               <Card size="1" variant="surface">
                 <Flex justify="between" align="center">
                   <Text size="2">Modo Noturno</Text>
@@ -110,9 +308,46 @@ const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notifi
             </Flex>
           </>
         )}
-        
-        <Flex justify="end" mt="5">
-          <Button variant="soft" color="gray" onClick={() => onOpenChange(false)}>Fechar</Button>
+
+        <Flex justify="end" mt="5" gap="2">
+          {mode !== "view" && (
+            <Button
+              variant="soft"
+              color="gray"
+              onClick={() => {
+                setDraftUser(localUser);
+              }}
+            >
+              Cancelar
+            </Button>
+          )}
+
+          {mode !== "view" && (
+            <Button
+              variant="solid"
+              onClick={async () => {
+                try {
+                  const payload = {};
+                  for (const tab of tabs) {
+                    for (const [key] of fieldsByTab[tab] || []) {
+                      payload[key] = toPersistValue(key, draftUser?.[key]);
+                    }
+                  }
+                  await updateUser(localUser.id, payload);
+                  setLocalUser((prev) => ({ ...prev, ...payload }));
+                  setDraftUser((prev) => ({ ...prev }));
+                } catch (err) {
+                  console.error(err);
+                }
+              }}
+            >
+              Salvar
+            </Button>
+          )}
+
+          <Button variant="soft" color="gray" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
         </Flex>
       </Dialog.Content>
     </Dialog.Root>

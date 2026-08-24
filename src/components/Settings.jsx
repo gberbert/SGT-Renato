@@ -1,21 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, Box, Text, Card, Flex, Button, Table, Badge, Dialog, TextField, Select, IconButton, TextArea } from '@radix-ui/themes';
-import { 
-  subscribeToTicketTypes, saveTicketType, deleteTicketType, 
-  subscribeToWorkflows, saveWorkflow, deleteWorkflow, 
-  subscribeToUsers, updateUserRole, updateUser, createUser, deleteUser,
-  subscribeToSystems, saveSystem, deleteSystem,
-  subscribeToComponents, saveComponent, deleteComponent,
-  subscribeToCustomFields, saveCustomField, deleteCustomField,
-  subscribeToAutomations, saveAutomation, deleteAutomation,
-  subscribeToAISettings, saveAISettings
+import {
+  subscribeToTicketTypes,
+  saveTicketType,
+  deleteTicketType,
+  subscribeToWorkflows,
+  saveWorkflow,
+  deleteWorkflow,
+  subscribeToUsers,
+  updateUserRole,
+  updateUser,
+  createUser,
+  deleteUser,
+  subscribeToSystems,
+  saveSystem,
+  deleteSystem,
+  subscribeToComponents,
+  saveComponent,
+  deleteComponent,
+  subscribeToCustomFields,
+  saveCustomField,
+  deleteCustomField,
+  subscribeToAutomations,
+  saveAutomation,
+  deleteAutomation,
+  subscribeToAISettings,
+  saveAISettings,
 } from '../services/settingsService';
 import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search } from 'lucide-react';
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import ImportDataExcel from './ImportDataExcel';
 import OperacaoJiraSettings from './operacao/OperacaoJiraSettings';
+import PermissionsManager from './PermissionsManager';
 import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
@@ -32,6 +50,9 @@ const Settings = ({ userRole = 'admin' }) => {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [userSearchTerm, setUserSearchTerm] = useState('');
+
+  const [permissionProfiles, setPermissionProfiles] = useState([]);
+  const [loadingPermissionProfiles, setLoadingPermissionProfiles] = useState(true);
 
   const [systems, setSystems] = useState([]);
   const [loadingSystems, setLoadingSystems] = useState(true);
@@ -139,6 +160,30 @@ const Settings = ({ userRole = 'admin' }) => {
       if (data) setAiSettings(data);
       setLoadingAi(false);
     });
+
+    async function loadPermissionProfilesOnce() {
+      setLoadingPermissionProfiles(true);
+      try {
+        // permissionProfiles é uma coleção independente do SECOPS
+        const { collection, getDocs } = await import('firebase/firestore');
+        const snap = await getDocs(collection(db, 'permissionProfiles'));
+        const arr = [];
+        snap.forEach((d) => {
+          const data = d.data() || {};
+          arr.push({
+            profileId: d.id,
+            displayName: data.displayName || d.id,
+          });
+        });
+        setPermissionProfiles(arr);
+      } catch (e) {
+        console.error('Erro ao listar permissionProfiles:', e);
+        setPermissionProfiles([]);
+      } finally {
+        setLoadingPermissionProfiles(false);
+      }
+    }
+    loadPermissionProfilesOnce();
     return () => {
       unsubscribeTypes();
       unsubscribeWorkflows();
@@ -217,7 +262,19 @@ const Settings = ({ userRole = 'admin' }) => {
   };
 
   const openNewUserModal = () => {
-    setEditingUserData({ id: '', shortName: '', displayName: '', email: '', role: 'user' });
+    // se houver profiles na sessão/coleção, pega o primeiro como default
+    const fallbackRole =
+      permissionProfiles && permissionProfiles.length > 0
+        ? permissionProfiles[0].profileId
+        : 'user';
+
+    setEditingUserData({
+      id: '',
+      shortName: '',
+      displayName: '',
+      email: '',
+      role: fallbackRole,
+    });
     setIsUserModalOpen(true);
   };
 
@@ -499,7 +556,7 @@ const Settings = ({ userRole = 'admin' }) => {
         <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
           
           {/* Desktop Classic Tabs */}
-          <Box className="hide-on-mobile">
+              <Box className="hide-on-mobile">
             <Tabs.List style={{ flexWrap: 'wrap' }}>
               <Tabs.Trigger value="users">Usuários</Tabs.Trigger>
               <Tabs.Trigger value="systems">Sistemas</Tabs.Trigger>
@@ -510,6 +567,7 @@ const Settings = ({ userRole = 'admin' }) => {
               <Tabs.Trigger value="automations">Automações</Tabs.Trigger>
               <Tabs.Trigger value="ai"><Zap size={14} style={{ display: 'inline', marginRight: 4 }}/> IA (Gemini)</Tabs.Trigger>
               <Tabs.Trigger value="rbac"><Shield size={14} style={{ display: 'inline', marginRight: 4 }}/> RBAC</Tabs.Trigger>
+              <Tabs.Trigger value="secopsPermissions"><Key size={14} style={{ display: 'inline', marginRight: 4 }}/> Permissões</Tabs.Trigger>
               <Tabs.Trigger value="jiraOperacao"><Database size={14} style={{ display: 'inline', marginRight: 4 }}/> Jira Operação</Tabs.Trigger>
             </Tabs.List>
           </Box>
@@ -529,6 +587,7 @@ const Settings = ({ userRole = 'admin' }) => {
                 <Select.Item value="automations">Automações</Select.Item>
                 <Select.Item value="ai">IA (Gemini)</Select.Item>
                 <Select.Item value="rbac">RBAC (Acessos)</Select.Item>
+                <Select.Item value="secopsPermissions">SECOPS - Permissões</Select.Item>
                 <Select.Item value="jiraOperacao">Jira Operação</Select.Item>
               </Select.Content>
             </Select.Root>
@@ -609,12 +668,22 @@ const Settings = ({ userRole = 'admin' }) => {
                             <IconButton size="1" color="red" variant="soft" onClick={() => handleDeleteUser(u.id)}>
                               <Trash2 size={14} />
                             </IconButton>
-                            <Select.Root value={u.role} onValueChange={(val) => handleRoleChange(u.id, val)}>
+                            <Select.Root
+                              value={u.role}
+                              onValueChange={(val) => handleRoleChange(u.id, val)}
+                              disabled={loadingPermissionProfiles}
+                            >
                               <Select.Trigger />
                               <Select.Content>
-                                <Select.Item value="user">Membro (User)</Select.Item>
-                                <Select.Item value="squad_leader">Líder de Squad</Select.Item>
-                                <Select.Item value="admin">Admin</Select.Item>
+                                {permissionProfiles.length === 0 ? (
+                                  <Select.Item value={u.role || 'user'}>{u.role || 'user'}</Select.Item>
+                                ) : (
+                                  permissionProfiles.map((p) => (
+                                    <Select.Item key={p.profileId} value={p.profileId}>
+                                      {p.displayName}
+                                    </Select.Item>
+                                  ))
+                                )}
                               </Select.Content>
                             </Select.Root>
                           </Flex>
@@ -1028,6 +1097,11 @@ const Settings = ({ userRole = 'admin' }) => {
               )}
             </Tabs.Content>
 
+            {/* SECOPS PERMISSIONS TAB */}
+            <Tabs.Content value="secopsPermissions">
+              <PermissionsManager initialProfileId="admin" userRole={userRole} />
+            </Tabs.Content>
+
             <Tabs.Content value="jiraOperacao">
               <OperacaoJiraSettings userRole={userRole} />
             </Tabs.Content>
@@ -1072,12 +1146,26 @@ const Settings = ({ userRole = 'admin' }) => {
               {!editingUserData.id && (
                 <label>
                   <Text as="div" size="2" mb="1" weight="bold">Perfil</Text>
-                  <Select.Root value={editingUserData.role} onValueChange={(val) => setEditingUserData({...editingUserData, role: val})}>
+                  <Select.Root
+                    value={editingUserData.role}
+                    onValueChange={(val) => setEditingUserData({ ...editingUserData, role: val })}
+                    disabled={loadingPermissionProfiles}
+                  >
                     <Select.Trigger style={{ width: '100%' }} />
                     <Select.Content>
-                      <Select.Item value="user">Membro (User)</Select.Item>
-                      <Select.Item value="squad_leader">Líder de Squad</Select.Item>
-                      <Select.Item value="admin">Administrador</Select.Item>
+                      {permissionProfiles.length === 0 ? (
+                        <>
+                          <Select.Item value="user">Membro (User)</Select.Item>
+                          <Select.Item value="squad_leader">Líder de Squad</Select.Item>
+                          <Select.Item value="admin">Administrador</Select.Item>
+                        </>
+                      ) : (
+                        permissionProfiles.map((p) => (
+                          <Select.Item key={p.profileId} value={p.profileId}>
+                            {p.displayName}
+                          </Select.Item>
+                        ))
+                      )}
                     </Select.Content>
                   </Select.Root>
                 </label>

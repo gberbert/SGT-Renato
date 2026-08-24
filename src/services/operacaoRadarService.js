@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ESCOPO_SEED } from '../utils/jqlCargaClient';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const TICKETS_GLOBAL = 'tickets_global';
 const GRUPO_ATENDIMENTO = 'grupo_atendimento';
@@ -425,33 +426,71 @@ async function fetchGrupoOptionsForRadar() {
 }
 
 export async function fetchRadarBootstrap() {
-  const [statsSnap, squads, grupos] = await Promise.all([
-    getDoc(STATS_DOC),
-    fetchSquadsForRadar(),
-    fetchGrupoOptionsForRadar(),
-  ]);
+  // Primeiro: tentar buscar bootstrap via backend (evita varrer tickets_global no browser)
+  try {
+    const functions = getFunctions();
+    const callable = httpsCallable(functions, 'getOperacaoRadarBootstrap');
+    const resp = await callable({});
+    const payload = resp?.data || resp;
 
-  const stats = statsSnap.exists() ? statsSnap.data() : null;
-  const statsRadar = await buildRadarFromStatsWithFallback(stats);
-  const statuses = buildStatusOptionsFromStats(stats);
-  const squadOptions = squads.map((s) => ({
-    id: s.id,
-    nome: s.name || s.nome || s.sigla || s.id,
-    sigla: s.sigla || '',
-    total: 0,
-  }));
+    // reconstrói Map para compatibilidade com o front
+    const squadGrupoMapSerializable = payload?.squadGrupoMap || {};
+    const squadGrupoMap = new Map(Object.entries(squadGrupoMapSerializable));
 
-  return {
-    stats,
-    statsRadar,
-    squads,
-    filterOptions: {
-      grupos,
-      squads: squadOptions,
-      statuses,
-    },
-    squadGrupoMap: buildSquadGrupoMap(squads, grupos.map((g) => g.nome)),
-  };
+    return {
+      stats: payload?.stats || null,
+      statsRadar: payload?.statsRadar || null,
+      squads: Array.isArray(payload?.squads) ? payload.squads : [],
+      filterOptions: payload?.filterOptions || { grupos: [], squads: [], statuses: [] },
+      squadGrupoMap,
+    };
+  } catch (e) {
+    // Fallback: mantém o comportamento antigo (caso a callable falhe)
+    const [statsSnap, squads, grupos] = await Promise.all([
+      getDoc(STATS_DOC),
+      fetchSquadsForRadar(),
+      fetchGrupoOptionsForRadar(),
+    ]);
+
+    const stats = statsSnap.exists() ? statsSnap.data() : null;
+    const statsRadar = await buildRadarFromStatsWithFallback(stats);
+
+    let statuses = buildStatusOptionsFromStats(stats);
+
+    if (!Array.isArray(statuses) || statuses.length === 0) {
+      const tickets = await fetchTicketsGlobalForRadar();
+      const statusSet = new Map();
+      for (const t of tickets) {
+        const s = t.status ? String(t.status).trim() : '';
+        if (!s) continue;
+        statusSet.set(s, (statusSet.get(s) || 0) + 1);
+      }
+
+      statuses = [...statusSet.entries()]
+        .map(([nome, total]) => ({ id: nome, nome, total }))
+        .filter((item) => item.total > 0)
+        .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+    }
+
+    const squadOptions = squads.map((s) => ({
+      id: s.id,
+      nome: s.name || s.nome || s.sigla || s.id,
+      sigla: s.sigla || '',
+      total: 0,
+    }));
+
+    return {
+      stats,
+      statsRadar,
+      squads,
+      filterOptions: {
+        grupos,
+        squads: squadOptions,
+        statuses,
+      },
+      squadGrupoMap: buildSquadGrupoMap(squads, grupos.map((g) => g.nome)),
+    };
+  }
 }
 
 export function mapDrillTicket(t) {

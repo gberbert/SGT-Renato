@@ -1,7 +1,7 @@
 {
   "name": "sistema-demandas-renato",
   "private": true,
-  "version": "0.1.218",
+  "version": "0.1.219",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -31,6 +31,7 @@
     "axios": "^1.18.1",
     "cheerio": "^1.2.0",
     "firebase": "^12.15.0",
+    "firebase-admin": "^13.10.0",
     "frappe-gantt": "^1.2.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

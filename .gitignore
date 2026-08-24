@@ -24,3 +24,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# graphify-axet
+.graphify/
+
+# Sensitive credentials / private data
+Arquivos_Gerais/*.json
+Arquivos_Gerais/*.xlsx

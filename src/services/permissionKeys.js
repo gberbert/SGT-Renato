@@ -1,0 +1,25 @@
+export const PermissionFunctionKeys = {
+  // Radar / Operação
+  RADAR_VIEW: "RADAR_VIEW",
+  RADAR_REFRESH: "RADAR_REFRESH",
+
+  // Demandas
+  DEMANDAS_VIEW: "DEMANDAS_VIEW",
+  MINHAS_ATIVIDADES_VIEW: "MINHAS_ATIVIDADES_VIEW",
+
+  // Team
+  TEAM_VIEW: "TEAM_VIEW",
+  TEAM_EDIT: "TEAM_EDIT",
+
+  // User (UserDetailsModal)
+  USER_CSR_VIEW: "USER_CSR_VIEW",
+  USER_RATECARD_VIEW: "USER_RATECARD_VIEW",
+
+  // Configurações / Operação
+  SETTINGS_VIEW: "SETTINGS_VIEW",
+  PLANEJAMENTO_VIEW: "PLANEJAMENTO_VIEW",
+  CONFIGURACOES_VIEW: "CONFIGURACOES_VIEW",
+
+  // Administração
+  ADMIN_ALL: "ADMIN_ALL",
+};

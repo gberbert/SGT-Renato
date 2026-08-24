@@ -1,6 +1,8 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
 admin.initializeApp();
+
+const { onRequest } = require("firebase-functions/v2/https");
 
 exports.onCreateNotification = onDocumentCreated({
     document: 'notifications/{notificationId}',
@@ -596,6 +598,224 @@ exports.getJiraGlobalSyncStatus = onCall({
     }
 });
 
+exports.getOperacaoRadarBootstrap = onCall(
+    {
+        maxInstances: 5,
+        timeoutSeconds: 60,
+        memory: "512MiB",
+    },
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError("unauthenticated", "Autenticação necessária.");
+        }
+
+        try {
+            const db = getFirestore(undefined, "default");
+
+            const operacaoStatsSnap = await db.collection("operacao_stats").doc("summary").get();
+            const stats = operacaoStatsSnap.exists ? operacaoStatsSnap.data() : null;
+
+            // squads
+            const squadsSnap = await db.collection("squads").get();
+            const squads = squadsSnap.docs
+                .map((d) => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => String(a.sigla || a.name || "").localeCompare(String(b.sigla || b.name || ''), 'pt-BR'));
+
+            // grupos
+            const gruposSnap = await db.collection("grupo_atendimento").get();
+            const grupos = gruposSnap.docs
+                .map((d) => {
+                    const nome = d.data().nome || d.id;
+                    return { id: nome, nome, total: 0 };
+                })
+                .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+            // helper para squadGrupoMap (mesma lógica do front)
+            const ticketGrupoNames = (ticket) => [ticket.grupoSuporte, ticket.grupoSolucionador].filter(Boolean);
+
+            const buildSquadGrupoMap = (squads, grupoNames) => {
+                const map = new Map();
+                for (const squad of squads) {
+                    const sigla = String(squad.sigla || '').trim().toUpperCase();
+                    const nome = String(squad.name || squad.nome || '').trim().toUpperCase();
+                    const tokens = [sigla, ...nome.split(/\s+/).filter((t) => t.length >= 3)];
+                    const matches = grupoNames.filter((grupo) => {
+                        const g = grupo.toUpperCase();
+                        return tokens.some((token) => token && g.includes(token));
+                    });
+                    map.set(squad.id, matches);
+                }
+                return map;
+            };
+
+            const squadOptions = squads.map((s) => ({
+                id: s.id,
+                nome: s.name || s.nome || s.sigla || s.id,
+                sigla: s.sigla || '',
+                total: 0,
+            }));
+
+            const squadGrupoMap = buildSquadGrupoMap(squads, grupos.map((g) => g.nome));
+
+            // statsRadar (usa regras do front, reimplementar mínimo compatível)
+            const ESCOPO_RADAR_ORDER = [
+                { key: 'PROBLEMAS', label: 'PROBLEMAS', color: '#f87171' },
+                { key: 'DEMANDA FAST', label: 'DEMANDA FAST', color: '#fb923c' },
+                { key: 'DEMANDA', label: 'DEMANDA', color: '#facc15' },
+                { key: 'INCIDENTE', label: 'INCIDENTE', color: '#4ade80' },
+                { key: 'SOLICITACAO', label: 'SOLICITAÇÃO', color: '#22d3ee' },
+                { key: 'CATALOGO', label: 'CATÁLOGO', color: '#a78bfa' },
+            ];
+
+            const normalizeEscopoKey = (raw) => {
+                const value = String(raw || '')
+                    .trim()
+                    .toUpperCase()
+                    .replace(/\s+/g, ' ');
+                if (!value) return '';
+                if (value.startsWith('SOLICIT')) return 'SOLICITACAO';
+                if (value.startsWith('CATAL')) return 'CATALOGO';
+                return value;
+            };
+
+            const computeRadarEscoposFromTickets = (tickets) => {
+                const counts = {};
+                for (const item of ESCOPO_RADAR_ORDER) counts[item.key] = 0;
+
+                for (const ticket of tickets) {
+                    const key = normalizeEscopoKey(ticket.escopo);
+                    if (!key) continue;
+                    if (counts[key] == null) counts[key] = 0;
+                    counts[key] += 1;
+                }
+
+                const escopos = ESCOPO_RADAR_ORDER
+                    .filter((item) => Number(counts[item.key]) > 0)
+                    .map((item) => ({
+                        key: item.key,
+                        label: item.label,
+                        color: item.color,
+                        total: Number(counts[item.key]),
+                        issueTypes: [],
+                    }));
+
+                const total = tickets.length;
+                return { total, escopos };
+            };
+
+            const buildStatusOptionsFromStats = (st) => {
+                const byStatus = st?.byStatus || {};
+                return Object.entries(byStatus)
+                    .map(([nome, total]) => ({ id: nome, nome, total: Number(total) || 0 }))
+                    .filter((item) => item.total > 0)
+                    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+            };
+
+            // statsRadar: se stats.radarByEscopo existir, a app já sabe interpretar; aqui mantemos fallback simples
+            let statsRadar = null;
+            if (stats?.radarByEscopo && Array.isArray(stats.radarByEscopo) && stats.radarByEscopo.length) {
+                const escopos = stats.radarByEscopo
+                    .map((item) => {
+                        const meta = ESCOPO_RADAR_ORDER.find((e) => e.key === (item.key || item.label));
+                        const key = meta ? meta.key : (item.key || item.label);
+                        const meta2 = meta || { key, label: key, color: '#22d3ee' };
+                        return {
+                            key: meta2.key,
+                            label: item.label || meta2.label,
+                            color: item.color || meta2.color,
+                            total: Number(item.total) || 0,
+                            issueTypes: item.issueTypes || [],
+                        };
+                    })
+                    .filter((x) => x.total > 0);
+
+                const total = Number(stats.totalTicketsExact) || Number(stats.totalTickets) || escopos.reduce((a, b) => a + b.total, 0) || 0;
+                if (total || escopos.length) statsRadar = { total, escopos };
+            }
+
+            let statuses = buildStatusOptionsFromStats(stats);
+
+            // Se byStatus vier vazio, calculamos statuses no back varrendo tickets_global (sem varrer no front)
+            if (!Array.isArray(statuses) || statuses.length === 0) {
+                const statusSet = new Map();
+
+                // paginando por documentId (similar ao front)
+                const PAGE_SIZE = 500;
+                let lastId = null;
+
+                while (true) {
+                    let q = db.collection("tickets_global").orderBy("__name__").limit(PAGE_SIZE);
+                    if (lastId) {
+                        q = db.collection("tickets_global").orderBy("__name__").startAfter(lastId).limit(PAGE_SIZE);
+                    }
+
+                    const snap = await q.get();
+                    if (snap.empty) break;
+
+                    snap.docs.forEach((d) => {
+                        const data = d.data() || {};
+                        const s = data.status ? String(data.status).trim() : '';
+                        if (!s) return;
+                        statusSet.set(s, (statusSet.get(s) || 0) + 1);
+                    });
+
+                    const lastDoc = snap.docs[snap.docs.length - 1];
+                    lastId = lastDoc;
+                    if (snap.size < PAGE_SIZE) break;
+                }
+
+                statuses = [...statusSet.entries()]
+                    .map(([nome, total]) => ({ id: nome, nome, total }))
+                    .filter((item) => item.total > 0)
+                    .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+            }
+
+            // squads totals por grupo: igual front (precisa dos tickets pra calcular totais por squad)
+            // para manter performance, não calculamos squad.total aqui (o front faz de forma pesada quando filtra)
+            // mas precisamos manter o formato:
+            squadOptions.forEach((sq) => { sq.total = 0; });
+
+            // squadGrupoMap (precisa serializável). No front espera Map, mas no bootstrap é colocado na store.
+            // Vamos serializar como array e reconstruir no front (ajuste na store pode ser necessário).
+            const squadGrupoMapSerializable = {};
+            for (const [k, v] of squadGrupoMap.entries()) squadGrupoMapSerializable[k] = v;
+
+            // statsRadar: se ainda nulo, faça fallback pesado calculando escopos a partir de tickets_global
+            if (!statsRadar) {
+                const tickets = [];
+                const PAGE_SIZE = 500;
+                let lastDoc = null;
+                while (true) {
+                    let q = db.collection("tickets_global").orderBy("__name__").limit(PAGE_SIZE);
+                    if (lastDoc) q = db.collection("tickets_global").orderBy("__name__").startAfter(lastDoc).limit(PAGE_SIZE);
+                    const snap = await q.get();
+                    if (snap.empty) break;
+                    snap.docs.forEach((d) => tickets.push(d.data() || {}));
+                    lastDoc = snap.docs[snap.docs.length - 1];
+                    if (snap.size < PAGE_SIZE) break;
+                }
+                statsRadar = computeRadarEscoposFromTickets(tickets);
+            }
+
+            return {
+                stats,
+                statsRadar,
+                squads,
+                filterOptions: {
+                    grupos,
+                    squads: squadOptions,
+                    statuses,
+                },
+                // retorna serializável
+                squadGrupoMap: squadGrupoMapSerializable,
+            };
+        } catch (error) {
+            console.error("Erro ao carregar bootstrap radar operação:", error);
+            throw new HttpsError("internal", error.message || String(error));
+        }
+    }
+);
+
 exports.getOperacaoStats = onCall({
     maxInstances: 10,
     timeoutSeconds: 30,
@@ -610,4 +830,130 @@ exports.getOperacaoStats = onCall({
         console.error("Erro ao carregar stats operação:", error);
         throw new HttpsError("internal", error.message);
     }
+});
+
+function requireAdminFromAuthorization(request) {
+  return (async () => {
+    const authHeader = request.headers.authorization || request.headers.Authorization;
+    if (!authHeader || typeof authHeader !== "string") {
+      throw new HttpsError("unauthenticated", "Authorization Bearer token necessário.");
+    }
+    const match = authHeader.match(/^Bearer (.+)$/);
+    if (!match) {
+      throw new HttpsError("unauthenticated", "Formato Authorization inválido. Use: Bearer <ID_TOKEN>.");
+    }
+    const token = match[1];
+
+    const decoded = await admin.auth().verifyIdToken(token);
+    const uid = decoded.uid;
+
+    const fs = getFirestore(undefined, "default");
+    const userDoc = await fs.collection("users").doc(uid).get();
+    if (!userDoc.exists) {
+      throw new HttpsError("permission-denied", "Usuário não encontrado para checagem de admin.");
+    }
+    if (userDoc.data()?.role !== "admin") {
+      throw new HttpsError("permission-denied", "Apenas administradores podem executar este endpoint.");
+    }
+    return uid;
+  })();
+}
+
+const FIELDS = [
+  "cidade",
+  "contrato",
+  "dataInicio",
+  "dataNascimento",
+  "foundation",
+  "perfilNTT",
+  "perfilRatecard",
+  "senioridade",
+  "status",
+  "uf",
+];
+
+exports.enrichUsersFromTeamHttp = onRequest(async (request, response) => {
+  if (request.method !== "POST") {
+    response.status(405).json({ ok: false, error: "Method Not Allowed. Use POST." });
+    return;
+  }
+
+  try {
+    await requireAdminFromAuthorization(request);
+
+    const db = getFirestore(undefined, "default");
+
+    const teamSnap = await db.collection("team").get();
+
+    let updated = 0;
+    let skippedNoEmail = 0;
+    let skippedNoUser = 0;
+
+    for (const teamDoc of teamSnap.docs) {
+      const teamData = teamDoc.data() || {};
+      const email = (teamData.email || "").toString().trim().toLowerCase();
+      if (!email) {
+        skippedNoEmail++;
+        continue;
+      }
+
+      const usersQuery = db.collection("users").where("email", "==", email).limit(10);
+      const usersSnap = await usersQuery.get();
+
+      if (usersSnap.empty) {
+        skippedNoUser++;
+        continue;
+      }
+
+      for (const userDoc of usersSnap.docs) {
+        const userData = userDoc.data() || {};
+        const patch = {};
+
+        for (const field of FIELDS) {
+          const incoming = teamData[field];
+          const current = userData[field];
+
+          const currentIsEmpty =
+            current === null ||
+            current === undefined ||
+            (typeof current === "string" && current.trim() === "");
+
+          if (!currentIsEmpty) continue;
+
+          if (incoming === null || incoming === undefined) continue;
+          patch[field] = incoming;
+        }
+
+        delete patch.email;
+        delete patch.displayName;
+
+        if (Object.keys(patch).length === 0) continue;
+
+        await userDoc.ref.set(
+          {
+            ...patch,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        updated++;
+      }
+    }
+
+    response.status(200).json({
+      ok: true,
+      updated,
+      skippedNoEmail,
+      skippedNoUser,
+      totalTeamDocs: teamSnap.size,
+    });
+  } catch (e) {
+    const statusCode = e?.code === "permission-denied" ? 403 : e?.code === "unauthenticated" ? 401 : 500;
+    response.status(statusCode).json({
+      ok: false,
+      error: e?.message || String(e),
+      code: e?.code || "unknown",
+    });
+  }
 });
