@@ -1,5 +1,11 @@
 # Versionamento do Projeto
 
+## [0.1.230] - 2026-08-25
+- **Feature (Radar Operação — Rotas por aba):** Cada aba do Radar (Geral, Problemas, Demandas, Incidentes, Solicitações, Catálogo, Eficiência) agora possui rota própria (`/radar/:tabParam`, ex: `/radar/problemas`, `/radar/eficiencia`), permitindo acesso direto via URL/favoritos e navegação com histórico do browser. A aba "Geral" continua acessível pela raiz (`/`).
+- **Feature (Controle de Permissões por aba):** Novas chaves de permissão em `permissionKeys.js` — `RADAR_GERAL_VIEW`, `RADAR_PROBLEMAS_VIEW`, `RADAR_DEMANDAS_TAB_VIEW`, `RADAR_INCIDENTES_VIEW`, `RADAR_SOLICITACOES_VIEW`, `RADAR_CATALOGO_VIEW`, `RADAR_EFICIENCIA_VIEW` — gerenciáveis em Configurações → SECOPS → Gerenciar Permissões (`PermissionsManager.jsx`), permitindo habilitar/desabilitar o acesso a cada aba individualmente por perfil. Abas sem permissão simplesmente não aparecem na lista de tabs do usuário; se a aba ativa deixar de estar visível, o sistema redireciona automaticamente para a primeira aba permitida.
+- **Migração de dados:** Novo script `scripts/migrate_add_radar_tab_permissions.mjs` (Admin SDK) que adiciona as 7 novas chaves de aba a todos os perfis que já possuíam `RADAR_VIEW` ou `ADMIN_ALL`, preservando o comportamento anterior (quem já via o Radar continua vendo todas as abas). Executado em produção — perfil `admin` atualizado; perfis sem `RADAR_VIEW` (ex.: `squad_leader`, `user`, `financeiro`) não foram alterados.
+- **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.
+
 ## [0.1.229] - 2026-08-25
 - **Bugfix (Radar Operação — Filtros bloqueados):** Corrigido bug onde os 3 filtros (Grupo de Atendimento, Squad, Status) ficavam permanentemente desabilitados mesmo com os dados já carregados. Causa raiz: a Cloud Function `getOperacaoRadarBootstrap` retorna `filterOptions.statuses = []` quando `operacao_stats/summary.byStatus` está vazio (para evitar full-scan de `tickets_global`), e o front exigia que os 3 filtros estivessem populados para habilitar qualquer um deles. Agora, quando o backend não fornece opções de status, elas são derivadas localmente a partir dos tickets já carregados em memória (`ticketsCache`), habilitando os filtros normalmente sem custo extra de leituras no Firestore.
 - **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.

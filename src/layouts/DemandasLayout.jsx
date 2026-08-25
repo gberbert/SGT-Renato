@@ -73,6 +73,7 @@ const DemandasLayout = ({
         <section className="view-container">
           <Routes>
             <Route index element={<OperacaoHome userRole={userRole} />} />
+            <Route path="/radar/:tabParam" element={<OperacaoHome userRole={userRole} />} />
             <Route path="/radar-operacao" element={<Navigate to="/" replace />} />
             <Route path="/demandas" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="demandas" setIsModalOpen={setIsModalOpen} />} />
             <Route path="/atividades" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="atividades" setIsModalOpen={setIsModalOpen} />} />

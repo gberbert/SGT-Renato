@@ -475,6 +475,13 @@ export default function PermissionsManager({ initialProfileId = "admin" }) {
                   const menuMapping = {
                     RADAR_VIEW: "Radar",
                     RADAR_REFRESH: "Radar (atualizar)",
+                    RADAR_GERAL_VIEW: "Radar > Aba Geral",
+                    RADAR_PROBLEMAS_VIEW: "Radar > Aba Problemas",
+                    RADAR_DEMANDAS_TAB_VIEW: "Radar > Aba Demandas",
+                    RADAR_INCIDENTES_VIEW: "Radar > Aba Incidentes",
+                    RADAR_SOLICITACOES_VIEW: "Radar > Aba Solicitações",
+                    RADAR_CATALOGO_VIEW: "Radar > Aba Catálogo",
+                    RADAR_EFICIENCIA_VIEW: "Radar > Aba Eficiência",
                     DEMANDAS_VIEW: "Demandas",
                     MINHAS_ATIVIDADES_VIEW: "Minhas Atividades",
                     TEAM_VIEW: "Team (visualizar)",

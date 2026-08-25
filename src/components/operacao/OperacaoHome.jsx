@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
 import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
@@ -7,6 +8,8 @@ import OperacaoEscopoTimelineChart from './OperacaoEscopoTimelineChart';
 import OperacaoEfficiencyChart from './OperacaoEfficiencyChart';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
 import { formatCallableError } from '../../utils/callableError';
+import { getPermissionProfile } from '../../services/permissionService';
+import { PermissionFunctionKeys } from '../../services/permissionKeys';
 import {
   createRadarFilterState,
   fetchTicketsForDrill,
@@ -32,7 +35,27 @@ const formatDateTime = (value) => {
   return date.toLocaleString('pt-BR');
 };
 
-const OperacaoHome = () => {
+const RADAR_TAB_DEFS = [
+  { value: 'GERAL', slug: 'geral', label: 'Geral', requiredFn: PermissionFunctionKeys.RADAR_GERAL_VIEW },
+  { value: 'PROBLEMAS', slug: 'problemas', label: 'Problemas', requiredFn: PermissionFunctionKeys.RADAR_PROBLEMAS_VIEW },
+  { value: 'DEMANDA', slug: 'demandas', label: 'Demandas', requiredFn: PermissionFunctionKeys.RADAR_DEMANDAS_TAB_VIEW },
+  { value: 'INCIDENTE', slug: 'incidentes', label: 'Incidentes', requiredFn: PermissionFunctionKeys.RADAR_INCIDENTES_VIEW },
+  { value: 'SOLICITACAO', slug: 'solicitacoes', label: 'Solicitações', requiredFn: PermissionFunctionKeys.RADAR_SOLICITACOES_VIEW },
+  { value: 'CATALOGO', slug: 'catalogo', label: 'Catálogo', requiredFn: PermissionFunctionKeys.RADAR_CATALOGO_VIEW },
+  { value: 'EFICIENCIA', slug: 'eficiencia', label: 'Eficiência', requiredFn: PermissionFunctionKeys.RADAR_EFICIENCIA_VIEW },
+];
+
+const slugToTabValue = (slug) => {
+  const found = RADAR_TAB_DEFS.find((t) => t.slug === String(slug || '').toLowerCase());
+  return found ? found.value : null;
+};
+
+const tabValueToSlug = (value) => {
+  const found = RADAR_TAB_DEFS.find((t) => t.value === value);
+  return found ? found.slug : 'geral';
+};
+
+const OperacaoHome = ({ userRole }) => {
   const {
     bootLoading,
     error,
@@ -48,8 +71,66 @@ const OperacaoHome = () => {
     ensureRadarBootstrap();
   }, [ensureRadarBootstrap]);
 
+  const [allowedFunctions, setAllowedFunctions] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAllowed() {
+      if (!userRole) {
+        if (!cancelled) setAllowedFunctions([]);
+        return;
+      }
+      try {
+        const profile = await getPermissionProfile(userRole);
+        const af = Array.isArray(profile?.allowedFunctions) ? profile.allowedFunctions : [];
+        if (!cancelled) setAllowedFunctions(af);
+      } catch {
+        if (!cancelled) setAllowedFunctions([]);
+      }
+    }
+    loadAllowed();
+    return () => {
+      cancelled = true;
+    };
+  }, [userRole]);
+
+  const hasFn = useCallback(
+    (fnKey) =>
+      allowedFunctions === null ||
+      allowedFunctions.includes(PermissionFunctionKeys.ADMIN_ALL) ||
+      allowedFunctions.includes(fnKey),
+    [allowedFunctions]
+  );
+
+  const visibleTabs = useMemo(
+    () => RADAR_TAB_DEFS.filter((tab) => hasFn(tab.requiredFn)),
+    [hasFn]
+  );
+
+  const navigate = useNavigate();
+  const { tabParam } = useParams();
+
   const [filters, setFilters] = useState(createRadarFilterState);
-  const [activeEscopoTab, setActiveEscopoTab] = useState('GERAL');
+  const [activeEscopoTab, setActiveEscopoTab] = useState(() => slugToTabValue(tabParam) || 'GERAL');
+
+  // Sincroniza a aba ativa com o parâmetro de rota (permite acesso direto via URL)
+  useEffect(() => {
+    const fromUrl = slugToTabValue(tabParam);
+    if (fromUrl && fromUrl !== activeEscopoTab) {
+      setActiveEscopoTab(fromUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabParam]);
+
+  useEffect(() => {
+    if (visibleTabs.length === 0) return;
+    if (!visibleTabs.some((tab) => tab.value === activeEscopoTab)) {
+      const fallback = visibleTabs[0].value;
+      setActiveEscopoTab(fallback);
+      navigate(fallback === 'GERAL' ? '/' : `/radar/${tabValueToSlug(fallback)}`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleTabs]);
 
   const [ticketsCache, setTicketsCache] = useState(null);
   const [ticketsCacheLoading, setTicketsCacheLoading] = useState(false);
@@ -556,17 +637,16 @@ const OperacaoHome = () => {
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
+              navigate(next === 'GERAL' ? '/' : `/radar/${tabValueToSlug(next)}`);
             }}
             mb="4"
           >
             <RadixTabs.List>
-              <RadixTabs.Trigger value="GERAL">Geral</RadixTabs.Trigger>
-              <RadixTabs.Trigger value="PROBLEMAS">Problemas</RadixTabs.Trigger>
-              <RadixTabs.Trigger value="DEMANDA">Demandas</RadixTabs.Trigger>
-              <RadixTabs.Trigger value="INCIDENTE">Incidentes</RadixTabs.Trigger>
-              <RadixTabs.Trigger value="SOLICITACAO">Solicitações</RadixTabs.Trigger>
-              <RadixTabs.Trigger value="CATALOGO">Catálogo</RadixTabs.Trigger>
-              <RadixTabs.Trigger value="EFICIENCIA">Eficiência</RadixTabs.Trigger>
+              {visibleTabs.map((tab) => (
+                <RadixTabs.Trigger key={tab.value} value={tab.value}>
+                  {tab.label}
+                </RadixTabs.Trigger>
+              ))}
             </RadixTabs.List>
           </RadixTabs.Root>
 
