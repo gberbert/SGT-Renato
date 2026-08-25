@@ -113,6 +113,27 @@ const OperacaoHome = () => {
     [drillHierarchy, expandedParents]
   );
 
+  const derivedStatusOptions = useMemo(() => {
+    if (!Array.isArray(ticketsCache) || ticketsCache.length === 0) return [];
+    const counts = new Map();
+    for (const t of ticketsCache) {
+      const s = t.status ? String(t.status).trim() : '';
+      if (!s) continue;
+      counts.set(s, (counts.get(s) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([nome, total]) => ({ id: nome, nome, total }))
+      .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome, 'pt-BR'));
+  }, [ticketsCache]);
+
+  const effectiveFilterOptions = useMemo(() => {
+    const base = filterOptions || { grupos: [], squads: [], statuses: [] };
+    const statuses = Array.isArray(base.statuses) && base.statuses.length > 0
+      ? base.statuses
+      : derivedStatusOptions;
+    return { ...base, statuses };
+  }, [filterOptions, derivedStatusOptions]);
+
   const hasData = Boolean(statsRadar?.total);
   const filterActive =
     filters.grupos.size > 0 ||
@@ -128,8 +149,8 @@ const OperacaoHome = () => {
     filterOptions.grupos.length > 0 &&
     Array.isArray(filterOptions?.squads) &&
     filterOptions.squads.length > 0 &&
-    Array.isArray(filterOptions?.statuses) &&
-    filterOptions.statuses.length > 0;
+    Array.isArray(effectiveFilterOptions?.statuses) &&
+    effectiveFilterOptions.statuses.length > 0;
 
   const shouldBlockFilters = bootLoading || ticketsCacheLoading || !filtersReady;
 
@@ -459,7 +480,7 @@ const OperacaoHome = () => {
               <OperacaoMultiCombobox
                 label="GRUPO DE ATENDIMENTO"
                 placeholder="Todos os grupos"
-                options={filterOptions.grupos}
+                options={effectiveFilterOptions.grupos}
                 selected={filters.grupos}
                 onChange={(value) => updateFilter('grupos', value)}
                 disabled={shouldBlockFilters}
@@ -468,7 +489,7 @@ const OperacaoHome = () => {
               <OperacaoMultiCombobox
                 label="SQUAD"
                 placeholder="Todas as squads"
-                options={filterOptions.squads}
+                options={effectiveFilterOptions.squads}
                 selected={filters.squads}
                 onChange={(value) => updateFilter('squads', value)}
                 disabled={shouldBlockFilters}
@@ -478,7 +499,7 @@ const OperacaoHome = () => {
               <OperacaoMultiCombobox
                 label="STATUS DO TICKET"
                 placeholder="Todos os status"
-                options={filterOptions.statuses}
+                options={effectiveFilterOptions.statuses}
                 selected={filters.statuses}
                 onChange={(value) => updateFilter('statuses', value)}
                 disabled={shouldBlockFilters}

@@ -1,5 +1,9 @@
 # Versionamento do Projeto
 
+## [0.1.229] - 2026-08-25
+- **Bugfix (Radar Operação — Filtros bloqueados):** Corrigido bug onde os 3 filtros (Grupo de Atendimento, Squad, Status) ficavam permanentemente desabilitados mesmo com os dados já carregados. Causa raiz: a Cloud Function `getOperacaoRadarBootstrap` retorna `filterOptions.statuses = []` quando `operacao_stats/summary.byStatus` está vazio (para evitar full-scan de `tickets_global`), e o front exigia que os 3 filtros estivessem populados para habilitar qualquer um deles. Agora, quando o backend não fornece opções de status, elas são derivadas localmente a partir dos tickets já carregados em memória (`ticketsCache`), habilitando os filtros normalmente sem custo extra de leituras no Firestore.
+- **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.
+
 ## [0.1.228] - 2026-08-25
 - **Feature (Radar Operação — Campos Gerenciados Internamente):** Adicionados 4 novos campos em `tickets_global`, preenchidos manualmente pela equipe (não vêm do Jira): **Responsável Atual** (string), **Data de Previsão** (date), **Observação Adicional** (string) e **Estimativa Macro** (integer). Os 4 campos aparecem como novas colunas editáveis (inputs inline, salvos em `onBlur`) na grid de detalhes (drill-down) do Radar Operação, em todas as abas de escopo.
 - **Backend:** Nova função `updateTicketRadarFields(issueKey, patch)` em `operacaoRadarService.js`, que grava com `setDoc(..., { merge: true })` diretamente no documento do ticket em `tickets_global`, junto com um timestamp `radarFieldsUpdatedAt`. Os campos são lidos e mapeados em `mapFirestoreTicketDoc` e `mapDrillTicket` para popular a grid.
