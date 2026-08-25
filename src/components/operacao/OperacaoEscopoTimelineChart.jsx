@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Box, Flex, Text, Select } from '@radix-ui/themes';
 import { GRANULARITY_OPTIONS, buildCreatedVsResolvedSeries } from '../../utils/timeSeriesBuckets';
+import OperacaoStatusPieChart from './OperacaoStatusPieChart';
 
 // Lazy-load do recharts: usado apenas nas abas de escopo do Radar, evita inflar o bundle principal.
 const RechartsBarChart = lazy(async () => {
@@ -82,17 +83,25 @@ const OperacaoEscopoTimelineChart = ({ tickets = [] }) => {
         </Flex>
       </Flex>
 
-      {!hasData ? (
-        <Text size="2" color="gray">
-          Sem dados suficientes de data de criação/resolução para este escopo.
-        </Text>
-      ) : (
-        <Box style={{ width: '100%', height: 320 }}>
-          <Suspense fallback={<Text size="2" color="gray">Carregando gráfico…</Text>}>
-            <RechartsBarChart data={data} />
-          </Suspense>
+      <Flex gap="4" wrap="wrap" align="start">
+        <Box style={{ flex: 2, minWidth: 320 }}>
+          {!hasData ? (
+            <Text size="2" color="gray">
+              Sem dados suficientes de data de criação/resolução para este escopo.
+            </Text>
+          ) : (
+            <Box style={{ width: '100%', height: 320 }}>
+              <Suspense fallback={<Text size="2" color="gray">Carregando gráfico…</Text>}>
+                <RechartsBarChart data={data} />
+              </Suspense>
+            </Box>
+          )}
         </Box>
-      )}
+
+        <Box style={{ flex: 1, minWidth: 280 }}>
+          <OperacaoStatusPieChart tickets={tickets} />
+        </Box>
+      </Flex>
     </Box>
   );
 };

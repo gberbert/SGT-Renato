@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { Box, Flex, Text, Select, Card, Grid } from '@radix-ui/themes';
 import { GRANULARITY_OPTIONS } from '../../utils/timeSeriesBuckets';
 import { buildEfficiencySeries, computeEfficiencySummary } from '../../utils/efficiencyMetrics';
+import OperacaoStatusPieChart from './OperacaoStatusPieChart';
 
 const AXIS_TICK_COLOR = '#9ca3af';
 
@@ -152,17 +153,25 @@ const OperacaoEfficiencyChart = ({ tickets = [] }) => {
         </Flex>
       </Flex>
 
-      {!hasData ? (
-        <Text size="2" color="gray">
-          Sem tickets resolvidos (com data de resolução) para calcular eficiência neste escopo.
-        </Text>
-      ) : (
-        <Box style={{ width: '100%', height: 340 }}>
-          <Suspense fallback={<Text size="2" color="gray">Carregando gráfico…</Text>}>
-            <RechartsEfficiencyChart data={data} />
-          </Suspense>
+      <Flex gap="4" wrap="wrap" align="start">
+        <Box style={{ flex: 2, minWidth: 320 }}>
+          {!hasData ? (
+            <Text size="2" color="gray">
+              Sem tickets resolvidos (com data de resolução) para calcular eficiência neste escopo.
+            </Text>
+          ) : (
+            <Box style={{ width: '100%', height: 340 }}>
+              <Suspense fallback={<Text size="2" color="gray">Carregando gráfico…</Text>}>
+                <RechartsEfficiencyChart data={data} />
+              </Suspense>
+            </Box>
+          )}
         </Box>
-      )}
+
+        <Box style={{ flex: 1, minWidth: 280 }}>
+          <OperacaoStatusPieChart tickets={tickets} />
+        </Box>
+      </Flex>
     </Box>
   );
 };

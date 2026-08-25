@@ -1,5 +1,9 @@
 # Versionamento do Projeto
 
+## [0.1.227] - 2026-08-25
+- **Feature (Radar Operação — Gráfico de Pizza por Status):** Adicionado gráfico de pizza (`OperacaoStatusPieChart.jsx`, recharts, lazy-loaded) consolidando o total de tickets por `status`, exibido ao lado do gráfico de barras "Criados x Resolvidos" (em cada aba de escopo) e ao lado do gráfico composto de "Eficiência" (aba Eficiência). Novo utilitário `src/utils/statusDistribution.js` agrupa e ordena os status por volume, agregando os menos frequentes em "Outros" (máx. 8 fatias) para manter a legenda legível.
+- **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.
+
 ## [0.1.226] - 2026-08-24
 - **Feature (Organograma):** Nova tela `/organograma` (`src/components/Organograma.jsx`) — visão em cards por squad, destacando o membro com papel `GP` (foto + nome), no layout escuro com destaque ciano solicitado. Ao clicar no card de uma squad, abre um modal com contagem por papel (roles herdados de `squad.users[].role`) e lista de integrantes agrupados por papel, refletindo em tempo real a coleção `squads` (mesma fonte de dados usada em `SquadDetailsModal`/`Team`).
 - **Navegação:** Novo item "Organograma" na Sidebar (ícone `Network`), controlado pela mesma permissão `TEAM_VIEW` já usada pelo item "Team" — perfis que já veem "Team" passam a ver "Organograma" automaticamente, sem necessidade de reconfigurar perfis de permissão.
