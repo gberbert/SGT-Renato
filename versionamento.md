@@ -1,5 +1,11 @@
 # Versionamento do Projeto
 
+## [0.1.228] - 2026-08-25
+- **Feature (Radar Operação — Campos Gerenciados Internamente):** Adicionados 4 novos campos em `tickets_global`, preenchidos manualmente pela equipe (não vêm do Jira): **Responsável Atual** (string), **Data de Previsão** (date), **Observação Adicional** (string) e **Estimativa Macro** (integer). Os 4 campos aparecem como novas colunas editáveis (inputs inline, salvos em `onBlur`) na grid de detalhes (drill-down) do Radar Operação, em todas as abas de escopo.
+- **Backend:** Nova função `updateTicketRadarFields(issueKey, patch)` em `operacaoRadarService.js`, que grava com `setDoc(..., { merge: true })` diretamente no documento do ticket em `tickets_global`, junto com um timestamp `radarFieldsUpdatedAt`. Os campos são lidos e mapeados em `mapFirestoreTicketDoc` e `mapDrillTicket` para popular a grid.
+- **UX:** Edição otimista — ao salvar um campo, o estado local (`drillTickets` e `ticketsCache`) é atualizado imediatamente, refletindo a mudança sem precisar recarregar a página.
+- **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.
+
 ## [0.1.227] - 2026-08-25
 - **Feature (Radar Operação — Gráfico de Pizza por Status):** Adicionado gráfico de pizza (`OperacaoStatusPieChart.jsx`, recharts, lazy-loaded) consolidando o total de tickets por `status`, exibido ao lado do gráfico de barras "Criados x Resolvidos" (em cada aba de escopo) e ao lado do gráfico composto de "Eficiência" (aba Eficiência). Novo utilitário `src/utils/statusDistribution.js` agrupa e ordena os status por volume, agregando os menos frequentes em "Outros" (máx. 8 fatias) para manter a legenda legível.
 - **Deploy:** Build de produção + deploy de `hosting` no projeto `sgt-renato`.

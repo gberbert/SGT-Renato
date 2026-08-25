@@ -8,6 +8,8 @@ import {
   limit,
   orderBy,
   query,
+  serverTimestamp,
+  setDoc,
   startAfter,
   where,
 } from 'firebase/firestore';
@@ -539,6 +541,10 @@ export function mapDrillTicket(t) {
         : [],
     agingDays: t.agingDays ?? computeAgingDays(t.createdAt),
     escopo: normalizeEscopoKey(t.escopo),
+    responsavelAtual: t.responsavelAtual || '',
+    dataPrevisao: t.dataPrevisao || null,
+    observacaoAdicional: t.observacaoAdicional || '',
+    estimativaMacro: t.estimativaMacro ?? null,
   };
 }
 
@@ -662,7 +668,38 @@ function mapFirestoreTicketDoc(d) {
     resolvedAt: data.resolvedAt || null,
     reopenCount: Number(data.reopenCount) || 0,
     status: data.status,
+    responsavelAtual: data.responsavelAtual || '',
+    dataPrevisao: data.dataPrevisao || null,
+    observacaoAdicional: data.observacaoAdicional || '',
+    estimativaMacro: data.estimativaMacro ?? null,
   };
+}
+
+/**
+ * Atualiza os campos gerenciados internamente pelo SGT em um ticket de `tickets_global`.
+ * Esses campos NÃO vêm do Jira — são preenchidos manualmente pela equipe dentro do Radar Operação.
+ *
+ * @param {string} issueKey
+ * @param {{responsavelAtual?: string, dataPrevisao?: string|null, observacaoAdicional?: string, estimativaMacro?: number|null}} patch
+ */
+export async function updateTicketRadarFields(issueKey, patch) {
+  if (!issueKey) throw new Error('issueKey é obrigatório.');
+
+  const payload = {};
+  if ('responsavelAtual' in patch) payload.responsavelAtual = patch.responsavelAtual || '';
+  if ('dataPrevisao' in patch) payload.dataPrevisao = patch.dataPrevisao || null;
+  if ('observacaoAdicional' in patch) payload.observacaoAdicional = patch.observacaoAdicional || '';
+  if ('estimativaMacro' in patch) {
+    const numeric = patch.estimativaMacro === '' || patch.estimativaMacro == null
+      ? null
+      : Number(patch.estimativaMacro);
+    payload.estimativaMacro = Number.isFinite(numeric) ? numeric : null;
+  }
+  payload.radarFieldsUpdatedAt = serverTimestamp();
+
+  const ref = doc(db, TICKETS_GLOBAL, issueKey);
+  await setDoc(ref, payload, { merge: true });
+  return payload;
 }
 
 /** Lê tickets do Firestore por escopo (drill-down), sem varrer tickets_global inteiro. */

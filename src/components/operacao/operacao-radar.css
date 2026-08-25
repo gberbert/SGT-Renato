@@ -389,6 +389,38 @@
   white-space: normal;
 }
 
+.operacao-radar-tickets-editable-input {
+  width: 130px;
+  min-width: 110px;
+  padding: 4px 6px;
+  font-size: 0.78rem;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.operacao-radar-tickets-editable-input:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.operacao-radar-tickets-editable-input:focus {
+  border-color: #22d3ee;
+  background: rgba(34, 211, 238, 0.06);
+}
+
+.operacao-radar-tickets-editable-input-wide {
+  width: 220px;
+  min-width: 180px;
+}
+
+.operacao-radar-tickets-editable-input-narrow {
+  width: 90px;
+  min-width: 70px;
+}
+
 .operacao-radar-loading {
   padding: 1rem;
   color: var(--text-muted);

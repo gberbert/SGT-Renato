@@ -16,6 +16,7 @@ import {
   getEscopoRadarMeta,
   prepareDrillHierarchy,
   computeRadarEscopos,
+  updateTicketRadarFields,
 } from '../../services/operacaoRadarService';
 import './operacao-radar.css';
 
@@ -164,6 +165,26 @@ const OperacaoHome = () => {
       }
     },
     [ticketsCache, filters, squadGrupoMap]
+  );
+
+  const handleSaveTicketField = useCallback(
+    async (issueKey, fieldName, rawValue) => {
+      try {
+        const patch = { [fieldName]: rawValue };
+        const saved = await updateTicketRadarFields(issueKey, patch);
+
+        const applyPatch = (list) =>
+          Array.isArray(list)
+            ? list.map((t) => (t.issueKey === issueKey ? { ...t, ...saved } : t))
+            : list;
+
+        setDrillTickets((prev) => applyPatch(prev));
+        setTicketsCache((prev) => applyPatch(prev));
+      } catch (err) {
+        console.error('Erro ao salvar campo do ticket:', err);
+      }
+    },
+    []
   );
 
   const toggleParentExpand = (issueKey) => {
@@ -701,6 +722,10 @@ const OperacaoHome = () => {
                             <th>TICKETS_VINCULADOS</th>
                             <th>GRUPO_SUPORTE</th>
                             <th>ESCOPO</th>
+                            <th>RESPONSÁVEL ATUAL</th>
+                            <th>DATA DE PREVISÃO</th>
+                            <th>OBSERVAÇÃO ADICIONAL</th>
+                            <th>ESTIMATIVA MACRO</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -758,6 +783,51 @@ const OperacaoHome = () => {
                               <td className="operacao-radar-tickets-linked">{ticket.linkedTicketsLabel || '—'}</td>
                               <td>{ticket.grupoSuporte || '—'}</td>
                               <td>{ticket.escopo || '—'}</td>
+                              <td>
+                                <input
+                                  type="text"
+                                  className="operacao-radar-tickets-editable-input"
+                                  defaultValue={ticket.responsavelAtual || ''}
+                                  placeholder="—"
+                                  onBlur={(e) =>
+                                    handleSaveTicketField(ticket.issueKey, 'responsavelAtual', e.target.value)
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="date"
+                                  className="operacao-radar-tickets-editable-input"
+                                  defaultValue={
+                                    ticket.dataPrevisao ? String(ticket.dataPrevisao).slice(0, 10) : ''
+                                  }
+                                  onBlur={(e) =>
+                                    handleSaveTicketField(ticket.issueKey, 'dataPrevisao', e.target.value)
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  className="operacao-radar-tickets-editable-input operacao-radar-tickets-editable-input-wide"
+                                  defaultValue={ticket.observacaoAdicional || ''}
+                                  placeholder="—"
+                                  onBlur={(e) =>
+                                    handleSaveTicketField(ticket.issueKey, 'observacaoAdicional', e.target.value)
+                                  }
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  className="operacao-radar-tickets-editable-input operacao-radar-tickets-editable-input-narrow"
+                                  defaultValue={ticket.estimativaMacro ?? ''}
+                                  placeholder="—"
+                                  onBlur={(e) =>
+                                    handleSaveTicketField(ticket.issueKey, 'estimativaMacro', e.target.value)
+                                  }
+                                />
+                              </td>
                             </tr>
                           ))}
                         </tbody>
