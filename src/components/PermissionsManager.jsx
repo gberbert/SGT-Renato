@@ -464,7 +464,8 @@ export default function PermissionsManager({ initialProfileId = "admin" }) {
               <Table.Header>
                 <Table.Row>
                   <Table.ColumnHeaderCell>Funcionalidade</Table.ColumnHeaderCell>
-                  <Table.ColumnHeaderCell>Menu/rota</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Menu</Table.ColumnHeaderCell>
+                  <Table.ColumnHeaderCell>Rota (URL)</Table.ColumnHeaderCell>
                   <Table.ColumnHeaderCell align="right">Permitido?</Table.ColumnHeaderCell>
                 </Table.Row>
               </Table.Header>
@@ -494,6 +495,28 @@ export default function PermissionsManager({ initialProfileId = "admin" }) {
                     ADMIN_ALL: "Admin (tudo)",
                   };
 
+                  const routeMapping = {
+                    RADAR_VIEW: "/",
+                    RADAR_REFRESH: "/ (botão Atualizar)",
+                    RADAR_GERAL_VIEW: "/",
+                    RADAR_PROBLEMAS_VIEW: "/radar/problemas",
+                    RADAR_DEMANDAS_TAB_VIEW: "/radar/demandas",
+                    RADAR_INCIDENTES_VIEW: "/radar/incidentes",
+                    RADAR_SOLICITACOES_VIEW: "/radar/solicitacoes",
+                    RADAR_CATALOGO_VIEW: "/radar/catalogo",
+                    RADAR_EFICIENCIA_VIEW: "/radar/eficiencia",
+                    DEMANDAS_VIEW: "/demandas",
+                    MINHAS_ATIVIDADES_VIEW: "/minhas-atividades",
+                    TEAM_VIEW: "/team",
+                    TEAM_EDIT: "/team (edição inline)",
+                    USER_CSR_VIEW: "/team (modal do usuário)",
+                    USER_RATECARD_VIEW: "/team (modal do usuário)",
+                    SETTINGS_VIEW: "/configuracoes",
+                    PLANEJAMENTO_VIEW: "/planejamento",
+                    CONFIGURACOES_VIEW: "/configuracoes",
+                    ADMIN_ALL: "— (todas as rotas)",
+                  };
+
                   return (
                     <Table.Row key={fnKey}>
                       <Table.Cell>
@@ -501,6 +524,11 @@ export default function PermissionsManager({ initialProfileId = "admin" }) {
                       </Table.Cell>
                       <Table.Cell>
                         <Text>{menuMapping[fnKey] || "-"}</Text>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Text size="1" style={{ fontFamily: "monospace" }} color="gray">
+                          {routeMapping[fnKey] || "-"}
+                        </Text>
                       </Table.Cell>
                       <Table.Cell align="right">
                         <Button

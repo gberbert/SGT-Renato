@@ -94,11 +94,11 @@ const OperacaoHome = ({ userRole }) => {
     };
   }, [userRole]);
 
+  // Consistente com Sidebar.jsx: ADMIN_ALL não é implícito para cada chave individual —
+  // precisa estar explicitamente marcado no perfil junto com a chave da aba (ou ser adicionado
+  // explicitamente aqui) para não conflitar com o toggle manual de cada aba no SECOPS.
   const hasFn = useCallback(
-    (fnKey) =>
-      allowedFunctions === null ||
-      allowedFunctions.includes(PermissionFunctionKeys.ADMIN_ALL) ||
-      allowedFunctions.includes(fnKey),
+    (fnKey) => allowedFunctions === null || allowedFunctions.includes(fnKey),
     [allowedFunctions]
   );
 
