@@ -681,6 +681,10 @@ function mapFirestoreTicketDoc(d) {
     dataFimHomologacaoPlanejada: data.dataFimHomologacaoPlanejada || null,
     dataFimHomologacaoEfetiva: data.dataFimHomologacaoEfetiva || null,
     dataEntregaProducaoPrevista: data.dataEntregaProducaoPrevista || null,
+    estimativaHoras: data.estimativaHoras ?? null,
+    dataFimPlanejado: data.dataFimPlanejado || null,
+    demandaFast: data.demandaFast || null,
+    issueLinksDetailed: Array.isArray(data.issueLinksDetailed) ? data.issueLinksDetailed : [],
   };
 }
 

@@ -60,6 +60,8 @@ const TICKET_FIELD_DEFINITIONS = {
     "Data Entrega em Produção Prevista",
     "data entrega em produção prevista",
   ],
+  estimativa_horas: ["Estimativa de horas", "estimativa de horas"],
+  data_fim_planejado: ["Data Fim Planejado", "data fim planejado"],
 };
 
 const ESCOPO_SEED = [

@@ -20,6 +20,18 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
+.roadmap-geral-active-view-bar {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.roadmap-geral-date-badge {
+  font-family: monospace;
+  font-size: 0.72rem;
+}
+
 .roadmap-geral-granularity-footer {
   padding: 6px 10px;
   border-radius: 999px;
@@ -133,4 +145,68 @@
 
 .roadmap-geral-bar:hover {
   filter: brightness(1.15);
+}
+
+/* Linha tracejada "hoje" */
+.roadmap-geral-today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  border-left: 2px dashed rgba(56, 189, 248, 0.75);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Wrapper relativo para posicionar o tooltip da barra */
+.roadmap-geral-bar-wrap {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  display: inline-flex;
+  align-items: flex-start;
+}
+
+.roadmap-geral-bar-wrap .roadmap-geral-bar {
+  position: relative;
+  top: 0;
+  left: 0;
+  flex-shrink: 0;
+}
+
+/* Tooltip balão suspenso */
+.roadmap-geral-bar-tooltip {
+  display: none;
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  background: var(--bg-surface, #0f172a);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 50;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  pointer-events: none;
+  color: var(--gray-12);
+}
+
+.roadmap-geral-bar-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(56, 189, 248, 0.4);
+}
+
+.roadmap-geral-bar-wrap:hover .roadmap-geral-bar-tooltip {
+  display: flex;
 }

@@ -6,6 +6,7 @@ import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
 import OperacaoEscopoTimelineChart from './OperacaoEscopoTimelineChart';
 import OperacaoEfficiencyChart from './OperacaoEfficiencyChart';
+import OperacaoObservabilidade from './OperacaoObservabilidade';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
 import { formatCallableError } from '../../utils/callableError';
 import { getPermissionProfile } from '../../services/permissionService';
@@ -43,6 +44,7 @@ const RADAR_TAB_DEFS = [
   { value: 'SOLICITACAO', slug: 'solicitacoes', label: 'Solicitações', requiredFn: PermissionFunctionKeys.RADAR_SOLICITACOES_VIEW },
   { value: 'CATALOGO', slug: 'catalogo', label: 'Catálogo', requiredFn: PermissionFunctionKeys.RADAR_CATALOGO_VIEW },
   { value: 'EFICIENCIA', slug: 'eficiencia', label: 'Eficiência', requiredFn: PermissionFunctionKeys.RADAR_EFICIENCIA_VIEW },
+  { value: 'OBSERVABILIDADE', slug: 'observabilidade', label: 'Observabilidade', requiredFn: PermissionFunctionKeys.RADAR_OBSERVABILIDADE_VIEW },
 ];
 
 const slugToTabValue = (slug) => {
@@ -713,6 +715,13 @@ const OperacaoHome = ({ userRole }) => {
                     ? filterTickets(ticketsCache, filters, squadGrupoMap || new Map())
                     : [];
                   return <OperacaoEfficiencyChart tickets={filteredTicketsAll} />;
+                })()
+              ) : activeEscopoTab === 'OBSERVABILIDADE' ? (
+                (() => {
+                  const filteredTicketsAll = Array.isArray(ticketsCache)
+                    ? filterTickets(ticketsCache, filters, squadGrupoMap || new Map())
+                    : [];
+                  return <OperacaoObservabilidade tickets={filteredTicketsAll} />;
                 })()
               ) : (
                 (() => {

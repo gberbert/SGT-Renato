@@ -252,6 +252,28 @@ function extractLinkedWorkItems(issue, fieldIds) {
   return [linkedKey];
 }
 
+/**
+ * Extrai os vínculos (issuelinks) do Jira com detalhes do ticket vinculado
+ * (chave, tipo de issue e status), usados pelos indicadores de Observabilidade.
+ * Não requer chamada extra à API — os dados já vêm expandidos na resposta de busca.
+ */
+function extractIssueLinksDetailed(issue) {
+  const links = issue.fields?.issuelinks || [];
+  const result = [];
+  for (const link of links) {
+    const targetIssue = link.outwardIssue || link.inwardIssue;
+    if (!targetIssue) continue;
+    result.push({
+      key: targetIssue.key,
+      issueType: (targetIssue.fields || {}).issuetype?.name || null,
+      status: (targetIssue.fields || {}).status?.name || null,
+      linkTypeName: (link.type || {}).name || null,
+      direction: link.outwardIssue ? "outward" : "inward",
+    });
+  }
+  return result;
+}
+
 let _fieldMapCache = null;
 let _fieldIdsCache = null;
 
@@ -373,6 +395,9 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     dataFimHomologacaoPlanejada: extracted.data_fim_homologacao_planejada || null,
     dataFimHomologacaoEfetiva: extracted.data_fim_homologacao_efetiva || null,
     dataEntregaProducaoPrevista: extracted.data_entrega_producao_prevista || null,
+    estimativaHoras: extracted.estimativa_horas != null ? Number(extracted.estimativa_horas) : null,
+    dataFimPlanejado: extracted.data_fim_planejado || null,
+    issueLinksDetailed: extractIssueLinksDetailed(issue),
     labels,
     components,
     parentKey,

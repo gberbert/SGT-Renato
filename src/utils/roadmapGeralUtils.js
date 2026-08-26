@@ -219,3 +219,27 @@ export function todayColumnIndex(columns) {
   const now = new Date();
   return columns.findIndex((c) => now.getTime() >= c.start.getTime() && now.getTime() < c.end.getTime());
 }
+
+/**
+ * Calcula o offset em pixels da linha "hoje" dentro da track da timeline.
+ * Retorna null se "hoje" estiver fora do range das colunas.
+ */
+export function todayPixelOffset(columns, colWidth) {
+  if (!columns.length) return null;
+  const now = new Date();
+  const firstStart = columns[0].start.getTime();
+  const lastEnd = columns[columns.length - 1].end.getTime();
+  if (now.getTime() < firstStart || now.getTime() > lastEnd) return null;
+
+  const todayIdx = columns.findIndex(
+    (c) => now.getTime() >= c.start.getTime() && now.getTime() < c.end.getTime()
+  );
+  if (todayIdx === -1) return null;
+
+  const col = columns[todayIdx];
+  const colDuration = col.end.getTime() - col.start.getTime();
+  const elapsed = now.getTime() - col.start.getTime();
+  const frac = colDuration > 0 ? elapsed / colDuration : 0;
+
+  return todayIdx * colWidth + frac * colWidth;
+}

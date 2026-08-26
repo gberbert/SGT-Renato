@@ -13,7 +13,9 @@ import {
 import {
   fetchRoadmapGeralViews,
   saveRoadmapGeralView,
+  updateRoadmapGeralView,
   deleteRoadmapGeralView,
+  setPrimaryRoadmapGeralView,
 } from '../services/roadmapGeralViewsService';
 import {
   ROADMAP_GRANULARITY_OPTIONS,
@@ -23,6 +25,7 @@ import {
   computeBarPosition,
   findMinMaxDates,
   todayColumnIndex,
+  todayPixelOffset,
 } from '../utils/roadmapGeralUtils';
 import './RoadmapGeral.css';
 
@@ -55,6 +58,30 @@ const END_FIELD_OPTIONS = DATE_FIELD_OPTIONS;
 
 function createDefaultDateConfig() {
   return { startField: 'createdAt', endField: 'resolvedAt' };
+}
+
+function dateFieldLabel(value) {
+  const opt = DATE_FIELD_OPTIONS.find((o) => o.value === value);
+  return opt ? opt.label : value;
+}
+
+function formatShortDate(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('pt-BR');
+}
+
+function serializeRoadmapState(filters, groupBy, granularity, dateConfig) {
+  return JSON.stringify({
+    escopos: [...filters.escopos].sort(),
+    squads: [...filters.squads].sort(),
+    grupos: [...filters.grupos].sort(),
+    statuses: [...filters.statuses].sort(),
+    groupBy,
+    granularity,
+    dateConfig,
+  });
 }
 
 const STATUS_COLORS = {
@@ -107,9 +134,26 @@ const RoadmapGeral = () => {
   const [savedViews, setSavedViews] = useState([]);
   const [savedViewsLoading, setSavedViewsLoading] = useState(true);
   const [newViewName, setNewViewName] = useState('');
+  const [newViewIsPrimary, setNewViewIsPrimary] = useState(false);
   const [savingView, setSavingView] = useState(false);
+  const [activeViewId, setActiveViewId] = useState(null);
+  const [activeViewSnapshot, setActiveViewSnapshot] = useState(null);
+  const [primaryViewApplied, setPrimaryViewApplied] = useState(false);
 
   const uid = auth.currentUser?.uid || null;
+
+  // Auto-carrega a visão primária na primeira vez que as views são carregadas
+  useEffect(() => {
+    if (primaryViewApplied || savedViewsLoading || savedViews.length === 0) return;
+    const primary = savedViews.find((v) => v.isPrimary);
+    if (primary) {
+      const snapshot = applyViewState(primary);
+      setActiveViewId(primary.id);
+      setActiveViewSnapshot(snapshot);
+    }
+    setPrimaryViewApplied(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedViews, savedViewsLoading, primaryViewApplied]);
 
   // Reaproveita o cache de tickets do Radar Operação (mesma chave de sessionStorage) para evitar
   // uma segunda varredura completa de tickets_global quando o usuário já abriu o Radar antes.
@@ -336,25 +380,46 @@ const RoadmapGeral = () => {
   const filterActive =
     filters.escopos.size > 0 || filters.squads.size > 0 || filters.grupos.size > 0 || filters.statuses.size > 0;
 
+  // Estado serializado atual, usado para detectar mudanças não salvas na visão ativa.
+  const currentStateSnapshot = useMemo(
+    () => serializeRoadmapState(filters, groupBy, granularity, dateConfig),
+    [filters, groupBy, granularity, dateConfig]
+  );
+
+  const activeView = useMemo(
+    () => savedViews.find((v) => v.id === activeViewId) || null,
+    [savedViews, activeViewId]
+  );
+
+  const activeViewDirty = Boolean(activeView) && activeViewSnapshot !== null && activeViewSnapshot !== currentStateSnapshot;
+
   const handleSaveView = async () => {
     if (!newViewName.trim() || !uid) return;
     setSavingView(true);
     try {
-      await saveRoadmapGeralView(uid, {
+      const filtersPayload = {
+        escopos: [...filters.escopos],
+        squads: [...filters.squads],
+        grupos: [...filters.grupos],
+        statuses: [...filters.statuses],
+      };
+      const newId = await saveRoadmapGeralView(uid, {
         name: newViewName.trim(),
-        filters: {
-          escopos: [...filters.escopos],
-          squads: [...filters.squads],
-          grupos: [...filters.grupos],
-          statuses: [...filters.statuses],
-        },
+        filters: filtersPayload,
         groupBy,
         granularity,
         dateConfig,
+        isPrimary: newViewIsPrimary,
       });
+      if (newViewIsPrimary) {
+        await setPrimaryRoadmapGeralView(uid, newId);
+      }
       const views = await fetchRoadmapGeralViews(uid);
       setSavedViews(views);
       setNewViewName('');
+      setNewViewIsPrimary(false);
+      setActiveViewId(newId);
+      setActiveViewSnapshot(serializeRoadmapState(filters, groupBy, granularity, dateConfig));
     } catch (e) {
       setError(e?.message || String(e));
     } finally {
@@ -362,22 +427,100 @@ const RoadmapGeral = () => {
     }
   };
 
-  const handleLoadView = (view) => {
-    setFilters({
+  const handleTogglePrimaryView = async (viewId) => {
+    if (!uid) return;
+    const view = savedViews.find((v) => v.id === viewId);
+    if (!view) return;
+    const newIsPrimary = !view.isPrimary;
+    try {
+      if (newIsPrimary) {
+        await setPrimaryRoadmapGeralView(uid, viewId);
+      } else {
+        await setPrimaryRoadmapGeralView(uid, null);
+      }
+      const views = await fetchRoadmapGeralViews(uid);
+      setSavedViews(views);
+    } catch (e) {
+      setError(e?.message || String(e));
+    }
+  };
+
+  const applyViewState = (view) => {
+    const nextFilters = {
       escopos: new Set(view.filters?.escopos || []),
       squads: new Set(view.filters?.squads || []),
       grupos: new Set(view.filters?.grupos || []),
       statuses: new Set(view.filters?.statuses || []),
-    });
-    setGroupBy(view.groupBy || 'none');
-    setGranularity(view.granularity || 'mes');
-    setDateConfig(view.dateConfig || createDefaultDateConfig());
+    };
+    const nextGroupBy = view.groupBy || 'none';
+    const nextGranularity = view.granularity || 'mes';
+    const nextDateConfig = view.dateConfig || createDefaultDateConfig();
+
+    setFilters(nextFilters);
+    setGroupBy(nextGroupBy);
+    setGranularity(nextGranularity);
+    setDateConfig(nextDateConfig);
+
+    return serializeRoadmapState(nextFilters, nextGroupBy, nextGranularity, nextDateConfig);
+  };
+
+  const handleLoadView = (view) => {
+    const snapshot = applyViewState(view);
+    setActiveViewId(view.id);
+    setActiveViewSnapshot(snapshot);
+  };
+
+  const handleSaveChangesToActiveView = async () => {
+    if (!activeView) return;
+    setSavingView(true);
+    try {
+      const filtersPayload = {
+        escopos: [...filters.escopos],
+        squads: [...filters.squads],
+        grupos: [...filters.grupos],
+        statuses: [...filters.statuses],
+      };
+      await updateRoadmapGeralView(activeView.id, {
+        name: activeView.name,
+        filters: filtersPayload,
+        groupBy,
+        granularity,
+        dateConfig,
+      });
+      const views = await fetchRoadmapGeralViews(uid);
+      setSavedViews(views);
+      setActiveViewSnapshot(currentStateSnapshot);
+    } catch (e) {
+      setError(e?.message || String(e));
+    } finally {
+      setSavingView(false);
+    }
+  };
+
+  const handleDiscardActiveViewChanges = () => {
+    if (!activeView) return;
+    applyViewState(activeView);
+    setActiveViewSnapshot(serializeRoadmapState(
+      {
+        escopos: new Set(activeView.filters?.escopos || []),
+        squads: new Set(activeView.filters?.squads || []),
+        grupos: new Set(activeView.filters?.grupos || []),
+        statuses: new Set(activeView.filters?.statuses || []),
+      },
+      activeView.groupBy || 'none',
+      activeView.granularity || 'mes',
+      activeView.dateConfig || createDefaultDateConfig()
+    ));
   };
 
   const handleDeleteView = async (id) => {
     try {
       await deleteRoadmapGeralView(id);
       setSavedViews((prev) => prev.filter((v) => v.id !== id));
+      if (activeViewId === id) {
+        setActiveViewId(null);
+        setActiveViewSnapshot(null);
+      }
     } catch (e) {
       setError(e?.message || String(e));
     }
@@ -428,6 +571,32 @@ const RoadmapGeral = () => {
         <Callout.Root color="red" mb="3">
           <Callout.Text>{error}</Callout.Text>
         </Callout.Root>
+      )}
+
+      {activeView && (
+        <Flex align="center" justify="between" gap="3" wrap="wrap" mb="3" className="roadmap-geral-active-view-bar">
+          <Flex align="center" gap="2">
+            <Save size={14} color="var(--rg-accent)" />
+            <Text size="2">
+              Visão ativa: <b>{activeView.name}</b>
+            </Text>
+            {activeViewDirty && (
+              <Badge color="amber" variant="soft">
+                alterações não salvas
+              </Badge>
+            )}
+          </Flex>
+          {activeViewDirty && (
+            <Flex gap="2">
+              <Button size="1" variant="soft" color="gray" onClick={handleDiscardActiveViewChanges}>
+                Descartar alterações
+              </Button>
+              <Button size="1" onClick={handleSaveChangesToActiveView} disabled={savingView}>
+                {savingView ? <Loader2 size={14} className="spinner-icon" /> : 'Salvar alterações nesta visão'}
+              </Button>
+            </Flex>
+          )}
+        </Flex>
       )}
 
       {/* Painel de controle: Filtros, Agrupamento (lado a lado), Configurar Datas, Visões */}
@@ -572,6 +741,10 @@ const RoadmapGeral = () => {
         </Flex>
 
         <Flex align="center" gap="2">
+          <Badge color="gray" variant="soft" className="roadmap-geral-date-badge">
+            {dateFieldLabel(dateConfig.startField)} → {dateFieldLabel(dateConfig.endField)}
+          </Badge>
+
           <Popover.Root>
             <Popover.Trigger>
               <Button variant="soft" color="gray" title="Configurar datas consideradas na timeline">
@@ -643,7 +816,7 @@ const RoadmapGeral = () => {
             <Text weight="bold" mb="2" as="div">
               Salvar visão atual
             </Text>
-            <Flex gap="2" mb="4">
+            <Flex gap="2" mb="1">
               <TextField.Root
                 placeholder="Nome da visão..."
                 value={newViewName}
@@ -654,6 +827,14 @@ const RoadmapGeral = () => {
                 {savingView ? <Loader2 size={14} className="spinner-icon" /> : 'Salvar'}
               </Button>
             </Flex>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+              <input
+                type="checkbox"
+                checked={newViewIsPrimary}
+                onChange={(e) => setNewViewIsPrimary(e.target.checked)}
+              />
+              <Text size="1" color="gray">Definir como visão principal (carrega ao abrir)</Text>
+            </label>
 
             <Text weight="bold" mb="2" as="div">
               Carregar visão
@@ -666,16 +847,34 @@ const RoadmapGeral = () => {
                   Nenhuma visão salva.
                 </Text>
               ) : (
-                savedViews.map((view) => (
+                [...savedViews]
+                  .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+                  .map((view) => (
                   <Flex
                     key={view.id}
                     justify="between"
                     align="center"
-                    style={{ background: 'var(--gray-3)', padding: 8, borderRadius: 6 }}
+                    style={{
+                      background: view.isPrimary ? 'rgba(56,189,248,0.08)' : 'var(--gray-3)',
+                      border: view.isPrimary ? '1px solid rgba(56,189,248,0.35)' : '1px solid transparent',
+                      padding: 8,
+                      borderRadius: 6,
+                    }}
                   >
-                    <Text size="2" style={{ cursor: 'pointer', flex: 1 }} onClick={() => handleLoadView(view)}>
-                      {view.name}
-                    </Text>
+                    <Flex align="center" gap="2" style={{ flex: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!view.isPrimary}
+                        title="Definir como visão principal"
+                        onChange={() => handleTogglePrimaryView(view.id)}
+                      />
+                      <Text size="2" style={{ cursor: 'pointer' }} onClick={() => handleLoadView(view)}>
+                        {view.name}
+                        {view.isPrimary && (
+                          <Badge color="sky" variant="soft" ml="2" size="1">principal</Badge>
+                        )}
+                      </Text>
+                    </Flex>
                     <Trash2
                       size={14}
                       style={{ cursor: 'pointer', color: 'var(--red-9)' }}
@@ -693,7 +892,9 @@ const RoadmapGeral = () => {
       {/* Timeline */}
       {columns.length === 0 ? (
         <Text color="gray">Nenhum ticket com data de criação encontrado para os filtros selecionados.</Text>
-      ) : (
+      ) : (() => {
+        const todayPx = todayPixelOffset(columns, colWidth);
+        return (
         <Box className="roadmap-geral-timeline-wrap">
           <Box className="roadmap-geral-timeline" style={{ width: totalWidth + 240 }}>
             {/* Cabeçalho: super-header (mês/ano) + colunas */}
@@ -729,7 +930,15 @@ const RoadmapGeral = () => {
               </Flex>
             </Box>
 
-            {/* Corpo: grupos + barras */}
+            {/* Corpo: grupos + barras + linha tracejada de hoje */}
+            <Box className="roadmap-geral-body-wrap" style={{ position: 'relative' }}>
+              {todayPx !== null && (
+                <Box
+                  className="roadmap-geral-today-line"
+                  style={{ left: 240 + todayPx }}
+                  title={`Hoje: ${new Date().toLocaleDateString('pt-BR')}`}
+                />
+              )}
             {groupedRows.map((group) => {
               const isCollapsed = collapsedGroups.has(group.key);
               return (
@@ -763,15 +972,21 @@ const RoadmapGeral = () => {
                           </Box>
                           <Box className="roadmap-geral-row-track" style={{ width: totalWidth }}>
                             {pos && (
-                              <Box
-                                className="roadmap-geral-bar"
-                                title={`${ticket.issueKey} — ${ticket.status || ''}`}
-                                style={{
-                                  marginLeft: pos.offset * colWidth,
-                                  width: Math.max(pos.span * colWidth - 4, 6),
-                                  background: barColorForTicket(ticket),
-                                }}
-                              />
+                              <Box className="roadmap-geral-bar-wrap" style={{ marginLeft: pos.offset * colWidth }}>
+                                <Box
+                                  className="roadmap-geral-bar"
+                                  style={{
+                                    width: Math.max(pos.span * colWidth - 4, 6),
+                                    background: barColorForTicket(ticket),
+                                  }}
+                                />
+                                <Box className="roadmap-geral-bar-tooltip">
+                                  <b>{ticket.issueKey}</b>
+                                  <span style={{ color: 'var(--gray-11)' }}>{ticket.status}</span>
+                                  <span>📅 {dateFieldLabel(dateConfig.startField).split('(')[0].trim()}: <b>{formatShortDate(ticket._rangeStart)}</b></span>
+                                  <span>🏁 {dateFieldLabel(dateConfig.endField).split('(')[0].trim()}: <b>{formatShortDate(ticket._rangeEnd)}</b></span>
+                                </Box>
+                              </Box>
                             )}
                           </Box>
                         </Flex>
@@ -780,9 +995,11 @@ const RoadmapGeral = () => {
                 </Box>
               );
             })}
+            </Box>
           </Box>
         </Box>
-      )}
+        );
+      })()}
 
       {/* Rodapé: seletor de granularidade da linha do tempo */}
       <Flex justify="end" mt="3">
