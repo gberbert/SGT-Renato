@@ -30,6 +30,36 @@ const TICKET_FIELD_DEFINITIONS = {
     "quantidade de reaberturas",
     "Quantidade de Reaberturas[Number]",
   ],
+  data_aprovacao_efsr: ["Data de Aprovação EF/SR", "data de aprovação ef/sr"],
+  data_inicio_atendimento_planejada: [
+    "Data Início do Atendimento Planejada",
+    "data início do atendimento planejada",
+  ],
+  data_inicio_atendimento: ["Data Início do Atendimento", "data início do atendimento"],
+  data_aprovacao_qa_planejada: [
+    "Data Aprovação QA Planejada",
+    "data aprovação qa planejada",
+  ],
+  data_inicio_homologacao_planejada: [
+    "Data Início Homologação Planejada",
+    "data início homologação planejada",
+  ],
+  data_inicio_homologacao_efetiva: [
+    "Data Início Homologação Efetiva",
+    "data início homologação efetiva",
+  ],
+  data_fim_homologacao_planejada: [
+    "Data Fim Homologação Planejada",
+    "data fim homologação planejada",
+  ],
+  data_fim_homologacao_efetiva: [
+    "Data Fim Homologação Efetiva",
+    "data fim homologação efetiva",
+  ],
+  data_entrega_producao_prevista: [
+    "Data Entrega em Produção Prevista",
+    "data entrega em produção prevista",
+  ],
 };
 
 const ESCOPO_SEED = [

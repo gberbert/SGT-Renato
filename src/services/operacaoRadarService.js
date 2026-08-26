@@ -672,6 +672,15 @@ function mapFirestoreTicketDoc(d) {
     dataPrevisao: data.dataPrevisao || null,
     observacaoAdicional: data.observacaoAdicional || '',
     estimativaMacro: data.estimativaMacro ?? null,
+    dataAprovacaoEfsr: data.dataAprovacaoEfsr || null,
+    dataInicioAtendimentoPlanejada: data.dataInicioAtendimentoPlanejada || null,
+    dataInicioAtendimento: data.dataInicioAtendimento || null,
+    dataAprovacaoQaPlanejada: data.dataAprovacaoQaPlanejada || null,
+    dataInicioHomologacaoPlanejada: data.dataInicioHomologacaoPlanejada || null,
+    dataInicioHomologacaoEfetiva: data.dataInicioHomologacaoEfetiva || null,
+    dataFimHomologacaoPlanejada: data.dataFimHomologacaoPlanejada || null,
+    dataFimHomologacaoEfetiva: data.dataFimHomologacaoEfetiva || null,
+    dataEntregaProducaoPrevista: data.dataEntregaProducaoPrevista || null,
   };
 }
 

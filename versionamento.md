@@ -1,5 +1,26 @@
 # Versionamento do Projeto
 
+## [0.1.236] - 2026-08-25
+- **UX (Roadmap Geral — Toolbar):** "Agrupar por" movido para o lado de "Filtros" na mesma barra de controles. Adicionados badges/chips exibindo os filtros ativos diretamente na toolbar (Escopo, Squad, Grupo, Status), permitindo visualizar rapidamente o que está filtrado sem reabrir o popover.
+
+## [0.1.235] - 2026-08-25
+- **Perf/UX (Roadmap Geral — Carregamento):** Tela de carregamento substituída por indicador mais informativo: spinner animado + barra de progresso (`Progress` do Radix) + contagem de tickets carregados em tempo real (`X de Y tickets (Z%)`) + mensagem de "aguarde".
+- **Perf (Roadmap Geral — Reaproveitamento de cache):** A tela reaproveita o mesmo cache de tickets do Radar Operação (`sessionStorage`, chave baseada no fingerprint de `operacao_stats/summary`) — se o usuário já abriu o Radar Operação na sessão, o Roadmap Geral carrega instantaneamente sem repetir a varredura completa de `tickets_global`. Squads também são reaproveitadas do contexto do Radar quando disponíveis.
+
+## [0.1.234] - 2026-08-25
+- **UX (Roadmap Geral):** Toolbar simplificada — "Filtros" e "Agrupamento" unificados em um único popover para reduzir a poluição visual da tela.
+- **Feature (Roadmap Geral — Campos de Data do Jira):** Adicionados novos campos de datas de planejamento/homologação do Jira em `tickets_global` (Data de Aprovação EF/SR, Data Início/Fim do Atendimento Planejada/Efetiva, Data Aprovação QA Planejada, Data Início/Fim Homologação Planejada/Efetiva, Data Entrega em Produção Prevista), disponíveis no seletor de "Configurar Datas da Timeline" do Roadmap Geral.
+- **Backend (Ingestão Jira):** Novos mapeamentos em `TICKET_FIELD_DEFINITIONS` (`functions/jqlCarga.js`) e persistência dos novos campos em `functions/jiraGlobalSync.js`.
+
+## [0.1.233] - 2026-08-25
+- **Feature (Roadmap Geral):** Adicionado ícone de configuração (⚙) permitindo selecionar quais campos de data do ticket definem o início e o fim de cada barra na timeline (ex: Data de Criação, Data de Resolução, Data de Previsão), com fallback para "hoje" quando a data de fim escolhida está vazia (ticket ainda em andamento).
+
+## [0.1.232] - 2026-08-25
+- **Feature (Roadmap Geral):** Novo menu "Roadmap Geral" (abaixo de Radar Operação na Sidebar), com visão de timeline no estilo Jira Plans a partir da coleção `tickets_global`. Inclui Filtros (Escopo, Squad, Grupo de Atendimento, Status), Agrupamento (Nenhum, Escopo, Squad, Grupo, Status), Visões Salvas (Firestore, por usuário) e seletor de granularidade da linha do tempo (Dia, Semana, Mês, Trimestre, Quarter, Ano) no rodapé.
+- **Backend:** Nova coleção `roadmap_geral_views` e serviço `roadmapGeralViewsService.js` para persistir/carregar/excluir visões salvas por usuário.
+- **Novos utilitários:** `src/utils/roadmapGeralUtils.js` (geração de colunas contínuas da timeline, posicionamento de barras, agrupamento de super-cabeçalhos).
+- **Permissão:** Nova chave `ROADMAP_GERAL_VIEW` em `permissionKeys.js`, gerenciável em Configurações → SECOPS → Gerenciar Permissões; migração aplicada em produção para perfis com `RADAR_VIEW`/`ADMIN_ALL`.
+
 ## [0.1.231] - 2026-08-25
 - **Bugfix (Permissões — Abas do Radar ignoravam toggle individual):** Corrigido bug onde desativar uma aba específica (ex: `RADAR_PROBLEMAS_VIEW`) no gerenciador de permissões (SECOPS) não tinha efeito para perfis que possuíam `ADMIN_ALL` marcado (ex: `admin`) — a aba continuava aparecendo mesmo desabilitada. Causa: `hasFn()` em `OperacaoHome.jsx` concedia acesso automático a qualquer chave sempre que `ADMIN_ALL` estivesse presente no perfil, ignorando o toggle individual de cada aba. Agora a visibilidade de cada aba depende exclusivamente da sua chave própria (`RADAR_GERAL_VIEW`, `RADAR_PROBLEMAS_VIEW`, etc.), respeitando fielmente o que foi configurado em Configurações → SECOPS → Gerenciar Permissões.
 - **Feature (Tabela de Permissões — Coluna Rota):** Adicionada coluna "Rota (URL)" na tabela de `PermissionsManager.jsx`, exibindo a URL correspondente a cada funcionalidade (ex: `RADAR_PROBLEMAS_VIEW` → `/radar/problemas`), permitindo validar visualmente o vínculo entre cada chave de permissão e a rota real do sistema.

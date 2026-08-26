@@ -12,6 +12,9 @@ export const PermissionFunctionKeys = {
   RADAR_CATALOGO_VIEW: "RADAR_CATALOGO_VIEW",
   RADAR_EFICIENCIA_VIEW: "RADAR_EFICIENCIA_VIEW",
 
+  // Roadmap Geral (timeline consolidada de tickets_global)
+  ROADMAP_GERAL_VIEW: "ROADMAP_GERAL_VIEW",
+
   // Demandas
   DEMANDAS_VIEW: "DEMANDAS_VIEW",
   MINHAS_ATIVIDADES_VIEW: "MINHAS_ATIVIDADES_VIEW",

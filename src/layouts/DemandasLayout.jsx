@@ -18,6 +18,7 @@ import MyActivities from '../components/MyActivities';
 import HelpFlow from '../components/HelpFlow';
 import TicketDetailsModal from '../components/TicketDetailsModal';
 import OperacaoHome from '../components/operacao/OperacaoHome';
+import RoadmapGeral from '../components/RoadmapGeral';
 import Team from '../components/Team';
 import Organograma from '../components/Organograma';
 import SecopsPermissionsLayout from './SecopsPermissionsLayout';
@@ -75,6 +76,7 @@ const DemandasLayout = ({
             <Route index element={<OperacaoHome userRole={userRole} />} />
             <Route path="/radar/:tabParam" element={<OperacaoHome userRole={userRole} />} />
             <Route path="/radar-operacao" element={<Navigate to="/" replace />} />
+            <Route path="/roadmap-geral" element={<RoadmapGeral userRole={userRole} />} />
             <Route path="/demandas" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="demandas" setIsModalOpen={setIsModalOpen} />} />
             <Route path="/atividades" element={<KanbanBoard onCardClick={setSelectedTicket} userRole={userRole} board="atividades" setIsModalOpen={setIsModalOpen} />} />
             <Route path="/roadmap" element={<Roadmap userRole={userRole} />} />

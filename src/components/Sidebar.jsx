@@ -136,6 +136,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
 
   let menuItems = [
     { name: 'Radar Operação', icon: <Radar size={20} />, path: '/', requiredFn: PermissionFunctionKeys.RADAR_VIEW },
+    { name: 'Roadmap Geral', icon: <Route size={20} />, path: '/roadmap-geral', requiredFn: PermissionFunctionKeys.ROADMAP_GERAL_VIEW },
     { name: 'Minhas Atividades', icon: <ListChecks size={20} />, path: '/minhas-atividades', requiredFn: PermissionFunctionKeys.MINHAS_ATIVIDADES_VIEW },
     { name: 'Team', icon: <Users size={20} />, path: '/team', requiredFn: PermissionFunctionKeys.TEAM_VIEW },
     { name: 'Organograma', icon: <Network size={20} />, path: '/organograma', requiredFn: PermissionFunctionKeys.TEAM_VIEW },

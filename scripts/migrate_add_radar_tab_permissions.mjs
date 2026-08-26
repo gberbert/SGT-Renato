@@ -37,6 +37,7 @@ const RADAR_TAB_KEYS = [
   PermissionFunctionKeys.RADAR_SOLICITACOES_VIEW,
   PermissionFunctionKeys.RADAR_CATALOGO_VIEW,
   PermissionFunctionKeys.RADAR_EFICIENCIA_VIEW,
+  PermissionFunctionKeys.ROADMAP_GERAL_VIEW,
 ];
 
 async function main() {
