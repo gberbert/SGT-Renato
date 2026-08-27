@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
-import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
+import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock } from 'lucide-react';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
 import OperacaoEscopoTimelineChart from './OperacaoEscopoTimelineChart';
@@ -21,6 +21,7 @@ import {
   prepareDrillHierarchy,
   computeRadarEscopos,
   updateTicketRadarFields,
+  PRIORIDADE_INTERNA_OPTIONS,
 } from '../../services/operacaoRadarService';
 import './operacao-radar.css';
 
@@ -63,6 +64,7 @@ const OperacaoHome = ({ userRole }) => {
     error,
     statsRadar,
     statsFingerprint,
+    lastSyncAt,
     filterOptions,
     ensureRadarBootstrap,
     refreshRadar,
@@ -510,14 +512,29 @@ const OperacaoHome = ({ userRole }) => {
             </Text>
           </Box>
         </Flex>
-        <button
-          className="btn btn-ghost"
-          onClick={refreshRadar}
-          disabled={bootLoading}
-          type="button"
-        >
-          <RefreshCw size={16} /> Atualizar
-        </button>
+        <Flex align="center" gap="3">
+          {lastSyncAt && (
+            <Flex align="center" gap="2" style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)' }}>
+              <Clock size={13} color="#38bdf8" />
+              <Text size="1" color="gray">
+                Última carga:{' '}
+                <Text as="span" size="1" weight="bold" style={{ color: 'var(--gray-12)' }}>
+                  {lastSyncAt instanceof Date && !Number.isNaN(lastSyncAt.getTime())
+                    ? lastSyncAt.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : '—'}
+                </Text>
+              </Text>
+            </Flex>
+          )}
+          <button
+            className="btn btn-ghost"
+            onClick={refreshRadar}
+            disabled={bootLoading}
+            type="button"
+          >
+            <RefreshCw size={16} /> Atualizar
+          </button>
+        </Flex>
       </Flex>
 
       {error && (
@@ -832,6 +849,7 @@ const OperacaoHome = ({ userRole }) => {
                             <th>TICKETS_VINCULADOS</th>
                             <th>GRUPO_SUPORTE</th>
                             <th>ESCOPO</th>
+                            <th>PRIORIDADE INT.</th>
                             <th>RESPONSÁVEL ATUAL</th>
                             <th>DATA DE PREVISÃO</th>
                             <th>OBSERVAÇÃO ADICIONAL</th>
@@ -893,6 +911,23 @@ const OperacaoHome = ({ userRole }) => {
                               <td className="operacao-radar-tickets-linked">{ticket.linkedTicketsLabel || '—'}</td>
                               <td>{ticket.grupoSuporte || '—'}</td>
                               <td>{ticket.escopo || '—'}</td>
+                              <td>
+                                <select
+                                  className="operacao-radar-tickets-editable-input operacao-radar-tickets-editable-input-narrow"
+                                  defaultValue={ticket.prioridadeInterna ?? ''}
+                                  onChange={(e) =>
+                                    handleSaveTicketField(ticket.issueKey, 'prioridadeInterna', e.target.value === '' ? null : Number(e.target.value))
+                                  }
+                                  style={{ minWidth: 72 }}
+                                >
+                                  <option value="">—</option>
+                                  {PRIORIDADE_INTERNA_OPTIONS.map((p) => (
+                                    <option key={p.value} value={p.value}>
+                                      {p.label} {p.description}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
                               <td>
                                 <input
                                   type="text"

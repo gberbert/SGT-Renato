@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress, Separator } from '@radix-ui/themes';
-import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Settings } from 'lucide-react';
+import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Settings, Info, Clock } from 'lucide-react';
 import { auth } from '../firebase';
 import { useOperacaoRadar } from '../contexts/OperacaoRadarContext';
 import {
@@ -9,6 +9,9 @@ import {
   buildRadarFilters,
   normalizeEscopoKey,
   ESCOPO_RADAR_ORDER,
+  getPrioridadeInternaMeta,
+  PRIORIDADE_INTERNA_OPTIONS,
+  updateTicketRadarFields,
 } from '../services/operacaoRadarService';
 import {
   fetchRoadmapGeralViews,
@@ -61,7 +64,7 @@ function createDefaultDateConfig() {
 }
 
 function createDefaultScopeConfig() {
-  return { escopos: [], dateRangeStart: '', dateRangeEnd: '' };
+  return { escopos: [], dateRangeStart: '', dateRangeEnd: '', visibleMilestones: [] };
 }
 
 function dateFieldLabel(value) {
@@ -90,7 +93,7 @@ function serializeRoadmapState(filters, groupBy, granularity, dateConfig, scopeC
 }
 
 function createEmptyFilters() {
-  return { escopos: new Set(), squads: new Set(), grupos: new Set(), statuses: new Set() };
+  return { escopos: new Set(), squads: new Set(), grupos: new Set(), statuses: new Set(), tickets: new Set(), prioridades: new Set() };
 }
 
 function ticketGrupoNamesLocal(ticket) {
@@ -107,15 +110,15 @@ function barColorForTicket(ticket) {
 
 const ROADMAP_CACHE_PREFIX = 'roadmap_geral_v2_';
 
-/** Todas as datas de planejamento exibidas como circulos sutis na linha de cada ticket */
+/** Datas de planejamento: circulos pretos com letra identificadora na linha de cada ticket */
 const MILESTONE_FIELDS = [
-  { key: 'dataAprovacaoEfsr', label: 'Aprovacao EF/SR', color: '#38bdf8' },
-  { key: 'dataInicioAtendimentoPlanejada', label: 'Inicio Atendimento Planejado', color: '#60a5fa' },
-  { key: 'dataInicioAtendimento', label: 'Inicio Atendimento', color: '#818cf8' },
-  { key: 'dataAprovacaoQaPlanejada', label: 'Aprovacao QA Planejada', color: '#c084fc' },
-  { key: 'dataInicioHomologacaoPlanejada', label: 'Inicio Homologacao Planejada', color: '#fb923c' },
-  { key: 'dataFimHomologacaoPlanejada', label: 'Fim Homologacao Planejada', color: '#f87171' },
-  { key: 'dataEntregaProducaoPrevista', label: 'Entrega em Producao Prevista', color: '#4ade80' },
+  { key: 'dataAprovacaoEfsr',            label: 'Aprovacao EF/SR',            letter: '' },
+  { key: 'dataInicioAtendimentoPlanejada', label: 'Inicio Atendimento Planejado', letter: 'A' },
+  { key: 'dataInicioAtendimento',         label: 'Inicio Atendimento',            letter: 'B' },
+  { key: 'dataAprovacaoQaPlanejada',      label: 'Aprovacao QA Planejada',        letter: 'C' },
+  { key: 'dataInicioHomologacaoPlanejada', label: 'Inicio Homologacao Planejada', letter: 'D' },
+  { key: 'dataFimHomologacaoPlanejada',   label: 'Fim Homologacao Planejada',     letter: 'E' },
+  { key: 'dataEntregaProducaoPrevista',   label: 'Entrega em Producao Prevista',  letter: 'F', highlight: { background: '#39ff14', borderColor: 'rgba(15,15,15,0.88)', color: '#064e1a' } },
 ];
 
 /**
@@ -138,7 +141,7 @@ function getMilestonePixelOffset(columns, dateValue, colWidth) {
 }
 
 const RoadmapGeral = () => {
-  const { statsRadar, statsFingerprint, squads: radarSquads, ensureRadarBootstrap } = useOperacaoRadar();
+  const { statsRadar, statsFingerprint, lastSyncAt, squads: radarSquads, ensureRadarBootstrap } = useOperacaoRadar();
 
   const [ticketsCache, setTicketsCache] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -165,6 +168,8 @@ const RoadmapGeral = () => {
   const [savingView, setSavingView] = useState(false);
   const [activeViewId, setActiveViewId] = useState(null);
   const [activeViewSnapshot, setActiveViewSnapshot] = useState(null);
+  const [editingPriority, setEditingPriority] = useState(null);
+  const [editingPriorityValue, setEditingPriorityValue] = useState(null);
 
   const uid = auth.currentUser?.uid || null;
 
@@ -275,6 +280,7 @@ const RoadmapGeral = () => {
     if (!Array.isArray(ticketsCache)) return [];
     return ticketsCache.filter((t) => {
       if (scopeConfig.escopos.length > 0 && !scopeConfig.escopos.includes(normalizeEscopoKey(t.escopo))) return false;
+      if (filters.tickets?.size > 0 && !filters.tickets.has(String(t.issueKey || '').trim().toUpperCase())) return false;
       if (filters.escopos.size > 0 && !filters.escopos.has(normalizeEscopoKey(t.escopo))) return false;
       if (filters.statuses.size > 0 && !filters.statuses.has(t.status)) return false;
       if (filters.grupos.size > 0) {
@@ -288,6 +294,10 @@ const RoadmapGeral = () => {
         }
         const names = ticketGrupoNamesLocal(t);
         if (!names.some((n) => allowed.has(n))) return false;
+      }
+      if (filters.prioridades?.size > 0) {
+        const p = t.prioridadeInterna != null ? Number(t.prioridadeInterna) : null;
+        if (p === null || !filters.prioridades.has(p)) return false;
       }
       return true;
     });
@@ -419,7 +429,22 @@ const RoadmapGeral = () => {
   const clearFilters = () => setFilters(createEmptyFilters());
 
   const filterActive =
-    filters.escopos.size > 0 || filters.squads.size > 0 || filters.grupos.size > 0 || filters.statuses.size > 0;
+    filters.escopos.size > 0 || filters.squads.size > 0 || filters.grupos.size > 0 || filters.statuses.size > 0 || filters.tickets?.size > 0 || filters.prioridades?.size > 0;
+
+  const handleSavePriority = async (issueKey) => {
+    try {
+      await updateTicketRadarFields(issueKey, { prioridadeInterna: editingPriorityValue });
+      setTicketsCache((prev) =>
+        Array.isArray(prev)
+          ? prev.map((t) => t.issueKey === issueKey ? { ...t, prioridadeInterna: editingPriorityValue } : t)
+          : prev
+      );
+    } catch (e) {
+      console.error('Erro ao salvar prioridade:', e);
+    } finally {
+      setEditingPriority(null);
+    }
+  };
 
   const scopeActive =
     scopeConfig.escopos.length > 0 || Boolean(scopeConfig.dateRangeStart) || Boolean(scopeConfig.dateRangeEnd);
@@ -562,26 +587,78 @@ const RoadmapGeral = () => {
             </Text>
           </Box>
         </Flex>
-        <Button
-          size="3"
-          variant="solid"
-          color="indigo"
-          onClick={handleCarregar}
-          disabled={loading}
-          style={{ minWidth: 130 }}
-        >
-          {loading ? (
-            <>
-              <Loader2 size={16} className="spinner-icon" />
-              {loadedCount > 0 ? `${loadedCount.toLocaleString('pt-BR')}...` : 'Carregando...'}
-            </>
-          ) : (
-            <>
-              <Route size={16} />
-              {ticketsCache ? 'Recarregar' : 'Carregar'}
-            </>
+        <Flex align="center" gap="2">
+          <Button
+            size="3"
+            variant="solid"
+            color="indigo"
+            onClick={handleCarregar}
+            disabled={loading}
+            style={{ minWidth: 130 }}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={16} className="spinner-icon" />
+                {loadedCount > 0 ? `${loadedCount.toLocaleString('pt-BR')}...` : 'Carregando...'}
+              </>
+            ) : (
+              <>
+                <Route size={16} />
+                {ticketsCache ? 'Recarregar' : 'Carregar'}
+              </>
+            )}
+          </Button>
+
+          {lastSyncAt && (
+            <Flex align="center" gap="2" style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)' }}>
+              <Clock size={13} color="#38bdf8" />
+              <Text size="1" color="gray">
+                Última carga:{' '}
+                <Text as="span" size="1" weight="bold" style={{ color: 'var(--gray-12)' }}>
+                  {lastSyncAt instanceof Date && !Number.isNaN(lastSyncAt.getTime())
+                    ? lastSyncAt.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : '—'}
+                </Text>
+              </Text>
+            </Flex>
           )}
-        </Button>
+          {/* Ícone de legenda dos milestones */}
+          <Popover.Root>
+            <Popover.Trigger>
+              <Button variant="ghost" color="gray" size="2" title="Legenda dos marcos de planejamento">
+                <Info size={18} />
+              </Button>
+            </Popover.Trigger>
+            <Popover.Content width="300px" side="bottom" align="end">
+              <Flex direction="column" gap="3">
+                <Text weight="bold" size="3">Legenda — Marcos de Planejamento</Text>
+                <Text size="1" color="gray" as="div">
+                  Círculos exibidos em cada linha do Roadmap indicando as datas-chave da demanda.
+                </Text>
+                <Flex direction="column" gap="2">
+                  {MILESTONE_FIELDS.map((mf) => (
+                    <Flex key={mf.key} align="center" gap="2">
+                      <Box
+                        style={{
+                          width: 18, height: 18, borderRadius: '50%',
+                          border: mf.highlight ? `1.5px solid ${mf.highlight.borderColor}` : '1.5px solid rgba(15,15,15,0.88)',
+                          background: mf.highlight ? mf.highlight.background : 'rgba(255,255,255,0.92)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 8, fontWeight: 800,
+                          color: mf.highlight ? mf.highlight.color : 'rgba(15,15,15,0.9)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {mf.letter}
+                      </Box>
+                      <Text size="2">{mf.label}</Text>
+                    </Flex>
+                  ))}
+                </Flex>
+              </Flex>
+            </Popover.Content>
+          </Popover.Root>
+        </Flex>
       </Flex>
       {loading && (
         <Box mb="3">
@@ -614,18 +691,76 @@ const RoadmapGeral = () => {
         </Flex>
       )}
 
-      <Flex className="roadmap-geral-toolbar" align="center" justify="between" wrap="wrap" gap="3" mb="4">
-        <Flex align="center" gap="3" wrap="wrap">
-          {/* Filtros de exibicao */}
-          <Popover.Root>
-            <Popover.Trigger>
-              <Button variant="surface" color={filterActive || scopeActive ? 'amber' : 'gray'}>
-                <Filter size={16} /> Filtros{filterActive || scopeActive ? ' •' : ''}
-              </Button>
-            </Popover.Trigger>
+      <Box className="roadmap-geral-toolbar" mb="4">
+        {/* Linha 1: todos os botões/ações alinhados horizontalmente */}
+        <Flex align="center" justify="between" gap="3" wrap="wrap">
+          <Flex align="center" gap="3" wrap="nowrap">
+            {/* Filtros de exibicao */}
+            <Popover.Root>
+              <Popover.Trigger>
+                <Button variant="surface" color={filterActive || scopeActive ? 'amber' : 'gray'}>
+                  <Filter size={16} /> Filtros{filterActive || scopeActive ? ' •' : ''}
+                </Button>
+              </Popover.Trigger>
             <Popover.Content width="340px" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
               <Flex direction="column" gap="3">
                 <Text weight="bold" size="3">Filtros</Text>
+
+                {/* Filtro por Ticket ID — multiselect com tags */}
+                <Box>
+                  <Text as="div" size="1" weight="bold" mb="1">Tickets (ID)</Text>
+                  <Text size="1" color="gray" mb="2" as="div">Digite IDs separados por vírgula ou Enter.</Text>
+                  <Flex gap="1" wrap="wrap" mb="2">
+                    {[...(filters.tickets || [])].map((key) => (
+                      <Badge key={key} color="indigo" variant="soft" style={{ cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => setFilters((prev) => {
+                          const next = new Set(prev.tickets);
+                          next.delete(key);
+                          return { ...prev, tickets: next };
+                        })}
+                      >
+                        {key} ×
+                      </Badge>
+                    ))}
+                  </Flex>
+                  <TextField.Root
+                    placeholder="Ex: DEMANDA-123, DEMANDA-456"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        const val = e.target.value.replace(/,/g, ' ').trim().toUpperCase();
+                        if (val) {
+                          const keys = val.split(/[\s,]+/).filter(Boolean);
+                          setFilters((prev) => {
+                            const next = new Set(prev.tickets);
+                            keys.forEach((k) => next.add(k));
+                            return { ...prev, tickets: next };
+                          });
+                          e.target.value = '';
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const val = e.target.value.trim().toUpperCase();
+                      if (val) {
+                        const keys = val.split(/[\s,]+/).filter(Boolean);
+                        setFilters((prev) => {
+                          const next = new Set(prev.tickets);
+                          keys.forEach((k) => next.add(k));
+                          return { ...prev, tickets: next };
+                        });
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                  {filters.tickets?.size > 0 && (
+                    <Button size="1" variant="ghost" color="gray" mt="1"
+                      onClick={() => setFilters((prev) => ({ ...prev, tickets: new Set() }))}>
+                      Limpar tickets
+                    </Button>
+                  )}
+                </Box>
+
                 <Box>
                   <Text as="div" size="1" weight="bold" mb="1">Escopo</Text>
                   <Flex direction="column" gap="1" style={{ maxHeight: 120, overflowY: 'auto' }}>
@@ -671,6 +806,32 @@ const RoadmapGeral = () => {
                   </Flex>
                 </Box>
 
+                <Box>
+                  <Flex align="center" justify="between" mb="1">
+                    <Text as="div" size="1" weight="bold">Prioridade Interna</Text>
+                    {filters.prioridades?.size > 0 && (
+                      <Button size="1" variant="ghost" color="gray" onClick={() => setFilters((p) => ({ ...p, prioridades: new Set() }))}>Limpar</Button>
+                    )}
+                  </Flex>
+                  <Flex direction="column" gap="1">
+                    {PRIORIDADE_INTERNA_OPTIONS.map((p) => (
+                      <label key={p.value} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          type="checkbox"
+                          checked={filters.prioridades?.has(p.value) || false}
+                          onChange={() => setFilters((prev) => {
+                            const next = new Set(prev.prioridades);
+                            if (next.has(p.value)) next.delete(p.value); else next.add(p.value);
+                            return { ...prev, prioridades: next };
+                          })}
+                        />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: p.color, color: '#fff', fontSize: 8, fontWeight: 800 }}>{p.label}</span>
+                        <Text size="2">{p.description}</Text>
+                      </label>
+                    ))}
+                  </Flex>
+                </Box>
+
                 <Separator size="4" />
 
                 {/* Periodo da Timeline */}
@@ -703,36 +864,21 @@ const RoadmapGeral = () => {
             </Popover.Content>
           </Popover.Root>
 
-          {filters.escopos.size > 0 && (
-            <Badge color="indigo" variant="soft">Escopo: {[...filters.escopos].join(', ')}</Badge>
-          )}
-          {filters.squads.size > 0 && (
-            <Badge color="indigo" variant="soft">
-              Squad: {[...filters.squads].map((id) => { const s = (filterOptions.squads || []).find((sq) => sq.id === id); return s ? s.sigla || s.nome : id; }).join(', ')}
-            </Badge>
-          )}
-          {filters.grupos.size > 0 && (
-            <Badge color="indigo" variant="soft">Grupo: {[...filters.grupos].join(', ')}</Badge>
-          )}
-          {filters.statuses.size > 0 && (
-            <Badge color="indigo" variant="soft">Status: {[...filters.statuses].join(', ')}</Badge>
-          )}
+            <Flex align="center" gap="2">
+              <Layers size={16} color="var(--text-muted)" />
+              <Text size="1" color="gray" style={{ letterSpacing: '0.05em' }}>AGRUPAR POR</Text>
+              <Select.Root value={groupBy} onValueChange={setGroupBy}>
+                <Select.Trigger style={{ minWidth: 170 }} />
+                <Select.Content>
+                  {GROUP_BY_OPTIONS.map((opt) => (
+                    <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Flex>
+          </Flex>
 
           <Flex align="center" gap="2">
-            <Layers size={16} color="var(--text-muted)" />
-            <Text size="1" color="gray" style={{ letterSpacing: '0.05em' }}>AGRUPAR POR</Text>
-            <Select.Root value={groupBy} onValueChange={setGroupBy}>
-              <Select.Trigger style={{ minWidth: 170 }} />
-              <Select.Content>
-                {GROUP_BY_OPTIONS.map((opt) => (
-                  <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
-          </Flex>
-        </Flex>
-
-        <Flex align="center" gap="2">
           <Badge color="gray" variant="soft" className="roadmap-geral-date-badge">
             {dateFieldLabel(dateConfig.startField)} → {dateFieldLabel(dateConfig.endField)}
           </Badge>
@@ -744,7 +890,7 @@ const RoadmapGeral = () => {
                 <Settings size={16} />
               </Button>
             </Popover.Trigger>
-            <Popover.Content width="300px">
+            <Popover.Content width="300px" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
               <Flex direction="column" gap="3">
                 <Text weight="bold" size="3">Configuracoes da Timeline</Text>
 
@@ -765,6 +911,53 @@ const RoadmapGeral = () => {
                         <input type="checkbox" checked={scopeConfig.escopos.includes(esc.key)} onChange={() => { setScopeConfig((prev) => { const next = prev.escopos.includes(esc.key) ? prev.escopos.filter((k) => k !== esc.key) : [...prev.escopos, esc.key]; return { ...prev, escopos: next }; }); }} />
                         <Box style={{ width: 10, height: 10, borderRadius: 3, background: esc.color, flexShrink: 0 }} />
                         <Text size="2">{esc.label}</Text>
+                      </label>
+                    ))}
+                  </Flex>
+                </Box>
+
+                <Separator size="4" />
+
+                {/* Milestones visíveis */}
+                <Box>
+                  <Flex align="center" justify="between" mb="1">
+                    <Text as="div" size="2" weight="bold">Marcos Visíveis na Linha do Tempo</Text>
+                    {scopeConfig.visibleMilestones?.length > 0 && (
+                      <Button size="1" variant="ghost" color="gray" onClick={() => setScopeConfig((p) => ({ ...p, visibleMilestones: [] }))}>Todos</Button>
+                    )}
+                  </Flex>
+                  <Text size="1" color="gray" mb="2" as="div">
+                    Selecione quais círculos aparecem. Vazio = todos visíveis.
+                  </Text>
+                  <Flex direction="column" gap="1">
+                    {MILESTONE_FIELDS.map((mf) => (
+                      <label key={mf.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          checked={!scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key)}
+                          onChange={() => {
+                            setScopeConfig((prev) => {
+                              const current = prev.visibleMilestones?.length
+                                ? prev.visibleMilestones
+                                : MILESTONE_FIELDS.map((f) => f.key);
+                              const next = current.includes(mf.key)
+                                ? current.filter((k) => k !== mf.key)
+                                : [...current, mf.key];
+                              return { ...prev, visibleMilestones: next.length === MILESTONE_FIELDS.length ? [] : next };
+                            });
+                          }}
+                        />
+                        <Box
+                          style={{
+                            width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                            border: mf.highlight ? `1.5px solid rgba(15,15,15,0.88)` : '1.5px solid rgba(15,15,15,0.88)',
+                            background: mf.highlight ? mf.highlight.background : 'rgba(255,255,255,0.92)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 7, fontWeight: 800,
+                            color: mf.highlight ? mf.highlight.color : 'rgba(15,15,15,0.9)',
+                          }}
+                        >{mf.letter}</Box>
+                        <Text size="2">{mf.label}</Text>
                       </label>
                     ))}
                   </Flex>
@@ -847,8 +1040,43 @@ const RoadmapGeral = () => {
               </Flex>
             </Popover.Content>
           </Popover.Root>
+          </Flex>
         </Flex>
-      </Flex>
+
+        {/* Linha 2: Legendas de filtros ativos (aparece somente quando há filtros) */}
+        {(filterActive || scopeActive) && (
+          <Flex align="center" gap="2" wrap="wrap" mt="2" pt="2" style={{ borderTop: '1px solid var(--glass-border)' }}>
+            {filters.tickets?.size > 0 && (
+              <Badge color="indigo" variant="soft">Tickets: {[...filters.tickets].join(', ')}</Badge>
+            )}
+            {filters.escopos.size > 0 && (
+              <Badge color="indigo" variant="soft">Escopo: {[...filters.escopos].join(', ')}</Badge>
+            )}
+            {filters.squads.size > 0 && (
+              <Badge color="indigo" variant="soft">
+                Squad: {[...filters.squads].map((id) => { const s = (filterOptions.squads || []).find((sq) => sq.id === id); return s ? s.sigla || s.nome : id; }).join(', ')}
+              </Badge>
+            )}
+            {filters.grupos.size > 0 && (
+              <Badge color="indigo" variant="soft">Grupo: {[...filters.grupos].join(', ')}</Badge>
+            )}
+            {filters.prioridades?.size > 0 && (
+              <Badge color="indigo" variant="soft">
+                Prioridade: {[...filters.prioridades].sort().map((v) => { const p = PRIORIDADE_INTERNA_OPTIONS.find((o) => o.value === v); return p ? p.label : v; }).join(', ')}
+              </Badge>
+            )}
+            {filters.statuses.size > 0 && (
+              <Badge color="indigo" variant="soft">Status: {[...filters.statuses].join(', ')}</Badge>
+            )}
+            {scopeActive && (
+              <Badge color="amber" variant="soft">
+                {scopeConfig.escopos.length > 0 ? `Escopo: ${scopeConfig.escopos.join(', ')}` : ''}
+                {scopeConfig.dateRangeStart || scopeConfig.dateRangeEnd ? ` Período: ${scopeConfig.dateRangeStart || '∞'} → ${scopeConfig.dateRangeEnd || '∞'}` : ''}
+              </Badge>
+            )}
+          </Flex>
+        )}
+      </Box>
 
       {/* Timeline */}
       {columns.length === 0 ? (
@@ -857,9 +1085,10 @@ const RoadmapGeral = () => {
         const todayPx = todayPixelOffset(columns, colWidth);
         return (
           <Box className="roadmap-geral-timeline-wrap">
-            <Box className="roadmap-geral-timeline" style={{ width: totalWidth + 240 }}>
+            <Box className="roadmap-geral-timeline" style={{ width: totalWidth + 258 }}>
               <Box className="roadmap-geral-header-row">
                 <Box className="roadmap-geral-row-label-cell roadmap-geral-header-corner" />
+                <Box className="roadmap-geral-priority-cell roadmap-geral-header-corner" style={{ fontSize: 9, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.05em', cursor: 'default' }}>PRIO</Box>
                 <Flex>
                   {superHeaderGroups.map((g, idx) => (
                     <Box key={`${g.label}-${idx}`} className="roadmap-geral-super-header" style={{ width: g.span * colWidth }}>
@@ -870,6 +1099,7 @@ const RoadmapGeral = () => {
               </Box>
               <Box className="roadmap-geral-header-row roadmap-geral-header-row-cols">
                 <Box className="roadmap-geral-row-label-cell roadmap-geral-header-corner" />
+                <Box className="roadmap-geral-priority-cell roadmap-geral-header-corner" />
                 <Flex>
                   {columns.map((col, idx) => (
                     <Box key={col.key} className={`roadmap-geral-col-header${idx === todayIdx ? ' is-today' : ''}`} style={{ width: colWidth }}>
@@ -880,7 +1110,7 @@ const RoadmapGeral = () => {
               </Box>
               <Box className="roadmap-geral-body-wrap" style={{ position: 'relative' }}>
                 {todayPx !== null && (
-                  <Box className="roadmap-geral-today-line" style={{ left: 240 + todayPx }} title={`Hoje: ${new Date().toLocaleDateString('pt-BR')}`} />
+                  <Box className="roadmap-geral-today-line" style={{ left: 258 + todayPx }} title={`Hoje: ${new Date().toLocaleDateString('pt-BR')}`} />
                 )}
                 {groupedRows.map((group) => {
                   const isCollapsed = collapsedGroups.has(group.key);
@@ -898,9 +1128,63 @@ const RoadmapGeral = () => {
                         return (
                           <Flex key={ticket.issueKey} align="center" className="roadmap-geral-row">
                             <Box className="roadmap-geral-row-label-cell">
-                              <Text size="1" className="roadmap-geral-row-label-text" title={ticket.summary}>
-                                {ticket.issueKey} · {ticket.summary || 'Sem titulo'}
+                              <Text size="1" className="roadmap-geral-row-label-text" title={ticket.summary} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                {ticket.issueUrl ? (
+                                  <a
+                                    href={ticket.issueUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: 'var(--rg-accent)', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {ticket.issueKey}
+                                  </a>
+                                ) : (
+                                  <span style={{ flexShrink: 0 }}>{ticket.issueKey}</span>
+                                )}
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {' · '}{ticket.summary || 'Sem titulo'}
+                                </span>
                               </Text>
+                            </Box>
+                            {/* Coluna Prioridade Interna editável */}
+                            <Box
+                              className="roadmap-geral-priority-cell"
+                              title={editingPriority === ticket.issueKey ? undefined : 'Clique para definir prioridade interna'}
+                              onClick={() => {
+                                if (editingPriority !== ticket.issueKey) {
+                                  setEditingPriority(ticket.issueKey);
+                                  setEditingPriorityValue(ticket.prioridadeInterna ?? null);
+                                }
+                              }}
+                            >
+                              {editingPriority === ticket.issueKey ? (
+                                <div className="roadmap-geral-priority-editor" onClick={(e) => e.stopPropagation()}>
+                                  <select
+                                    className="roadmap-geral-priority-select"
+                                    value={editingPriorityValue ?? ''}
+                                    autoFocus
+                                    onChange={(e) => setEditingPriorityValue(e.target.value === '' ? null : Number(e.target.value))}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSavePriority(ticket.issueKey); if (e.key === 'Escape') setEditingPriority(null); }}
+                                  >
+                                    <option value="">—</option>
+                                    {PRIORIDADE_INTERNA_OPTIONS.map((p) => (
+                                      <option key={p.value} value={p.value}>{p.label} {p.description}</option>
+                                    ))}
+                                  </select>
+                                  <div className="roadmap-geral-priority-actions">
+                                    <button className="roadmap-geral-priority-confirm" title="Confirmar" onClick={() => handleSavePriority(ticket.issueKey)}>✓</button>
+                                    <button className="roadmap-geral-priority-cancel" title="Cancelar" onClick={() => setEditingPriority(null)}>✗</button>
+                                  </div>
+                                </div>
+                              ) : (() => {
+                                const pm = getPrioridadeInternaMeta(ticket.prioridadeInterna);
+                                return pm ? (
+                                  <span className="roadmap-geral-priority-badge" style={{ background: pm.color }} title={`${pm.label} — ${pm.description}`}>{pm.label}</span>
+                                ) : (
+                                  <div className="roadmap-geral-priority-empty" title="Sem prioridade definida" />
+                                );
+                              })()}
                             </Box>
                             <Box className="roadmap-geral-row-track" style={{ width: totalWidth }}>
                               {pos && (
@@ -914,18 +1198,27 @@ const RoadmapGeral = () => {
                                   </Box>
                                 </Box>
                               )}
-                              {/* Circulos sutis de milestone: datas de planejamento de cada etapa */}
-                              {MILESTONE_FIELDS.map((mf) => {
+                              {/* Circulos de milestone: datas-chave com letra identificadora */}
+                              {MILESTONE_FIELDS.filter((mf) =>
+                                !scopeConfig.visibleMilestones?.length ||
+                                scopeConfig.visibleMilestones.includes(mf.key)
+                              ).map((mf) => {
                                 const px = getMilestonePixelOffset(columns, ticket[mf.key], colWidth);
                                 if (px === null) return null;
                                 return (
                                   <div key={mf.key} className="roadmap-geral-milestone" style={{ left: px }}>
                                     <div
                                       className="roadmap-geral-milestone-circle"
-                                      style={{ borderColor: mf.color, background: `${mf.color}30` }}
-                                    />
+                                      style={mf.highlight ? {
+                                        background: mf.highlight.background,
+                                        borderColor: mf.highlight.borderColor,
+                                        color: mf.highlight.color,
+                                      } : undefined}
+                                    >
+                                      {mf.letter}
+                                    </div>
                                     <div className="roadmap-geral-milestone-tooltip">
-                                      <b style={{ color: mf.color }}>{mf.label}</b>
+                                      <b>{mf.letter ? `${mf.letter} — ` : ''}{mf.label}</b>
                                       <span>{formatShortDate(ticket[mf.key])}</span>
                                     </div>
                                   </div>

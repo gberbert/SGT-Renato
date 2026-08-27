@@ -711,6 +711,7 @@ const SGT_MANAGED_FIELDS = [
   "dataPrevisao",
   "observacaoAdicional",
   "estimativaMacro",
+  "prioridadeInterna",
   "radarFieldsUpdatedAt",
 ];
 

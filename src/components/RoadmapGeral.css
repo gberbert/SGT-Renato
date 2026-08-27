@@ -64,7 +64,7 @@
 
 .roadmap-geral-row-label-cell {
   flex-shrink: 0;
-  width: 240px;
+  width: 200px;
   padding: 6px 10px;
   display: flex;
   align-items: center;
@@ -74,6 +74,90 @@
   z-index: 1;
   background: var(--bg-surface, #0f172a);
 }
+
+/* Coluna de Prioridade Interna */
+.roadmap-geral-priority-cell {
+  flex-shrink: 0;
+  width: 58px;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--glass-border);
+  position: sticky;
+  left: 200px;
+  z-index: 1;
+  background: var(--bg-surface, #0f172a);
+  cursor: pointer;
+}
+
+.roadmap-geral-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  transition: transform 0.1s;
+}
+
+.roadmap-geral-priority-cell:hover .roadmap-geral-priority-badge {
+  transform: scale(1.15);
+}
+
+.roadmap-geral-priority-empty {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--gray-6);
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.roadmap-geral-priority-cell:hover .roadmap-geral-priority-empty {
+  opacity: 0.8;
+  border-color: var(--gray-9);
+}
+
+.roadmap-geral-priority-editor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.roadmap-geral-priority-select {
+  font-size: 10px;
+  padding: 2px 3px;
+  border-radius: 4px;
+  background: var(--gray-3);
+  border: 1px solid var(--gray-6);
+  color: var(--gray-12);
+  width: 50px;
+  cursor: pointer;
+}
+
+.roadmap-geral-priority-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.roadmap-geral-priority-confirm,
+.roadmap-geral-priority-cancel {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.roadmap-geral-priority-confirm { color: #4ade80; }
+.roadmap-geral-priority-cancel  { color: #f87171; }
 
 .roadmap-geral-header-corner {
   background: var(--bg-surface, #0f172a);
@@ -124,7 +208,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
-  max-width: 220px;
+  max-width: 178px;
 }
 
 .roadmap-geral-row-track {
@@ -211,27 +295,38 @@
   display: flex;
 }
 
-/* ── Milestone markers (circulos sutis) ── */
+/* ── Milestone markers (circulos com letra) ── */
 .roadmap-geral-milestone {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  z-index: 4;
+  z-index: 5;
   cursor: default;
 }
 
 .roadmap-geral-milestone-circle {
-  width: 11px;
-  height: 11px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  border: 1.5px solid;
+  border: 1.5px solid rgba(15, 15, 15, 0.88);
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: rgba(15, 15, 15, 0.9);
+  line-height: 1;
+  letter-spacing: -0.01em;
   transition: opacity 0.15s, transform 0.15s;
-  opacity: 0.75;
+  opacity: 0.9;
+  flex-shrink: 0;
 }
 
 .roadmap-geral-milestone:hover .roadmap-geral-milestone-circle {
   opacity: 1;
-  transform: scale(1.25);
+  transform: scale(1.15);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
 }
 
 .roadmap-geral-milestone-tooltip {

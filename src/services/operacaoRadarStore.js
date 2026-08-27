@@ -9,6 +9,7 @@ let state = {
   error: '',
   statsRadar: null,
   statsFingerprint: null,
+  lastSyncAt: null,
   filterOptions: EMPTY_FILTER_OPTIONS,
   squadGrupoMap: new Map(),
   squads: [],
@@ -85,9 +86,12 @@ async function runBootstrapLoad(uid, { force = false } = {}) {
     const bootstrap = await fetchRadarBootstrap();
     if (loadToken !== token) return;
 
+    const rawTs = bootstrap.stats?.lastSyncAt;
+    const lastSyncAt = rawTs?.toDate?.() ?? (rawTs ? new Date(rawTs) : null);
     patchState({
       statsRadar: bootstrap.statsRadar,
       statsFingerprint: buildStatsFingerprint(bootstrap.stats),
+      lastSyncAt,
       filterOptions: bootstrap.filterOptions,
       squadGrupoMap: bootstrap.squadGrupoMap,
       squads: bootstrap.squads,
@@ -142,6 +146,7 @@ export function resetOperacaoRadarStore() {
     error: '',
     statsRadar: null,
     statsFingerprint: null,
+    lastSyncAt: null,
     filterOptions: EMPTY_FILTER_OPTIONS,
     squadGrupoMap: new Map(),
     squads: [],

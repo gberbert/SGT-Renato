@@ -23,6 +23,19 @@ const STATS_DOC = doc(db, 'operacao_stats', 'summary');
 const PAGE_SIZE = 500;
 const DRILL_LIMIT = 2000;
 
+/** Prioridades internas SGT — valores P1 a P5, nao vem do Jira */
+export const PRIORIDADE_INTERNA_OPTIONS = [
+  { value: 1, label: 'P1', description: 'Critica',     color: '#ef4444' },
+  { value: 2, label: 'P2', description: 'Alta',        color: '#f97316' },
+  { value: 3, label: 'P3', description: 'Media',       color: '#eab308' },
+  { value: 4, label: 'P4', description: 'Baixa',       color: '#3b82f6' },
+  { value: 5, label: 'P5', description: 'Muito Baixa', color: '#6b7280' },
+];
+
+export function getPrioridadeInternaMeta(value) {
+  return PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(value)) || null;
+}
+
 export const ESCOPO_RADAR_ORDER = [
   { key: 'PROBLEMAS', label: 'PROBLEMAS', color: '#f87171' },
   { key: 'DEMANDA FAST', label: 'DEMANDA FAST', color: '#fb923c' },
@@ -545,6 +558,7 @@ export function mapDrillTicket(t) {
     dataPrevisao: t.dataPrevisao || null,
     observacaoAdicional: t.observacaoAdicional || '',
     estimativaMacro: t.estimativaMacro ?? null,
+    prioridadeInterna: t.prioridadeInterna ?? null,
   };
 }
 
@@ -685,6 +699,7 @@ function mapFirestoreTicketDoc(d) {
     dataFimPlanejado: data.dataFimPlanejado || null,
     demandaFast: data.demandaFast || null,
     issueLinksDetailed: Array.isArray(data.issueLinksDetailed) ? data.issueLinksDetailed : [],
+    prioridadeInterna: data.prioridadeInterna ?? null,
   };
 }
 
@@ -707,6 +722,11 @@ export async function updateTicketRadarFields(issueKey, patch) {
       ? null
       : Number(patch.estimativaMacro);
     payload.estimativaMacro = Number.isFinite(numeric) ? numeric : null;
+  }
+  if ('prioridadeInterna' in patch) {
+    const val = patch.prioridadeInterna === '' || patch.prioridadeInterna == null
+      ? null : Number(patch.prioridadeInterna);
+    payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 5) ? val : null;
   }
   payload.radarFieldsUpdatedAt = serverTimestamp();
 
