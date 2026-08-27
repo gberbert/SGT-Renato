@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Box, Flex, Text, Card, Button, Progress, Callout, Badge, Table, Grid } from '@radix-ui/themes';
 import { Database, Play, Search, Square, AlertTriangle, CheckCircle2, Loader2, Clock } from 'lucide-react';
 import { previewJiraGlobalCarga, runJiraGlobalCarga } from '../../services/operacaoSyncService';
@@ -6,6 +6,16 @@ import { formatCallableError } from '../../utils/callableError';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import {
+  getSyncState,
+  subscribeSyncState,
+  startSyncLoading,
+  setSyncRun,
+  finishSyncLoading,
+} from '../../services/operacaoSyncStore';
+
+// AbortController persistido fora do componente para sobreviver a navegações
+let _activeAbortController = null;
 
 const formatNumber = (value) => {
   if (value == null || Number.isNaN(Number(value))) return '—';
@@ -155,18 +165,24 @@ const CargaProgressPanel = ({ syncRun, syncLoading }) => {
   );
 };
 
+// Hook para se inscrever no store global de sync
+function useSyncStoreState() {
+  const [state, setLocalState] = useState(getSyncState);
+  useEffect(() => subscribeSyncState(setLocalState), []);
+  return state;
+}
+
 const OperacaoCarga = ({ userRole, embedded = false }) => {
   const { refreshRadar } = useOperacaoRadar();
   const [preview, setPreview] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
-  const [syncRun, setSyncRun] = useState(null);
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncError, setSyncError] = useState('');
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [lastSyncTickets, setLastSyncTickets] = useState(null);
-  const abortRef = useRef(null);
   const isAdmin = userRole === 'admin';
+
+  // Estado da carga vem do store global (persiste entre navegações)
+  const { syncRun, syncLoading, syncError } = useSyncStoreState();
 
   // Busca a data/hora e totais da última carga a partir do operacao_stats/summary
   const fetchLastSyncInfo = useCallback(async () => {
@@ -203,13 +219,11 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
 
   const handleStartSync = async () => {
     if (!preview) {
-      setSyncError('Execute a prévia antes de iniciar a carga.');
+      finishSyncLoading(null, 'Execute a prévia antes de iniciar a carga.');
       return;
     }
 
-    setSyncLoading(true);
-    setSyncError('');
-    setSyncRun({
+    const initialRun = {
       status: 'running',
       percent: 0,
       message: 'Iniciando carga…',
@@ -218,10 +232,11 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
       totalEstimated: preview.total || 0,
       batchIndex: 0,
       totalBatches: preview.batches?.length || 6,
-    });
+    };
+    startSyncLoading(initialRun);
 
     const controller = new AbortController();
-    abortRef.current = controller;
+    _activeAbortController = controller;
 
     try {
       const finalRun = await runJiraGlobalCarga({
@@ -234,22 +249,27 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
         signal: controller.signal,
         onProgress: (run) => setSyncRun(run),
       });
-      setSyncRun(finalRun);
+      finishSyncLoading(finalRun, '');
       await refreshRadar();
     } catch (err) {
-      setSyncError(formatCallableError(err));
-      setSyncRun((prev) => (prev ? { ...prev, status: 'error', message: formatCallableError(err) } : null));
+      const errMsg = formatCallableError(err);
+      finishSyncLoading(
+        syncRun ? { ...syncRun, status: 'error', message: errMsg } : null,
+        errMsg
+      );
     } finally {
-      setSyncLoading(false);
-      abortRef.current = null;
-      // Atualiza a data da última carga após conclusão
+      _activeAbortController = null;
       fetchLastSyncInfo();
     }
   };
 
   const handleCancel = () => {
-    abortRef.current?.abort();
-    setSyncLoading(false);
+    _activeAbortController?.abort();
+    finishSyncLoading(
+      syncRun ? { ...syncRun, status: 'error', message: 'Carga cancelada pelo usuário.' } : null,
+      ''
+    );
+    _activeAbortController = null;
   };
 
   const boxPadding = embedded ? '0' : '5';
