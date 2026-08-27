@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import KanbanBoard from '../components/KanbanBoard';
@@ -23,6 +23,17 @@ import Team from '../components/Team';
 import Organograma from '../components/Organograma';
 import SecopsPermissionsLayout from './SecopsPermissionsLayout';
 import { getTicketById } from '../services/ticketService';
+import { logUserAccess } from '../services/auditService';
+
+/** Gera ou reutiliza um ID de sessão único por aba/sessão do browser */
+function getOrCreateSessionId() {
+  let id = sessionStorage.getItem('sgt_session_id');
+  if (!id) {
+    id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    sessionStorage.setItem('sgt_session_id', id);
+  }
+  return id;
+}
 
 const DemandasLayout = ({
   userRole,
@@ -35,6 +46,17 @@ const DemandasLayout = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const location = useLocation();
+  const sessionId = useRef(getOrCreateSessionId()).current;
+  // Throttle: não registra o mesmo path mais de 1x por segundo
+  const lastLoggedPath = useRef(null);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    if (lastLoggedPath.current === location.pathname) return;
+    lastLoggedPath.current = location.pathname;
+    logUserAccess(user, location.pathname, userRole, sessionId);
+  }, [location.pathname, user, userRole, sessionId]);
 
   useEffect(() => {
     const checkUrlForTicket = async () => {

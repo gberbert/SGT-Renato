@@ -28,12 +28,13 @@ import {
   subscribeToAISettings,
   saveAISettings,
 } from '../services/settingsService';
-import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search } from 'lucide-react';
+import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search, ShieldCheck } from 'lucide-react';
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import ImportDataExcel from './ImportDataExcel';
 import OperacaoJiraSettings from './operacao/OperacaoJiraSettings';
 import PermissionsManager from './PermissionsManager';
+import AuditDashboard from './AuditDashboard';
 import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
@@ -569,6 +570,7 @@ const Settings = ({ userRole = 'admin' }) => {
               <Tabs.Trigger value="rbac"><Shield size={14} style={{ display: 'inline', marginRight: 4 }}/> RBAC</Tabs.Trigger>
               <Tabs.Trigger value="secopsPermissions"><Key size={14} style={{ display: 'inline', marginRight: 4 }}/> Permissões</Tabs.Trigger>
               <Tabs.Trigger value="jiraOperacao"><Database size={14} style={{ display: 'inline', marginRight: 4 }}/> Jira Operação</Tabs.Trigger>
+              <Tabs.Trigger value="auditoria"><ShieldCheck size={14} style={{ display: 'inline', marginRight: 4 }}/> Auditoria</Tabs.Trigger>
             </Tabs.List>
           </Box>
 
@@ -589,6 +591,7 @@ const Settings = ({ userRole = 'admin' }) => {
                 <Select.Item value="rbac">RBAC (Acessos)</Select.Item>
                 <Select.Item value="secopsPermissions">SECOPS - Permissões</Select.Item>
                 <Select.Item value="jiraOperacao">Jira Operação</Select.Item>
+                <Select.Item value="auditoria">Auditoria</Select.Item>
               </Select.Content>
             </Select.Root>
           </Box>
@@ -1104,6 +1107,10 @@ const Settings = ({ userRole = 'admin' }) => {
 
             <Tabs.Content value="jiraOperacao">
               <OperacaoJiraSettings userRole={userRole} />
+            </Tabs.Content>
+
+            <Tabs.Content value="auditoria">
+              <AuditDashboard userRole={userRole} />
             </Tabs.Content>
           </Box>
         </Tabs.Root>

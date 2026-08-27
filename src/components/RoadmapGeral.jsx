@@ -85,6 +85,8 @@ function serializeRoadmapState(filters, groupBy, granularity, dateConfig, scopeC
     squads: [...filters.squads].sort(),
     grupos: [...filters.grupos].sort(),
     statuses: [...filters.statuses].sort(),
+    tickets: [...(filters.tickets || [])].sort(),
+    prioridades: [...(filters.prioridades || [])].sort(),
     groupBy,
     granularity,
     dateConfig,
@@ -170,6 +172,8 @@ const RoadmapGeral = () => {
   const [activeViewSnapshot, setActiveViewSnapshot] = useState(null);
   const [editingPriority, setEditingPriority] = useState(null);
   const [editingPriorityValue, setEditingPriorityValue] = useState(null);
+  // Controla re-carga automática após carregar uma visão
+  const [pendingAutoReload, setPendingAutoReload] = useState(false);
 
   const uid = auth.currentUser?.uid || null;
 
@@ -180,6 +184,8 @@ const RoadmapGeral = () => {
       squads: new Set(view.filters?.squads || []),
       grupos: new Set(view.filters?.grupos || []),
       statuses: new Set(view.filters?.statuses || []),
+      tickets: new Set(view.filters?.tickets || []),
+      prioridades: new Set((view.filters?.prioridades || []).map(Number).filter(Number.isFinite)),
     };
     const nextGroupBy = view.groupBy || 'none';
     const nextGranularity = view.granularity || 'mes';
@@ -462,6 +468,14 @@ const RoadmapGeral = () => {
   const activeViewDirty =
     Boolean(activeView) && activeViewSnapshot !== null && activeViewSnapshot !== currentStateSnapshot;
 
+  // Auto-reload quando uma visão é carregada
+  useEffect(() => {
+    if (!pendingAutoReload) return;
+    setPendingAutoReload(false);
+    handleCarregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAutoReload]);
+
   const handleSaveView = async () => {
     if (!newViewName.trim() || !uid) return;
     setSavingView(true);
@@ -471,6 +485,8 @@ const RoadmapGeral = () => {
         squads: [...filters.squads],
         grupos: [...filters.grupos],
         statuses: [...filters.statuses],
+        tickets: [...(filters.tickets || [])],
+        prioridades: [...(filters.prioridades || [])],
       };
       const newId = await saveRoadmapGeralView(uid, {
         name: newViewName.trim(),
@@ -513,21 +529,26 @@ const RoadmapGeral = () => {
     const snapshot = applyViewState(view);
     setActiveViewId(view.id);
     setActiveViewSnapshot(snapshot);
+    // Limpa cache e dispara re-carga automática
+    setTicketsCache(null);
+    setPendingAutoReload(true);
   };
 
   const handleSaveChangesToActiveView = async () => {
     if (!activeView) return;
     setSavingView(true);
     try {
-      const filtersPayload = {
+      const filtersPayloadActive = {
         escopos: [...filters.escopos],
         squads: [...filters.squads],
         grupos: [...filters.grupos],
         statuses: [...filters.statuses],
+        tickets: [...(filters.tickets || [])],
+        prioridades: [...(filters.prioridades || [])],
       };
       await updateRoadmapGeralView(activeView.id, {
         name: activeView.name,
-        filters: filtersPayload,
+        filters: filtersPayloadActive,
         groupBy,
         granularity,
         dateConfig,
@@ -552,6 +573,8 @@ const RoadmapGeral = () => {
         squads: new Set(activeView.filters?.squads || []),
         grupos: new Set(activeView.filters?.grupos || []),
         statuses: new Set(activeView.filters?.statuses || []),
+        tickets: new Set(activeView.filters?.tickets || []),
+        prioridades: new Set((activeView.filters?.prioridades || []).map(Number).filter(Number.isFinite)),
       },
       activeView.groupBy || 'none',
       activeView.granularity || 'mes',

@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Box, Flex, Text, Card, Button, Progress, Callout, Badge, Table, Grid } from '@radix-ui/themes';
 import { Database, Play, Search, Square, AlertTriangle, CheckCircle2, Loader2, Clock } from 'lucide-react';
 import { previewJiraGlobalCarga, runJiraGlobalCarga } from '../../services/operacaoSyncService';
+import { logSyncAction } from '../../services/auditService';
+import { auth } from '../../firebase';
 import { formatCallableError } from '../../utils/callableError';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
 import { doc, getDoc } from 'firebase/firestore';
@@ -223,6 +225,8 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
       return;
     }
 
+    const syncStartTime = Date.now();
+
     const initialRun = {
       status: 'running',
       percent: 0,
@@ -251,12 +255,14 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
       });
       finishSyncLoading(finalRun, '');
       await refreshRadar();
+      // Auditoria: registra carga bem-sucedida
+      logSyncAction(auth.currentUser, finalRun, syncStartTime);
     } catch (err) {
       const errMsg = formatCallableError(err);
-      finishSyncLoading(
-        syncRun ? { ...syncRun, status: 'error', message: errMsg } : null,
-        errMsg
-      );
+      const errorRun = syncRun ? { ...syncRun, status: 'error', message: errMsg } : null;
+      finishSyncLoading(errorRun, errMsg);
+      // Auditoria: registra carga com erro
+      if (errorRun) logSyncAction(auth.currentUser, errorRun, syncStartTime);
     } finally {
       _activeAbortController = null;
       fetchLastSyncInfo();
