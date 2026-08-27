@@ -37,6 +37,7 @@ export async function saveRoadmapGeralView(uid, payload) {
     groupBy: payload.groupBy,
     granularity: payload.granularity,
     dateConfig: payload.dateConfig || null,
+    scopeConfig: payload.scopeConfig || null,
     isPrimary: payload.isPrimary || false,
     createdAt: serverTimestamp(),
   });
@@ -74,6 +75,7 @@ export async function updateRoadmapGeralView(id, payload) {
       groupBy: payload.groupBy,
       granularity: payload.granularity,
       dateConfig: payload.dateConfig,
+      scopeConfig: payload.scopeConfig || null,
       updatedAt: serverTimestamp(),
     },
     { merge: true }

@@ -740,6 +740,29 @@ export async function fetchTicketsForDrill({ escopoKey } = {}) {
   return tickets;
 }
 
+/**
+ * Busca tickets para o Roadmap Geral.
+ * Se escopos[] for informado, filtra por escopo no Firestore (mais eficiente).
+ * Caso contrario, busca todos os tickets da colecao.
+ */
+export async function fetchTicketsForRoadmap({ escopos = [], onProgress } = {}) {
+  if (escopos.length > 0) {
+    const allTickets = [];
+    // Firestore 'in' suporta ate 10 valores; ESCOPO_RADAR_ORDER tem 6 entradas
+    const batchSize = 10;
+    for (let i = 0; i < escopos.length; i += batchSize) {
+      const batch = escopos.slice(i, i + batchSize);
+      const snap = await getDocs(
+        query(collection(db, TICKETS_GLOBAL), where('escopo', 'in', batch), limit(10000))
+      );
+      snap.docs.forEach((d) => allTickets.push(mapFirestoreTicketDoc(d)));
+      onProgress?.(allTickets.length);
+    }
+    return allTickets;
+  }
+  return fetchTicketsGlobalForRadar({ onProgress });
+}
+
 export async function fetchTicketsGlobalForRadar({ onProgress } = {}) {
   const tickets = [];
   let lastDoc = null;

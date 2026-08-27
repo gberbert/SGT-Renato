@@ -296,6 +296,22 @@ function resolveFieldId(fieldMap, candidates) {
   return null;
 }
 
+// IDs conhecidos dos campos de data de planejamento (obtidos de jira_fields.json)
+// Usados como fallback caso o resolveFieldId não encontre pelo nome
+const KNOWN_DATE_FIELD_IDS = {
+  data_aprovacao_efsr: "customfield_10259",
+  data_inicio_atendimento_planejada: "customfield_10434",
+  data_inicio_atendimento: "customfield_10260",
+  data_aprovacao_qa_planejada: "customfield_10435",
+  data_inicio_homologacao_planejada: "customfield_10261",
+  data_inicio_homologacao_efetiva: "customfield_10431",
+  data_fim_homologacao_planejada: "customfield_10262",
+  data_fim_homologacao_efetiva: "customfield_10432",
+  data_entrega_producao_prevista: "customfield_10263",
+  estimativa_horas: "customfield_10437",
+  data_fim_planejado: "customfield_16711",
+};
+
 async function resolveTicketFieldIds() {
   if (_fieldIdsCache) return _fieldIdsCache;
   const fieldMap = await getFieldMap();
@@ -306,7 +322,8 @@ async function resolveTicketFieldIds() {
     parentLink: resolveFieldId(fieldMap, ["Parent Link", "Parent link"]),
   };
   for (const [col, candidates] of Object.entries(TICKET_FIELD_DEFINITIONS)) {
-    ids[col] = resolveFieldId(fieldMap, candidates);
+    // Tenta resolver pelo nome; usa ID hardcoded como fallback
+    ids[col] = resolveFieldId(fieldMap, candidates) || KNOWN_DATE_FIELD_IDS[col] || null;
   }
   _fieldIdsCache = ids;
   return ids;
@@ -687,6 +704,16 @@ async function searchOperacaoIssues({
   };
 }
 
+// Campos gerenciados internamente pelo SGT — NUNCA devem ser sobrescritos pelo sync do Jira.
+// São preenchidos manualmente pela equipe via updateTicketRadarFields().
+const SGT_MANAGED_FIELDS = [
+  "responsavelAtual",
+  "dataPrevisao",
+  "observacaoAdicional",
+  "estimativaMacro",
+  "radarFieldsUpdatedAt",
+];
+
 async function writeTicketsGlobal(tickets) {
   if (!tickets.length) return;
   const db = getDb();
@@ -695,11 +722,15 @@ async function writeTicketsGlobal(tickets) {
 
   for (const ticket of tickets) {
     const ref = db.collection(TICKETS_GLOBAL).doc(ticket.issueKey);
-    batch.set(
-      ref,
-      { ...ticket, syncedAt: FieldValue.serverTimestamp() },
-      { merge: true }
-    );
+
+    // Remove explicitamente os campos SGT do payload do sync para garantir
+    // que nunca sejam zerados, mesmo que acidentalmente cheguem até aqui.
+    const payload = { ...ticket, syncedAt: FieldValue.serverTimestamp() };
+    for (const field of SGT_MANAGED_FIELDS) {
+      delete payload[field];
+    }
+
+    batch.set(ref, payload, { merge: true });
     ops += 1;
     if (ops >= MAX_WRITE_BATCH) {
       await batch.commit();

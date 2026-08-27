@@ -210,3 +210,61 @@
 .roadmap-geral-bar-wrap:hover .roadmap-geral-bar-tooltip {
   display: flex;
 }
+
+/* ── Milestone markers (circulos sutis) ── */
+.roadmap-geral-milestone {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  cursor: default;
+}
+
+.roadmap-geral-milestone-circle {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  transition: opacity 0.15s, transform 0.15s;
+  opacity: 0.75;
+}
+
+.roadmap-geral-milestone:hover .roadmap-geral-milestone-circle {
+  opacity: 1;
+  transform: scale(1.25);
+}
+
+.roadmap-geral-milestone-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-surface, #0f172a);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 10px;
+  padding: 7px 11px;
+  font-size: 0.71rem;
+  white-space: nowrap;
+  z-index: 60;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--gray-12);
+  min-width: 180px;
+}
+
+.roadmap-geral-milestone-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(56, 189, 248, 0.45);
+}
+
+.roadmap-geral-milestone:hover .roadmap-geral-milestone-tooltip {
+  display: flex;
+}
