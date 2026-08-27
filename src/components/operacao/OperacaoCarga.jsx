@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Flex, Text, Card, Button, Progress, Callout, Badge, Table, Grid } from '@radix-ui/themes';
-import { Database, Play, Search, Square, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Database, Play, Search, Square, AlertTriangle, CheckCircle2, Loader2, Clock } from 'lucide-react';
 import { previewJiraGlobalCarga, runJiraGlobalCarga } from '../../services/operacaoSyncService';
 import { formatCallableError } from '../../utils/callableError';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 const formatNumber = (value) => {
   if (value == null || Number.isNaN(Number(value))) return '—';
@@ -161,8 +163,23 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
   const [syncRun, setSyncRun] = useState(null);
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncError, setSyncError] = useState('');
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [lastSyncTickets, setLastSyncTickets] = useState(null);
   const abortRef = useRef(null);
   const isAdmin = userRole === 'admin';
+
+  // Busca a data/hora e totais da última carga a partir do operacao_stats/summary
+  const fetchLastSyncInfo = useCallback(async () => {
+    try {
+      const snap = await getDoc(doc(db, 'operacao_stats', 'summary'));
+      if (snap.exists()) {
+        const data = snap.data();
+        const ts = data.lastSyncAt?.toDate?.() || (data.lastSyncAt ? new Date(data.lastSyncAt) : null);
+        setLastSyncAt(ts);
+        setLastSyncTickets(data.totalTicketsExact ?? data.lastSyncTicketsUpserted ?? null);
+      }
+    } catch { /* ignora erros silenciosamente */ }
+  }, []);
 
   const handlePreview = useCallback(async () => {
     setPreviewLoading(true);
@@ -180,8 +197,9 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
   useEffect(() => {
     if (isAdmin) {
       handlePreview();
+      fetchLastSyncInfo();
     }
-  }, [isAdmin, handlePreview]);
+  }, [isAdmin, handlePreview, fetchLastSyncInfo]);
 
   const handleStartSync = async () => {
     if (!preview) {
@@ -224,6 +242,8 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
     } finally {
       setSyncLoading(false);
       abortRef.current = null;
+      // Atualiza a data da última carga após conclusão
+      fetchLastSyncInfo();
     }
   };
 
@@ -268,6 +288,24 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
         <Text size="2" color="gray" mb="4" as="p">
           Prévia via Jira e gravação direta no Firestore (<code>tickets_global</code>).
         </Text>
+      )}
+
+      {/* Data/hora da última carga */}
+      {lastSyncAt && (
+        <Flex align="center" gap="2" mb="4" style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', width: 'fit-content' }}>
+          <Clock size={15} color="var(--rg-accent, #38bdf8)" />
+          <Text size="2" color="gray">
+            Última carga:{' '}
+            <Text as="span" size="2" weight="bold" style={{ color: 'var(--gray-12)' }}>
+              {lastSyncAt.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+            </Text>
+            {lastSyncTickets != null && (
+              <Text as="span" size="2" color="gray">
+                {' '}· {Number(lastSyncTickets).toLocaleString('pt-BR')} tickets
+              </Text>
+            )}
+          </Text>
+        </Flex>
       )}
 
       <Flex gap="3" mb="4" wrap="wrap">
