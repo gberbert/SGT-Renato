@@ -15,8 +15,12 @@ const GRUPO_ATENDIMENTO = "grupo_atendimento";
 const ESCOPO_COLLECTION = "escopo";
 const OPERACAO_STATS_DOC = "operacao_stats/summary";
 
-const ISSUES_PER_STEP = 50;
-const MAX_WRITE_BATCH = 450;
+// Com changelog (expand=changelog), cada issue retorna muito mais dados.
+// Menos issues por step = respostas Jira menores + batch writes mais rápidos.
+const ISSUES_PER_STEP = 20;
+const MAX_WRITE_BATCH = 200;
+// Limite máximo de entradas no statusHistory por ticket (evita documentos gigantes)
+const MAX_STATUS_HISTORY = 150;
 
 const ESCOPO_RADAR_ORDER = [
   { key: "PROBLEMAS", label: "PROBLEMAS", color: "#f87171" },
@@ -706,6 +710,10 @@ function extractStatusHistory(issue) {
     }
   }
   result.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  // Mantém apenas as MAX_STATUS_HISTORY entradas mais recentes se houver muitas
+  if (result.length > MAX_STATUS_HISTORY) {
+    return result.slice(result.length - MAX_STATUS_HISTORY);
+  }
   return result;
 }
 
