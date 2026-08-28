@@ -429,6 +429,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     commentCount: (fields.comment || {}).total || 0,
     attachmentCount: (fields.attachment || []).length,
     subtaskCount: (fields.subtasks || []).length,
+    statusHistory: extractStatusHistory(issue),
   };
 }
 
@@ -662,11 +663,38 @@ async function createSyncRun({ startedBy, totalEstimated }) {
   return { runId: runRef.id };
 }
 
+/**
+ * Extrai o histórico de transições de status a partir do changelog do issue.
+ * Retorna array ordenado cronologicamente:
+ * [{ date, fromStatus, toStatus, authorName, authorEmail, authorAccountId }]
+ */
+function extractStatusHistory(issue) {
+  const histories = issue.changelog?.histories || [];
+  const result = [];
+  for (const history of histories) {
+    for (const item of history.items || []) {
+      if (item.field === "status") {
+        result.push({
+          date: history.created || null,
+          fromStatus: item.fromString || null,
+          toStatus: item.toString || null,
+          authorName: history.author?.displayName || null,
+          authorEmail: history.author?.emailAddress || null,
+          authorAccountId: history.author?.accountId || null,
+        });
+      }
+    }
+  }
+  result.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  return result;
+}
+
 async function searchIssuesPage(jql, { pageToken, fieldIds, maxResults = ISSUES_PER_STEP }) {
   const body = {
     jql,
     maxResults,
     fields: buildJiraFieldList(fieldIds),
+    expand: ["changelog"],
   };
   if (pageToken) body.nextPageToken = pageToken;
 

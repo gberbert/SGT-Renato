@@ -559,6 +559,7 @@ export function mapDrillTicket(t) {
     observacaoAdicional: t.observacaoAdicional || '',
     estimativaMacro: t.estimativaMacro ?? null,
     prioridadeInterna: t.prioridadeInterna ?? null,
+    statusHistory: Array.isArray(t.statusHistory) ? t.statusHistory : [],
   };
 }
 
@@ -700,6 +701,7 @@ function mapFirestoreTicketDoc(d) {
     demandaFast: data.demandaFast || null,
     issueLinksDetailed: Array.isArray(data.issueLinksDetailed) ? data.issueLinksDetailed : [],
     prioridadeInterna: data.prioridadeInterna ?? null,
+    statusHistory: Array.isArray(data.statusHistory) ? data.statusHistory : [],
   };
 }
 
