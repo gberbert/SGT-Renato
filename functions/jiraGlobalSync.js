@@ -587,17 +587,37 @@ async function previewCarga() {
 
   const totalRaw = batchResults.reduce((sum, b) => sum + b.total, 0);
 
+  // Amostra de changelog: busca 10 tickets do primeiro lote para validar coleta de change status
+  let changelogSample = { sampleSize: 0, statusChangesFound: 0, avgPerTicket: 0 };
+  try {
+    const fieldIds = await resolveTicketFieldIds();
+    const firstBatch = batches[0];
+    if (firstBatch) {
+      const samplePage = await searchIssuesPageGet(firstBatch.jql, { startAt: 0, fieldIds, maxResults: 10 });
+      const sampleIssues = samplePage.issues || [];
+      const sampleChanges = sampleIssues.reduce((acc, issue) => acc + extractStatusHistory(issue).length, 0);
+      changelogSample = {
+        sampleSize: sampleIssues.length,
+        statusChangesFound: sampleChanges,
+        avgPerTicket: sampleIssues.length > 0 ? Math.round(sampleChanges / sampleIssues.length * 10) / 10 : 0,
+      };
+    }
+  } catch (e) {
+    changelogSample = { sampleSize: 0, statusChangesFound: 0, avgPerTicket: 0, error: e.message };
+  }
+
   return {
     total: uniqueTotal,
     totalRaw,
     approximate: true,
     jqlFile: getJqlCargaFilePath(),
     batches: batchResults,
+    changelogSample,
     mitigation: {
       estimatedDocs: uniqueTotal,
       firestoreLimitDocs: 1000000,
       recommendedDocSizeKb: "1-3",
-      syncStrategy: "chunked_by_escopo_with_pageToken",
+      syncStrategy: "GET_with_changelog_expand",
       dashboardReads: "operacao_stats/summary (1 doc)",
     },
   };
@@ -689,12 +709,28 @@ function extractStatusHistory(issue) {
   return result;
 }
 
+/**
+ * Busca uma página de issues usando GET /rest/api/3/search com expand=changelog.
+ * Usa startAt para paginação (a API GET não suporta nextPageToken).
+ */
+async function searchIssuesPageGet(jql, { startAt = 0, fieldIds, maxResults = ISSUES_PER_STEP }) {
+  const fields = buildJiraFieldList(fieldIds).join(",");
+  const params = new URLSearchParams({
+    jql,
+    maxResults: String(maxResults),
+    startAt: String(startAt),
+    expand: "changelog",
+    fields,
+  });
+  return jiraFetch(`/rest/api/3/search?${params.toString()}`, { method: "GET" });
+}
+
+/** Versão sem changelog — usada na prévia de contagem (mais rápida) */
 async function searchIssuesPage(jql, { pageToken, fieldIds, maxResults = ISSUES_PER_STEP }) {
   const body = {
     jql,
     maxResults,
     fields: buildJiraFieldList(fieldIds),
-    expand: ["changelog"],
   };
   if (pageToken) body.nextPageToken = pageToken;
 
@@ -806,8 +842,11 @@ async function processSyncStep(runId) {
   const fieldIds = await resolveTicketFieldIds();
   const { baseUrl } = getJiraCredentials();
   const currentBatch = batches[batchIndex];
-  const page = await searchIssuesPage(currentBatch.jql, {
-    pageToken: run.pageToken || undefined,
+
+  // Usa GET com expand=changelog para capturar o histórico de status
+  const currentStartAt = run.pageStartAt || 0;
+  const page = await searchIssuesPageGet(currentBatch.jql, {
+    startAt: currentStartAt,
     fieldIds,
   });
 
@@ -830,14 +869,19 @@ async function processSyncStep(runId) {
   currentBatch.fetched = (currentBatch.fetched || 0) + issues.length;
   currentBatch.upserted = (currentBatch.upserted || 0) + parsed.length;
 
-  let pageToken = page.nextPageToken || null;
-  let nextBatchIndex = batchIndex;
-  let message = `Processando ${currentBatch.label}: ${currentBatch.upserted} tickets.`;
+  // Contagem acumulada de change status
+  const statusChangesInBatch = parsed.reduce((acc, t) => acc + (t.statusHistory?.length || 0), 0);
+  const totalStatusChanges = (run.totalStatusChanges || 0) + statusChangesInBatch;
 
-  if (!pageToken) {
+  // Paginação via startAt para o GET
+  const nextStartAt = currentStartAt + issues.length;
+  const hasMorePages = issues.length === ISSUES_PER_STEP && nextStartAt < (page.total || Infinity);
+  let nextBatchIndex = batchIndex;
+  let message = `Processando ${currentBatch.label}: ${currentBatch.upserted} tickets (${totalStatusChanges} change status).`;
+
+  if (!hasMorePages) {
     currentBatch.done = true;
     nextBatchIndex += 1;
-    pageToken = null;
     if (nextBatchIndex < batches.length) {
       message = `Lote ${currentBatch.label} concluído. Iniciando ${batches[nextBatchIndex].label}...`;
     } else {
@@ -849,7 +893,8 @@ async function processSyncStep(runId) {
   const partialRun = {
     ...run,
     batchIndex: nextBatchIndex,
-    pageToken,
+    pageStartAt: hasMorePages ? nextStartAt : 0,
+    totalStatusChanges,
     ticketsFetched,
     ticketsUpserted,
     currentBatch: nextBatch ? nextBatch.label : null,
@@ -870,7 +915,7 @@ async function processSyncStep(runId) {
     await runRef.update({
       ...partialRun,
       status: "finalizing",
-      message: "Finalizando agregados...",
+      message: `Finalizando agregados... ${totalStatusChanges} change status coletados.`,
     });
     await finalizeSyncRun(runRef, partialRun);
     const finalSnap = await runRef.get();
@@ -907,6 +952,7 @@ function serializeRun(id, run) {
     currentEscopo: run.currentEscopo || null,
     ticketsFetched: run.ticketsFetched || 0,
     ticketsUpserted: run.ticketsUpserted || 0,
+    totalStatusChanges: run.totalStatusChanges || 0,
     totalEstimated: run.totalEstimated || 0,
     batches: run.batches || [],
     startedAt: run.startedAt || null,

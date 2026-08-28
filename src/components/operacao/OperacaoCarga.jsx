@@ -108,8 +108,10 @@ const CargaProgressPanel = ({ syncRun, syncLoading }) => {
             <Text size="3" weight="medium">{formatNumber(syncRun?.ticketsUpserted)}</Text>
           </Box>
           <Box>
-            <Text size="1" color="gray">Estimado (prévia)</Text>
-            <Text size="3" weight="medium">{formatNumber(syncRun?.totalEstimated)}</Text>
+            <Text size="1" color="gray">Change Status coletados</Text>
+            <Text size="3" weight="medium" style={{ color: 'var(--cyan-11)' }}>
+              {formatNumber(syncRun?.totalStatusChanges ?? 0)}
+            </Text>
           </Box>
         </Grid>
 
@@ -391,6 +393,23 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
                   Estimativa ~{formatNumber(preview.mitigation.estimatedDocs)} tickets. A barra de progresso
                   usa a contagem da prévia como referência de 100%.
                 </Callout.Text>
+              </Callout.Root>
+            )}
+
+            {preview.changelogSample && !preview.changelogSample.error && (
+              <Callout.Root color="cyan" mb="3">
+                <Callout.Icon><CheckCircle2 size={16} /></Callout.Icon>
+                <Callout.Text>
+                  <strong>Changelog validado:</strong> amostra de {preview.changelogSample.sampleSize} tickets →{' '}
+                  {formatNumber(preview.changelogSample.statusChangesFound)} change status encontrados
+                  (média {preview.changelogSample.avgPerTicket} por ticket). O histórico de status
+                  será coletado na carga completa via <code>GET /rest/api/3/search?expand=changelog</code>.
+                </Callout.Text>
+              </Callout.Root>
+            )}
+            {preview.changelogSample?.error && (
+              <Callout.Root color="amber" mb="3">
+                <Callout.Text>Aviso changelog: {preview.changelogSample.error}</Callout.Text>
               </Callout.Root>
             )}
 
