@@ -147,6 +147,7 @@ const OperacaoHome = ({ userRole }) => {
   const [drillTickets, setDrillTickets] = useState([]);
   const [drillLoading, setDrillLoading] = useState(false);
   const [drillError, setDrillError] = useState('');
+  const [drillIssueTypeFilter, setDrillIssueTypeFilter] = useState(null);
 
   const radar = useMemo(
     () => computedRadar || statsRadar || { total: 0, escopos: [] },
@@ -239,12 +240,23 @@ const OperacaoHome = ({ userRole }) => {
 
   const shouldBlockFilters = bootLoading || ticketsCacheLoading || !filtersReady;
 
+  const openDrillDirect = useCallback((tickets, label) => {
+    setDrillIssueKeyQuery('');
+    setExpandedParents(new Set());
+    setDrillEscopo('');      // '' = não filtra por escopo em prepareDrillHierarchy
+    setDrillLabel(label);
+    setDrillIssueTypeFilter(null);
+    setDrillError('');
+    setDrillTickets(tickets);
+  }, []);
+
   const openDrill = useCallback(
-    async (escopoKey, label) => {
+    async (escopoKey, label, issueTypeFilter = null) => {
       setDrillIssueKeyQuery('');
       setExpandedParents(new Set());
       setDrillEscopo(escopoKey);
       setDrillLabel(label);
+      setDrillIssueTypeFilter(issueTypeFilter);
       setDrillTickets([]);
       setDrillError('');
       setDrillLoading(true);
@@ -255,14 +267,18 @@ const OperacaoHome = ({ userRole }) => {
           return;
         }
 
-        // filtra somente no recorte do escopo e aplica filtros atuais em memória
         const baseTickets = escopoKey
           ? ticketsCache.filter(
               (t) => String(t.escopo || '').toUpperCase() === String(escopoKey).toUpperCase()
             )
           : ticketsCache;
 
-        const filteredTickets = filterTickets(baseTickets, filters, squadGrupoMap || new Map());
+        let filteredTickets = filterTickets(baseTickets, filters, squadGrupoMap || new Map());
+        if (issueTypeFilter) {
+          filteredTickets = filteredTickets.filter(
+            (t) => (t.issueType || 'Sem tipo') === issueTypeFilter
+          );
+        }
         setDrillTickets(filteredTickets);
       } catch (err) {
         setDrillError(formatCallableError(err));
@@ -491,7 +507,7 @@ const OperacaoHome = ({ userRole }) => {
       {
         key: 'CATALOGO',
         label: 'CATÁLOGO',
-        total: findTotal('CATALOGODEP') || findTotal('CATÁLOGO'),
+        total: findTotal('CATALOGO'),
         color: '#a855f7',
       },
     ];
@@ -653,6 +669,7 @@ const OperacaoHome = ({ userRole }) => {
               setDrillEscopo(null);
               setDrillLabel('');
               setDrillIssueKeyQuery('');
+              setDrillIssueTypeFilter(null);
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
@@ -738,7 +755,12 @@ const OperacaoHome = ({ userRole }) => {
                   const filteredTicketsAll = Array.isArray(ticketsCache)
                     ? filterTickets(ticketsCache, filters, squadGrupoMap || new Map())
                     : [];
-                  return <OperacaoObservabilidade tickets={filteredTicketsAll} />;
+                  return (
+                    <OperacaoObservabilidade
+                      tickets={filteredTicketsAll}
+                      onDrillTickets={openDrillDirect}
+                    />
+                  );
                 })()
               ) : (
                 (() => {
@@ -775,20 +797,38 @@ const OperacaoHome = ({ userRole }) => {
                         <Text className="operacao-radar-summary-label">Tickets em {tabCard.label}</Text>
                         {escopoTickets.length > 0 && (() => {
                           const typeCounts = {};
+                          let totalImpedidos = 0;
                           for (const t of escopoTickets) {
                             const type = t.issueType || 'Sem tipo';
                             typeCounts[type] = (typeCounts[type] || 0) + 1;
+                            if (t.impedimento === true) totalImpedidos += 1;
                           }
                           const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
                           return (
-                            <Flex gap="3" wrap="wrap" mt="2">
-                              {sortedTypes.map(([type, count]) => (
-                                <Flex key={type} align="center" gap="1" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                  <Text size="1" weight="bold" style={{ color: tabCard.color }}>{formatNumber(count)}</Text>
-                                  <Text size="1" color="gray">{type}</Text>
+                            <>
+                              <Flex gap="2" wrap="wrap" mt="2">
+                                {sortedTypes.map(([type, count]) => (
+                                  <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => openDrill(tabCard.key, `${tabCard.label} · ${type}`, type)}
+                                    disabled={drillLoading}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 8px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+                                    title={`Filtrar por ${type}`}
+                                  >
+                                    <Text size="1" weight="bold" style={{ color: tabCard.color }}>{formatNumber(count)}</Text>
+                                    <Text size="1" color="gray">{type}</Text>
+                                  </button>
+                                ))}
+                              </Flex>
+                              {totalImpedidos > 0 && (
+                                <Flex align="center" gap="1" mt="1" style={{ background: 'rgba(234,179,8,0.08)', borderRadius: 6, padding: '3px 10px', border: '1px solid rgba(234,179,8,0.3)', width: 'fit-content' }}>
+                                  <Text size="1">🚧</Text>
+                                  <Text size="1" weight="bold" style={{ color: '#eab308' }}>{formatNumber(totalImpedidos)}</Text>
+                                  <Text size="1" color="gray">impedimento(s)</Text>
                                 </Flex>
-                              ))}
-                            </Flex>
+                              )}
+                            </>
                           );
                         })()}
                       </Box>
@@ -805,6 +845,11 @@ const OperacaoHome = ({ userRole }) => {
                     <Box>
                       <Text size="4" weight="bold">
                         Tickets · {drillLabel || getEscopoRadarMeta(drillEscopo).label}
+                        {drillIssueTypeFilter && (
+                          <Text as="span" size="2" color="gray" ml="2">
+                            [{drillIssueTypeFilter}]
+                          </Text>
+                        )}
                       </Text>
                       <Text size="2" color="gray">
                         {drillLoading

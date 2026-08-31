@@ -16,7 +16,7 @@ const formatNumber = (value) => Number(value || 0).toLocaleString('pt-BR');
  * e compliance da equipe com o processo de atendimento (hoje focados em PROBLEMAS,
  * conforme regras definidas pelo time).
  */
-const OperacaoObservabilidade = ({ tickets = [] }) => {
+const OperacaoObservabilidade = ({ tickets = [], onDrillTickets }) => {
   const [escopoFilter, setEscopoFilter] = useState('ALL');
 
   const filteredTickets = useMemo(() => {
@@ -89,9 +89,22 @@ const OperacaoObservabilidade = ({ tickets = [] }) => {
                 <Info size={16} color="var(--text-muted)" style={{ cursor: 'help' }} />
               </Tooltip>
             </Flex>
-            <Text size="8" weight="bold" style={{ color: indicator.total > 0 ? '#f87171' : '#4ade80' }}>
-              {formatNumber(indicator.total)}
-            </Text>
+            {onDrillTickets && indicator.total > 0 ? (
+              <button
+                type="button"
+                onClick={() => onDrillTickets(indicator.tickets, `Observabilidade · ${indicator.label}`)}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                title={`Ver ${indicator.total} ticket(s) — ${indicator.label}`}
+              >
+                <Text size="8" weight="bold" style={{ color: '#f87171', textDecoration: 'underline dotted' }}>
+                  {formatNumber(indicator.total)}
+                </Text>
+              </button>
+            ) : (
+              <Text size="8" weight="bold" style={{ color: indicator.total > 0 ? '#f87171' : '#4ade80' }}>
+                {formatNumber(indicator.total)}
+              </Text>
+            )}
           </Box>
         ))}
       </Box>
