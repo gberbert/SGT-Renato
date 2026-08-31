@@ -571,8 +571,39 @@ async function finalizeOperacaoStats(runRef, run) {
   );
 }
 
+/**
+ * Carrega os batches de JQL aplicando overrides da collection `jql_overrides`.
+ * Se um documento existir nessa collection para um dado escopoId, sua JQL prevalece.
+ * Fallback transparente: se a leitura falhar ou a collection estiver vazia,
+ * usa as JQLs do arquivo functions/data/jqls_carga.txt.
+ */
+async function loadJqlBatchesWithOverrides() {
+  const baseBatches = loadJqlBatches(); // sempre carrega do arquivo como fallback
+  try {
+    const db = getDb();
+    const snap = await db.collection("jql_overrides").get();
+    if (snap.empty) return baseBatches;
+
+    const overridesMap = {};
+    snap.forEach((doc) => {
+      const data = doc.data();
+      if (data.escopoId && data.jql && data.ativo !== false) {
+        overridesMap[data.escopoId] = data.jql;
+      }
+    });
+
+    return baseBatches.map((batch) => {
+      const override = overridesMap[batch.escopoId];
+      return override ? { ...batch, jql: override } : batch;
+    });
+  } catch (e) {
+    console.warn("[jiraGlobalSync] Falha ao carregar jql_overrides — usando JQLs do arquivo:", e.message);
+    return baseBatches;
+  }
+}
+
 async function previewCarga() {
-  const batches = loadJqlBatches();
+  const batches = await loadJqlBatchesWithOverrides();
   const combinedJql = buildCombinedOrJql(batches);
   const uniqueTotal = await getApproxCount(combinedJql);
 
@@ -628,7 +659,7 @@ async function previewCarga() {
 }
 
 async function getJqlConfig() {
-  const batches = loadJqlBatches();
+  const batches = await loadJqlBatchesWithOverrides();
   return {
     jqlFile: getJqlCargaFilePath(),
     batches: batches.map((b) => ({
@@ -642,7 +673,7 @@ async function getJqlConfig() {
 }
 
 async function createSyncRun({ startedBy, totalEstimated }) {
-  const batches = loadJqlBatches();
+  const batches = await loadJqlBatchesWithOverrides();
   await seedEscopos();
 
   const db = getDb();
