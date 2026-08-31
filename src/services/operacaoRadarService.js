@@ -25,11 +25,10 @@ const DRILL_LIMIT = 2000;
 
 /** Prioridades internas SGT — valores P1 a P5, nao vem do Jira */
 export const PRIORIDADE_INTERNA_OPTIONS = [
-  { value: 1, label: 'P1', description: 'Critica',     color: '#ef4444' },
-  { value: 2, label: 'P2', description: 'Alta',        color: '#f97316' },
-  { value: 3, label: 'P3', description: 'Media',       color: '#eab308' },
-  { value: 4, label: 'P4', description: 'Baixa',       color: '#3b82f6' },
-  { value: 5, label: 'P5', description: 'Muito Baixa', color: '#6b7280' },
+  { value: 1, label: 'P1', description: 'Critica', color: '#ef4444' },
+  { value: 2, label: 'P2', description: 'Alta',    color: '#f97316' },
+  { value: 3, label: 'P3', description: 'Media',   color: '#eab308' },
+  { value: 4, label: 'P4', description: 'Baixa',   color: '#3b82f6' },
 ];
 
 export function getPrioridadeInternaMeta(value) {
@@ -559,6 +558,7 @@ export function mapDrillTicket(t) {
     observacaoAdicional: t.observacaoAdicional || '',
     estimativaMacro: t.estimativaMacro ?? null,
     prioridadeInterna: t.prioridadeInterna ?? null,
+    impedimento: t.impedimento === true,
     statusHistory: Array.isArray(t.statusHistory) ? t.statusHistory : [],
   };
 }
@@ -701,6 +701,7 @@ function mapFirestoreTicketDoc(d) {
     demandaFast: data.demandaFast || null,
     issueLinksDetailed: Array.isArray(data.issueLinksDetailed) ? data.issueLinksDetailed : [],
     prioridadeInterna: data.prioridadeInterna ?? null,
+    impedimento: data.impedimento === true,
     statusHistory: Array.isArray(data.statusHistory) ? data.statusHistory : [],
   };
 }
@@ -728,7 +729,10 @@ export async function updateTicketRadarFields(issueKey, patch) {
   if ('prioridadeInterna' in patch) {
     const val = patch.prioridadeInterna === '' || patch.prioridadeInterna == null
       ? null : Number(patch.prioridadeInterna);
-    payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 5) ? val : null;
+    payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 4) ? val : null;
+  }
+  if ('impedimento' in patch) {
+    payload.impedimento = Boolean(patch.impedimento);
   }
   payload.radarFieldsUpdatedAt = serverTimestamp();
 

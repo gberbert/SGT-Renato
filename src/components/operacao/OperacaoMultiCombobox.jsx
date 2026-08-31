@@ -59,6 +59,23 @@ const OperacaoMultiCombobox = ({
     onChange(next);
   };
 
+  const allFilteredIds = filteredOptions.map((o) => o.id);
+  const allFilteredSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selected.has(id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      // deselect all filtered
+      const next = new Set(selected);
+      allFilteredIds.forEach((id) => next.delete(id));
+      onChange(next);
+    } else {
+      // select all filtered
+      const next = new Set(selected);
+      allFilteredIds.forEach((id) => next.add(id));
+      onChange(next);
+    }
+  };
+
   return (
     <Box ref={rootRef} className="operacao-combobox" style={{ position: 'relative', flex: 1, minWidth: 200 }}>
       <Text size="1" weight="bold" color="gray" mb="1" style={{ letterSpacing: '0.06em' }}>
@@ -99,7 +116,23 @@ const OperacaoMultiCombobox = ({
               Nenhum resultado para &quot;{searchQuery.trim()}&quot;.
             </Text>
           ) : (
-            filteredOptions.map((item) => (
+            <>
+              {filteredOptions.length > 1 && (
+                <label
+                  className="operacao-combobox-item operacao-combobox-item-selectall"
+                  style={{ borderBottom: '1px solid var(--glass-border)', marginBottom: 2, paddingBottom: 6 }}
+                >
+                  <Checkbox
+                    checked={allFilteredSelected}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                  <Text size="2" weight="bold" color="gray">
+                    {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+                    {searchQuery.trim() ? ` (${filteredOptions.length})` : ''}
+                  </Text>
+                </label>
+              )}
+            {filteredOptions.map((item) => (
               <label key={item.id} className="operacao-combobox-item">
                 <Checkbox
                   checked={selected.has(item.id)}
@@ -112,7 +145,8 @@ const OperacaoMultiCombobox = ({
                   )}
                 </Flex>
               </label>
-            ))
+            ))}
+            </>
           )}
         </Box>
       )}

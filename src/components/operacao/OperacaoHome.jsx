@@ -773,6 +773,24 @@ const OperacaoHome = ({ userRole }) => {
                           </button>
                         </Flex>
                         <Text className="operacao-radar-summary-label">Tickets em {tabCard.label}</Text>
+                        {escopoTickets.length > 0 && (() => {
+                          const typeCounts = {};
+                          for (const t of escopoTickets) {
+                            const type = t.issueType || 'Sem tipo';
+                            typeCounts[type] = (typeCounts[type] || 0) + 1;
+                          }
+                          const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+                          return (
+                            <Flex gap="3" wrap="wrap" mt="2">
+                              {sortedTypes.map(([type, count]) => (
+                                <Flex key={type} align="center" gap="1" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                  <Text size="1" weight="bold" style={{ color: tabCard.color }}>{formatNumber(count)}</Text>
+                                  <Text size="1" color="gray">{type}</Text>
+                                </Flex>
+                              ))}
+                            </Flex>
+                          );
+                        })()}
                       </Box>
 
                       <OperacaoEscopoTimelineChart tickets={escopoTickets} />
@@ -791,11 +809,13 @@ const OperacaoHome = ({ userRole }) => {
                       <Text size="2" color="gray">
                         {drillLoading
                           ? 'Consultando tickets no Firestore…'
-                          : `${formatNumber(drillHierarchy.totalTickets)} ticket(s)${
-                              drillRows.length < drillHierarchy.totalTickets
-                                ? ` · ${formatNumber(drillRows.length)} exibido(s)`
-                                : ''
-                            }`}
+                          : (() => {
+                              const totalImpedimentos = drillTickets.filter((t) => t.impedimento === true).length;
+                              const base = `${formatNumber(drillHierarchy.totalTickets)} ticket(s)${drillRows.length < drillHierarchy.totalTickets ? ` · ${formatNumber(drillRows.length)} exibido(s)` : ''}`;
+                              return totalImpedimentos > 0
+                                ? `${base} · 🚧 ${formatNumber(totalImpedimentos)} impedimento(s)`
+                                : base;
+                            })()}
                       </Text>
                     </Box>
                     <Box className="operacao-radar-drill-filter">
@@ -842,17 +862,14 @@ const OperacaoHome = ({ userRole }) => {
                             <th>ISSUETYPE</th>
                             <th>SUMMARY</th>
                             <th>STATUS</th>
-                            <th>PRIORITY</th>
-                            <th>CREATED_AT</th>
+                            <th>SEVERIDADE</th>
                             <th>AGING</th>
-                            <th>UPDATE_AT</th>
-                            <th>TICKETS_VINCULADOS</th>
                             <th>GRUPO_SUPORTE</th>
-                            <th>ESCOPO</th>
                             <th>PRIORIDADE INT.</th>
+                            <th>IMPEDIMENTO</th>
                             <th>RESPONSÁVEL ATUAL</th>
                             <th>DATA DE PREVISÃO</th>
-                            <th>OBSERVAÇÃO ADICIONAL</th>
+                            <th>MOTIVO IMPEDIMENTO</th>
                             <th>ESTIMATIVA MACRO</th>
                           </tr>
                         </thead>
@@ -905,12 +922,8 @@ const OperacaoHome = ({ userRole }) => {
                               <td className="operacao-radar-tickets-summary">{ticket.summary || '—'}</td>
                               <td>{ticket.status || '—'}</td>
                               <td>{ticket.priority || '—'}</td>
-                              <td>{formatDateTime(ticket.createdAt)}</td>
                               <td>{ticket.agingDays != null ? `${formatNumber(ticket.agingDays)} d` : '—'}</td>
-                              <td>{formatDateTime(ticket.updatedAt)}</td>
-                              <td className="operacao-radar-tickets-linked">{ticket.linkedTicketsLabel || '—'}</td>
                               <td>{ticket.grupoSuporte || '—'}</td>
-                              <td>{ticket.escopo || '—'}</td>
                               <td>
                                 <select
                                   className="operacao-radar-tickets-editable-input operacao-radar-tickets-editable-input-narrow"
@@ -927,6 +940,17 @@ const OperacaoHome = ({ userRole }) => {
                                     </option>
                                   ))}
                                 </select>
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={ticket.impedimento === true}
+                                  onChange={(e) =>
+                                    handleSaveTicketField(ticket.issueKey, 'impedimento', e.target.checked)
+                                  }
+                                  title="Marcar como impedimento"
+                                  style={{ cursor: 'pointer', width: 16, height: 16 }}
+                                />
                               </td>
                               <td>
                                 <input
