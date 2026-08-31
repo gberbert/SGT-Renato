@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
-import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock } from 'lucide-react';
+import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
 import OperacaoEscopoTimelineChart from './OperacaoEscopoTimelineChart';
@@ -36,6 +37,52 @@ const formatDateTime = (value) => {
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString('pt-BR');
 };
+
+function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
+  const HEADERS = [
+    'ISSUE_KEY', 'ISSUETYPE', 'SUMMARY', 'STATUS', 'SEVERIDADE',
+    'AGING (dias)', 'GRUPO_SUPORTE', 'PRIORIDADE INT.', 'IMPEDIMENTO',
+    'RESPONSÁVEL ATUAL', 'DATA DE PREVISÃO', 'MOTIVO IMPEDIMENTO', 'ESTIMATIVA MACRO',
+  ];
+
+  const data = [
+    HEADERS,
+    ...rows.map((t) => [
+      t.issueKey || '',
+      t.issueType || '',
+      t.summary || '',
+      t.status || '',
+      t.priority || '',
+      t.agingDays != null ? Number(t.agingDays) : '',
+      t.grupoSuporte || '',
+      t.prioridadeInterna != null ? `P${t.prioridadeInterna}` : '',
+      t.impedimento ? 'Sim' : 'Não',
+      t.responsavelAtual || '',
+      t.dataPrevisao ? String(t.dataPrevisao).slice(0, 10) : '',
+      t.observacaoAdicional || '',
+      t.estimativaMacro != null ? Number(t.estimativaMacro) : '',
+    ]),
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // Larguras automáticas por coluna
+  const colWidths = HEADERS.map((h, i) => {
+    const maxLen = Math.max(
+      h.length,
+      ...rows.map((r) => String(data[rows.indexOf(r) + 1]?.[i] ?? '').length)
+    );
+    return { wch: Math.min(60, Math.max(10, maxLen + 2)) };
+  });
+  ws['!cols'] = colWidths;
+
+  // Estilo do cabeçalho (bold) via cell styles — SheetJS community não suporta estilos completos;
+  // a primeira linha fica no header da planilha de forma natural
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Radar Operação');
+
+  XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
+}
 
 const RADAR_TAB_DEFS = [
   { value: 'GERAL', slug: 'geral', label: 'Geral', requiredFn: PermissionFunctionKeys.RADAR_GERAL_VIEW },
@@ -863,6 +910,7 @@ const OperacaoHome = ({ userRole }) => {
                             })()}
                       </Text>
                     </Box>
+                    <Flex align="end" gap="2">
                     <Box className="operacao-radar-drill-filter">
                       <Text size="1" weight="bold" color="gray" mb="1" style={{ letterSpacing: '0.06em' }}>
                         ISSUE_KEY
@@ -880,6 +928,24 @@ const OperacaoHome = ({ userRole }) => {
                         </TextField.Slot>
                       </TextField.Root>
                     </Box>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      title="Exportar para Excel (CSV)"
+                      disabled={drillLoading || drillRows.length === 0}
+                      onClick={() => {
+                        const safeName = (drillLabel || 'radar')
+                          .replace(/[^a-zA-Z0-9_\- ]/g, '')
+                          .trim()
+                          .replace(/\s+/g, '-')
+                          .toLowerCase();
+                        exportRowsToExcel(drillRows, `${safeName}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+                      }}
+                      style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Download size={15} /> Exportar Excel
+                    </button>
+                    </Flex>
                   </Flex>
 
                   {drillError && (
