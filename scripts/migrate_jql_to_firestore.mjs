@@ -14,22 +14,21 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIREBASE_RC = join(__dirname, '..', '.firebaserc');
 const JQL_FILE = join(__dirname, '..', 'functions', 'data', 'jqls_carga.txt');
 
 // ─── Firebase init ───────────────────────────────────────────────────────────
+const firebaserc = JSON.parse(readFileSync(join(__dirname, '..', '.firebaserc'), 'utf8'));
+const projectId = firebaserc?.projects?.default || 'sgt-renato';
+
 if (!getApps().length) {
   const serviceAccount = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (serviceAccount && existsSync(serviceAccount)) {
-    initializeApp({ credential: cert(JSON.parse(readFileSync(serviceAccount, 'utf8'))) });
+    initializeApp({ credential: cert(JSON.parse(readFileSync(serviceAccount, 'utf8'))), projectId });
   } else {
-    // Usa credenciais padrão (gcloud auth / emulador)
-    initializeApp();
+    initializeApp({ projectId });
   }
 }
 const db = getFirestore();

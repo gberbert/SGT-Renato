@@ -582,7 +582,29 @@ async function loadJqlBatchesWithOverrides() {
   try {
     const db = getDb();
     const snap = await db.collection("jql_overrides").get();
-    if (snap.empty) return baseBatches;
+
+    // Auto-seed: se a collection estiver vazia, popula com as JQLs do arquivo
+    if (snap.empty) {
+      console.log("[jiraGlobalSync] jql_overrides vazia — semeando com JQLs do arquivo...");
+      const writeBatch = db.batch();
+      for (const batch of baseBatches) {
+        const ref = db.collection("jql_overrides").doc(batch.escopoId);
+        writeBatch.set(ref, {
+          escopoId:    batch.escopoId,
+          escopo:      batch.escopo,
+          label:       batch.label,
+          jql:         batch.jql,
+          originalJql: batch.jql,
+          ativo:       true,
+          updatedAt:   FieldValue.serverTimestamp(),
+          updatedBy:   "auto-seed",
+          description: "JQL semeada automaticamente na primeira execução",
+        }, { merge: true });
+      }
+      await writeBatch.commit();
+      console.log(`[jiraGlobalSync] ${baseBatches.length} JQLs semeadas em jql_overrides`);
+      return baseBatches;
+    }
 
     const overridesMap = {};
     snap.forEach((doc) => {

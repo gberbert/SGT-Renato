@@ -1,11 +1,10 @@
 CONSULTA 1 PROBLEMAS
-Project in (TI)
-AND "grupo de suporte[group picker (single group)]" IN (TI_SANF, TI_SEFIC, TI_SGA, TI_Sharepoint, TI_Siase, TI_SIGA, TI_Solucionador_DCAF, TI_Solucionador_EPM, "TI_Solucionador_Logos Web", TI_Solucionador_Projetos_Particulares, TI_SPAP, TI_WEB_Agência_Virtual, TI_WEB_ApontamentoHoras, TI_WEB_Comercial, TI_WEB_ControleGarantias, TI_WEB_Energia, TI_WEB_Clientes_VIP, TI_WEB_CPFLEmpresas, TI_WEB_Corporativo, TI_WEB_GDO, TI_WEB_GISMA, TI_WEB_GMP, "TI_WEB_Inspeções Rapidas", TI_WEB_Logos, TI_WebLogradouros, TI_WEB_PID, TI_WEB_RDCT, TI_WEB_SEFIC, TI_WEB_SGA, TI_WEB_SIGA, TI_WEB_SPAP, TI_WEB_WebLogradouros, TI_WEB_VBA_Gestão_de_Energia, TI_WEB_SIGEn, TI_WEB_SANF, TI_WEB_RHAP, TI_WEB_Resoluções, TI_WEB_PortalOperações, TI_WEB_PRVG, TI_WEB_NSGCSR, TI_CWS, TI_GED_FOR, TI_Renováveis_ARQUIVEI, TI_Renováveis_AZIX, TI_Renováveis_INTRANET, TI_Renováveis_PPM, TI_Renováveis_SIS, TI_Renováveis_SOGI, TI_Agência_Virtual, TI_CPFLEmpresas, "TI_Inspeções Rapidas", TI_Logos, TI_WEB_Lumens, TI_SICLOPE, TI_WEB_Operação, TI_Solucionador_SGCE, TI_Renováveis_SICLOPE, TI_WEB_EVI, TI_Renováveis_VBA_APROVADOR_WORKFLOW, "TI - WEB - Novo GED_Suporte", "TI - WEB - Novo GED_Suporte_N2", TI_SALESFORCE, TI_Suporte_TOTEM_Sistema, TI_CDRE_N1, TI_GMP, TI_Atendimento)
-AND type = Problem
-OR (
-project = PROB
-AND "fornecedor ti[dropdown]" IN ("NTT Data", "NTT DATA - FRENTES SATELITIES")
-)
+(project = TI AND type = Problem AND "fornecedores[dropdown]" = "NTT Data")
+or 
+(type = Problem AND project = PROB AND cf[10382] = "ari:cloud:cmdb::object/4fc8c668-3c28-445a-921f-4cd66d1f865e/432192")
+or
+(type != Problem AND project = PROB AND cf[10382] = "ari:cloud:cmdb::object/4fc8c668-3c28-445a-921f-4cd66d1f865e/432192")
+
 
 CONSULTA 2 DEMANDAS FAST
 project = SERVICE
