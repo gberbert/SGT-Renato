@@ -87,7 +87,24 @@ async function runBootstrapLoad(uid, { force = false } = {}) {
     if (loadToken !== token) return;
 
     const rawTs = bootstrap.stats?.lastSyncAt;
-    const lastSyncAt = rawTs?.toDate?.() ?? (rawTs ? new Date(rawTs) : null);
+    let lastSyncAt = null;
+    if (rawTs) {
+      if (typeof rawTs.toDate === 'function') {
+        // Firestore Timestamp — instância da classe SDK do browser
+        lastSyncAt = rawTs.toDate();
+      } else if (rawTs._seconds != null) {
+        // Firebase Admin SDK serializa como { _seconds, _nanoseconds } via JSON
+        lastSyncAt = new Date(Number(rawTs._seconds) * 1000);
+      } else if (rawTs.seconds != null) {
+        // Alguns SDKs serializam como { seconds, nanoseconds }
+        lastSyncAt = new Date(Number(rawTs.seconds) * 1000);
+      } else {
+        // string ISO, number (ms epoch), etc.
+        lastSyncAt = new Date(rawTs);
+      }
+      // Descarta se acabou sendo uma data inválida
+      if (Number.isNaN(lastSyncAt.getTime())) lastSyncAt = null;
+    }
     patchState({
       statsRadar: bootstrap.statsRadar,
       statsFingerprint: buildStatsFingerprint(bootstrap.stats),

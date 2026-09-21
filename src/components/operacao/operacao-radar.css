@@ -288,16 +288,33 @@
 }
 
 .operacao-radar-tickets-table-wrap {
-  max-height: 420px;
+  max-height: 560px;
   overflow: auto;
   border: 1px solid var(--glass-border);
-  border-radius: 10px;
+  border-radius: 8px;
 }
+
+/* Per-column fixed widths via col classes */
+.operacao-radar-tickets-table col.col-key      { width: 130px; }
+.operacao-radar-tickets-table col.col-type     { width:  84px; }
+.operacao-radar-tickets-table col.col-summary  { width: 220px; }
+.operacao-radar-tickets-table col.col-status   { width: 140px; }
+.operacao-radar-tickets-table col.col-sev      { width:  78px; }
+.operacao-radar-tickets-table col.col-aging    { width:  58px; }
+.operacao-radar-tickets-table col.col-grupo    { width: 130px; }
+.operacao-radar-tickets-table col.col-prio     { width:  82px; }
+.operacao-radar-tickets-table col.col-imp      { width:  64px; }
+.operacao-radar-tickets-table col.col-resp     { width: 120px; }
+.operacao-radar-tickets-table col.col-prev     { width: 104px; }
+.operacao-radar-tickets-table col.col-motivo   { width: 180px; }
+.operacao-radar-tickets-table col.col-estim    { width:  80px; }
 
 .operacao-radar-tickets-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
+  table-layout: fixed;
+  line-height: 1.2;
 }
 
 .operacao-radar-tickets-table th {
@@ -306,22 +323,28 @@
   z-index: 1;
   background: var(--bg-surface);
   text-align: left;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
+  padding: 5px 8px;
+  font-size: 0.6rem;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--text-muted);
   border-bottom: 1px solid var(--glass-border);
+  white-space: nowrap;
 }
 
 .operacao-radar-tickets-table td {
-  padding: 0.6rem 0.75rem;
+  padding: 3px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  vertical-align: top;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+  height: 26px;
 }
 
 .operacao-radar-tickets-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .operacao-radar-tickets-key {
@@ -335,20 +358,22 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  min-width: 180px;
+  min-width: 0;
+  max-width: unset;
+  overflow: visible;
 }
 
 .operacao-radar-tickets-expand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   border: none;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 4px;
   flex-shrink: 0;
 }
 
@@ -363,7 +388,7 @@
 }
 
 .operacao-radar-tickets-child-count {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -377,29 +402,29 @@
 }
 
 .operacao-radar-tickets-summary {
-  max-width: 360px;
+  width: 280px;
 }
 
 .operacao-radar-tickets-linked {
-  min-width: 180px;
-  max-width: 280px;
   font-size: 0.78rem;
-  line-height: 1.35;
   color: var(--text-muted);
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .operacao-radar-tickets-editable-input {
-  width: 130px;
-  min-width: 110px;
-  padding: 4px 6px;
-  font-size: 0.78rem;
+  width: 120px;
+  min-width: 90px;
+  padding: 1px 5px;
+  font-size: 0.7rem;
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--glass-border);
-  border-radius: 6px;
+  border-radius: 4px;
   outline: none;
   transition: border-color 0.15s ease, background 0.15s ease;
+  height: 20px;
 }
 
 .operacao-radar-tickets-editable-input:hover {
@@ -412,16 +437,268 @@
 }
 
 .operacao-radar-tickets-editable-input-wide {
-  width: 220px;
-  min-width: 180px;
+  width: 200px;
+  min-width: 160px;
 }
 
 .operacao-radar-tickets-editable-input-narrow {
-  width: 90px;
-  min-width: 70px;
+  width: 76px;
+  min-width: 60px;
 }
 
 .operacao-radar-loading {
   padding: 1rem;
   color: var(--text-muted);
+}
+
+/* ── KPI Cards (Geral + escopos) ───────────────────────────────────────── */
+.radar-kpi-card {
+  position: relative;
+  padding: 1.1rem 1.25rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  min-width: 160px;
+  flex: 1 1 160px;
+  max-width: 240px;
+  overflow: hidden;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.radar-kpi-card:hover {
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.radar-kpi-card--main {
+  min-width: 180px;
+  flex: 1 1 180px;
+}
+
+.radar-kpi-card--sub {
+  min-width: 130px;
+  flex: 1 1 130px;
+  max-width: 200px;
+}
+
+/* ── Botao Carregar Dados ──────────────────────────────────────────────── */
+.radar-load-btn-wrap {
+  flex-shrink: 0;
+}
+
+.radar-load-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.07);
+  color: #38bdf8;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.radar-load-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.13);
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+.radar-load-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ── Spin ──────────────────────────────────────────────────────────────── */
+.radar-spin {
+  animation: operacao-radar-spin 0.85s linear infinite;
+}
+
+/* ── Drill Panel ───────────────────────────────────────────────────────── */
+.radar-drill-panel {
+  padding: 1.25rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.radar-drill-table-wrap {
+  max-height: 440px;
+  overflow: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+}
+
+.radar-drill-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.radar-drill-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-surface);
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.67rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--glass-border);
+  white-space: nowrap;
+}
+
+.radar-drill-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+}
+
+.radar-drill-row:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.radar-drill-child td {
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.radar-drill-parent td {
+  font-weight: 600;
+}
+
+.radar-issue-link {
+  color: #38bdf8;
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.radar-issue-link:hover {
+  text-decoration: underline;
+}
+
+.radar-status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.radar-summary-cell {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.radar-inline-select {
+  font-size: 0.78rem;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+  outline: none;
+}
+
+.radar-inline-select:focus {
+  border-color: #22d3ee;
+}
+
+.radar-inline-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #22d3ee;
+}
+
+.radar-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.radar-expand-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-main);
+}
+
+/* ── Progress boot ─────────────────────────────────────────────────────── */
+.operacao-radar-boot-progress {
+  max-width: 640px;
+}
+
+/* ── Tab Load Banner ───────────────────────────────────────────────────── */
+.radar-tab-load-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  padding: 2.5rem 1.5rem;
+  border-radius: 16px;
+  border: 1px dashed rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.03);
+  margin-top: 1rem;
+}
+
+.radar-tab-load-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  font-family: inherit;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+  letter-spacing: 0.02em;
+}
+
+.radar-tab-load-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.7);
+  transform: translateY(-1px);
+}
+
+.radar-tab-load-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.radar-tab-load-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.radar-tab-load-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(56, 189, 248, 0.3);
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: radar-tab-spin 0.7s linear infinite;
+}
+
+@keyframes radar-tab-spin {
+  to { transform: rotate(360deg); }
 }

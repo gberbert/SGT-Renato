@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
-import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download } from 'lucide-react';
+import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download, DatabaseZap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
@@ -84,6 +84,42 @@ function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
   XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
 }
 
+/** Status do fluxo de trabalho de DEMANDAS — fila CPFL Previsto (pré-análise) */
+const DEMANDA_STATUS_FLOW_PREVISTO = [
+  { status: 'Aguardando Aprovação Gestor Imediato', responsible: 'CPFL' },
+  { status: 'Escrita de Requerimento',              responsible: 'CPFL' },
+  { status: 'Validação Comitê',                     responsible: 'CPFL' },
+  { status: 'Aguardando Solicitante',               responsible: 'CPFL' },
+  { status: 'Detalhamento de Requisitos',           responsible: 'CPFL' },
+  { status: 'Aguardando Profissional de TI',        responsible: 'CPFL' },
+  { status: 'Aguardando Demanda/Projeto',           responsible: 'CPFL' },
+  { status: 'Revisão de Requisitos de Projeto',     responsible: 'CPFL' },
+];
+
+/** Status do fluxo de trabalho de DEMANDAS — ordem e responsável pela fila */
+const DEMANDA_STATUS_FLOW_ROW1 = [
+  { status: 'Análise e T-Shirt',              responsible: 'NTT Data' },
+  { status: 'T-Shirt Aguardando Aprovação PO', responsible: 'CPFL'    },
+  { status: 'T-Shirt Concluída',               responsible: 'CPFL'    },
+  { status: 'Planejamento',                    responsible: 'NTT Data' },
+  { status: 'Aprovação de Planejamento',       responsible: 'CPFL'    },
+  { status: 'Execução',                        responsible: 'NTT Data' },
+  { status: 'Em Execução',                     responsible: 'NTT Data' },
+  { status: 'Em Teste',                        responsible: 'CPFL'    },
+  { status: 'Em homologação',                  responsible: 'CPFL'    },
+  { status: 'Revisão de homologação',          responsible: 'NTT Data' },
+  { status: 'Aguardando Mudança',              responsible: 'NTT Data' },
+  { status: 'Concluída',                       responsible: 'CPFL'    },
+  { status: 'Cancelada',                       responsible: 'CPFL'    },
+  { status: 'Congelada',                       responsible: 'CPFL'    },
+];
+const DEMANDA_STATUS_FLOW_ROW2 = [];
+
+const RESPONSIBLE_STYLE = {
+  'NTT Data': { bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.4)', color: '#38bdf8' },
+  CPFL:       { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',  color: '#22c55e' },
+};
+
 const RADAR_TAB_DEFS = [
   { value: 'GERAL', slug: 'geral', label: 'Geral', requiredFn: PermissionFunctionKeys.RADAR_GERAL_VIEW },
   { value: 'PROBLEMAS', slug: 'problemas', label: 'Problemas', requiredFn: PermissionFunctionKeys.RADAR_PROBLEMAS_VIEW },
@@ -105,6 +141,47 @@ const tabValueToSlug = (value) => {
   return found ? found.slug : 'geral';
 };
 
+/** Banner exibido dentro de cada aba quando os dados ainda não foram carregados. */
+function TabLoadBanner({ tabLabel, onLoad, loading }) {
+  return (
+    <Box className="radar-tab-load-banner">
+      <Flex direction="column" align="center" gap="3">
+        <DatabaseZap size={40} color="#38bdf8" strokeWidth={1.5} />
+        <Box style={{ textAlign: 'center' }}>
+          <Text size="4" weight="bold" style={{ display: 'block', marginBottom: 6 }}>
+            Dados não carregados
+          </Text>
+          <Text size="2" color="gray">
+            Clique no botão abaixo para buscar os dados da aba{' '}
+            <Text as="span" weight="bold" style={{ color: 'var(--gray-12)' }}>
+              {tabLabel}
+            </Text>{' '}
+            do Firestore.
+          </Text>
+        </Box>
+        <button
+          type="button"
+          className="btn btn-primary radar-tab-load-btn"
+          onClick={onLoad}
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <span className="radar-tab-load-spinner" />
+              Carregando dados…
+            </>
+          ) : (
+            <>
+              <DatabaseZap size={16} />
+              Carregar dados — {tabLabel}
+            </>
+          )}
+        </button>
+      </Flex>
+    </Box>
+  );
+}
+
 const OperacaoHome = ({ userRole }) => {
   const {
     bootLoading,
@@ -117,10 +194,6 @@ const OperacaoHome = ({ userRole }) => {
     refreshRadar,
     squadGrupoMap,
   } = useOperacaoRadar();
-
-  useEffect(() => {
-    ensureRadarBootstrap();
-  }, [ensureRadarBootstrap]);
 
   const [allowedFunctions, setAllowedFunctions] = useState(null);
 
@@ -185,6 +258,8 @@ const OperacaoHome = ({ userRole }) => {
 
   const [ticketsCache, setTicketsCache] = useState(null);
   const [ticketsCacheLoading, setTicketsCacheLoading] = useState(false);
+  // Tracks which escopos have been successfully loaded
+  const [loadedEscopos, setLoadedEscopos] = useState(new Set());
 
   const [computedRadar, setComputedRadar] = useState(null);
   const [drillEscopo, setDrillEscopo] = useState(null);
@@ -195,6 +270,8 @@ const OperacaoHome = ({ userRole }) => {
   const [drillLoading, setDrillLoading] = useState(false);
   const [drillError, setDrillError] = useState('');
   const [drillIssueTypeFilter, setDrillIssueTypeFilter] = useState(null);
+  const [drillStatusFilter, setDrillStatusFilter] = useState(null);
+  const [demandaStatusFilters, setDemandaStatusFilters] = useState(() => new Set());
 
   const radar = useMemo(
     () => computedRadar || statsRadar || { total: 0, escopos: [] },
@@ -290,20 +367,22 @@ const OperacaoHome = ({ userRole }) => {
   const openDrillDirect = useCallback((tickets, label) => {
     setDrillIssueKeyQuery('');
     setExpandedParents(new Set());
-    setDrillEscopo('');      // '' = não filtra por escopo em prepareDrillHierarchy
+    setDrillEscopo('');
     setDrillLabel(label);
     setDrillIssueTypeFilter(null);
+    setDrillStatusFilter(null);
     setDrillError('');
     setDrillTickets(tickets);
   }, []);
 
   const openDrill = useCallback(
-    async (escopoKey, label, issueTypeFilter = null) => {
+    async (escopoKey, label, issueTypeFilter = null, statusFilter = null) => {
       setDrillIssueKeyQuery('');
       setExpandedParents(new Set());
       setDrillEscopo(escopoKey);
       setDrillLabel(label);
       setDrillIssueTypeFilter(issueTypeFilter);
+      setDrillStatusFilter(statusFilter);
       setDrillTickets([]);
       setDrillError('');
       setDrillLoading(true);
@@ -324,6 +403,11 @@ const OperacaoHome = ({ userRole }) => {
         if (issueTypeFilter) {
           filteredTickets = filteredTickets.filter(
             (t) => (t.issueType || 'Sem tipo') === issueTypeFilter
+          );
+        }
+        if (statusFilter) {
+          filteredTickets = filteredTickets.filter(
+            (t) => String(t.status || '').trim() === statusFilter
           );
         }
         setDrillTickets(filteredTickets);
@@ -379,62 +463,95 @@ const OperacaoHome = ({ userRole }) => {
     setDrillError('');
   };
 
-  // 1) Ao entrar na tela Radar, carregar tickets_global uma vez (memória + cache)
+  // 1) Ao entrar na tela Radar, restaurar cache de sessão por escopo silenciosamente
   useEffect(() => {
-    let cancelled = false;
-
-    async function ensureTicketsCache() {
-      if (!statsFingerprint) return;
-      if (!hasData) return;
-      if (ticketsCacheLoading) return;
-      if (Array.isArray(ticketsCache) && ticketsCache.length >= 0) return;
-
-      const ticketsCacheKey = `operacao_radar_tickets_${statsFingerprint}`;
-      const cached = (() => {
-        try {
-          return sessionStorage.getItem(ticketsCacheKey);
-        } catch {
-          return null;
-        }
-      })();
-
-      let cachedTickets = null;
-      if (cached) {
-        try {
-          cachedTickets = JSON.parse(cached);
-        } catch {
-          cachedTickets = null;
-        }
-      }
-
-      if (Array.isArray(cachedTickets)) {
-        setTicketsCache(cachedTickets);
-        return;
-      }
-
-      setTicketsCacheLoading(true);
+    if (!statsFingerprint) return;
+    const escoposToTry = ['PROBLEMAS', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO'];
+    const restored = [];
+    const restoredEscopos = new Set();
+    for (const esc of escoposToTry) {
       try {
-        const loaded = await fetchTicketsGlobalForRadar();
-        if (cancelled) return;
+        const raw = sessionStorage.getItem(`operacao_radar_tickets_${statsFingerprint}_${esc}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            restored.push(...parsed);
+            restoredEscopos.add(esc);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (restored.length > 0) {
+      setTicketsCache(restored);
+      setLoadedEscopos(restoredEscopos);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsFingerprint]);
 
-        setTicketsCache(loaded);
+  /**
+   * Carrega tickets do Firestore sob demanda (chamado pelo botão em cada aba).
+   * @param {string|null} escopoKey - chave do escopo (ex: 'DEMANDA'). null = carregar todos via fetchTicketsGlobalForRadar.
+   */
+  const loadTicketsData = useCallback(async (escopoKey) => {
+    if (ticketsCacheLoading) return;
+    if (escopoKey && loadedEscopos.has(escopoKey)) return;
+
+    // Bootstrap under the hood (carrega statsRadar, filterOptions, etc.)
+    await ensureRadarBootstrap();
+
+    setTicketsCacheLoading(true);
+    try {
+      let loaded;
+      if (escopoKey) {
+        loaded = await fetchTicketsForDrill({ escopoKey });
+      } else {
+        loaded = await fetchTicketsGlobalForRadar();
+      }
+
+      setTicketsCache((prev) => {
+        const existing = Array.isArray(prev) ? prev : [];
+        // Remove stale tickets for this escopo, then append fresh ones
+        const filtered = escopoKey
+          ? existing.filter(
+              (t) => String(t.escopo || '').toUpperCase() !== String(escopoKey).toUpperCase()
+            )
+          : [];
+        return [...filtered, ...loaded];
+      });
+
+      setLoadedEscopos((prev) => {
+        const next = new Set(prev);
+        if (escopoKey) {
+          next.add(escopoKey);
+        } else {
+          // Mark all known escopos as loaded when using global fetch
+          for (const t of loaded) {
+            const k = String(t.escopo || '').toUpperCase();
+            if (k) next.add(k);
+          }
+        }
+        return next;
+      });
+
+      // Persist per-escopo to sessionStorage
+      if (statsFingerprint) {
         try {
-          sessionStorage.setItem(ticketsCacheKey, JSON.stringify(loaded));
+          if (escopoKey) {
+            sessionStorage.setItem(
+              `operacao_radar_tickets_${statsFingerprint}_${escopoKey}`,
+              JSON.stringify(loaded)
+            );
+          }
         } catch {
           // ignore
         }
-      } finally {
-        if (!cancelled) setTicketsCacheLoading(false);
       }
+    } finally {
+      setTicketsCacheLoading(false);
     }
-
-    ensureTicketsCache();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statsFingerprint, hasData]);
+  }, [ticketsCacheLoading, loadedEscopos, ensureRadarBootstrap, statsFingerprint]);
 
   // 2) Ao filtrar, recomputa totais/lanes a partir do tickets em memória
   useEffect(() => {
@@ -623,7 +740,7 @@ const OperacaoHome = ({ userRole }) => {
         </Box>
       )}
 
-      {!bootLoading && !hasData && (
+      {!bootLoading && hasData === false && statsFingerprint && (
         <Callout.Root color="amber" mb="4">
           <Callout.Text>
             Nenhum ticket em <code>tickets_global</code>. Execute a carga Jira em Configurações →
@@ -632,83 +749,8 @@ const OperacaoHome = ({ userRole }) => {
         </Callout.Root>
       )}
 
-      {!bootLoading && hasData && (
+      {!bootLoading && (
         <>
-          {/* Filters ABOVE tabs */}
-          <Box mb="4">
-            <Box
-              className="operacao-radar-filters"
-              style={{ opacity: shouldBlockFilters ? 0.6 : 1 }}
-            >
-              <OperacaoMultiCombobox
-                label="GRUPO DE ATENDIMENTO"
-                placeholder="Todos os grupos"
-                options={effectiveFilterOptions.grupos}
-                selected={filters.grupos}
-                onChange={(value) => updateFilter('grupos', value)}
-                disabled={shouldBlockFilters}
-                formatMeta={(item) => `${formatNumber(item.total)} tickets`}
-              />
-              <OperacaoMultiCombobox
-                label="SQUAD"
-                placeholder="Todas as squads"
-                options={effectiveFilterOptions.squads}
-                selected={filters.squads}
-                onChange={(value) => updateFilter('squads', value)}
-                disabled={shouldBlockFilters}
-                formatOption={(item) => (item.sigla ? `${item.sigla} — ${item.nome}` : item.nome)}
-                formatMeta={(item) => `${formatNumber(item.total)} tickets`}
-              />
-              <OperacaoMultiCombobox
-                label="STATUS DO TICKET"
-                placeholder="Todos os status"
-                options={effectiveFilterOptions.statuses}
-                selected={filters.statuses}
-                onChange={(value) => updateFilter('statuses', value)}
-                disabled={shouldBlockFilters}
-                formatMeta={(item) => `${formatNumber(item.total)} tickets`}
-              />
-
-              <Box style={{ paddingRight: '0.75rem', borderRight: '1px solid var(--glass-border)' }}>
-                <OperacaoDateRangeFilter
-                  label="DATA DE CRIAÇÃO (CREATED_AT)"
-                  value={filters.createdAt}
-                  onChange={(value) => updateFilter('createdAt', value)}
-                  disabled={shouldBlockFilters}
-                />
-              </Box>
-
-              <OperacaoDateRangeFilter
-                label="DATA DE RESOLUÇÃO (RESOLVED_AT)"
-                value={filters.resolvedAt}
-                onChange={(value) => updateFilter('resolvedAt', value)}
-                disabled={shouldBlockFilters}
-              />
-
-              <Flex
-                className="operacao-radar-filter-actions"
-                align="center"
-                justify="between"
-                wrap="wrap"
-                gap="2"
-              >
-                <Text className="operacao-radar-filter-summary">
-                  Filtros globais desativados para reduzir leituras do Firestore. Clique em um escopo
-                  para carregar a tabela de tickets daquele grupo.
-                </Text>
-                {filterActive && (
-                  <button
-                    type="button"
-                    className="operacao-radar-clear-filters btn btn-ghost"
-                    onClick={clearFilters}
-                  >
-                    <XCircle size={16} /> Limpar filtros
-                  </button>
-                )}
-              </Flex>
-            </Box>
-          </Box>
-
           <RadixTabs.Root
             value={activeEscopoTab}
             onValueChange={(next) => {
@@ -717,6 +759,8 @@ const OperacaoHome = ({ userRole }) => {
               setDrillLabel('');
               setDrillIssueKeyQuery('');
               setDrillIssueTypeFilter(null);
+              setDrillStatusFilter(null);
+              setDemandaStatusFilters(new Set());
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
@@ -791,26 +835,48 @@ const OperacaoHome = ({ userRole }) => {
                   </Box>
                 </>
               ) : activeEscopoTab === 'EFICIENCIA' ? (
-                (() => {
-                  const filteredTicketsAll = Array.isArray(ticketsCache)
-                    ? filterTickets(ticketsCache, filters, squadGrupoMap || new Map())
-                    : [];
-                  return <OperacaoEfficiencyChart tickets={filteredTicketsAll} />;
-                })()
+                ticketsCache === null ? (
+                  <TabLoadBanner
+                    tabLabel="Eficiência (todos os escopos)"
+                    onLoad={() => loadTicketsData(null)}
+                    loading={ticketsCacheLoading}
+                  />
+                ) : (
+                  (() => {
+                    const filteredTicketsAll = filterTickets(ticketsCache, filters, squadGrupoMap || new Map());
+                    return <OperacaoEfficiencyChart tickets={filteredTicketsAll} />;
+                  })()
+                )
               ) : activeEscopoTab === 'OBSERVABILIDADE' ? (
-                (() => {
-                  const filteredTicketsAll = Array.isArray(ticketsCache)
-                    ? filterTickets(ticketsCache, filters, squadGrupoMap || new Map())
-                    : [];
-                  return (
-                    <OperacaoObservabilidade
-                      tickets={filteredTicketsAll}
-                      onDrillTickets={openDrillDirect}
-                    />
-                  );
-                })()
+                ticketsCache === null ? (
+                  <TabLoadBanner
+                    tabLabel="Observabilidade (todos os escopos)"
+                    onLoad={() => loadTicketsData(null)}
+                    loading={ticketsCacheLoading}
+                  />
+                ) : (
+                  (() => {
+                    const filteredTicketsAll = filterTickets(ticketsCache, filters, squadGrupoMap || new Map());
+                    return (
+                      <OperacaoObservabilidade
+                        tickets={filteredTicketsAll}
+                        onDrillTickets={openDrillDirect}
+                      />
+                    );
+                  })()
+                )
               ) : (
                 (() => {
+                  const escopoLoaded = loadedEscopos.has(activeEscopoTab);
+                  if (!escopoLoaded) {
+                    return (
+                      <TabLoadBanner
+                        tabLabel={visibleTabs.find((t) => t.value === activeEscopoTab)?.label || activeEscopoTab}
+                        onLoad={() => loadTicketsData(activeEscopoTab)}
+                        loading={ticketsCacheLoading}
+                      />
+                    );
+                  }
                   const tabCard = geralCards.find((c) => c.key === activeEscopoTab) || {
                     key: activeEscopoTab,
                     label: activeEscopoTab,
@@ -826,62 +892,261 @@ const OperacaoHome = ({ userRole }) => {
                         squadGrupoMap || new Map()
                       )
                     : [];
-                  return (
-                    <>
-                      <Box mt="1" className="operacao-radar-summary">
-                        <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
-                          <button
-                            type="button"
-                            className="operacao-radar-summary-value"
-                            title={`Ver tickets de ${tabCard.label}`}
-                            onClick={() => openDrill(tabCard.key, tabCard.label)}
-                            disabled={drillLoading}
-                            style={{ color: tabCard.color }}
-                          >
-                            {formatNumber(tabCard.total)}
-                          </button>
-                        </Flex>
-                        <Text className="operacao-radar-summary-label">Tickets em {tabCard.label}</Text>
-                        {escopoTickets.length > 0 && (() => {
-                          const typeCounts = {};
-                          let totalImpedidos = 0;
-                          for (const t of escopoTickets) {
-                            const type = t.issueType || 'Sem tipo';
-                            typeCounts[type] = (typeCounts[type] || 0) + 1;
-                            if (t.impedimento === true) totalImpedidos += 1;
-                          }
-                          const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
-                          return (
-                            <>
-                              <Flex gap="2" wrap="wrap" mt="2">
-                                {sortedTypes.map(([type, count]) => (
-                                  <button
-                                    key={type}
-                                    type="button"
-                                    onClick={() => openDrill(tabCard.key, `${tabCard.label} · ${type}`, type)}
-                                    disabled={drillLoading}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 8px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
-                                    title={`Filtrar por ${type}`}
-                                  >
-                                    <Text size="1" weight="bold" style={{ color: tabCard.color }}>{formatNumber(count)}</Text>
-                                    <Text size="1" color="gray">{type}</Text>
-                                  </button>
-                                ))}
-                              </Flex>
-                              {totalImpedidos > 0 && (
-                                <Flex align="center" gap="1" mt="1" style={{ background: 'rgba(234,179,8,0.08)', borderRadius: 6, padding: '3px 10px', border: '1px solid rgba(234,179,8,0.3)', width: 'fit-content' }}>
+                  // ── DEMANDA: visão enriquecida por fluxo de status ──────────────────
+                  if (activeEscopoTab === 'DEMANDA') {
+                    const totalDemandas = escopoTickets.length;
+                    const totalImpedidas = escopoTickets.filter((t) => t.impedimento === true).length;
+                    const statusCounts = {};
+                    for (const t of escopoTickets) {
+                      const s = t.status ? String(t.status).trim() : '';
+                      if (s) statusCounts[s] = (statusCounts[s] || 0) + 1;
+                    }
+
+                    const handleToggleDemandaStatus = (status) => {
+                      const next = new Set(demandaStatusFilters);
+                      if (next.has(status)) {
+                        next.delete(status);
+                      } else {
+                        next.add(status);
+                      }
+                      setDemandaStatusFilters(next);
+                      if (next.size === 0) {
+                        setDrillEscopo(null);
+                        setDrillTickets([]);
+                        setDrillLabel('');
+                        setDrillError('');
+                        return;
+                      }
+                      const filtered = escopoTickets.filter((t) =>
+                        next.has(String(t.status || '').trim())
+                      );
+                      const label = `Demandas · ${[...next].join(' + ')}`;
+                      openDrillDirect(filtered, label);
+                    };
+
+                        const StatusCard = ({ status, responsible }) => {
+                      const count = statusCounts[status] || 0;
+                      const rs = RESPONSIBLE_STYLE[responsible] || RESPONSIBLE_STYLE['NTT Data'];
+                      const isActive = demandaStatusFilters.has(status);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDemandaStatus(status)}
+                          disabled={drillLoading}
+                          style={{
+                            background: isActive ? 'rgba(56,213,169,0.08)' : 'rgba(255,255,255,0.02)',
+                            border: isActive
+                              ? '1px solid rgba(56,213,169,0.7)'
+                              : count > 0
+                              ? '1px solid rgba(56,213,169,0.3)'
+                              : '1px solid rgba(255,255,255,0.07)',
+                            borderRadius: 10,
+                            padding: '10px 14px',
+                            width: 120,
+                            flex: '0 0 120px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 4,
+                            boxShadow: isActive ? '0 0 0 2px rgba(56,213,169,0.18)' : 'none',
+                            transition: 'border 0.15s, box-shadow 0.15s',
+                          }}
+                          title={`Filtrar: ${status}`}
+                        >
+                          <span style={{
+                            fontSize: 28,
+                            fontWeight: 900,
+                            lineHeight: 1,
+                            color: count > 0 ? '#f0f0f0' : 'rgba(255,255,255,0.25)',
+                          }}>
+                            {count}
+                          </span>
+                          <span style={{
+                            fontSize: 11,
+                            lineHeight: 1.3,
+                            color: count > 0 ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.28)',
+                            whiteSpace: 'normal',
+                          }}>
+                            {status}
+                          </span>
+                          <span style={{
+                            marginTop: 4,
+                            display: 'inline-block',
+                            padding: '2px 7px',
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            background: rs.bg,
+                            color: rs.color,
+                            border: `1px solid ${rs.border}`,
+                            width: 'fit-content',
+                          }}>
+                            {responsible}
+                          </span>
+                        </button>
+                      );
+                    };
+
+                    return (
+                      <Box mt="1">
+                        {/* ── Cabeçalho: total + impedidas ── */}
+                        <Box mb="4" style={{ paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                          <Text style={{ fontSize: 11, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', fontWeight: 700, display: 'block', marginBottom: 8 }}>
+                            VISÃO GERAL
+                          </Text>
+                          <Flex align="center" gap="4" wrap="wrap">
+                            <button
+                              type="button"
+                              onClick={() => openDrill('DEMANDA', 'Demandas')}
+                              disabled={drillLoading}
+                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', lineHeight: 1 }}
+                            >
+                              <span style={{ fontSize: 52, fontWeight: 900, color: '#38bdf8', lineHeight: 1 }}>
+                                {formatNumber(totalDemandas)}
+                              </span>
+                            </button>
+                            <Box>
+                              <Text weight="bold" style={{ fontSize: 13, color: 'var(--gray-11)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                                DEMANDAS NO ROADMAP
+                              </Text>
+                              {totalImpedidas > 0 && (
+                                <Flex align="center" gap="1" style={{ background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 6, padding: '3px 10px', width: 'fit-content' }}>
                                   <Text size="1">🚧</Text>
-                                  <Text size="1" weight="bold" style={{ color: '#eab308' }}>{formatNumber(totalImpedidos)}</Text>
-                                  <Text size="1" color="gray">impedimento(s)</Text>
+                                  <Text size="1" weight="bold" style={{ color: '#eab308' }}>{formatNumber(totalImpedidas)} impedida(s)</Text>
                                 </Flex>
                               )}
-                            </>
-                          );
-                        })()}
-                      </Box>
+                            </Box>
+                            {demandaStatusFilters.size > 0 && (
+                              <Flex gap="1" wrap="wrap" align="center" style={{ marginLeft: 4 }}>
+                                {[...demandaStatusFilters].map((s) => (
+                                  <span
+                                    key={s}
+                                    style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                                      background: 'rgba(56,213,169,0.10)',
+                                      border: '1px solid rgba(56,213,169,0.45)',
+                                      borderRadius: 6, padding: '3px 8px',
+                                      fontSize: 11, color: '#5eead4',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {s}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleDemandaStatus(s)}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, lineHeight: 1, fontSize: 13, marginLeft: 1 }}
+                                      title={`Remover filtro: ${s}`}
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDemandaStatusFilters(new Set());
+                                    setDrillEscopo(null);
+                                    setDrillTickets([]);
+                                    setDrillLabel('');
+                                    setDrillError('');
+                                  }}
+                                  style={{
+                                    background: 'none', border: '1px solid rgba(255,255,255,0.12)',
+                                    borderRadius: 6, padding: '3px 8px', fontSize: 11,
+                                    color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title="Limpar todos os filtros de status"
+                                >
+                                  Limpar tudo
+                                </button>
+                              </Flex>
+                            )}
+                          </Flex>
+                        </Box>
 
-                      <OperacaoEscopoTimelineChart tickets={escopoTickets} />
-                    </>
+                        {/* ── Status por Fluxo de Trabalho ── */}
+                        <Box>
+                          <Text style={{ fontSize: 11, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', fontWeight: 700, display: 'block', marginBottom: 12 }}>
+                            STATUS POR FLUXO DE TRABALHO
+                          </Text>
+                          {/* Row 0 — fila CPFL Previsto (pré-análise) */}
+                          <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(34,197,94,0.6)', fontWeight: 700, display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>
+                            Fila CPFL Previsto
+                          </Text>
+                          <Flex gap="2" wrap="wrap" mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            {DEMANDA_STATUS_FLOW_PREVISTO.map(({ status, responsible }) => (
+                              <StatusCard key={status} status={status} responsible={responsible} />
+                            ))}
+                          </Flex>
+                          {/* Row 1 — fluxo principal */}
+                          <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(56,189,248,0.6)', fontWeight: 700, display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>
+                            Fluxo Principal
+                          </Text>
+                          <Flex gap="2" wrap="wrap" mb="3">
+                            {DEMANDA_STATUS_FLOW_ROW1.map(({ status, responsible }) => (
+                              <StatusCard key={status} status={status} responsible={responsible} />
+                            ))}
+                          </Flex>
+                        </Box>
+                      </Box>
+                    );
+                  }
+
+                  // ── Demais escopos: resumo simples (sem gráficos) ──────────────
+                  return (
+                    <Box mt="1" className="operacao-radar-summary">
+                      <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
+                        <button
+                          type="button"
+                          className="operacao-radar-summary-value"
+                          title={`Ver tickets de ${tabCard.label}`}
+                          onClick={() => openDrill(tabCard.key, tabCard.label)}
+                          disabled={drillLoading}
+                          style={{ color: tabCard.color }}
+                        >
+                          {formatNumber(tabCard.total)}
+                        </button>
+                      </Flex>
+                      <Text className="operacao-radar-summary-label">Tickets em {tabCard.label}</Text>
+                      {escopoTickets.length > 0 && (() => {
+                        const typeCounts = {};
+                        let totalImpedidos = 0;
+                        for (const t of escopoTickets) {
+                          const type = t.issueType || 'Sem tipo';
+                          typeCounts[type] = (typeCounts[type] || 0) + 1;
+                          if (t.impedimento === true) totalImpedidos += 1;
+                        }
+                        const sortedTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+                        return (
+                          <>
+                            <Flex gap="2" wrap="wrap" mt="2">
+                              {sortedTypes.map(([type, count]) => (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => openDrill(tabCard.key, `${tabCard.label} · ${type}`, type)}
+                                  disabled={drillLoading}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 8px', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+                                  title={`Filtrar por ${type}`}
+                                >
+                                  <Text size="1" weight="bold" style={{ color: tabCard.color }}>{formatNumber(count)}</Text>
+                                  <Text size="1" color="gray">{type}</Text>
+                                </button>
+                              ))}
+                            </Flex>
+                            {totalImpedidos > 0 && (
+                              <Flex align="center" gap="1" mt="1" style={{ background: 'rgba(234,179,8,0.08)', borderRadius: 6, padding: '3px 10px', border: '1px solid rgba(234,179,8,0.3)', width: 'fit-content' }}>
+                                <Text size="1">🚧</Text>
+                                <Text size="1" weight="bold" style={{ color: '#eab308' }}>{formatNumber(totalImpedidos)}</Text>
+                                <Text size="1" color="gray">impedimento(s)</Text>
+                              </Flex>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </Box>
                   );
                 })()
               )}
@@ -967,6 +1232,21 @@ const OperacaoHome = ({ userRole }) => {
                   ) : (
                     <Box className="operacao-radar-tickets-table-wrap">
                       <table className="operacao-radar-tickets-table">
+                        <colgroup>
+                          <col className="col-key" />
+                          <col className="col-type" />
+                          <col className="col-summary" />
+                          <col className="col-status" />
+                          <col className="col-sev" />
+                          <col className="col-aging" />
+                          <col className="col-grupo" />
+                          <col className="col-prio" />
+                          <col className="col-imp" />
+                          <col className="col-resp" />
+                          <col className="col-prev" />
+                          <col className="col-motivo" />
+                          <col className="col-estim" />
+                        </colgroup>
                         <thead>
                           <tr>
                             <th>ISSUE_KEY</th>
