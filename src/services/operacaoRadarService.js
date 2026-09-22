@@ -689,6 +689,14 @@ function mapFirestoreTicketDoc(d) {
     estimativaMacro: (data.estimativaMacro !== null && data.estimativaMacro !== undefined && data.estimativaMacro !== '')
       ? data.estimativaMacro
       : (data.estimativaMacroJira ?? null),
+    estimativaMacroJira: data.estimativaMacroJira ?? data.estimativaMacro ?? null,
+    estimativaTotal: data.estimativaTotal ?? null,
+    sistemasImpactados: data.sistemasImpactados || '',
+    dataFimDesenvolvimento: data.dataFimDesenvolvimento || null,
+    dataFimTesteInterno: data.dataFimTesteInterno || null,
+    dataFimTesteQa: data.dataFimTesteQa || null,
+    dataFimHomologacao: data.dataFimHomologacao || null,
+    dataConclusao: data.dataConclusao || null,
     dataAprovacaoEfsr: data.dataAprovacaoEfsr || data.jiraDatesFlow?.aprovacao2 || null,
     dataInicioAtendimentoPlanejada: data.dataInicioAtendimentoPlanejada || null,
     dataInicioAtendimento: data.dataInicioAtendimento || data.jiraDatesFlow?.inicioDemanda || null,

@@ -1302,11 +1302,12 @@ const Settings = ({ userRole = 'admin' }) => {
                   <Select.Trigger placeholder="Selecione um squad" style={{ width: '100%' }} />
                   <Select.Content>
                     <Select.Item value="">Nenhum</Select.Item>
-                    {squads
-                      .filter(s => !systemData.projectId || s.projectId === systemData.projectId)
-                      .map(s => (
-                        <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
-                      ))}
+                    {(systemData.projectId
+                      ? squads.filter(s => !s.projectId || s.projectId === systemData.projectId)
+                      : squads
+                    ).map(s => (
+                      <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
+                    ))}
                   </Select.Content>
                 </Select.Root>
               </label>

@@ -227,6 +227,17 @@ function resolveSquadFromTicket(ticket, systems, squads) {
   return names.length ? names.join(', ') : null;
 }
 
+function resolveGrupoSuporteFromTicket(ticket, systems) {
+  if (!ticket.sistemasImpactados || !systems.length) return null;
+  const sysNames = String(ticket.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean);
+  const grupos = [...new Set(
+    sysNames
+      .map((name) => systems.find((s) => s.name?.trim().toLowerCase() === name.toLowerCase())?.grupoSuporte)
+      .filter(Boolean)
+  )];
+  return grupos.length ? grupos.join(', ') : null;
+}
+
 const OperacaoHome = ({ userRole }) => {
   const systems = useSystems();
   const squads = useSquads();
@@ -327,10 +338,16 @@ const OperacaoHome = ({ userRole }) => {
   // Pre-compute squad per issueKey as soon as drillTickets + systems + squads are available
   const squadByIssueKey = useMemo(() => {
     const map = new Map();
-    if (!systems.length || !squads.length || !drillTickets.length) return map;
+    if (!drillTickets.length) return map;
     for (const ticket of drillTickets) {
+      // 1. Try to resolve squad name via sistemas → squadId → squad name
       const sq = resolveSquadFromTicket(ticket, systems, squads);
-      if (sq) map.set(ticket.issueKey, sq);
+      if (sq) { map.set(ticket.issueKey, sq); continue; }
+      // 2. Fallback: grupoSuporte from matching system
+      const gs = resolveGrupoSuporteFromTicket(ticket, systems);
+      if (gs) { map.set(ticket.issueKey, gs); continue; }
+      // 3. Fallback: direct ticket.grupoSuporte field
+      if (ticket.grupoSuporte) map.set(ticket.issueKey, ticket.grupoSuporte);
     }
     return map;
   }, [drillTickets, systems, squads]);
