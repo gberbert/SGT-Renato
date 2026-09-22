@@ -4,6 +4,26 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
 
+function useSystems() {
+  const [systems, setSystems] = useState([]);
+  useEffect(() => {
+    getDocs(query(collection(db, 'systems'), orderBy('createdAt', 'asc')))
+      .then((snap) => setSystems(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, []);
+  return systems;
+}
+
+function useSquads() {
+  const [squads, setSquads] = useState([]);
+  useEffect(() => {
+    getDocs(query(collection(db, 'squads'), orderBy('createdAt', 'desc')))
+      .then((snap) => setSquads(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, []);
+  return squads;
+}
+
 function getUserLabel(u) {
   return u?.displayName || u?.shortName || u?.name || u?.email || u?.id || '';
 }
@@ -246,6 +266,8 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
   const [activeTab, setActiveTab] = useState('geral');
   const isEdit = mode === 'edit';
   const teamMembers = useTeamMembers();
+  const systems = useSystems();
+  const squads = useSquads();
 
   useEffect(() => { setActiveTab('geral'); }, [ticket?.issueKey]);
 
@@ -282,6 +304,42 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
             <span className="dmd-modal-issue-key">{ticket.issueKey}</span>
             <span className="dmd-badge dmd-badge--squad">{squadLabel}</span>
             <span className="dmd-badge dmd-badge--status">{statusLabel}</span>
+            {/* Squad tags derivadas dos sistemas impactados */}
+            {(() => {
+              if (!ticket.sistemasImpactados || !systems.length || !squads.length) return null;
+              const sysNames = String(ticket.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean);
+              const squadIds = [...new Set(
+                sysNames
+                  .map((name) => systems.find((s) => s.name?.trim().toLowerCase() === name.toLowerCase())?.squadId)
+                  .filter(Boolean)
+              )];
+              if (!squadIds.length) return null;
+              const squadNames = squadIds
+                .map((id) => squads.find((sq) => sq.id === id)?.name)
+                .filter(Boolean);
+              if (!squadNames.length) return null;
+              return squadNames.map((name, idx) => (
+                <span
+                  key={idx}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'rgba(16,185,129,0.15)',
+                    border: '1px solid rgba(16,185,129,0.4)',
+                    borderRadius: 999,
+                    padding: '3px 12px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: '#6ee7b7',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {name}
+                </span>
+              ));
+            })()}
           </div>
           <button className="dmd-close-btn" onClick={onClose} title="Fechar">
             <X size={18} />
@@ -325,10 +383,43 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                 <ReadField label="NATUREZA DA OPERAÇÃO" value={ticket.naturezaOperacao} />
               </div>
 
-              {/* Row 3: SISTEMAS IMPACTADOS (sempre somente-leitura) */}
+              {/* Row 3: SISTEMAS IMPACTADOS — tags */}
               <div className="dmd-row">
-                <ReadField label="SISTEMAS IMPACTADOS" value={ticket.sistemasImpactados} wide />
+                <div className="dmd-field dmd-field--wide">
+                  <FieldLabel>SISTEMAS IMPACTADOS</FieldLabel>
+                  {ticket.sistemasImpactados && String(ticket.sistemasImpactados).trim() !== '' ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: 4 }}>
+                      {String(ticket.sistemasImpactados)
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .map((sys, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              background: 'rgba(99,102,241,0.12)',
+                              border: '1px solid rgba(99,102,241,0.35)',
+                              borderRadius: 6,
+                              padding: '4px 10px',
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: '#a5b4fc',
+                              letterSpacing: '0.01em',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {sys}
+                          </span>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="dmd-field-value">—</div>
+                  )}
+                </div>
               </div>
+
 
               {/* Row 4: IMPEDIDO + MOTIVO IMPEDIMENTO */}
               <div className="dmd-row">

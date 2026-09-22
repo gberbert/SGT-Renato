@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
 import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download, DatabaseZap, Eye, Pencil } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../../firebase';
 import DemandaDetailsModal from './DemandaDetailsModal';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
@@ -40,29 +42,37 @@ const formatDateTime = (value) => {
   return date.toLocaleString('pt-BR');
 };
 
+const fmtDate = (v) => {
+  if (!v) return '—';
+  const s = String(v).slice(0, 10);
+  if (s.length < 10) return String(v);
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
+};
+
 function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
   const HEADERS = [
-    'ISSUE_KEY', 'ISSUETYPE', 'SUMMARY', 'STATUS', 'SEVERIDADE',
-    'AGING (dias)', 'GRUPO_SUPORTE', 'PRIORIDADE INT.', 'IMPEDIMENTO',
-    'RESPONSÁVEL ATUAL', 'DATA DE PREVISÃO', 'MOTIVO IMPEDIMENTO', 'ESTIMATIVA MACRO',
+    'ISSUE_KEY', 'STATUS', 'ISSUETYPE', 'SUMMARY', 'SQUAD',
+    'IMPEDIMENTO', 'ESTIMATIVA MACRO', 'ESTIMATIVA TOTAL',
+    'DESENVOLVIMENTO', 'TESTE INTERNO', 'TESTE (QA)', 'HOMOLOGAÇÃO', 'PRODUÇÃO',
   ];
 
   const data = [
     HEADERS,
     ...rows.map((t) => [
       t.issueKey || '',
+      t.status || '',
       t.issueType || '',
       t.summary || '',
-      t.status || '',
-      t.priority || '',
-      t.agingDays != null ? Number(t.agingDays) : '',
       t.grupoSuporte || '',
-      t.prioridadeInterna != null ? `P${t.prioridadeInterna}` : '',
       t.impedimento ? 'Sim' : 'Não',
-      t.responsavelAtual || '',
-      t.dataPrevisao ? String(t.dataPrevisao).slice(0, 10) : '',
-      t.observacaoAdicional || '',
-      t.estimativaMacro != null ? Number(t.estimativaMacro) : '',
+      t.estimativaMacroJira != null ? Number(t.estimativaMacroJira) : '',
+      t.estimativaTotal != null ? Number(t.estimativaTotal) : '',
+      t.dataFimDesenvolvimento ? String(t.dataFimDesenvolvimento).slice(0, 10) : '',
+      t.dataFimTesteInterno ? String(t.dataFimTesteInterno).slice(0, 10) : '',
+      t.dataFimTesteQa ? String(t.dataFimTesteQa).slice(0, 10) : '',
+      t.dataFimHomologacao ? String(t.dataFimHomologacao).slice(0, 10) : '',
+      t.dataConclusao ? String(t.dataConclusao).slice(0, 10) : '',
     ]),
   ];
 
@@ -184,7 +194,43 @@ function TabLoadBanner({ tabLabel, onLoad, loading }) {
   );
 }
 
+function useSystems() {
+  const [systems, setSystems] = useState([]);
+  useEffect(() => {
+    getDocs(query(collection(db, 'systems'), orderBy('name', 'asc')))
+      .then((snap) => setSystems(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, []);
+  return systems;
+}
+
+function useSquads() {
+  const [squads, setSquads] = useState([]);
+  useEffect(() => {
+    getDocs(query(collection(db, 'squads'), orderBy('name', 'asc')))
+      .then((snap) => setSquads(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .catch(() => {});
+  }, []);
+  return squads;
+}
+
+function resolveSquadFromTicket(ticket, systems, squads) {
+  if (!ticket.sistemasImpactados || !systems.length || !squads.length) return null;
+  const sysNames = String(ticket.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean);
+  const squadIds = [...new Set(
+    sysNames
+      .map((name) => systems.find((s) => s.name?.trim().toLowerCase() === name.toLowerCase())?.squadId)
+      .filter(Boolean)
+  )];
+  if (!squadIds.length) return null;
+  const names = squadIds.map((id) => squads.find((sq) => sq.id === id)?.name).filter(Boolean);
+  return names.length ? names.join(', ') : null;
+}
+
 const OperacaoHome = ({ userRole }) => {
+  const systems = useSystems();
+  const squads = useSquads();
+
   const {
     bootLoading,
     error,
@@ -277,6 +323,17 @@ const OperacaoHome = ({ userRole }) => {
   const [demandaModalTicket, setDemandaModalTicket] = useState(null);
   const [editModalTicket, setEditModalTicket] = useState(null);
   const [modalLoadingKey, setModalLoadingKey] = useState(null);
+
+  // Pre-compute squad per issueKey as soon as drillTickets + systems + squads are available
+  const squadByIssueKey = useMemo(() => {
+    const map = new Map();
+    if (!systems.length || !squads.length || !drillTickets.length) return map;
+    for (const ticket of drillTickets) {
+      const sq = resolveSquadFromTicket(ticket, systems, squads);
+      if (sq) map.set(ticket.issueKey, sq);
+    }
+    return map;
+  }, [drillTickets, systems, squads]);
 
   const radar = useMemo(
     () => computedRadar || statsRadar || { total: 0, escopos: [] },
@@ -1255,36 +1312,36 @@ const OperacaoHome = ({ userRole }) => {
                           <col className="col-num" />
                           <col className="col-acoes" />
                           <col className="col-key" />
+                          <col className="col-status" />
                           <col className="col-type" />
                           <col className="col-summary" />
-                          <col className="col-status" />
-                          <col className="col-sev" />
-                          <col className="col-aging" />
-                          <col className="col-grupo" />
-                          <col className="col-prio" />
+                          <col className="col-squad" />
                           <col className="col-imp" />
-                          <col className="col-resp" />
-                          <col className="col-prev" />
-                          <col className="col-motivo" />
                           <col className="col-estim" />
+                          <col className="col-estim" />
+                          <col className="col-date" />
+                          <col className="col-date" />
+                          <col className="col-date" />
+                          <col className="col-date" />
+                          <col className="col-date" />
                         </colgroup>
                         <thead>
                           <tr>
                             <th>#</th>
                             <th>AÇÕES</th>
                             <th>ISSUE_KEY</th>
+                            <th>STATUS</th>
                             <th>ISSUETYPE</th>
                             <th>SUMMARY</th>
-                            <th>STATUS</th>
-                            <th>SEVERIDADE</th>
-                            <th>AGING</th>
-                            <th>GRUPO_SUPORTE</th>
-                            <th>PRIORIDADE INT.</th>
+                            <th>SQUAD</th>
                             <th>IMPEDIMENTO</th>
-                            <th>RESPONSÁVEL ATUAL</th>
-                            <th>DATA DE PREVISÃO</th>
-                            <th>MOTIVO IMPEDIMENTO</th>
-                            <th>ESTIMATIVA MACRO</th>
+                            <th>EST. MACRO</th>
+                            <th>EST. TOTAL</th>
+                            <th>DESENVOLVIMENTO</th>
+                            <th>TESTE INTERNO</th>
+                            <th>TESTE (QA)</th>
+                            <th>HOMOLOGAÇÃO</th>
+                            <th>PRODUÇÃO</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1355,85 +1412,41 @@ const OperacaoHome = ({ userRole }) => {
                                   )}
                                 </div>
                               </td>
+                              <td>{ticket.status || '—'}</td>
                               <td>{ticket.issueType || '—'}</td>
                               <td className="operacao-radar-tickets-summary">{ticket.summary || '—'}</td>
-                              <td>{ticket.status || '—'}</td>
-                              <td>{ticket.priority || '—'}</td>
-                              <td>{ticket.agingDays != null ? `${formatNumber(ticket.agingDays)} d` : '—'}</td>
-                              <td>{ticket.grupoSuporte || '—'}</td>
                               <td>
-                                <select
-                                  className="operacao-radar-tickets-editable-input operacao-radar-tickets-editable-input-narrow"
-                                  defaultValue={ticket.prioridadeInterna ?? ''}
-                                  onChange={(e) =>
-                                    handleSaveTicketField(ticket.issueKey, 'prioridadeInterna', e.target.value === '' ? null : Number(e.target.value))
-                                  }
-                                  style={{ minWidth: 72 }}
-                                >
-                                  <option value="">—</option>
-                                  {PRIORIDADE_INTERNA_OPTIONS.map((p) => (
-                                    <option key={p.value} value={p.value}>
-                                      {p.label} {p.description}
-                                    </option>
-                                  ))}
-                                </select>
+                                {(() => {
+                                  const sq = squadByIssueKey.get(ticket.issueKey);
+                                  return sq ? (
+                                    <span style={{
+                                      display: 'inline-block',
+                                      background: 'rgba(16,185,129,0.13)',
+                                      border: '1px solid rgba(16,185,129,0.35)',
+                                      borderRadius: 5,
+                                      padding: '2px 8px',
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                      color: '#6ee7b7',
+                                      whiteSpace: 'nowrap',
+                                    }}>{sq}</span>
+                                  ) : (ticket.grupoSuporte || '—');
+                                })()}
                               </td>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={ticket.impedimento === true}
-                                  onChange={(e) =>
-                                    handleSaveTicketField(ticket.issueKey, 'impedimento', e.target.checked)
-                                  }
-                                  title="Marcar como impedimento"
-                                  style={{ cursor: 'pointer', width: 16, height: 16 }}
-                                />
+                              <td style={{ textAlign: 'center', color: ticket.impedimento === true ? '#eab308' : 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
+                                {ticket.impedimento === true ? '🚧' : '—'}
                               </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  className="operacao-radar-tickets-editable-input"
-                                  defaultValue={ticket.responsavelAtual || ''}
-                                  placeholder="—"
-                                  onBlur={(e) =>
-                                    handleSaveTicketField(ticket.issueKey, 'responsavelAtual', e.target.value)
-                                  }
-                                />
+                              <td style={{ textAlign: 'right', paddingRight: 8 }}>
+                                {ticket.estimativaMacroJira != null && ticket.estimativaMacroJira !== '' ? Number(ticket.estimativaMacroJira).toLocaleString('pt-BR') : '—'}
                               </td>
-                              <td>
-                                <input
-                                  type="date"
-                                  className="operacao-radar-tickets-editable-input"
-                                  defaultValue={
-                                    ticket.dataPrevisao ? String(ticket.dataPrevisao).slice(0, 10) : ''
-                                  }
-                                  onBlur={(e) =>
-                                    handleSaveTicketField(ticket.issueKey, 'dataPrevisao', e.target.value)
-                                  }
-                                />
+                              <td style={{ textAlign: 'right', paddingRight: 8 }}>
+                                {ticket.estimativaTotal != null && ticket.estimativaTotal !== '' ? Number(ticket.estimativaTotal).toLocaleString('pt-BR') : '—'}
                               </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  className="operacao-radar-tickets-editable-input operacao-radar-tickets-editable-input-wide"
-                                  defaultValue={ticket.observacaoAdicional || ''}
-                                  placeholder="—"
-                                  onBlur={(e) =>
-                                    handleSaveTicketField(ticket.issueKey, 'observacaoAdicional', e.target.value)
-                                  }
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  className="operacao-radar-tickets-editable-input operacao-radar-tickets-editable-input-narrow"
-                                  defaultValue={ticket.estimativaMacro ?? ''}
-                                  placeholder="—"
-                                  onBlur={(e) =>
-                                    handleSaveTicketField(ticket.issueKey, 'estimativaMacro', e.target.value)
-                                  }
-                                />
-                              </td>
+                              <td>{fmtDate(ticket.dataFimDesenvolvimento)}</td>
+                              <td>{fmtDate(ticket.dataFimTesteInterno)}</td>
+                              <td>{fmtDate(ticket.dataFimTesteQa)}</td>
+                              <td>{fmtDate(ticket.dataFimHomologacao)}</td>
+                              <td>{fmtDate(ticket.dataConclusao)}</td>
                             </tr>
                           ))}
                         </tbody>

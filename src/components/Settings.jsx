@@ -39,6 +39,7 @@ import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
 import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
+import { subscribeToProjectSquads } from '../services/squadService';
 
 const Settings = ({ userRole = 'admin' }) => {
   const [searchParams] = useSearchParams();
@@ -57,6 +58,7 @@ const Settings = ({ userRole = 'admin' }) => {
 
   const [systems, setSystems] = useState([]);
   const [loadingSystems, setLoadingSystems] = useState(true);
+  const [squads, setSquads] = useState([]);
 
   const [components, setComponents] = useState([]);
   const [loadingComponents, setLoadingComponents] = useState(true);
@@ -142,6 +144,9 @@ const Settings = ({ userRole = 'admin' }) => {
       setSystems(data);
       setLoadingSystems(false);
     });
+    const unsubscribeSquads = subscribeToProjectSquads('all', (data) => {
+      setSquads(data);
+    });
     const unsubscribeComponents = subscribeToComponents((data) => {
       setComponents(data);
       setLoadingComponents(false);
@@ -190,6 +195,7 @@ const Settings = ({ userRole = 'admin' }) => {
       unsubscribeWorkflows();
       unsubscribeUsers();
       unsubscribeSystems();
+      unsubscribeSquads();
       unsubscribeComponents();
       unsubscribeCustomFields();
       unsubscribeAutomations();
@@ -337,12 +343,12 @@ const Settings = ({ userRole = 'admin' }) => {
   };
 
   const openNewSystemModal = () => {
-    setSystemData({ name: '', projectId: '' });
+    setSystemData({ name: '', projectId: '', grupoSuporte: '', squadId: '' });
     setIsSystemModalOpen(true);
   };
 
   const openEditSystemModal = (sys) => {
-    setSystemData(sys);
+    setSystemData({ grupoSuporte: '', squadId: '', ...sys });
     setIsSystemModalOpen(true);
   };
 
@@ -360,7 +366,12 @@ const Settings = ({ userRole = 'admin' }) => {
       } else {
         const names = systemData.name.split('\n').map(n => n.trim()).filter(n => n);
         for (const name of names) {
-          await saveSystem({ name, projectId: systemData.projectId });
+          await saveSystem({
+            name,
+            projectId: systemData.projectId,
+            grupoSuporte: systemData.grupoSuporte || '',
+            squadId: systemData.squadId || '',
+          });
         }
       }
       setIsSystemModalOpen(false);
@@ -710,16 +721,21 @@ const Settings = ({ userRole = 'admin' }) => {
                     <Table.Row>
                       <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell>Projeto</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Grupo de Suporte</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Squad</Table.ColumnHeaderCell>
                       <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
                     {systems.map(sys => {
                       const proj = projects.find(p => p.id === sys.projectId);
+                      const squad = squads.find(s => s.id === sys.squadId);
                       return (
                       <Table.Row key={sys.id} align="center">
                         <Table.Cell><Text weight="bold">{sys.name}</Text></Table.Cell>
                         <Table.Cell>{proj ? proj.name : '-'}</Table.Cell>
+                        <Table.Cell>{sys.grupoSuporte || <Text color="gray">-</Text>}</Table.Cell>
+                        <Table.Cell>{squad ? squad.name : <Text color="gray">-</Text>}</Table.Cell>
                         <Table.Cell justify="end">
                           <Flex gap="2" justify="end">
                             <Button size="1" variant="soft" onClick={() => openEditSystemModal(sys)}>
@@ -1268,6 +1284,31 @@ const Settings = ({ userRole = 'admin' }) => {
                     required 
                   />
                 )}
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Grupo de Suporte</Text>
+                <TextField.Root 
+                  value={systemData.grupoSuporte || ''} 
+                  onChange={(e) => setSystemData({...systemData, grupoSuporte: e.target.value})} 
+                  placeholder="Ex: TI Corporativo, AMS Web"
+                />
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Squad</Text>
+                <Select.Root 
+                  value={systemData.squadId || ''} 
+                  onValueChange={(val) => setSystemData({...systemData, squadId: val})}
+                >
+                  <Select.Trigger placeholder="Selecione um squad" style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="">Nenhum</Select.Item>
+                    {squads
+                      .filter(s => !systemData.projectId || s.projectId === systemData.projectId)
+                      .map(s => (
+                        <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
+                      ))}
+                  </Select.Content>
+                </Select.Root>
               </label>
             </Flex>
             <Flex gap="3" mt="4" justify="end">

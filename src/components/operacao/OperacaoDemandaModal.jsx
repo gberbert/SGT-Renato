@@ -243,7 +243,40 @@ export default function OperacaoDemandaModal({ ticket, onClose, onSave, readOnly
 
               {/* Row 3: SISTEMAS IMPACTADOS */}
               <Field label="Sistemas Impactados" style={{ flex: '1 1 100%' }}>
-                <input {...textInput('sistemasImpactados')} />
+                {/* Tags display */}
+                {form.sistemasImpactados && String(form.sistemasImpactados).trim() !== '' ? (
+                  <Flex gap="2" wrap="wrap" style={{ marginBottom: readOnly ? 0 : 8 }}>
+                    {String(form.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean).map((sys, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          background: 'rgba(99,102,241,0.12)',
+                          border: '1px solid rgba(99,102,241,0.35)',
+                          borderRadius: 6,
+                          padding: '4px 10px',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: '#a5b4fc',
+                          letterSpacing: '0.01em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {sys}
+                      </span>
+                    ))}
+                  </Flex>
+                ) : readOnly ? (
+                  <Text size="2" style={{ color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>Nenhum sistema impactado</Text>
+                ) : null}
+                {/* Edit input (only when not readOnly) */}
+                {!readOnly && (
+                  <input
+                    {...textInput('sistemasImpactados')}
+                    placeholder="Ex: Canal Mobile, Site CPFL, App GED"
+                  />
+                )}
               </Field>
 
               {/* Row 4: IMPEDIDO + MOTIVO */}

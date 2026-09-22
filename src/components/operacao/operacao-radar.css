@@ -298,18 +298,13 @@
 .operacao-radar-tickets-table col.col-num      { width:  36px; }
 .operacao-radar-tickets-table col.col-acoes    { width:  64px; }
 .operacao-radar-tickets-table col.col-key      { width: 130px; }
+.operacao-radar-tickets-table col.col-status   { width: 140px; }
 .operacao-radar-tickets-table col.col-type     { width:  84px; }
 .operacao-radar-tickets-table col.col-summary  { width: 220px; }
-.operacao-radar-tickets-table col.col-status   { width: 140px; }
-.operacao-radar-tickets-table col.col-sev      { width:  78px; }
-.operacao-radar-tickets-table col.col-aging    { width:  58px; }
-.operacao-radar-tickets-table col.col-grupo    { width: 130px; }
-.operacao-radar-tickets-table col.col-prio     { width:  82px; }
+.operacao-radar-tickets-table col.col-squad    { width: 130px; }
 .operacao-radar-tickets-table col.col-imp      { width:  64px; }
-.operacao-radar-tickets-table col.col-resp     { width: 120px; }
-.operacao-radar-tickets-table col.col-prev     { width: 104px; }
-.operacao-radar-tickets-table col.col-motivo   { width: 180px; }
 .operacao-radar-tickets-table col.col-estim    { width:  80px; }
+.operacao-radar-tickets-table col.col-date     { width: 110px; }
 
 .operacao-radar-tickets-table {
   width: 100%;
