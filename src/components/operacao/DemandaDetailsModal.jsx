@@ -1,6 +1,29 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { X, ChevronDown } from 'lucide-react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
+
+function getUserLabel(u) {
+  return u?.displayName || u?.shortName || u?.name || u?.email || u?.id || '';
+}
+
+function useTeamMembers() {
+  const [members, setMembers] = useState([]);
+  useEffect(() => {
+    getDocs(query(collection(db, 'users'), orderBy('displayName', 'asc')))
+      .then((snap) => {
+        const list = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .map((u) => ({ id: u.id, label: getUserLabel(u) }))
+          .filter((u) => u.label)
+          .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+        setMembers(list);
+      })
+      .catch(() => {});
+  }, []);
+  return members;
+}
 
 const fmtDate = (v) => {
   if (!v) return '—';
@@ -136,6 +159,80 @@ const PRIO_OPTIONS = (PRIORIDADE_INTERNA_OPTIONS || []).map((p) => ({
   label: p.description ? `${p.label} — ${p.description}` : p.label,
 }));
 
+function EditPersonCombobox({ label, fieldKey, value, onSave, members }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) setSearch('');
+  }, [open]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const filtered = search
+    ? members.filter((m) => m.label.toLowerCase().includes(search.toLowerCase()))
+    : members;
+
+  const handleSelect = (m) => {
+    onSave(fieldKey, m ? m.label : null);
+    setOpen(false);
+    setSearch('');
+  };
+
+  return (
+    <div className="dmd-field dmd-field--wide" ref={wrapRef} style={{ position: 'relative' }}>
+      <FieldLabel>{label}</FieldLabel>
+      <button
+        type="button"
+        className="dmd-combobox-trigger"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className={value ? 'dmd-combobox-value' : 'dmd-combobox-placeholder'}>
+          {value || 'Selecionar...'}
+        </span>
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div className="dmd-combobox-dropdown">
+          <input
+            autoFocus
+            className="dmd-combobox-search"
+            placeholder="Pesquisar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+          />
+          <div className="dmd-combobox-list">
+            <button type="button" className="dmd-combobox-item dmd-combobox-item--clear" onClick={() => handleSelect(null)}>
+              — Nenhum
+            </button>
+            {filtered.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`dmd-combobox-item${value === m.label ? ' dmd-combobox-item--selected' : ''}`}
+                onClick={() => handleSelect(m)}
+              >
+                {m.label}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <span className="dmd-combobox-empty">Nenhum resultado</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PlanRow({ left, right }) {
   return (
     <div className="dmd-plan-row">
@@ -148,6 +245,7 @@ function PlanRow({ left, right }) {
 export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
   const [activeTab, setActiveTab] = useState('geral');
   const isEdit = mode === 'edit';
+  const teamMembers = useTeamMembers();
 
   useEffect(() => { setActiveTab('geral'); }, [ticket?.issueKey]);
 
@@ -246,7 +344,33 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                 )}
               </div>
 
-              {/* Row 5: OBSERVAÇÃO */}
+              {/* Row 5: RESPONSÁVEIS */}
+              <div className="dmd-row">
+                {isEdit ? (
+                  <EditPersonCombobox
+                    label="RESPONSÁVEL DESENVOLVIMENTO"
+                    fieldKey="responsavelDesenvolvimento"
+                    value={ticket.responsavelDesenvolvimento}
+                    onSave={save}
+                    members={teamMembers}
+                  />
+                ) : (
+                  <ReadField label="RESPONSÁVEL DESENVOLVIMENTO" value={ticket.responsavelDesenvolvimento} wide />
+                )}
+                {isEdit ? (
+                  <EditPersonCombobox
+                    label="RESPONSÁVEL TESTE INTERNO"
+                    fieldKey="responsavelTesteInterno"
+                    value={ticket.responsavelTesteInterno}
+                    onSave={save}
+                    members={teamMembers}
+                  />
+                ) : (
+                  <ReadField label="RESPONSÁVEL TESTE INTERNO" value={ticket.responsavelTesteInterno} wide />
+                )}
+              </div>
+
+              {/* Row 6: OBSERVAÇÃO */}
               <div className="dmd-row">
                 {isEdit ? (
                   <EditTextarea label="OBSERVAÇÃO" fieldKey="observacao" value={ticket.observacao} onSave={save} />
