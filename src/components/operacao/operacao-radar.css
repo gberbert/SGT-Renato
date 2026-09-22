@@ -990,12 +990,30 @@
   resize: vertical;
 }
 
-.dmd-checkbox {
-  width: 16px;
-  height: 16px;
+.dmd-toggle {
+  padding: 6px 18px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  accent-color: #22d3ee;
-  margin-top: 4px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  min-width: 64px;
+  text-align: center;
+}
+.dmd-toggle:hover {
+  border-color: #475569;
+  color: #cbd5e1;
+}
+.dmd-toggle--on {
+  background: #164e63;
+  border-color: #22d3ee;
+  color: #22d3ee;
+}
+.dmd-toggle--on:hover {
+  background: #155e75;
 }
 
 /* ── Planejamento tab ── */

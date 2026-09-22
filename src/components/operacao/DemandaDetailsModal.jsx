@@ -92,16 +92,24 @@ function EditSelect({ label, fieldKey, options, value, onSave }) {
   );
 }
 
-function EditCheckbox({ label, fieldKey, value, onSave }) {
+function EditToggle({ label, fieldKey, value, onSave }) {
+  const [local, setLocal] = useState(value === true || value === 'true');
+  useEffect(() => { setLocal(value === true || value === 'true'); }, [value]);
+  const handleToggle = () => {
+    const next = !local;
+    setLocal(next);
+    onSave(fieldKey, next);
+  };
   return (
     <div className="dmd-field">
       <FieldLabel>{label}</FieldLabel>
-      <input
-        type="checkbox"
-        className="dmd-checkbox"
-        checked={value === true || value === 'true'}
-        onChange={(e) => onSave(fieldKey, e.target.checked)}
-      />
+      <button
+        type="button"
+        className={`dmd-toggle${local ? ' dmd-toggle--on' : ''}`}
+        onClick={handleToggle}
+      >
+        {local ? 'Sim' : 'Não'}
+      </button>
     </div>
   );
 }
@@ -227,7 +235,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
               {/* Row 4: IMPEDIDO + MOTIVO IMPEDIMENTO */}
               <div className="dmd-row">
                 {isEdit ? (
-                  <EditCheckbox label="IMPEDIDO" fieldKey="impedimento" value={ticket.impedimento} onSave={save} />
+                  <EditToggle label="IMPEDIDO" fieldKey="impedimento" value={ticket.impedimento} onSave={save} />
                 ) : (
                   <ReadField label="IMPEDIDO" value={ticket.impedimento ? 'Sim' : 'Não'} />
                 )}
