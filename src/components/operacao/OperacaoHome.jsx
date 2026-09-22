@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
-import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download, DatabaseZap } from 'lucide-react';
+import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download, DatabaseZap, Eye, Pencil } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import DemandaDetailsModal from './DemandaDetailsModal';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
 import OperacaoEscopoTimelineChart from './OperacaoEscopoTimelineChart';
@@ -14,6 +15,7 @@ import { getPermissionProfile } from '../../services/permissionService';
 import { PermissionFunctionKeys } from '../../services/permissionKeys';
 import {
   createRadarFilterState,
+  fetchTicketById,
   fetchTicketsForDrill,
   fetchTicketsGlobalForRadar,
   filterTickets,
@@ -272,6 +274,9 @@ const OperacaoHome = ({ userRole }) => {
   const [drillIssueTypeFilter, setDrillIssueTypeFilter] = useState(null);
   const [drillStatusFilter, setDrillStatusFilter] = useState(null);
   const [demandaStatusFilters, setDemandaStatusFilters] = useState(() => new Set());
+  const [demandaModalTicket, setDemandaModalTicket] = useState(null);
+  const [editModalTicket, setEditModalTicket] = useState(null);
+  const [modalLoadingKey, setModalLoadingKey] = useState(null);
 
   const radar = useMemo(
     () => computedRadar || statsRadar || { total: 0, escopos: [] },
@@ -439,6 +444,20 @@ const OperacaoHome = ({ userRole }) => {
     },
     []
   );
+
+  const openDemandaModal = useCallback(async (ticket, mode) => {
+    setModalLoadingKey(ticket.issueKey);
+    try {
+      const full = await fetchTicketById(ticket.issueKey);
+      if (mode === 'edit') setEditModalTicket(full || ticket);
+      else setDemandaModalTicket(full || ticket);
+    } catch {
+      if (mode === 'edit') setEditModalTicket(ticket);
+      else setDemandaModalTicket(ticket);
+    } finally {
+      setModalLoadingKey(null);
+    }
+  }, []);
 
   const toggleParentExpand = (issueKey) => {
     setExpandedParents((prev) => {
@@ -1233,6 +1252,8 @@ const OperacaoHome = ({ userRole }) => {
                     <Box className="operacao-radar-tickets-table-wrap">
                       <table className="operacao-radar-tickets-table">
                         <colgroup>
+                          <col className="col-num" />
+                          <col className="col-acoes" />
                           <col className="col-key" />
                           <col className="col-type" />
                           <col className="col-summary" />
@@ -1249,6 +1270,8 @@ const OperacaoHome = ({ userRole }) => {
                         </colgroup>
                         <thead>
                           <tr>
+                            <th>#</th>
+                            <th>AÇÕES</th>
                             <th>ISSUE_KEY</th>
                             <th>ISSUETYPE</th>
                             <th>SUMMARY</th>
@@ -1265,49 +1288,72 @@ const OperacaoHome = ({ userRole }) => {
                           </tr>
                         </thead>
                         <tbody>
-                          {drillRows.map((ticket) => (
+                          {drillRows.map((ticket, idx) => (
                             <tr
                               key={ticket.issueKey}
                               className={ticket.depth > 0 ? 'operacao-radar-tickets-row-child' : undefined}
                             >
+                              <td className="operacao-radar-tickets-num">{idx + 1}</td>
+                              <td className="operacao-radar-tickets-acoes">
+                                <button
+                                  type="button"
+                                  className="operacao-radar-tickets-action-btn action-view"
+                                  title="Ver detalhes"
+                                  disabled={modalLoadingKey === ticket.issueKey}
+                                  onClick={() => openDemandaModal(ticket, 'view')}
+                                >
+                                  {modalLoadingKey === ticket.issueKey ? <Loader2 size={14} className="spin" /> : <Eye size={14} />}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="operacao-radar-tickets-action-btn action-edit"
+                                  title="Editar ticket"
+                                  disabled={modalLoadingKey === ticket.issueKey}
+                                  onClick={() => openDemandaModal(ticket, 'edit')}
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              </td>
                               <td
                                 className="operacao-radar-tickets-key-cell"
                                 style={{ paddingLeft: `${0.75 + ticket.depth * 1.35}rem` }}
                               >
-                                {ticket.hasChildren ? (
-                                  <button
-                                    type="button"
-                                    className="operacao-radar-tickets-expand"
-                                    title={
-                                      ticket.isExpanded
-                                        ? 'Recolher tickets filhos'
-                                        : `Expandir ${formatNumber(ticket.childCount)} ticket(s) filho(s)`
-                                    }
-                                    aria-expanded={ticket.isExpanded}
-                                    onClick={() => toggleParentExpand(ticket.issueKey)}
-                                  >
-                                    {ticket.isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                  </button>
-                                ) : (
-                                  <span className="operacao-radar-tickets-expand placeholder" aria-hidden="true" />
-                                )}
-                                {ticket.issueUrl ? (
-                                  <a
-                                    className="operacao-radar-tickets-key"
-                                    href={ticket.issueUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    {ticket.issueKey}
-                                  </a>
-                                ) : (
-                                  ticket.issueKey
-                                )}
-                                {ticket.hasChildren && !ticket.isExpanded && (
-                                  <span className="operacao-radar-tickets-child-count">
-                                    {formatNumber(ticket.childCount)} filho(s)
-                                  </span>
-                                )}
+                                <div className="operacao-radar-tickets-key-inner">
+                                  {ticket.hasChildren ? (
+                                    <button
+                                      type="button"
+                                      className="operacao-radar-tickets-expand"
+                                      title={
+                                        ticket.isExpanded
+                                          ? 'Recolher tickets filhos'
+                                          : `Expandir ${formatNumber(ticket.childCount)} ticket(s) filho(s)`
+                                      }
+                                      aria-expanded={ticket.isExpanded}
+                                      onClick={() => toggleParentExpand(ticket.issueKey)}
+                                    >
+                                      {ticket.isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                    </button>
+                                  ) : (
+                                    <span className="operacao-radar-tickets-expand placeholder" aria-hidden="true" />
+                                  )}
+                                  {ticket.issueUrl ? (
+                                    <a
+                                      className="operacao-radar-tickets-key"
+                                      href={ticket.issueUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {ticket.issueKey}
+                                    </a>
+                                  ) : (
+                                    ticket.issueKey
+                                  )}
+                                  {ticket.hasChildren && !ticket.isExpanded && (
+                                    <span className="operacao-radar-tickets-child-count">
+                                      {formatNumber(ticket.childCount)} filho(s)
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td>{ticket.issueType || '—'}</td>
                               <td className="operacao-radar-tickets-summary">{ticket.summary || '—'}</td>
@@ -1401,6 +1447,26 @@ const OperacaoHome = ({ userRole }) => {
             {/* RIGHT: removido (fica apenas 1 coluna com tiles) */}
           </Flex>
         </>
+      )}
+
+      {/* ── Demanda Details Modal (View) ── */}
+      {demandaModalTicket && (
+        <DemandaDetailsModal
+          ticket={demandaModalTicket}
+          mode="view"
+          onClose={() => setDemandaModalTicket(null)}
+          onSave={handleSaveTicketField}
+        />
+      )}
+
+      {/* ── Demanda Details Modal (Edit) ── */}
+      {editModalTicket && (
+        <DemandaDetailsModal
+          ticket={editModalTicket}
+          mode="edit"
+          onClose={() => setEditModalTicket(null)}
+          onSave={handleSaveTicketField}
+        />
       )}
     </Box>
   );

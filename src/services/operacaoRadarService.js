@@ -686,15 +686,17 @@ function mapFirestoreTicketDoc(d) {
     responsavelAtual: data.responsavelAtual || '',
     dataPrevisao: data.dataPrevisao || null,
     observacaoAdicional: data.observacaoAdicional || '',
-    estimativaMacro: data.estimativaMacro ?? null,
-    dataAprovacaoEfsr: data.dataAprovacaoEfsr || null,
+    estimativaMacro: (data.estimativaMacro !== null && data.estimativaMacro !== undefined && data.estimativaMacro !== '')
+      ? data.estimativaMacro
+      : (data.estimativaMacroJira ?? null),
+    dataAprovacaoEfsr: data.dataAprovacaoEfsr || data.jiraDatesFlow?.aprovacao2 || null,
     dataInicioAtendimentoPlanejada: data.dataInicioAtendimentoPlanejada || null,
-    dataInicioAtendimento: data.dataInicioAtendimento || null,
-    dataAprovacaoQaPlanejada: data.dataAprovacaoQaPlanejada || null,
+    dataInicioAtendimento: data.dataInicioAtendimento || data.jiraDatesFlow?.inicioDemanda || null,
+    dataAprovacaoQaPlanejada: data.dataAprovacaoQaPlanejada || data.jiraDatesFlow?.dataEntrega || null,
     dataInicioHomologacaoPlanejada: data.dataInicioHomologacaoPlanejada || null,
     dataInicioHomologacaoEfetiva: data.dataInicioHomologacaoEfetiva || null,
     dataFimHomologacaoPlanejada: data.dataFimHomologacaoPlanejada || null,
-    dataFimHomologacaoEfetiva: data.dataFimHomologacaoEfetiva || null,
+    dataFimHomologacaoEfetiva: data.dataFimHomologacaoEfetiva || data.jiraDatesFlow?.aprovacaoHomologacao || null,
     dataEntregaProducaoPrevista: data.dataEntregaProducaoPrevista || null,
     estimativaHoras: data.estimativaHoras ?? null,
     dataFimPlanejado: data.dataFimPlanejado || null,
@@ -720,25 +722,60 @@ export async function updateTicketRadarFields(issueKey, patch) {
   if ('responsavelAtual' in patch) payload.responsavelAtual = patch.responsavelAtual || '';
   if ('dataPrevisao' in patch) payload.dataPrevisao = patch.dataPrevisao || null;
   if ('observacaoAdicional' in patch) payload.observacaoAdicional = patch.observacaoAdicional || '';
+  if ('observacao' in patch) payload.observacao = patch.observacao || '';
+  if ('naturezaOperacao' in patch) payload.naturezaOperacao = patch.naturezaOperacao || '';
+  if ('sistemasImpactados' in patch) payload.sistemasImpactados = patch.sistemasImpactados || '';
+  if ('summary' in patch) payload.summary = patch.summary || '';
   if ('estimativaMacro' in patch) {
     const numeric = patch.estimativaMacro === '' || patch.estimativaMacro == null
-      ? null
-      : Number(patch.estimativaMacro);
+      ? null : Number(patch.estimativaMacro);
     payload.estimativaMacro = Number.isFinite(numeric) ? numeric : null;
+  }
+  if ('estimativaTotal' in patch) {
+    const numeric = patch.estimativaTotal === '' || patch.estimativaTotal == null
+      ? null : Number(patch.estimativaTotal);
+    payload.estimativaTotal = Number.isFinite(numeric) ? numeric : null;
   }
   if ('prioridadeInterna' in patch) {
     const val = patch.prioridadeInterna === '' || patch.prioridadeInterna == null
       ? null : Number(patch.prioridadeInterna);
     payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 4) ? val : null;
   }
-  if ('impedimento' in patch) {
-    payload.impedimento = Boolean(patch.impedimento);
+  if ('impedimento' in patch) payload.impedimento = Boolean(patch.impedimento);
+
+  const SGT_DATE_FIELDS = [
+    'dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa',
+    'dataFimHomologacao', 'dataConclusao',
+  ];
+  for (const f of SGT_DATE_FIELDS) {
+    if (f in patch) payload[f] = patch[f] || null;
   }
+
   payload.radarFieldsUpdatedAt = serverTimestamp();
 
   const ref = doc(db, TICKETS_GLOBAL, issueKey);
   await setDoc(ref, payload, { merge: true });
   return payload;
+}
+
+export async function fetchTicketById(issueKey) {
+  if (!issueKey) return null;
+  const snap = await getDoc(doc(db, TICKETS_GLOBAL, issueKey));
+  if (!snap.exists()) return null;
+  const mapped = mapFirestoreTicketDoc(snap);
+  const raw = snap.data();
+  return {
+    ...mapped,
+    estimativaTotal: raw.estimativaTotal ?? null,
+    naturezaOperacao: raw.naturezaOperacao || raw.naturezaIniciativa || '',
+    sistemasImpactados: raw.sistemasImpactados || '',
+    observacao: raw.observacao || '',
+    dataFimDesenvolvimento: raw.dataFimDesenvolvimento || null,
+    dataFimTesteInterno: raw.dataFimTesteInterno || null,
+    dataFimTesteQa: raw.dataFimTesteQa || null,
+    dataFimHomologacao: raw.dataFimHomologacao || null,
+    dataConclusao: raw.dataConclusao || null,
+  };
 }
 
 /** Lê tickets do Firestore por escopo (drill-down), sem varrer tickets_global inteiro. */
