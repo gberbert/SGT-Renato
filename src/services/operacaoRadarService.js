@@ -558,6 +558,7 @@ export function mapDrillTicket(t) {
     dataPrevisao: t.dataPrevisao || null,
     observacaoAdicional: t.observacaoAdicional || '',
     estimativaMacro: t.estimativaMacro ?? null,
+    estimativaMacroJira: t.estimativaMacroJira ?? t.estimativaMacro ?? null,
     estimativaTotal: t.estimativaTotal ?? null,
     prioridadeInterna: t.prioridadeInterna ?? null,
     impedimento: t.impedimento === true,
