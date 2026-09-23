@@ -305,7 +305,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
             <span className="dmd-modal-issue-key">{ticket.issueKey}</span>
             <span className="dmd-badge dmd-badge--squad">{squadLabel}</span>
             <span className="dmd-badge dmd-badge--status">{statusLabel}</span>
-            {/* Squad tags derivadas dos sistemas impactados */}
+            {/* Squad tags derivadas dos sistemas impactados — clicáveis em modo edição */}
             {(() => {
               if (!ticket.sistemasImpactados || !systems.length || !squads.length) return null;
               const sysNames = String(ticket.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean);
@@ -319,27 +319,59 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                 .map((id) => squads.find((sq) => sq.id === id)?.name)
                 .filter(Boolean);
               if (!squadNames.length) return null;
-              return squadNames.map((name, idx) => (
-                <span
-                  key={idx}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    background: 'rgba(16,185,129,0.15)',
-                    border: '1px solid rgba(16,185,129,0.4)',
-                    borderRadius: 999,
-                    padding: '3px 12px',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: '#6ee7b7',
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {name}
-                </span>
-              ));
+              return squadNames.map((name, idx) => {
+                const isPrincipal = ticket.squadPrincipal === name;
+                if (isEdit) {
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      title={isPrincipal ? 'Squad principal selecionada' : 'Clique para definir como squad principal'}
+                      onClick={() => save('squadPrincipal', isPrincipal ? null : name)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        background: isPrincipal ? 'rgba(16,185,129,0.35)' : 'rgba(16,185,129,0.08)',
+                        border: isPrincipal ? '2px solid rgba(16,185,129,0.9)' : '1px dashed rgba(16,185,129,0.4)',
+                        borderRadius: 999,
+                        padding: '3px 12px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: isPrincipal ? '#34d399' : '#6ee7b7',
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        outline: 'none',
+                      }}
+                    >
+                      {isPrincipal ? '★ ' : ''}{name}
+                    </button>
+                  );
+                }
+                return (
+                  <span
+                    key={idx}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: isPrincipal ? 'rgba(16,185,129,0.25)' : 'rgba(16,185,129,0.15)',
+                      border: isPrincipal ? '1px solid rgba(16,185,129,0.7)' : '1px solid rgba(16,185,129,0.4)',
+                      borderRadius: 999,
+                      padding: '3px 12px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: '#6ee7b7',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {isPrincipal ? '★ ' : ''}{name}
+                  </span>
+                );
+              });
             })()}
           </div>
           <button className="dmd-close-btn" onClick={onClose} title="Fechar">
@@ -394,99 +426,39 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                 <ReadField label="NATUREZA DA OPERAÇÃO" value={ticket.naturezaOperacao} />
               </div>
 
-              {/* Row 3: SISTEMAS IMPACTADOS — tags */}
+              {/* Row 3: SISTEMAS IMPACTADOS — tags (somente leitura) */}
               <div className="dmd-row">
                 <div className="dmd-field dmd-field--wide">
                   <FieldLabel>SISTEMAS IMPACTADOS</FieldLabel>
-                  {isEdit ? (
-                    /* Edit mode: all systems as clickable tag chips */
+                  {ticket.sistemasImpactados && String(ticket.sistemasImpactados).trim() !== '' ? (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: 4 }}>
-                      {systems
-                        .slice()
-                        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
-                        .map((sys) => {
-                          const selected = String(ticket.sistemasImpactados || '')
-                            .split(',').map((s) => s.trim()).filter(Boolean)
-                            .some((s) => s.toLowerCase() === sys.name?.toLowerCase());
-                          return (
-                            <button
-                              key={sys.id}
-                              type="button"
-                              onClick={() => {
-                                const current = String(ticket.sistemasImpactados || '')
-                                  .split(',').map((s) => s.trim()).filter(Boolean);
-                                let next;
-                                if (selected) {
-                                  next = current.filter((s) => s.toLowerCase() !== sys.name?.toLowerCase());
-                                } else {
-                                  next = [...current, sys.name];
-                                }
-                                const nextStr = next.join(', ');
-                                save('sistemasImpactados', nextStr || null);
-                                // Auto-derive squadPrincipal from first selected system with squadId
-                                if (!selected && sys.squadId && !ticket.squadPrincipal) {
-                                  const sq = squads.find((s) => s.id === sys.squadId);
-                                  if (sq) save('squadPrincipal', sq.name);
-                                }
-                              }}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                background: selected ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.04)',
-                                border: selected ? '1px solid rgba(99,102,241,0.7)' : '1px solid rgba(255,255,255,0.12)',
-                                borderRadius: 6,
-                                padding: '4px 10px',
-                                fontSize: 13,
-                                fontWeight: selected ? 700 : 500,
-                                color: selected ? '#a5b4fc' : 'rgba(255,255,255,0.45)',
-                                letterSpacing: '0.01em',
-                                whiteSpace: 'nowrap',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                              }}
-                            >
-                              {sys.name}
-                            </button>
-                          );
-                        })}
-                      {systems.length === 0 && (
-                        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 13, fontStyle: 'italic' }}>
-                          Carregando sistemas...
-                        </span>
-                      )}
+                      {String(ticket.sistemasImpactados)
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .map((sys, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              background: 'rgba(99,102,241,0.12)',
+                              border: '1px solid rgba(99,102,241,0.35)',
+                              borderRadius: 6,
+                              padding: '4px 10px',
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: '#a5b4fc',
+                              letterSpacing: '0.01em',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {sys}
+                          </span>
+                        ))}
                     </div>
                   ) : (
-                    /* Read mode: show selected tags */
-                    ticket.sistemasImpactados && String(ticket.sistemasImpactados).trim() !== '' ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: 4 }}>
-                        {String(ticket.sistemasImpactados)
-                          .split(',')
-                          .map((s) => s.trim())
-                          .filter(Boolean)
-                          .map((sys, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                background: 'rgba(99,102,241,0.12)',
-                                border: '1px solid rgba(99,102,241,0.35)',
-                                borderRadius: 6,
-                                padding: '4px 10px',
-                                fontSize: 13,
-                                fontWeight: 600,
-                                color: '#a5b4fc',
-                                letterSpacing: '0.01em',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {sys}
-                            </span>
-                          ))}
-                      </div>
-                    ) : (
-                      <div className="dmd-field-value">—</div>
-                    )
+                    <div className="dmd-field-value">—</div>
                   )}
                 </div>
               </div>
