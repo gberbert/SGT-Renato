@@ -237,6 +237,12 @@ function resolveSquadFromTicket(ticket, systems, squads) {
   return names.length ? names.join(', ') : null;
 }
 
+/** Returns the squad array for a ticket, preferring squadPrincipal if set */
+function getTicketSquads(ticket, systems, squads) {
+  if (ticket.squadPrincipal) return [ticket.squadPrincipal];
+  return resolveSquadsArrayFromTicket(ticket, systems, squads);
+}
+
 function resolveSquadsArrayFromTicket(ticket, systems, squads) {
   if (!ticket.sistemasImpactados || !systems.length || !squads.length) return [];
   const sysNames = String(ticket.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean);
@@ -368,6 +374,8 @@ const OperacaoHome = ({ userRole }) => {
     const map = new Map();
     if (!drillTickets.length) return map;
     for (const ticket of drillTickets) {
+      // 0. Priority: squadPrincipal set directly on the ticket
+      if (ticket.squadPrincipal) { map.set(ticket.issueKey, ticket.squadPrincipal); continue; }
       // 1. Try to resolve squad name via sistemas → squadId → squad name
       const sq = resolveSquadFromTicket(ticket, systems, squads);
       if (sq) { map.set(ticket.issueKey, sq); continue; }
@@ -1042,22 +1050,22 @@ const OperacaoHome = ({ userRole }) => {
                       if (!selectedSquadFilter) return dueDateFilteredEscopoTickets;
                       const { name: sqName, mode: sqMode } = selectedSquadFilter;
                       if (sqMode === 'none') {
-                        return dueDateFilteredEscopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).length === 0);
+                        return dueDateFilteredEscopoTickets.filter((t) => getTicketSquads(t, systems, squads).length === 0);
                       }
                       if (sqMode === 'exclusive') {
                         return dueDateFilteredEscopoTickets.filter((t) => {
-                          const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                          const arr = getTicketSquads(t, systems, squads);
                           return arr.length === 1 && arr[0] === sqName;
                         });
                       }
                       if (sqMode === 'cross') {
                         return dueDateFilteredEscopoTickets.filter((t) => {
-                          const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                          const arr = getTicketSquads(t, systems, squads);
                           return arr.length > 1 && arr.includes(sqName);
                         });
                       }
                       // mode === 'all'
-                      return dueDateFilteredEscopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).includes(sqName));
+                      return dueDateFilteredEscopoTickets.filter((t) => getTicketSquads(t, systems, squads).includes(sqName));
                     })();
 
                     // Priority filter applied on top of squad filter
@@ -1426,7 +1434,7 @@ const OperacaoHome = ({ userRole }) => {
                           })();
                           const squadStats = {};
                           for (const ticket of statusFilteredBase) {
-                            const ticketSquads = resolveSquadsArrayFromTicket(ticket, systems, squads);
+                            const ticketSquads = getTicketSquads(ticket, systems, squads);
                             if (ticketSquads.length === 0) {
                               if (!squadStats['-']) squadStats['-'] = { exclusive: 0, cross: 0 };
                               squadStats['-'].exclusive += 1;
@@ -1549,7 +1557,7 @@ const OperacaoHome = ({ userRole }) => {
                                             onClick={() => {
                                               if (squadName === '-') {
                                                 const filtered = escopoTickets.filter((t) =>
-                                                  resolveSquadsArrayFromTicket(t, systems, squads).length === 0
+                                                  getTicketSquads(t, systems, squads).length === 0
                                                 );
                                                 setSelectedSquadFilter({ name: '-', mode: 'none' });
                                                 setDemandaStatusFilters(new Set());
@@ -1557,7 +1565,7 @@ const OperacaoHome = ({ userRole }) => {
                                                 openDrillDirect(filtered, 'Squad: (sem squad)');
                                               } else {
                                                 const filtered = escopoTickets.filter((t) =>
-                                                  resolveSquadsArrayFromTicket(t, systems, squads).includes(squadName)
+                                                  getTicketSquads(t, systems, squads).includes(squadName)
                                                 );
                                                 setSelectedSquadFilter({ name: squadName, mode: 'all' });
                                                 setDemandaStatusFilters(new Set());
@@ -1597,7 +1605,7 @@ const OperacaoHome = ({ userRole }) => {
                                                 title={`Ver demandas sem squad (${total})`}
                                                 onClick={() => {
                                                   const filtered = dueDateFilteredEscopoTickets.filter((t) =>
-                                                    resolveSquadsArrayFromTicket(t, systems, squads).length === 0
+                                                    getTicketSquads(t, systems, squads).length === 0
                                                   );
                                               setSelectedSquadFilter({ name: '-', mode: 'none' });
                                               setDemandaStatusFilters(new Set());
@@ -1624,7 +1632,7 @@ const OperacaoHome = ({ userRole }) => {
                                                 title={`Ver ${exclusive} demanda(s) exclusiva(s) de ${squadName}`}
                                                 onClick={() => {
                                                   const filtered = dueDateFilteredEscopoTickets.filter((t) => {
-                                                    const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                                                    const arr = getTicketSquads(t, systems, squads);
                                                     return arr.length === 1 && arr[0] === squadName;
                                                   });
                                                   setSelectedSquadFilter({ name: squadName, mode: 'exclusive' });
@@ -1650,7 +1658,7 @@ const OperacaoHome = ({ userRole }) => {
                                                 title={`Ver ${cross} demanda(s) cross-squad de ${squadName}`}
                                                 onClick={() => {
                                                   const filtered = dueDateFilteredEscopoTickets.filter((t) => {
-                                                    const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                                                    const arr = getTicketSquads(t, systems, squads);
                                                     return arr.length > 1 && arr.includes(squadName);
                                                   });
                                                   setSelectedSquadFilter({ name: squadName, mode: 'cross' });

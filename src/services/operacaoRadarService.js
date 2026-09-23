@@ -564,6 +564,7 @@ export function mapDrillTicket(t) {
     prioridadeInterna: t.prioridadeInterna ?? null,
     impedimento: t.impedimento === true,
     statusHistory: Array.isArray(t.statusHistory) ? t.statusHistory : [],
+    squadPrincipal: t.squadPrincipal || null,
     dataFimDesenvolvimento: t.dataFimDesenvolvimento || null,
     dataFimTesteInterno: t.dataFimTesteInterno || null,
     dataFimTesteQa: t.dataFimTesteQa || null,
@@ -722,6 +723,7 @@ function mapFirestoreTicketDoc(d) {
     prioridadeInterna: data.prioridadeInterna ?? null,
     impedimento: data.impedimento === true,
     statusHistory: Array.isArray(data.statusHistory) ? data.statusHistory : [],
+    squadPrincipal: data.squadPrincipal || null,
   };
 }
 
@@ -759,6 +761,7 @@ export async function updateTicketRadarFields(issueKey, patch) {
     payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 5) ? val : null;
   }
   if ('impedimento' in patch) payload.impedimento = Boolean(patch.impedimento);
+  if ('squadPrincipal' in patch) payload.squadPrincipal = patch.squadPrincipal || null;
 
   const SGT_DATE_FIELDS = [
     'dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa',
