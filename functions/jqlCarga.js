@@ -62,6 +62,12 @@ const TICKET_FIELD_DEFINITIONS = {
   ],
   estimativa_horas: ["Estimativa de horas", "estimativa de horas"],
   data_fim_planejado: ["Data Fim Planejado", "data fim planejado"],
+  natureza_iniciativa: [
+    "Natureza da Iniciativa",
+    "natureza da iniciativa",
+    "Natureza de Iniciativa",
+    "natureza de iniciativa",
+  ],
 };
 
 const ESCOPO_SEED = [

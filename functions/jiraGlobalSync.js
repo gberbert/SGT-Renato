@@ -207,6 +207,36 @@ function extractFieldValue(raw) {
   return null;
 }
 
+/**
+ * Extrai o valor completo do campo sem remover prefixos numéricos.
+ * Usado para campos como naturezaIniciativa onde "1 - Manutenção Evolutiva"
+ * deve ser preservado integralmente.
+ */
+function extractFieldValueFull(raw) {
+  if (raw == null) return null;
+  if (typeof raw === "string") return raw.trim() || null;
+  if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
+  if (Array.isArray(raw)) {
+    const values = raw.map(extractFieldValueFull).filter(Boolean);
+    return values.length ? values.join(", ") : null;
+  }
+  if (typeof raw === "object") {
+    for (const key of ["value", "name", "displayName", "key"]) {
+      if (raw[key]) return String(raw[key]).trim() || null;
+    }
+    if (Array.isArray(raw.content)) {
+      const parts = [];
+      for (const block of raw.content) {
+        for (const item of block.content || []) {
+          if (item.type === "text" && item.text) parts.push(item.text);
+        }
+      }
+      return parts.length ? parts.join("\n") : null;
+    }
+  }
+  return null;
+}
+
 function extractUser(fields, key) {
   const user = fields[key];
   if (!user) return { name: null, email: null, accountId: null };
@@ -351,7 +381,11 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
   const statusCategory = status.statusCategory || {};
   const project = fields.project || {};
   const issueType = fields.issuetype || {};
-  const priority = fields.priority || {};
+  const priorityRaw = fields.priority || {};
+  // Extrai o nome completo da prioridade como string pura do Jira (sem remover prefixos)
+  const priorityName = priorityRaw.name
+    ? String(priorityRaw.name).trim()
+    : (priorityRaw.id ? String(priorityRaw.id).trim() : null);
   const assignee = extractUser(fields, "assignee");
   const reporter = extractUser(fields, "reporter");
   const creator = extractUser(fields, "creator");
@@ -359,7 +393,16 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
   const extracted = {};
   for (const col of Object.keys(TICKET_FIELD_DEFINITIONS)) {
     const fid = fieldIds[col];
-    extracted[col] = fid ? extractFieldValue(fields[fid]) : null;
+    if (!fid) {
+      extracted[col] = null;
+      continue;
+    }
+    // natureza_iniciativa deve preservar o valor completo (com prefixo numérico)
+    if (col === "natureza_iniciativa") {
+      extracted[col] = extractFieldValueFull(fields[fid]);
+    } else {
+      extracted[col] = extractFieldValue(fields[fid]);
+    }
   }
 
   const empresa =
@@ -400,11 +443,13 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     projectKey: project.key || null,
     projectName: project.name || null,
     issueType: issueType.name || null,
-    priority: priority.name || null,
+    priority: priorityName,
+    prioridadeInterna: priorityName,
     escopo: escopo || null,
     syncBatch: syncBatch || null,
     empresa,
     fornecedor,
+    naturezaIniciativa: extracted.natureza_iniciativa || null,
     grupoSuporte: extracted.grupo_suporte || null,
     grupoSolucionador: extracted.grupo_solucionador || null,
     fornecedorTi: extracted.fornecedor_ti || null,
@@ -836,12 +881,13 @@ async function searchOperacaoIssues({
 
 // Campos gerenciados internamente pelo SGT — NUNCA devem ser sobrescritos pelo sync do Jira.
 // São preenchidos manualmente pela equipe via updateTicketRadarFields().
+// NOTA: prioridadeInterna é populado pelo sync com o valor da prioridade Jira na primeira carga
+// e pode ser revisado/editado internamente. Remova desta lista se quiser que o sync sempre atualize.
 const SGT_MANAGED_FIELDS = [
   "responsavelAtual",
   "dataPrevisao",
   "observacaoAdicional",
   "estimativaMacro",
-  "prioridadeInterna",
   "impedimento",
   "radarFieldsUpdatedAt",
 ];
