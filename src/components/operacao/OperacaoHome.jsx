@@ -355,6 +355,8 @@ const OperacaoHome = ({ userRole }) => {
   const [demandaStatusFilters, setDemandaStatusFilters] = useState(() => new Set());
   const [filteringImpedidas, setFilteringImpedidas] = useState(false);
   const [selectedSquadFilter, setSelectedSquadFilter] = useState(null);
+  const [selectedPriorityFilter, setSelectedPriorityFilter] = useState(null);
+  const [selectedDueDateFilter, setSelectedDueDateFilter] = useState(null); // null | 'today' | '2days'
   const [previstoExpanded, setPrevistoExpanded] = useState(true);
   const [principalExpanded, setPrincipalExpanded] = useState(true);
   const [demandaModalTicket, setDemandaModalTicket] = useState(null);
@@ -881,6 +883,8 @@ const OperacaoHome = ({ userRole }) => {
               setDrillStatusFilter(null);
               setDemandaStatusFilters(new Set());
               setSelectedSquadFilter(null);
+              setSelectedPriorityFilter(null);
+              setSelectedDueDateFilter(null);
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
@@ -1014,40 +1018,70 @@ const OperacaoHome = ({ userRole }) => {
                     : [];
                   // ── DEMANDA: visão enriquecida por fluxo de status ──────────────────
                   if (activeEscopoTab === 'DEMANDA') {
+                    // Compute due-date filtered base tickets
+                    const dueDateFilteredEscopoTickets = (() => {
+                      if (!selectedDueDateFilter) return escopoTickets;
+                      const todayStrDD = new Date().toISOString().slice(0, 10);
+                      const d1DD = new Date(); d1DD.setDate(d1DD.getDate() + 1);
+                      const d2DD = new Date(); d2DD.setDate(d2DD.getDate() + 2);
+                      const plus1StrDD = d1DD.toISOString().slice(0, 10);
+                      const plus2StrDD = d2DD.toISOString().slice(0, 10);
+                      const DATE_FIELDS_DD = ['dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa', 'dataFimHomologacao', 'dataConclusao'];
+                      const getDates = (t) => DATE_FIELDS_DD.map((f) => t[f] ? String(t[f]).slice(0, 10) : null).filter(Boolean);
+                      if (selectedDueDateFilter === 'today') {
+                        return escopoTickets.filter((t) => getDates(t).includes(todayStrDD));
+                      }
+                      return escopoTickets.filter((t) => {
+                        const dates = getDates(t);
+                        return dates.includes(plus1StrDD) || dates.includes(plus2StrDD);
+                      });
+                    })();
+
                     // Compute squad-filtered tickets when a squad is selected from the chart
                     const squadFilteredTickets = (() => {
-                      if (!selectedSquadFilter) return escopoTickets;
+                      if (!selectedSquadFilter) return dueDateFilteredEscopoTickets;
                       const { name: sqName, mode: sqMode } = selectedSquadFilter;
                       if (sqMode === 'none') {
-                        return escopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).length === 0);
+                        return dueDateFilteredEscopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).length === 0);
                       }
                       if (sqMode === 'exclusive') {
-                        return escopoTickets.filter((t) => {
+                        return dueDateFilteredEscopoTickets.filter((t) => {
                           const arr = resolveSquadsArrayFromTicket(t, systems, squads);
                           return arr.length === 1 && arr[0] === sqName;
                         });
                       }
                       if (sqMode === 'cross') {
-                        return escopoTickets.filter((t) => {
+                        return dueDateFilteredEscopoTickets.filter((t) => {
                           const arr = resolveSquadsArrayFromTicket(t, systems, squads);
                           return arr.length > 1 && arr.includes(sqName);
                         });
                       }
                       // mode === 'all'
-                      return escopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).includes(sqName));
+                      return dueDateFilteredEscopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).includes(sqName));
                     })();
+
+                    // Priority filter applied on top of squad filter
+                    const prioFilteredTickets = selectedPriorityFilter
+                      ? squadFilteredTickets.filter((t) => {
+                          const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(t.prioridadeInterna));
+                          const pLabel = t.prioridadeInterna != null
+                            ? (meta ? meta.description : `P${t.prioridadeInterna}`)
+                            : (t.priority || 'Sem prioridade');
+                          return pLabel === selectedPriorityFilter;
+                        })
+                      : squadFilteredTickets;
 
                     // When in "impedidas mode", visibleTickets = only impedidas within active status filters
                     const visibleTickets = (() => {
                       if (filteringImpedidas && demandaStatusFilters.size > 0) {
-                        return squadFilteredTickets.filter(
+                        return prioFilteredTickets.filter(
                           (t) => t.impedimento === true && demandaStatusFilters.has(String(t.status || '').trim())
                         );
                       }
                       if (demandaStatusFilters.size > 0) {
-                        return squadFilteredTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()));
+                        return prioFilteredTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()));
                       }
-                      return squadFilteredTickets;
+                      return prioFilteredTickets;
                     })();
                     const totalDemandas = visibleTickets.length;
                     const totalImpedidas = filteringImpedidas
@@ -1056,8 +1090,8 @@ const OperacaoHome = ({ userRole }) => {
                     // When in impedidas mode, status card counts show only impedidas per status
                     const statusCounts = {};
                     const baseForCounts = filteringImpedidas
-                      ? squadFilteredTickets.filter((t) => t.impedimento === true)
-                      : squadFilteredTickets;
+                      ? prioFilteredTickets.filter((t) => t.impedimento === true)
+                      : prioFilteredTickets;
                     for (const t of baseForCounts) {
                       const s = t.status ? String(t.status).trim() : '';
                       if (s) statusCounts[s] = (statusCounts[s] || 0) + 1;
@@ -1221,8 +1255,65 @@ const OperacaoHome = ({ userRole }) => {
                                 </button>
                               )}
                             </Box>
-                            {(selectedSquadFilter || demandaStatusFilters.size > 0) && (
+                            {(selectedSquadFilter || demandaStatusFilters.size > 0 || selectedDueDateFilter || selectedPriorityFilter) && (
                               <Flex gap="1" wrap="wrap" align="center" style={{ marginLeft: 4 }}>
+                                {selectedDueDateFilter && (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                                      background: selectedDueDateFilter === 'today' ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.12)',
+                                      border: `1px solid ${selectedDueDateFilter === 'today' ? 'rgba(239,68,68,0.5)' : 'rgba(234,179,8,0.5)'}`,
+                                      borderRadius: 6, padding: '3px 8px',
+                                      fontSize: 11, color: selectedDueDateFilter === 'today' ? '#f87171' : '#fbbf24',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    📅 {selectedDueDateFilter === 'today' ? 'Vence Hoje' : 'Vence em 2 dias'}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedDueDateFilter(null);
+                                        setDemandaStatusFilters(new Set());
+                                        setFilteringImpedidas(false);
+                                        openDrillDirect(
+                                          selectedSquadFilter ? squadFilteredTickets : escopoTickets,
+                                          selectedSquadFilter
+                                            ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name}`
+                                            : 'Demandas'
+                                        );
+                                      }}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, lineHeight: 1, fontSize: 13, marginLeft: 1 }}
+                                      title="Remover filtro de data"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                )}
+                                {selectedPriorityFilter && (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                                      background: 'rgba(251,146,60,0.12)',
+                                      border: '1px solid rgba(251,146,60,0.5)',
+                                      borderRadius: 6, padding: '3px 8px',
+                                      fontSize: 11, color: '#fb923c',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    🎯 Prioridade: {selectedPriorityFilter}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedPriorityFilter(null);
+                                        setDrillEscopo(null); setDrillTickets([]); setDrillLabel(''); setDrillError('');
+                                      }}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, lineHeight: 1, fontSize: 13, marginLeft: 1 }}
+                                      title="Remover filtro de prioridade"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                )}
                                 {selectedSquadFilter && (
                                   <span
                                     style={{
@@ -1285,6 +1376,7 @@ const OperacaoHome = ({ userRole }) => {
                                   type="button"
                                   onClick={() => {
                                     setDemandaStatusFilters(new Set());
+                                    setSelectedDueDateFilter(null);
                                     setFilteringImpedidas(false);
                                     if (selectedSquadFilter) {
                                       openDrillDirect(
@@ -1304,7 +1396,7 @@ const OperacaoHome = ({ userRole }) => {
                                     color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
                                     whiteSpace: 'nowrap',
                                   }}
-                                  title="Limpar todos os filtros de status"
+                                  title="Limpar todos os filtros"
                                 >
                                   Limpar tudo
                                 </button>
@@ -1317,8 +1409,23 @@ const OperacaoHome = ({ userRole }) => {
                         {(() => {
                           // Compute squad distribution — each ticket counted in ALL its squads.
                           // Cross-squad tickets (>1 squad) are tracked separately for colour coding.
+                          const statusFilteredBase = (() => {
+                            let base = demandaStatusFilters.size > 0
+                              ? dueDateFilteredEscopoTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()))
+                              : dueDateFilteredEscopoTickets;
+                            if (selectedPriorityFilter) {
+                              base = base.filter((t) => {
+                                const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(t.prioridadeInterna));
+                                const pLabel = t.prioridadeInterna != null
+                                  ? (meta ? meta.description : `P${t.prioridadeInterna}`)
+                                  : (t.priority || 'Sem prioridade');
+                                return pLabel === selectedPriorityFilter;
+                              });
+                            }
+                            return base;
+                          })();
                           const squadStats = {};
-                          for (const ticket of escopoTickets) {
+                          for (const ticket of statusFilteredBase) {
                             const ticketSquads = resolveSquadsArrayFromTicket(ticket, systems, squads);
                             if (ticketSquads.length === 0) {
                               if (!squadStats['-']) squadStats['-'] = { exclusive: 0, cross: 0 };
@@ -1346,7 +1453,7 @@ const OperacaoHome = ({ userRole }) => {
                             Low: '#52c41a', Lowest: '#87d068',
                           };
                           const priorityStats = {};
-                          for (const ticket of escopoTickets) {
+                          for (const ticket of visibleTickets) {
                             let label, color;
                             if (ticket.prioridadeInterna != null) {
                               const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(ticket.prioridadeInterna));
@@ -1409,8 +1516,14 @@ const OperacaoHome = ({ userRole }) => {
                                 {squadRows.map(({ name: squadName, exclusive, cross, total }) => {
                                   const exclusivePct = Math.round((exclusive / maxTotal) * 100);
                                   const crossPct    = Math.round((cross    / maxTotal) * 100);
+                                  const isSquadSelected = selectedSquadFilter !== null;
+                                  const isThisSquadActive = selectedSquadFilter &&
+                                    (selectedSquadFilter.mode === 'none'
+                                      ? squadName === '-'
+                                      : selectedSquadFilter.name === squadName);
+                                  const squadRowOpacity = isSquadSelected && !isThisSquadActive ? 0.25 : 1;
                                   return (
-                                    <Flex key={squadName} align="center" gap="2" style={{ minHeight: 22 }}>
+                                    <Flex key={squadName} align="center" gap="2" style={{ minHeight: 22, opacity: squadRowOpacity, transition: 'opacity 0.2s' }}>
                                       {/* Label */}
                                       <Box style={{ width: 140, flexShrink: 0 }}>
                                         <Flex align="center" justify="end" gap="2">
@@ -1469,23 +1582,23 @@ const OperacaoHome = ({ userRole }) => {
                                         style={{ flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 14, overflow: 'hidden', display: 'flex' }}
                                         title={`${squadName} · ${exclusive} exclusiva(s) + ${cross} cross-squad = ${total}`}
                                       >
-                                        {squadName === '-' ? (
-                                          <button
-                                            type="button"
-                                            style={{
-                                              display: 'block',
-                                              height: '100%',
-                                              width: `${exclusivePct + crossPct}%`,
-                                              background: 'rgba(255,255,255,0.15)',
-                                              border: 'none',
-                                              cursor: 'pointer',
-                                              minWidth: total > 0 ? 4 : 0,
-                                            }}
-                                            title={`Ver demandas sem squad (${total})`}
-                                            onClick={() => {
-                                              const filtered = escopoTickets.filter((t) =>
-                                                resolveSquadsArrayFromTicket(t, systems, squads).length === 0
-                                              );
+                                            {squadName === '-' ? (
+                                              <button
+                                                type="button"
+                                                style={{
+                                                  display: 'block',
+                                                  height: '100%',
+                                                  width: `${exclusivePct + crossPct}%`,
+                                                  background: 'rgba(255,255,255,0.15)',
+                                                  border: 'none',
+                                                  cursor: 'pointer',
+                                                  minWidth: total > 0 ? 4 : 0,
+                                                }}
+                                                title={`Ver demandas sem squad (${total})`}
+                                                onClick={() => {
+                                                  const filtered = dueDateFilteredEscopoTickets.filter((t) =>
+                                                    resolveSquadsArrayFromTicket(t, systems, squads).length === 0
+                                                  );
                                               setSelectedSquadFilter({ name: '-', mode: 'none' });
                                               setDemandaStatusFilters(new Set());
                                               setFilteringImpedidas(false);
@@ -1510,7 +1623,7 @@ const OperacaoHome = ({ userRole }) => {
                                                 }}
                                                 title={`Ver ${exclusive} demanda(s) exclusiva(s) de ${squadName}`}
                                                 onClick={() => {
-                                                  const filtered = escopoTickets.filter((t) => {
+                                                  const filtered = dueDateFilteredEscopoTickets.filter((t) => {
                                                     const arr = resolveSquadsArrayFromTicket(t, systems, squads);
                                                     return arr.length === 1 && arr[0] === squadName;
                                                   });
@@ -1536,7 +1649,7 @@ const OperacaoHome = ({ userRole }) => {
                                                 }}
                                                 title={`Ver ${cross} demanda(s) cross-squad de ${squadName}`}
                                                 onClick={() => {
-                                                  const filtered = escopoTickets.filter((t) => {
+                                                  const filtered = dueDateFilteredEscopoTickets.filter((t) => {
                                                     const arr = resolveSquadsArrayFromTicket(t, systems, squads);
                                                     return arr.length > 1 && arr.includes(squadName);
                                                   });
@@ -1565,8 +1678,8 @@ const OperacaoHome = ({ userRole }) => {
                                   const plus2Str = d2.toISOString().slice(0, 10);
                                   const DATE_FIELDS = ['dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa', 'dataFimHomologacao', 'dataConclusao'];
                                   const getTicketDates = (t) => DATE_FIELDS.map((f) => t[f] ? String(t[f]).slice(0, 10) : null).filter(Boolean);
-                                  const venceHoje = escopoTickets.filter((t) => getTicketDates(t).includes(todayStr)).length;
-                                  const vence2dias = escopoTickets.filter((t) => {
+                                  const venceHoje = visibleTickets.filter((t) => getTicketDates(t).includes(todayStr)).length;
+                                  const vence2dias = visibleTickets.filter((t) => {
                                     const dates = getTicketDates(t);
                                     return dates.includes(plus1Str) || dates.includes(plus2Str);
                                   }).length;
@@ -1583,10 +1696,26 @@ const OperacaoHome = ({ userRole }) => {
                                               key={i}
                                               d={seg.d}
                                               fill={seg.color}
-                                              stroke="rgba(0,0,0,0.4)"
-                                              strokeWidth="1.5"
-                                              style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
+                                              stroke={selectedPriorityFilter === seg.label ? 'white' : 'rgba(0,0,0,0.4)'}
+                                              strokeWidth={selectedPriorityFilter === seg.label ? 3 : 1.5}
+                                              opacity={selectedPriorityFilter && selectedPriorityFilter !== seg.label ? 0.35 : 1}
+                                              style={{ cursor: 'pointer', transition: 'opacity 0.15s, stroke-width 0.15s' }}
                                               title={`${seg.label}: ${seg.count}`}
+                                              onClick={() => {
+                                                const newLabel = selectedPriorityFilter === seg.label ? null : seg.label;
+                                                setSelectedPriorityFilter(newLabel);
+                                                if (newLabel) {
+                                                  const filtered = squadFilteredTickets.filter((t) => {
+                                                    const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(t.prioridadeInterna));
+                                                    const pLabel = t.prioridadeInterna != null ? (meta ? meta.description : `P${t.prioridadeInterna}`) : (t.priority || 'Sem prioridade');
+                                                    return pLabel === newLabel;
+                                                  });
+                                                  const squadLabel = selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · ` : '';
+                                                  openDrillDirect(filtered, `${squadLabel}Prioridade: ${newLabel}`);
+                                                } else {
+                                                  setDrillEscopo(null); setDrillTickets([]); setDrillLabel(''); setDrillError('');
+                                                }
+                                              }}
                                             />
                                           ))}
                                           <circle cx="80" cy="80" r="32" fill="#111827" />
@@ -1595,36 +1724,141 @@ const OperacaoHome = ({ userRole }) => {
                                         </svg>
                                         {/* Legend beside pie */}
                                         <Flex direction="column" gap="1" style={{ minWidth: 120 }}>
-                                          {priorityRows.map(({ label, count, color }) => (
-                                            <Flex key={label} align="center" gap="2" style={{ minHeight: 18 }}>
-                                              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
-                                              <Text size="1" style={{ flex: 1, color: 'rgba(255,255,255,0.6)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>
-                                                {label}
-                                              </Text>
-                                              <Text size="1" style={{ color, fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
-                                                {count}
-                                              </Text>
-                                            </Flex>
-                                          ))}
+                                          {priorityRows.map(({ label, count, color }) => {
+                                            const isActive = selectedPriorityFilter === label;
+                                            return (
+                                              <Flex
+                                                key={label}
+                                                align="center"
+                                                gap="2"
+                                                style={{
+                                                  minHeight: 18,
+                                                  cursor: 'pointer',
+                                                  borderRadius: 6,
+                                                  padding: '2px 5px',
+                                                  background: isActive ? `${color}22` : 'transparent',
+                                                  border: isActive ? `1px solid ${color}88` : '1px solid transparent',
+                                                  opacity: selectedPriorityFilter && !isActive ? 0.45 : 1,
+                                                  transition: 'opacity 0.15s, background 0.15s, border 0.15s',
+                                                }}
+                                                onClick={() => {
+                                                  const newLabel = isActive ? null : label;
+                                                  setSelectedPriorityFilter(newLabel);
+                                                  if (newLabel) {
+                                                    const filtered = squadFilteredTickets.filter((t) => {
+                                                      const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(t.prioridadeInterna));
+                                                      const pLabel = t.prioridadeInterna != null ? (meta ? meta.description : `P${t.prioridadeInterna}`) : (t.priority || 'Sem prioridade');
+                                                      return pLabel === newLabel;
+                                                    });
+                                                    const squadLabel = selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · ` : '';
+                                                    openDrillDirect(filtered, `${squadLabel}Prioridade: ${newLabel}`);
+                                                  } else {
+                                                    setDrillEscopo(null); setDrillTickets([]); setDrillLabel(''); setDrillError('');
+                                                  }
+                                                }}
+                                                title={isActive ? 'Clique para remover filtro' : `Filtrar por ${label}`}
+                                              >
+                                                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
+                                                <Text size="1" style={{ flex: 1, color: isActive ? 'white' : 'rgba(255,255,255,0.6)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: isActive ? 700 : 400 }} title={label}>
+                                                  {label}
+                                                </Text>
+                                                <Text size="1" style={{ color, fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                                                  {count}
+                                                </Text>
+                                              </Flex>
+                                            );
+                                          })}
                                         </Flex>
                                         {/* Due-date counters */}
                                         <Flex direction="column" gap="3" style={{ marginLeft: 8 }}>
-                                          <Box style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 110 }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const isActive = selectedDueDateFilter === 'today';
+                                              if (isActive) {
+                                                setSelectedDueDateFilter(null);
+                                                setDemandaStatusFilters(new Set());
+                                                setFilteringImpedidas(false);
+                                                openDrillDirect(
+                                                  selectedSquadFilter ? squadFilteredTickets : escopoTickets,
+                                                  selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name}` : 'Demandas'
+                                                );
+                                              } else {
+                                                setSelectedDueDateFilter('today');
+                                                setDemandaStatusFilters(new Set());
+                                                setFilteringImpedidas(false);
+                                                const ddStr = new Date().toISOString().slice(0, 10);
+                                                const DD_FIELDS = ['dataFimDesenvolvimento','dataFimTesteInterno','dataFimTesteQa','dataFimHomologacao','dataConclusao'];
+                                                const basePool = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
+                                                const filtered = basePool.filter((t) =>
+                                                  DD_FIELDS.map((f) => t[f] ? String(t[f]).slice(0,10) : null).filter(Boolean).includes(ddStr)
+                                                );
+                                                const squadLabel = selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · ` : '';
+                                                openDrillDirect(filtered, `${squadLabel}Vence Hoje`);
+                                              }
+                                            }}
+                                            style={{
+                                              background: selectedDueDateFilter === 'today' ? 'rgba(239,68,68,0.20)' : 'rgba(239,68,68,0.10)',
+                                              border: selectedDueDateFilter === 'today' ? '2px solid rgba(239,68,68,0.8)' : '1px solid rgba(239,68,68,0.35)',
+                                              borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 110,
+                                              cursor: 'pointer', boxShadow: selectedDueDateFilter === 'today' ? '0 0 0 3px rgba(239,68,68,0.15)' : 'none',
+                                              transition: 'border 0.15s, box-shadow 0.15s, background 0.15s',
+                                            }}
+                                            title={selectedDueDateFilter === 'today' ? 'Clique para remover filtro' : 'Clique para filtrar por vencimento hoje'}
+                                          >
                                             <Text style={{ fontSize: 40, fontWeight: 900, color: '#f87171', lineHeight: 1, display: 'block' }}>
                                               {venceHoje}
                                             </Text>
                                             <Text style={{ fontSize: 10, fontWeight: 700, color: 'rgba(248,113,113,0.7)', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>
                                               Vence Hoje
                                             </Text>
-                                          </Box>
-                                          <Box style={{ background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 110 }}>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const isActive = selectedDueDateFilter === '2days';
+                                              if (isActive) {
+                                                setSelectedDueDateFilter(null);
+                                                setDemandaStatusFilters(new Set());
+                                                setFilteringImpedidas(false);
+                                                openDrillDirect(
+                                                  selectedSquadFilter ? squadFilteredTickets : escopoTickets,
+                                                  selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name}` : 'Demandas'
+                                                );
+                                              } else {
+                                                setSelectedDueDateFilter('2days');
+                                                setDemandaStatusFilters(new Set());
+                                                setFilteringImpedidas(false);
+                                                const d1v = new Date(); d1v.setDate(d1v.getDate() + 1);
+                                                const d2v = new Date(); d2v.setDate(d2v.getDate() + 2);
+                                                const p1v = d1v.toISOString().slice(0, 10);
+                                                const p2v = d2v.toISOString().slice(0, 10);
+                                                const DD_FIELDS2 = ['dataFimDesenvolvimento','dataFimTesteInterno','dataFimTesteQa','dataFimHomologacao','dataConclusao'];
+                                                const basePool2 = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
+                                                const filtered2 = basePool2.filter((t) => {
+                                                  const dates = DD_FIELDS2.map((f) => t[f] ? String(t[f]).slice(0,10) : null).filter(Boolean);
+                                                  return dates.includes(p1v) || dates.includes(p2v);
+                                                });
+                                                const squadLabel2 = selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · ` : '';
+                                                openDrillDirect(filtered2, `${squadLabel2}Vence em 2 dias`);
+                                              }
+                                            }}
+                                            style={{
+                                              background: selectedDueDateFilter === '2days' ? 'rgba(234,179,8,0.20)' : 'rgba(234,179,8,0.10)',
+                                              border: selectedDueDateFilter === '2days' ? '2px solid rgba(234,179,8,0.8)' : '1px solid rgba(234,179,8,0.35)',
+                                              borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 110,
+                                              cursor: 'pointer', boxShadow: selectedDueDateFilter === '2days' ? '0 0 0 3px rgba(234,179,8,0.15)' : 'none',
+                                              transition: 'border 0.15s, box-shadow 0.15s, background 0.15s',
+                                            }}
+                                            title={selectedDueDateFilter === '2days' ? 'Clique para remover filtro' : 'Clique para filtrar por vencimento em até 2 dias'}
+                                          >
                                             <Text style={{ fontSize: 40, fontWeight: 900, color: '#fbbf24', lineHeight: 1, display: 'block' }}>
                                               {vence2dias}
                                             </Text>
                                             <Text style={{ fontSize: 10, fontWeight: 700, color: 'rgba(251,191,36,0.7)', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>
                                               Vence em 2 dias
                                             </Text>
-                                          </Box>
+                                          </button>
                                         </Flex>
                                       </Flex>
                                     </Box>

@@ -51,6 +51,12 @@ const DATE_FIELD_OPTIONS = [
   { value: 'dataFimHomologacaoPlanejada', label: 'Data Fim Homologacao Planejada' },
   { value: 'dataFimHomologacaoEfetiva', label: 'Data Fim Homologacao Efetiva' },
   { value: 'dataEntregaProducaoPrevista', label: 'Data Entrega em Producao Prevista' },
+  { value: 'dataFimDesenvolvimento', label: 'Fim Desenvolvimento' },
+  { value: 'dataFimTesteInterno', label: 'Fim Teste Interno' },
+  { value: 'dataFimTesteQa', label: 'Fim Teste (QA)' },
+  { value: 'dataFimHomologacao', label: 'Fim Homologacao (Efetiva)' },
+  { value: 'dataConclusao', label: 'Data Conclusao / Producao' },
+  { value: 'dataFimPlanejado', label: 'Data Fim Planejado (Jira)' },
   { value: 'resolvedAt', label: 'Data de Resolucao (RESOLVED_AT)' },
   { value: 'dataPrevisao', label: 'Data de Previsao (campo interno)' },
   { value: 'updatedAt', label: 'Data de Atualizacao (UPDATE_AT)' },
@@ -114,13 +120,20 @@ const ROADMAP_CACHE_PREFIX = 'roadmap_geral_v2_';
 
 /** Datas de planejamento: circulos pretos com letra identificadora na linha de cada ticket */
 const MILESTONE_FIELDS = [
-  { key: 'dataAprovacaoEfsr',            label: 'Aprovacao EF/SR',            letter: '' },
-  { key: 'dataInicioAtendimentoPlanejada', label: 'Inicio Atendimento Planejado', letter: 'A' },
-  { key: 'dataInicioAtendimento',         label: 'Inicio Atendimento',            letter: 'B' },
-  { key: 'dataAprovacaoQaPlanejada',      label: 'Aprovacao QA Planejada',        letter: 'C' },
-  { key: 'dataInicioHomologacaoPlanejada', label: 'Inicio Homologacao Planejada', letter: 'D' },
-  { key: 'dataFimHomologacaoPlanejada',   label: 'Fim Homologacao Planejada',     letter: 'E' },
-  { key: 'dataEntregaProducaoPrevista',   label: 'Entrega em Producao Prevista',  letter: 'F', highlight: { background: '#39ff14', borderColor: 'rgba(15,15,15,0.88)', color: '#064e1a' } },
+  { key: 'dataAprovacaoEfsr',              label: 'Aprovacao EF/SR',               letter: '' },
+  { key: 'dataInicioAtendimentoPlanejada', label: 'Inicio Atendimento Planejado',   letter: 'A' },
+  { key: 'dataInicioAtendimento',          label: 'Inicio Atendimento',             letter: 'B' },
+  { key: 'dataAprovacaoQaPlanejada',       label: 'Aprovacao QA Planejada',         letter: 'C' },
+  { key: 'dataInicioHomologacaoPlanejada', label: 'Inicio Homologacao Planejada',   letter: 'D' },
+  { key: 'dataFimHomologacaoPlanejada',    label: 'Fim Homologacao Planejada',      letter: 'E' },
+  { key: 'dataEntregaProducaoPrevista',    label: 'Entrega em Producao Prevista',   letter: 'F', highlight: { background: '#39ff14', borderColor: 'rgba(15,15,15,0.88)', color: '#064e1a' } },
+  { key: 'dataInicioHomologacaoEfetiva',   label: 'Inicio Homologacao Efetiva',     letter: 'G' },
+  { key: 'dataFimHomologacaoEfetiva',      label: 'Fim Homologacao Efetiva',        letter: 'H' },
+  { key: 'dataFimDesenvolvimento',         label: 'Fim Desenvolvimento',            letter: 'D2', highlight: { background: '#818cf8', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
+  { key: 'dataFimTesteInterno',            label: 'Fim Teste Interno',              letter: 'TI', highlight: { background: '#f59e0b', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
+  { key: 'dataFimTesteQa',                label: 'Fim Teste (QA)',                 letter: 'QA', highlight: { background: '#06b6d4', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
+  { key: 'dataFimHomologacao',             label: 'Fim Homologacao (Efetiva)',      letter: 'HE', highlight: { background: '#f97316', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
+  { key: 'dataConclusao',                  label: 'Data Conclusao / Producao',      letter: 'P',  highlight: { background: '#22c55e', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
 ];
 
 /**

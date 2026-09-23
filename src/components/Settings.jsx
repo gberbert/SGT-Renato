@@ -59,6 +59,8 @@ const Settings = ({ userRole = 'admin' }) => {
   const [systems, setSystems] = useState([]);
   const [loadingSystems, setLoadingSystems] = useState(true);
   const [squads, setSquads] = useState([]);
+  const [systemNameFilter, setSystemNameFilter] = useState('');
+  const [systemSquadFilter, setSystemSquadFilter] = useState('');
 
   const [components, setComponents] = useState([]);
   const [loadingComponents, setLoadingComponents] = useState(true);
@@ -715,42 +717,167 @@ const Settings = ({ userRole = 'admin' }) => {
                 <Text as="h2" size="4" weight="bold">Sistemas</Text>
                 <Button size="2" onClick={openNewSystemModal}>Novo Sistema</Button>
               </Flex>
-              {loadingSystems ? <Loader2 className="spinner-icon" /> : (
-                <Table.Root variant="surface">
-                  <Table.Header>
-                    <Table.Row>
-                      <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Projeto</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Grupo de Suporte</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell>Squad</Table.ColumnHeaderCell>
-                      <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
-                    </Table.Row>
-                  </Table.Header>
-                  <Table.Body>
-                    {systems.map(sys => {
-                      const proj = projects.find(p => p.id === sys.projectId);
-                      const squad = squads.find(s => s.id === sys.squadId);
+
+              {/* Filtro por nome */}
+              <Flex mb="3" align="center" gap="3">
+                <TextField.Root
+                  placeholder="Filtrar por nome do sistema..."
+                  value={systemNameFilter}
+                  onChange={(e) => setSystemNameFilter(e.target.value)}
+                  style={{ flexGrow: 1, maxWidth: 360 }}
+                >
+                  <TextField.Slot>
+                    <Search size={14} />
+                  </TextField.Slot>
+                </TextField.Root>
+                {systemNameFilter && (
+                  <Button size="1" variant="ghost" color="gray" onClick={() => setSystemNameFilter('')}>
+                    Limpar
+                  </Button>
+                )}
+              </Flex>
+
+              {/* Filtro por Squad — cards */}
+              {squads.length > 0 && (
+                <Box mb="4">
+                  <Text size="1" weight="bold" color="gray" mb="2" style={{ display: 'block', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                    Filtrar por Squad
+                  </Text>
+                  <Flex gap="2" wrap="wrap">
+                    {/* Opção: Sem Squad */}
+                    {(() => {
+                      const isActive = systemSquadFilter === '__none__';
                       return (
-                      <Table.Row key={sys.id} align="center">
-                        <Table.Cell><Text weight="bold">{sys.name}</Text></Table.Cell>
-                        <Table.Cell>{proj ? proj.name : '-'}</Table.Cell>
-                        <Table.Cell>{sys.grupoSuporte || <Text color="gray">-</Text>}</Table.Cell>
-                        <Table.Cell>{squad ? squad.name : <Text color="gray">-</Text>}</Table.Cell>
-                        <Table.Cell justify="end">
-                          <Flex gap="2" justify="end">
-                            <Button size="1" variant="soft" onClick={() => openEditSystemModal(sys)}>
-                              <Edit2 size={14} /> Editar
-                            </Button>
-                            <Button size="1" color="red" variant="soft" onClick={() => handleDeleteSystem(sys.id)}>
-                              <Trash2 size={14} /> Excluir
-                            </Button>
-                          </Flex>
-                        </Table.Cell>
-                      </Table.Row>
+                        <button
+                          type="button"
+                          onClick={() => setSystemSquadFilter(isActive ? '' : '__none__')}
+                          style={{
+                            padding: '4px 12px',
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            border: isActive ? '1.5px solid var(--orange-9)' : '1.5px solid var(--gray-6)',
+                            background: isActive ? 'var(--orange-3)' : 'var(--gray-2)',
+                            color: isActive ? 'var(--orange-11)' : 'var(--gray-11)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          — Sem Squad
+                        </button>
+                      );
+                    })()}
+                    {squads.map(sq => {
+                      const isActive = systemSquadFilter === sq.id;
+                      return (
+                        <button
+                          key={sq.id}
+                          type="button"
+                          onClick={() => setSystemSquadFilter(isActive ? '' : sq.id)}
+                          style={{
+                            padding: '4px 12px',
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            border: isActive ? '1.5px solid var(--accent-9)' : '1.5px solid var(--gray-6)',
+                            background: isActive ? 'var(--accent-3)' : 'var(--gray-2)',
+                            color: isActive ? 'var(--accent-11)' : 'var(--gray-11)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {sq.name}
+                        </button>
                       );
                     })}
-                  </Table.Body>
-                </Table.Root>
+                    {systemSquadFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setSystemSquadFilter('')}
+                        style={{
+                          padding: '4px 12px',
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: '1.5px solid var(--gray-5)',
+                          background: 'transparent',
+                          color: 'var(--gray-9)',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        × Limpar squad
+                      </button>
+                    )}
+                  </Flex>
+                </Box>
+              )}
+
+              {loadingSystems ? <Loader2 className="spinner-icon" /> : (
+                <>
+                  {(() => {
+                    const filtered = systems.filter(sys => {
+                      const matchName = systemNameFilter
+                        ? (sys.name || '').toLowerCase().includes(systemNameFilter.toLowerCase())
+                        : true;
+                      const matchSquad = systemSquadFilter
+                        ? systemSquadFilter === '__none__'
+                          ? !sys.squadId
+                          : sys.squadId === systemSquadFilter
+                        : true;
+                      return matchName && matchSquad;
+                    });
+                    return (
+                      <>
+                        <Text size="1" color="gray" mb="2" style={{ display: 'block' }}>
+                          {filtered.length} sistema(s) exibido(s){systems.length !== filtered.length ? ` de ${systems.length}` : ''}
+                        </Text>
+                        <Table.Root variant="surface">
+                          <Table.Header>
+                            <Table.Row>
+                              <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell>Projeto</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell>Grupo de Suporte</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell>Squad</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
+                            </Table.Row>
+                          </Table.Header>
+                          <Table.Body>
+                            {filtered.map(sys => {
+                              const proj = projects.find(p => p.id === sys.projectId);
+                              const squad = squads.find(s => s.id === sys.squadId);
+                              return (
+                                <Table.Row key={sys.id} align="center">
+                                  <Table.Cell><Text weight="bold">{sys.name}</Text></Table.Cell>
+                                  <Table.Cell>{proj ? proj.name : '-'}</Table.Cell>
+                                  <Table.Cell>{sys.grupoSuporte || <Text color="gray">-</Text>}</Table.Cell>
+                                  <Table.Cell>{squad ? squad.name : <Text color="gray">-</Text>}</Table.Cell>
+                                  <Table.Cell justify="end">
+                                    <Flex gap="2" justify="end">
+                                      <Button size="1" variant="soft" onClick={() => openEditSystemModal(sys)}>
+                                        <Edit2 size={14} /> Editar
+                                      </Button>
+                                      <Button size="1" color="red" variant="soft" onClick={() => handleDeleteSystem(sys.id)}>
+                                        <Trash2 size={14} /> Excluir
+                                      </Button>
+                                    </Flex>
+                                  </Table.Cell>
+                                </Table.Row>
+                              );
+                            })}
+                            {filtered.length === 0 && (
+                              <Table.Row>
+                                <Table.Cell colSpan={5}>
+                                  <Text color="gray" size="2">Nenhum sistema encontrado com os filtros aplicados.</Text>
+                                </Table.Cell>
+                              </Table.Row>
+                            )}
+                          </Table.Body>
+                        </Table.Root>
+                      </>
+                    );
+                  })()}
+                </>
               )}
             </Tabs.Content>
 

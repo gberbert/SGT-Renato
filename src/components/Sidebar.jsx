@@ -31,6 +31,7 @@ import { getPermissionProfile } from '../services/permissionService';
 import { PermissionFunctionKeys } from '../services/permissionKeys';
 
 const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -156,15 +157,24 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
   }
 
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+    <aside className={`sidebar ${isOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="logo">
           <KanbanSquare className="logo-icon" size={24} />
-          <span className="logo-text">SGT</span>
+          {!isCollapsed && <span className="logo-text">SGT</span>}
         </div>
-        <button className="menu-toggle" onClick={toggleSidebar}>
-          <X size={24} />
-        </button>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            className="menu-toggle desktop-toggle"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+          >
+            <Menu size={20} />
+          </button>
+          <button className="menu-toggle mobile-toggle" onClick={toggleSidebar}>
+            <X size={24} />
+          </button>
+        </div>
       </div>
 
       <nav className="sidebar-nav">
@@ -194,20 +204,21 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                   color: (isActive && !item.isDemandasParent) ? 'var(--primary)' : 'inherit',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  justifyContent: isCollapsed ? 'center' : 'space-between',
                   gap: '12px',
-                  padding: '12px 16px',
-                  paddingLeft: item.isChild ? '40px' : '16px',
+                  padding: isCollapsed ? '12px' : '12px 16px',
+                  paddingLeft: isCollapsed ? '12px' : (item.isChild ? '40px' : '16px'),
                   borderRadius: 'var(--border-radius)',
                   fontWeight: 500,
                   transition: 'all 0.2s ease',
                   textDecoration: 'none'
                 })}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {item.icon} {item.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? '0' : '12px' }} title={isCollapsed ? item.name : ''}>
+                  {item.icon}
+                  {!isCollapsed && item.name}
                 </div>
-                {item.isDemandasParent && (
+                {!isCollapsed && item.isDemandasParent && (
                   isDemandasOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />
                 )}
               </NavLink>
@@ -225,15 +236,17 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                 backgroundColor: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
                 gap: '12px',
-                padding: '12px 16px',
+                padding: isCollapsed ? '12px' : '12px 16px',
                 borderRadius: 'var(--border-radius)',
                 color: isActive ? 'var(--primary)' : 'inherit',
                 fontWeight: 500,
                 textDecoration: 'none'
               })}
             >
-              <HelpCircle size={20} /> Ajuda
+              <span title={isCollapsed ? 'Ajuda' : ''}><HelpCircle size={20} /></span>
+              {!isCollapsed && 'Ajuda'}
             </NavLink>
           </li>
           {(has(PermissionFunctionKeys.SETTINGS_VIEW) || has(PermissionFunctionKeys.PLANEJAMENTO_VIEW) || has(PermissionFunctionKeys.ADMIN_ALL)) && (
@@ -250,15 +263,17 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                     style={{
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: isCollapsed ? 'center' : 'flex-start',
                       gap: '12px',
-                      padding: '12px 16px',
+                      padding: isCollapsed ? '12px' : '12px 16px',
                       borderRadius: 'var(--border-radius)',
                       color: 'var(--text-muted)',
                       fontWeight: 500,
                       textDecoration: 'none',
                     }}
                   >
-                    <Settings size={20} /> Configurações
+                    <span title={isCollapsed ? 'Configurações' : ''}><Settings size={20} /></span>
+                    {!isCollapsed && 'Configurações'}
                   </NavLink>
                 </li>
               ) : null}
@@ -273,8 +288,9 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                     style={{
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: isCollapsed ? 'center' : 'flex-start',
                       gap: '12px',
-                      padding: '12px 16px',
+                      padding: isCollapsed ? '12px' : '12px 16px',
                       borderRadius: 'var(--border-radius)',
                       fontWeight: 500,
                       transition: 'all 0.2s ease',
@@ -283,7 +299,8 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
                     }}
                     className={({ isActive }) => (isActive ? 'active-link' : '')}
                   >
-                    <Calculator size={20} /> Planejamento
+                    <span title={isCollapsed ? 'Planejamento' : ''}><Calculator size={20} /></span>
+                    {!isCollapsed && 'Planejamento'}
                   </NavLink>
                 </li>
               ) : null}
@@ -292,35 +309,50 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
         </ul>
       </nav>
 
-      <div style={{ padding: '0 16px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ padding: isCollapsed ? '0 8px' : '0 16px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         
         {!isStandalone && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--primary)', color: 'white', borderRadius: 'var(--border-radius)', cursor: 'pointer', transition: 'all 0.2s' }} onClick={handleInstallClick}>
-            <span style={{ fontSize: '14px', fontWeight: 600 }}>Instalar App SGT</span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'space-between',
+              padding: isCollapsed ? '12px' : '12px 16px',
+              background: 'var(--primary)',
+              color: 'white',
+              borderRadius: 'var(--border-radius)',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onClick={handleInstallClick}
+            title={isCollapsed ? 'Instalar App SGT' : ''}
+          >
+            {!isCollapsed && <span style={{ fontSize: '14px', fontWeight: 600 }}>Instalar App SGT</span>}
             <Download size={16} />
           </div>
         )}
 
-
       </div>
 
       <div className="sidebar-footer" onClick={() => setShowProfileModal(true)} style={{ cursor: 'pointer' }}>
-        <div className="user-profile">
-          <div className="avatar">
+        <div className="user-profile" style={{ justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+          <div className="avatar" title={isCollapsed ? (fullUser?.displayName || user?.email || 'Usuário SGT') : ''}>
             {fullUser?.photoURL ? (
               <img src={fullUser.photoURL} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             ) : (
               (fullUser?.displayName || user?.email || 'U').charAt(0).toUpperCase()
             )}
           </div>
-          <div className="user-info">
-            <span className="name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
-              {fullUser?.displayName || user?.email || 'Usuário SGT'}
-            </span>
-            <span className="role" style={{ textTransform: 'capitalize' }}>
-              {userRole} • v{__APP_VERSION__}
-            </span>
-          </div>
+          {!isCollapsed && (
+            <div className="user-info">
+              <span className="name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                {fullUser?.displayName || user?.email || 'Usuário SGT'}
+              </span>
+              <span className="role" style={{ textTransform: 'capitalize' }}>
+                {userRole} • v{__APP_VERSION__}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

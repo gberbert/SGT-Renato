@@ -376,9 +376,19 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                 <ReadField label="SUMMARY" value={ticket.summary} wide />
               </div>
 
-              {/* Row 2: PRIORIDADE + EST MACRO + EST TOTAL + NATUREZA (sempre somente-leitura) */}
+              {/* Row 2: PRIORIDADE + EST MACRO + EST TOTAL + NATUREZA */}
               <div className="dmd-row">
-                <ReadField label="PRIORIDADE" value={prioLabel} />
+                {isEdit ? (
+                  <EditSelect
+                    label="PRIORIDADE"
+                    fieldKey="prioridadeInterna"
+                    options={PRIO_OPTIONS}
+                    value={ticket.prioridadeInterna != null ? String(ticket.prioridadeInterna) : ''}
+                    onSave={(field, val) => save(field, val === null ? null : Number(val))}
+                  />
+                ) : (
+                  <ReadField label="PRIORIDADE" value={prioLabel} />
+                )}
                 <ReadField label="ESTIMATIVA MACRO" value={ticket.estimativaMacro} />
                 <ReadField label="ESTIMATIVA TOTAL" value={ticket.estimativaTotal} />
                 <ReadField label="NATUREZA DA OPERAÇÃO" value={ticket.naturezaOperacao} />

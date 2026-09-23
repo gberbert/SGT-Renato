@@ -5,10 +5,10 @@ import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
 
 const PRIORIDADE_OPTIONS = [
   { value: '', label: '—' },
-  { value: '1', label: 'P1 — Crítica' },
-  { value: '2', label: 'P2 — Alta' },
-  { value: '3', label: 'P3 — Média' },
-  { value: '4', label: 'P4 — Baixa' },
+  { value: 'Critica', label: 'Crítica' },
+  { value: 'Alta', label: 'Alta' },
+  { value: 'Media', label: 'Média' },
+  { value: 'Baixa', label: 'Baixa' },
 ];
 
 const Field = ({ label, children, style = {} }) => (
@@ -216,12 +216,13 @@ export default function OperacaoDemandaModal({ ticket, onClose, onSave, readOnly
 
               {/* Row 2: PRIORIDADE + ESTIMATIVA MACRO + ESTIMATIVA TOTAL + NATUREZA */}
               <Flex gap="3" wrap="wrap">
-                <Field label="Prioridade Interna" style={{ flex: '0 0 140px' }}>
+                <Field label="Prioridade" style={{ flex: '0 0 140px' }}>
                   <select
                     value={form.prioridadeInterna ?? ''}
                     onChange={(e) => {
-                      set('prioridadeInterna', e.target.value);
-                      save('prioridadeInterna', e.target.value === '' ? null : Number(e.target.value));
+                      const val = e.target.value;
+                      set('prioridadeInterna', val);
+                      save('prioridadeInterna', val === '' ? null : val);
                     }}
                     disabled={readOnly}
                     style={readOnly ? roStyle : inputBase}
