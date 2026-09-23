@@ -31,3 +31,4 @@ dist-ssr
 # Sensitive credentials / private data
 Arquivos_Gerais/*.json
 Arquivos_Gerais/*.xlsx
+.firebase/
