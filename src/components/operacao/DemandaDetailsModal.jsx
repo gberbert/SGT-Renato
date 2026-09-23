@@ -398,37 +398,145 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
               <div className="dmd-row">
                 <div className="dmd-field dmd-field--wide">
                   <FieldLabel>SISTEMAS IMPACTADOS</FieldLabel>
-                  {ticket.sistemasImpactados && String(ticket.sistemasImpactados).trim() !== '' ? (
+                  {isEdit ? (
+                    /* Edit mode: all systems as clickable tag chips */
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: 4 }}>
-                      {String(ticket.sistemasImpactados)
-                        .split(',')
-                        .map((s) => s.trim())
-                        .filter(Boolean)
-                        .map((sys, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              background: 'rgba(99,102,241,0.12)',
-                              border: '1px solid rgba(99,102,241,0.35)',
-                              borderRadius: 6,
-                              padding: '4px 10px',
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: '#a5b4fc',
-                              letterSpacing: '0.01em',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {sys}
-                          </span>
-                        ))}
+                      {systems
+                        .slice()
+                        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
+                        .map((sys) => {
+                          const selected = String(ticket.sistemasImpactados || '')
+                            .split(',').map((s) => s.trim()).filter(Boolean)
+                            .some((s) => s.toLowerCase() === sys.name?.toLowerCase());
+                          return (
+                            <button
+                              key={sys.id}
+                              type="button"
+                              onClick={() => {
+                                const current = String(ticket.sistemasImpactados || '')
+                                  .split(',').map((s) => s.trim()).filter(Boolean);
+                                let next;
+                                if (selected) {
+                                  next = current.filter((s) => s.toLowerCase() !== sys.name?.toLowerCase());
+                                } else {
+                                  next = [...current, sys.name];
+                                }
+                                const nextStr = next.join(', ');
+                                save('sistemasImpactados', nextStr || null);
+                                // Auto-derive squadPrincipal from first selected system with squadId
+                                if (!selected && sys.squadId && !ticket.squadPrincipal) {
+                                  const sq = squads.find((s) => s.id === sys.squadId);
+                                  if (sq) save('squadPrincipal', sq.name);
+                                }
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                background: selected ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.04)',
+                                border: selected ? '1px solid rgba(99,102,241,0.7)' : '1px solid rgba(255,255,255,0.12)',
+                                borderRadius: 6,
+                                padding: '4px 10px',
+                                fontSize: 13,
+                                fontWeight: selected ? 700 : 500,
+                                color: selected ? '#a5b4fc' : 'rgba(255,255,255,0.45)',
+                                letterSpacing: '0.01em',
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {sys.name}
+                            </button>
+                          );
+                        })}
+                      {systems.length === 0 && (
+                        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 13, fontStyle: 'italic' }}>
+                          Carregando sistemas...
+                        </span>
+                      )}
                     </div>
                   ) : (
-                    <div className="dmd-field-value">—</div>
+                    /* Read mode: show selected tags */
+                    ticket.sistemasImpactados && String(ticket.sistemasImpactados).trim() !== '' ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: 4 }}>
+                        {String(ticket.sistemasImpactados)
+                          .split(',')
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                          .map((sys, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                background: 'rgba(99,102,241,0.12)',
+                                border: '1px solid rgba(99,102,241,0.35)',
+                                borderRadius: 6,
+                                padding: '4px 10px',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: '#a5b4fc',
+                                letterSpacing: '0.01em',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {sys}
+                            </span>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="dmd-field-value">—</div>
+                    )
                   )}
                 </div>
+              </div>
+
+              {/* Row 3b: SQUAD PRINCIPAL */}
+              <div className="dmd-row">
+                {isEdit ? (
+                  <div className="dmd-field">
+                    <FieldLabel>SQUAD PRINCIPAL</FieldLabel>
+                    <select
+                      className="dmd-input"
+                      value={ticket.squadPrincipal ?? ''}
+                      onChange={(e) => save('squadPrincipal', e.target.value === '' ? null : e.target.value)}
+                    >
+                      <option value="">— Nenhuma —</option>
+                      {squads
+                        .slice()
+                        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
+                        .map((sq) => (
+                          <option key={sq.id} value={sq.name}>{sq.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="dmd-field">
+                    <FieldLabel>SQUAD PRINCIPAL</FieldLabel>
+                    {ticket.squadPrincipal ? (
+                      <div style={{ display: 'flex', alignItems: 'center', paddingTop: 4 }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          background: 'rgba(16,185,129,0.13)',
+                          border: '1px solid rgba(16,185,129,0.4)',
+                          borderRadius: 6,
+                          padding: '4px 12px',
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: '#6ee7b7',
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {ticket.squadPrincipal}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="dmd-field-value">—</div>
+                    )}
+                  </div>
+                )}
               </div>
 
 
