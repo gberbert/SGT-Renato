@@ -237,6 +237,18 @@ function resolveSquadFromTicket(ticket, systems, squads) {
   return names.length ? names.join(', ') : null;
 }
 
+function resolveSquadsArrayFromTicket(ticket, systems, squads) {
+  if (!ticket.sistemasImpactados || !systems.length || !squads.length) return [];
+  const sysNames = String(ticket.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean);
+  const squadIds = [...new Set(
+    sysNames
+      .map((name) => systems.find((s) => s.name?.trim().toLowerCase() === name.toLowerCase())?.squadId)
+      .filter(Boolean)
+  )];
+  if (!squadIds.length) return [];
+  return squadIds.map((id) => squads.find((sq) => sq.id === id)?.name).filter(Boolean);
+}
+
 function resolveGrupoSuporteFromTicket(ticket, systems) {
   if (!ticket.sistemasImpactados || !systems.length) return null;
   const sysNames = String(ticket.sistemasImpactados).split(',').map((s) => s.trim()).filter(Boolean);
@@ -342,6 +354,7 @@ const OperacaoHome = ({ userRole }) => {
   const [drillStatusFilter, setDrillStatusFilter] = useState(null);
   const [demandaStatusFilters, setDemandaStatusFilters] = useState(() => new Set());
   const [filteringImpedidas, setFilteringImpedidas] = useState(false);
+  const [selectedSquadFilter, setSelectedSquadFilter] = useState(null);
   const [previstoExpanded, setPrevistoExpanded] = useState(true);
   const [principalExpanded, setPrincipalExpanded] = useState(true);
   const [demandaModalTicket, setDemandaModalTicket] = useState(null);
@@ -867,6 +880,7 @@ const OperacaoHome = ({ userRole }) => {
               setDrillIssueTypeFilter(null);
               setDrillStatusFilter(null);
               setDemandaStatusFilters(new Set());
+              setSelectedSquadFilter(null);
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
@@ -1000,17 +1014,40 @@ const OperacaoHome = ({ userRole }) => {
                     : [];
                   // ── DEMANDA: visão enriquecida por fluxo de status ──────────────────
                   if (activeEscopoTab === 'DEMANDA') {
+                    // Compute squad-filtered tickets when a squad is selected from the chart
+                    const squadFilteredTickets = (() => {
+                      if (!selectedSquadFilter) return escopoTickets;
+                      const { name: sqName, mode: sqMode } = selectedSquadFilter;
+                      if (sqMode === 'none') {
+                        return escopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).length === 0);
+                      }
+                      if (sqMode === 'exclusive') {
+                        return escopoTickets.filter((t) => {
+                          const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                          return arr.length === 1 && arr[0] === sqName;
+                        });
+                      }
+                      if (sqMode === 'cross') {
+                        return escopoTickets.filter((t) => {
+                          const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                          return arr.length > 1 && arr.includes(sqName);
+                        });
+                      }
+                      // mode === 'all'
+                      return escopoTickets.filter((t) => resolveSquadsArrayFromTicket(t, systems, squads).includes(sqName));
+                    })();
+
                     // When in "impedidas mode", visibleTickets = only impedidas within active status filters
                     const visibleTickets = (() => {
                       if (filteringImpedidas && demandaStatusFilters.size > 0) {
-                        return escopoTickets.filter(
+                        return squadFilteredTickets.filter(
                           (t) => t.impedimento === true && demandaStatusFilters.has(String(t.status || '').trim())
                         );
                       }
                       if (demandaStatusFilters.size > 0) {
-                        return escopoTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()));
+                        return squadFilteredTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()));
                       }
-                      return escopoTickets;
+                      return squadFilteredTickets;
                     })();
                     const totalDemandas = visibleTickets.length;
                     const totalImpedidas = filteringImpedidas
@@ -1019,8 +1056,8 @@ const OperacaoHome = ({ userRole }) => {
                     // When in impedidas mode, status card counts show only impedidas per status
                     const statusCounts = {};
                     const baseForCounts = filteringImpedidas
-                      ? escopoTickets.filter((t) => t.impedimento === true)
-                      : escopoTickets;
+                      ? squadFilteredTickets.filter((t) => t.impedimento === true)
+                      : squadFilteredTickets;
                     for (const t of baseForCounts) {
                       const s = t.status ? String(t.status).trim() : '';
                       if (s) statusCounts[s] = (statusCounts[s] || 0) + 1;
@@ -1037,16 +1074,18 @@ const OperacaoHome = ({ userRole }) => {
                       }
                       setDemandaStatusFilters(next);
                       if (next.size === 0) {
-                        setDrillEscopo(null);
-                        setDrillTickets([]);
-                        setDrillLabel('');
-                        setDrillError('');
+                        openDrillDirect(squadFilteredTickets, selectedSquadFilter
+                          ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name}`
+                          : 'Demandas');
                         return;
                       }
-                      const filtered = escopoTickets.filter((t) =>
+                      const filtered = squadFilteredTickets.filter((t) =>
                         next.has(String(t.status || '').trim())
                       );
-                      const label = `Demandas · ${[...next].join(' + ')}`;
+                      const squadLabel = selectedSquadFilter
+                        ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · `
+                        : '';
+                      const label = `${squadLabel}Demandas · ${[...next].join(' + ')}`;
                       openDrillDirect(filtered, label);
                     };
 
@@ -1135,8 +1174,8 @@ const OperacaoHome = ({ userRole }) => {
                             <button
                               type="button"
                               onClick={() => {
-                                if (demandaStatusFilters.size > 0) {
-                                  openDrillDirect(visibleTickets, `Demandas · ${[...demandaStatusFilters].join(' + ')}`);
+                                if (selectedSquadFilter || demandaStatusFilters.size > 0) {
+                                  openDrillDirect(visibleTickets, drillLabel || 'Demandas');
                                 } else {
                                   openDrill('DEMANDA', 'Demandas');
                                 }
@@ -1157,17 +1196,20 @@ const OperacaoHome = ({ userRole }) => {
                                   type="button"
                                   onClick={() => {
                                     const statusesWithImpedidas = new Set(
-                                      escopoTickets
+                                      squadFilteredTickets
                                         .filter((t) => t.impedimento === true)
                                         .map((t) => String(t.status || '').trim())
                                         .filter(Boolean)
                                     );
                                     setDemandaStatusFilters(statusesWithImpedidas);
                                     setFilteringImpedidas(true);
-                                    const imp = escopoTickets.filter(
+                                    const imp = squadFilteredTickets.filter(
                                       (t) => t.impedimento === true
                                     );
-                                    openDrillDirect(imp, `Impedidas · ${[...statusesWithImpedidas].join(' + ')}`);
+                                    const squadLabel = selectedSquadFilter
+                                      ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · `
+                                      : '';
+                                    openDrillDirect(imp, `${squadLabel}Impedidas · ${[...statusesWithImpedidas].join(' + ')}`);
                                   }}
                                   disabled={drillLoading}
                                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
@@ -1179,8 +1221,43 @@ const OperacaoHome = ({ userRole }) => {
                                 </button>
                               )}
                             </Box>
-                            {demandaStatusFilters.size > 0 && (
+                            {(selectedSquadFilter || demandaStatusFilters.size > 0) && (
                               <Flex gap="1" wrap="wrap" align="center" style={{ marginLeft: 4 }}>
+                                {selectedSquadFilter && (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                                      background: 'rgba(168,85,247,0.12)',
+                                      border: '1px solid rgba(168,85,247,0.5)',
+                                      borderRadius: 6, padding: '3px 8px',
+                                      fontSize: 11, color: '#c084fc',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    Squad: {selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name}
+                                    {selectedSquadFilter.mode !== 'all' && selectedSquadFilter.mode !== 'none' && (
+                                      <span style={{ opacity: 0.65, fontSize: 10 }}>
+                                        {' '}({selectedSquadFilter.mode === 'exclusive' ? 'exclusiva' : 'cross'})
+                                      </span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedSquadFilter(null);
+                                        setDemandaStatusFilters(new Set());
+                                        setFilteringImpedidas(false);
+                                        setDrillEscopo(null);
+                                        setDrillTickets([]);
+                                        setDrillLabel('');
+                                        setDrillError('');
+                                      }}
+                                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, lineHeight: 1, fontSize: 13, marginLeft: 1 }}
+                                      title="Remover filtro de squad"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                )}
                                 {[...demandaStatusFilters].map((s) => (
                                   <span
                                     key={s}
@@ -1209,10 +1286,17 @@ const OperacaoHome = ({ userRole }) => {
                                   onClick={() => {
                                     setDemandaStatusFilters(new Set());
                                     setFilteringImpedidas(false);
-                                    setDrillEscopo(null);
-                                    setDrillTickets([]);
-                                    setDrillLabel('');
-                                    setDrillError('');
+                                    if (selectedSquadFilter) {
+                                      openDrillDirect(
+                                        squadFilteredTickets,
+                                        `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name}`
+                                      );
+                                    } else {
+                                      setDrillEscopo(null);
+                                      setDrillTickets([]);
+                                      setDrillLabel('');
+                                      setDrillError('');
+                                    }
                                   }}
                                   style={{
                                     background: 'none', border: '1px solid rgba(255,255,255,0.12)',
@@ -1228,6 +1312,328 @@ const OperacaoHome = ({ userRole }) => {
                             )}
                           </Flex>
                         </Box>
+
+                        {/* ── Gráficos Agrupadores ── */}
+                        {(() => {
+                          // Compute squad distribution — each ticket counted in ALL its squads.
+                          // Cross-squad tickets (>1 squad) are tracked separately for colour coding.
+                          const squadStats = {};
+                          for (const ticket of escopoTickets) {
+                            const ticketSquads = resolveSquadsArrayFromTicket(ticket, systems, squads);
+                            if (ticketSquads.length === 0) {
+                              if (!squadStats['-']) squadStats['-'] = { exclusive: 0, cross: 0 };
+                              squadStats['-'].exclusive += 1;
+                            } else if (ticketSquads.length === 1) {
+                              const key = ticketSquads[0];
+                              if (!squadStats[key]) squadStats[key] = { exclusive: 0, cross: 0 };
+                              squadStats[key].exclusive += 1;
+                            } else {
+                              // Cross-squad: increment in every squad it belongs to
+                              for (const sq of ticketSquads) {
+                                if (!squadStats[sq]) squadStats[sq] = { exclusive: 0, cross: 0 };
+                                squadStats[sq].cross += 1;
+                              }
+                            }
+                          }
+                          const squadRows = Object.entries(squadStats)
+                            .map(([name, { exclusive, cross }]) => ({ name, exclusive, cross, total: exclusive + cross }))
+                            .sort((a, b) => b.total - a.total);
+                          const maxTotal = squadRows.length > 0 ? squadRows[0].total : 1;
+                          if (squadRows.length === 0) return null;
+                          // Priority distribution for pie chart
+                          const JIRA_PRIO_COLORS = {
+                            Highest: '#ff4d4f', High: '#ff7875', Medium: '#ffa500',
+                            Low: '#52c41a', Lowest: '#87d068',
+                          };
+                          const priorityStats = {};
+                          for (const ticket of escopoTickets) {
+                            let label, color;
+                            if (ticket.prioridadeInterna != null) {
+                              const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(ticket.prioridadeInterna));
+                              label = meta ? meta.description : `P${ticket.prioridadeInterna}`;
+                              color = meta ? meta.color : '#888';
+                            } else {
+                              label = ticket.priority || 'Sem prioridade';
+                              color = JIRA_PRIO_COLORS[label] || '#6b7280';
+                            }
+                            if (!priorityStats[label]) priorityStats[label] = { count: 0, color };
+                            priorityStats[label].count += 1;
+                          }
+                          const priorityRows = Object.entries(priorityStats)
+                            .map(([label, { count, color }]) => ({ label, count, color }))
+                            .sort((a, b) => b.count - a.count);
+                          const priorityTotal = priorityRows.reduce((s, r) => s + r.count, 0);
+
+                          // Build SVG pie segments
+                          const buildPieSegments = (rows, total, cx, cy, r) => {
+                            if (total === 0) return [];
+                            let cumAngle = -Math.PI / 2;
+                            return rows.map((row) => {
+                              const angle = (row.count / total) * 2 * Math.PI;
+                              const x1 = cx + r * Math.cos(cumAngle);
+                              const y1 = cy + r * Math.sin(cumAngle);
+                              cumAngle += angle;
+                              const x2 = cx + r * Math.cos(cumAngle);
+                              const y2 = cy + r * Math.sin(cumAngle);
+                              const largeArc = angle > Math.PI ? 1 : 0;
+                              const d = angle >= 2 * Math.PI - 0.001
+                                ? `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.001} ${cy - r} Z`
+                                : `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                              return { ...row, d };
+                            });
+                          };
+                          const pieSegments = buildPieSegments(priorityRows, priorityTotal, 80, 80, 65);
+
+                          return (
+                            <Box mb="4" style={{ paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                              <Flex gap="6" align="start" wrap="wrap">
+                                {/* LEFT: Squad bar chart */}
+                                <Box style={{ flex: '1 1 280px', minWidth: 240 }}>
+                              <Flex align="center" justify="between" mb="3" gap="3" wrap="wrap">
+                                <Text style={{ fontSize: 11, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
+                                  DEMANDAS POR SQUAD
+                                </Text>
+                                {/* Legend */}
+                                <Flex align="center" gap="3">
+                                  <Flex align="center" gap="1">
+                                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(56,189,248,0.65)', flexShrink: 0 }} />
+                                    <Text size="1" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>Exclusiva</Text>
+                                  </Flex>
+                                  <Flex align="center" gap="1">
+                                    <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(168,85,247,0.7)', flexShrink: 0 }} />
+                                    <Text size="1" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>Cross-squad</Text>
+                                  </Flex>
+                                </Flex>
+                              </Flex>
+                              <Flex direction="column" gap="2">
+                                {squadRows.map(({ name: squadName, exclusive, cross, total }) => {
+                                  const exclusivePct = Math.round((exclusive / maxTotal) * 100);
+                                  const crossPct    = Math.round((cross    / maxTotal) * 100);
+                                  return (
+                                    <Flex key={squadName} align="center" gap="2" style={{ minHeight: 22 }}>
+                                      {/* Label */}
+                                      <Box style={{ width: 140, flexShrink: 0 }}>
+                                        <Flex align="center" justify="end" gap="2">
+                                          <Text
+                                            size="1"
+                                            style={{
+                                              color: squadName === '-' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.6)',
+                                              fontWeight: 600,
+                                              fontSize: 11,
+                                              textAlign: 'right',
+                                              whiteSpace: 'nowrap',
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              maxWidth: 108,
+                                            }}
+                                            title={squadName}
+                                          >
+                                            {squadName}
+                                          </Text>
+                                          {/* Total count — click to filter all tickets for this squad */}
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (squadName === '-') {
+                                                const filtered = escopoTickets.filter((t) =>
+                                                  resolveSquadsArrayFromTicket(t, systems, squads).length === 0
+                                                );
+                                                setSelectedSquadFilter({ name: '-', mode: 'none' });
+                                                setDemandaStatusFilters(new Set());
+                                                setFilteringImpedidas(false);
+                                                openDrillDirect(filtered, 'Squad: (sem squad)');
+                                              } else {
+                                                const filtered = escopoTickets.filter((t) =>
+                                                  resolveSquadsArrayFromTicket(t, systems, squads).includes(squadName)
+                                                );
+                                                setSelectedSquadFilter({ name: squadName, mode: 'all' });
+                                                setDemandaStatusFilters(new Set());
+                                                setFilteringImpedidas(false);
+                                                openDrillDirect(filtered, `Squad: ${squadName}`);
+                                              }
+                                            }}
+                                            style={{
+                                              background: 'none', border: 'none', cursor: 'pointer',
+                                              color: '#38bdf8', fontWeight: 700, fontSize: 11,
+                                              minWidth: 24, textAlign: 'right', padding: 0,
+                                              lineHeight: 1,
+                                            }}
+                                            title={`Filtrar por squad: ${squadName === '-' ? '(sem squad)' : squadName}`}
+                                          >
+                                            {total}
+                                          </button>
+                                        </Flex>
+                                      </Box>
+                                      {/* Two-segment bar — click drills into this squad */}
+                                      <Box
+                                        style={{ flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 14, overflow: 'hidden', display: 'flex' }}
+                                        title={`${squadName} · ${exclusive} exclusiva(s) + ${cross} cross-squad = ${total}`}
+                                      >
+                                        {squadName === '-' ? (
+                                          <button
+                                            type="button"
+                                            style={{
+                                              display: 'block',
+                                              height: '100%',
+                                              width: `${exclusivePct + crossPct}%`,
+                                              background: 'rgba(255,255,255,0.15)',
+                                              border: 'none',
+                                              cursor: 'pointer',
+                                              minWidth: total > 0 ? 4 : 0,
+                                            }}
+                                            title={`Ver demandas sem squad (${total})`}
+                                            onClick={() => {
+                                              const filtered = escopoTickets.filter((t) =>
+                                                resolveSquadsArrayFromTicket(t, systems, squads).length === 0
+                                              );
+                                              setSelectedSquadFilter({ name: '-', mode: 'none' });
+                                              setDemandaStatusFilters(new Set());
+                                              setFilteringImpedidas(false);
+                                              openDrillDirect(filtered, 'Squad: (sem squad)');
+                                            }}
+                                          />
+                                        ) : (
+                                          /* Normal squad: blue exclusive segment + purple cross segment */
+                                          <>
+                                            {exclusive > 0 && (
+                                              <button
+                                                type="button"
+                                                style={{
+                                                  display: 'block',
+                                                  height: '100%',
+                                                  width: `${exclusivePct}%`,
+                                                  background: 'rgba(56,189,248,0.55)',
+                                                  border: 'none',
+                                                  cursor: 'pointer',
+                                                  minWidth: 4,
+                                                  transition: 'opacity 0.15s',
+                                                }}
+                                                title={`Ver ${exclusive} demanda(s) exclusiva(s) de ${squadName}`}
+                                                onClick={() => {
+                                                  const filtered = escopoTickets.filter((t) => {
+                                                    const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                                                    return arr.length === 1 && arr[0] === squadName;
+                                                  });
+                                                  setSelectedSquadFilter({ name: squadName, mode: 'exclusive' });
+                                                  setDemandaStatusFilters(new Set());
+                                                  setFilteringImpedidas(false);
+                                                  openDrillDirect(filtered, `Squad: ${squadName} (exclusivas)`);
+                                                }}
+                                              />
+                                            )}
+                                            {cross > 0 && (
+                                              <button
+                                                type="button"
+                                                style={{
+                                                  display: 'block',
+                                                  height: '100%',
+                                                  width: `${crossPct}%`,
+                                                  background: 'rgba(168,85,247,0.7)',
+                                                  border: 'none',
+                                                  cursor: 'pointer',
+                                                  minWidth: 4,
+                                                  transition: 'opacity 0.15s',
+                                                }}
+                                                title={`Ver ${cross} demanda(s) cross-squad de ${squadName}`}
+                                                onClick={() => {
+                                                  const filtered = escopoTickets.filter((t) => {
+                                                    const arr = resolveSquadsArrayFromTicket(t, systems, squads);
+                                                    return arr.length > 1 && arr.includes(squadName);
+                                                  });
+                                                  setSelectedSquadFilter({ name: squadName, mode: 'cross' });
+                                                  setDemandaStatusFilters(new Set());
+                                                  setFilteringImpedidas(false);
+                                                  openDrillDirect(filtered, `Squad: ${squadName} (cross-squad)`);
+                                                }}
+                                              />
+                                            )}
+                                          </>
+                                        )}
+                                      </Box>
+                                    </Flex>
+                                  );
+                                })}
+                              </Flex>
+                                </Box>
+
+                                {/* RIGHT: Priority pie chart + due-date counters */}
+                                {priorityTotal > 0 && (() => {
+                                  const todayStr = new Date().toISOString().slice(0, 10);
+                                  const d1 = new Date(); d1.setDate(d1.getDate() + 1);
+                                  const d2 = new Date(); d2.setDate(d2.getDate() + 2);
+                                  const plus1Str = d1.toISOString().slice(0, 10);
+                                  const plus2Str = d2.toISOString().slice(0, 10);
+                                  const DATE_FIELDS = ['dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa', 'dataFimHomologacao', 'dataConclusao'];
+                                  const getTicketDates = (t) => DATE_FIELDS.map((f) => t[f] ? String(t[f]).slice(0, 10) : null).filter(Boolean);
+                                  const venceHoje = escopoTickets.filter((t) => getTicketDates(t).includes(todayStr)).length;
+                                  const vence2dias = escopoTickets.filter((t) => {
+                                    const dates = getTicketDates(t);
+                                    return dates.includes(plus1Str) || dates.includes(plus2Str);
+                                  }).length;
+                                  return (
+                                    <Box style={{ flex: '0 0 auto', minWidth: 420 }}>
+                                      <Text style={{ fontSize: 11, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', fontWeight: 700, display: 'block', marginBottom: 10 }}>
+                                        DEMANDAS POR PRIORIDADE
+                                      </Text>
+                                      <Flex align="center" gap="4">
+                                        {/* Pie */}
+                                        <svg width="140" height="140" viewBox="0 0 160 160" style={{ overflow: 'visible', flexShrink: 0 }}>
+                                          {pieSegments.map((seg, i) => (
+                                            <path
+                                              key={i}
+                                              d={seg.d}
+                                              fill={seg.color}
+                                              stroke="rgba(0,0,0,0.4)"
+                                              strokeWidth="1.5"
+                                              style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
+                                              title={`${seg.label}: ${seg.count}`}
+                                            />
+                                          ))}
+                                          <circle cx="80" cy="80" r="32" fill="#111827" />
+                                          <text x="80" y="75" textAnchor="middle" fill="white" fontSize="18" fontWeight="bold" fontFamily="inherit">{priorityTotal}</text>
+                                          <text x="80" y="91" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="inherit">total</text>
+                                        </svg>
+                                        {/* Legend beside pie */}
+                                        <Flex direction="column" gap="1" style={{ minWidth: 120 }}>
+                                          {priorityRows.map(({ label, count, color }) => (
+                                            <Flex key={label} align="center" gap="2" style={{ minHeight: 18 }}>
+                                              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
+                                              <Text size="1" style={{ flex: 1, color: 'rgba(255,255,255,0.6)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>
+                                                {label}
+                                              </Text>
+                                              <Text size="1" style={{ color, fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                                                {count}
+                                              </Text>
+                                            </Flex>
+                                          ))}
+                                        </Flex>
+                                        {/* Due-date counters */}
+                                        <Flex direction="column" gap="3" style={{ marginLeft: 8 }}>
+                                          <Box style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 110 }}>
+                                            <Text style={{ fontSize: 40, fontWeight: 900, color: '#f87171', lineHeight: 1, display: 'block' }}>
+                                              {venceHoje}
+                                            </Text>
+                                            <Text style={{ fontSize: 10, fontWeight: 700, color: 'rgba(248,113,113,0.7)', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>
+                                              Vence Hoje
+                                            </Text>
+                                          </Box>
+                                          <Box style={{ background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 12, padding: '12px 18px', textAlign: 'center', minWidth: 110 }}>
+                                            <Text style={{ fontSize: 40, fontWeight: 900, color: '#fbbf24', lineHeight: 1, display: 'block' }}>
+                                              {vence2dias}
+                                            </Text>
+                                            <Text style={{ fontSize: 10, fontWeight: 700, color: 'rgba(251,191,36,0.7)', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginTop: 4 }}>
+                                              Vence em 2 dias
+                                            </Text>
+                                          </Box>
+                                        </Flex>
+                                      </Flex>
+                                    </Box>
+                                  );
+                                })()}
+                              </Flex>
+                            </Box>
+                          );
+                        })()}
 
                         {/* ── Status por Fluxo de Trabalho ── */}
                         <Box>

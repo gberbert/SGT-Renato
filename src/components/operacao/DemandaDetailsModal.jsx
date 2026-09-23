@@ -3,6 +3,7 @@ import { X, ChevronDown } from 'lucide-react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
+import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
 
 function useSystems() {
   const [systems, setSystems] = useState([]);
@@ -292,7 +293,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
     return ticket.priority || '—';
   })();
 
-  const squadLabel = ticket.grupoSuporte || ticket.squad || '—';
+  const squadLabel = stripNumericPrefix(ticket.grupoSuporte) || ticket.squad || '—';
   const statusLabel = ticket.status || '—';
 
   return (

@@ -177,9 +177,14 @@ async function getApproxCount(jql) {
   return Number(data.count) || 0;
 }
 
+function stripNumericPrefix(str) {
+  if (!str) return str;
+  return str.replace(/^\d+\s*-\s*/, "").trim() || str.trim();
+}
+
 function extractFieldValue(raw) {
   if (raw == null) return null;
-  if (typeof raw === "string") return raw || null;
+  if (typeof raw === "string") return stripNumericPrefix(raw) || null;
   if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
   if (Array.isArray(raw)) {
     const values = raw.map(extractFieldValue).filter(Boolean);
@@ -187,7 +192,7 @@ function extractFieldValue(raw) {
   }
   if (typeof raw === "object") {
     for (const key of ["value", "name", "displayName", "key"]) {
-      if (raw[key]) return String(raw[key]);
+      if (raw[key]) return stripNumericPrefix(String(raw[key]));
     }
     if (Array.isArray(raw.content)) {
       const parts = [];

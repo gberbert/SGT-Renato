@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Box, Flex, Text } from '@radix-ui/themes';
+import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
 
 const PRIORIDADE_OPTIONS = [
   { value: '', label: '—' },
@@ -152,7 +153,7 @@ export default function OperacaoDemandaModal({ ticket, onClose, onSave, readOnly
                   fontSize: 12, fontWeight: 700, color: 'var(--gray-11)',
                   letterSpacing: '0.06em', textTransform: 'uppercase',
                 }}>
-                  {ticket.grupoSuporte}
+                  {stripNumericPrefix(ticket.grupoSuporte)}
                 </span>
               )}
               {ticket.status && (

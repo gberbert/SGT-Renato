@@ -25,10 +25,11 @@ const DRILL_LIMIT = 2000;
 
 /** Prioridades internas SGT — valores P1 a P5, nao vem do Jira */
 export const PRIORIDADE_INTERNA_OPTIONS = [
-  { value: 1, label: 'P1', description: 'Critica', color: '#ef4444' },
-  { value: 2, label: 'P2', description: 'Alta',    color: '#f97316' },
-  { value: 3, label: 'P3', description: 'Media',   color: '#eab308' },
-  { value: 4, label: 'P4', description: 'Baixa',   color: '#3b82f6' },
+  { value: 1, label: 'P1', description: 'Crítica',     color: '#ef4444' },
+  { value: 2, label: 'P2', description: 'Alta',        color: '#f97316' },
+  { value: 3, label: 'P3', description: 'Média',       color: '#eab308' },
+  { value: 4, label: 'P4', description: 'Baixo',       color: '#3b82f6' },
+  { value: 5, label: 'P5', description: 'Muito Baixo', color: '#93c5fd' },
 ];
 
 export function getPrioridadeInternaMeta(value) {
@@ -755,7 +756,7 @@ export async function updateTicketRadarFields(issueKey, patch) {
   if ('prioridadeInterna' in patch) {
     const val = patch.prioridadeInterna === '' || patch.prioridadeInterna == null
       ? null : Number(patch.prioridadeInterna);
-    payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 4) ? val : null;
+    payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 5) ? val : null;
   }
   if ('impedimento' in patch) payload.impedimento = Boolean(patch.impedimento);
 
