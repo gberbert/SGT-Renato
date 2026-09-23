@@ -539,6 +539,7 @@ export function mapDrillTicket(t) {
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
     grupoSuporte: t.grupoSuporte,
+    grupoSolucionador: t.grupoSolucionador || '',
     parentKey: t.parentKey || null,
     epicKey: t.epicKey || null,
     linkedWorkItems: Array.isArray(t.linkedWorkItems)
@@ -557,9 +558,15 @@ export function mapDrillTicket(t) {
     dataPrevisao: t.dataPrevisao || null,
     observacaoAdicional: t.observacaoAdicional || '',
     estimativaMacro: t.estimativaMacro ?? null,
+    estimativaTotal: t.estimativaTotal ?? null,
     prioridadeInterna: t.prioridadeInterna ?? null,
     impedimento: t.impedimento === true,
     statusHistory: Array.isArray(t.statusHistory) ? t.statusHistory : [],
+    dataFimDesenvolvimento: t.dataFimDesenvolvimento || null,
+    dataFimTesteInterno: t.dataFimTesteInterno || null,
+    dataFimTesteQa: t.dataFimTesteQa || null,
+    dataFimHomologacao: t.dataFimHomologacao || null,
+    dataConclusao: t.dataConclusao || null,
   };
 }
 
