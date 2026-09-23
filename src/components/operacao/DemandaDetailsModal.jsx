@@ -265,12 +265,14 @@ function PlanRow({ left, right }) {
 
 export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
   const [activeTab, setActiveTab] = useState('geral');
+  const [squadPrincipal, setSquadPrincipal] = useState(ticket?.squadPrincipal ?? null);
   const isEdit = mode === 'edit';
   const teamMembers = useTeamMembers();
   const systems = useSystems();
   const squads = useSquads();
 
   useEffect(() => { setActiveTab('geral'); }, [ticket?.issueKey]);
+  useEffect(() => { setSquadPrincipal(ticket?.squadPrincipal ?? null); }, [ticket?.squadPrincipal]);
 
   const save = useCallback(
     (field, value) => {
@@ -320,14 +322,18 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                 .filter(Boolean);
               if (!squadNames.length) return null;
               return squadNames.map((name, idx) => {
-                const isPrincipal = ticket.squadPrincipal === name;
+                const isPrincipal = squadPrincipal === name;
                 if (isEdit) {
                   return (
                     <button
                       key={idx}
                       type="button"
                       title={isPrincipal ? 'Squad principal selecionada' : 'Clique para definir como squad principal'}
-                      onClick={() => save('squadPrincipal', isPrincipal ? null : name)}
+                      onClick={() => {
+                        const next = isPrincipal ? null : name;
+                        setSquadPrincipal(next);
+                        save('squadPrincipal', next);
+                      }}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -470,8 +476,12 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                     <FieldLabel>SQUAD PRINCIPAL</FieldLabel>
                     <select
                       className="dmd-input"
-                      value={ticket.squadPrincipal ?? ''}
-                      onChange={(e) => save('squadPrincipal', e.target.value === '' ? null : e.target.value)}
+                      value={squadPrincipal ?? ''}
+                      onChange={(e) => {
+                        const next = e.target.value === '' ? null : e.target.value;
+                        setSquadPrincipal(next);
+                        save('squadPrincipal', next);
+                      }}
                     >
                       <option value="">— Nenhuma —</option>
                       {squads
@@ -482,10 +492,10 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                         ))}
                     </select>
                   </div>
-                ) : (
-                  <div className="dmd-field">
+                  ) : (
+                    <div className="dmd-field">
                     <FieldLabel>SQUAD PRINCIPAL</FieldLabel>
-                    {ticket.squadPrincipal ? (
+                    {squadPrincipal ? (
                       <div style={{ display: 'flex', alignItems: 'center', paddingTop: 4 }}>
                         <span style={{
                           display: 'inline-flex',
@@ -501,7 +511,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                           textTransform: 'uppercase',
                           whiteSpace: 'nowrap',
                         }}>
-                          {ticket.squadPrincipal}
+                          {squadPrincipal}
                         </span>
                       </div>
                     ) : (
