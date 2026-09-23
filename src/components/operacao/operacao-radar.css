@@ -302,6 +302,7 @@
 .operacao-radar-tickets-table col.col-type     { width:  84px; }
 .operacao-radar-tickets-table col.col-summary  { width: 220px; }
 .operacao-radar-tickets-table col.col-squad    { width: 130px; }
+.operacao-radar-tickets-table col.col-prio     { width:  90px; }
 .operacao-radar-tickets-table col.col-imp      { width:  64px; }
 .operacao-radar-tickets-table col.col-estim    { width:  80px; }
 .operacao-radar-tickets-table col.col-date     { width: 110px; }

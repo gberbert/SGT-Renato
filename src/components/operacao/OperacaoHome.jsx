@@ -52,10 +52,18 @@ const fmtDate = (v) => {
 
 function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
   const HEADERS = [
-    'ISSUE_KEY', 'STATUS', 'ISSUETYPE', 'SUMMARY', 'SQUAD',
+    'ISSUE_KEY', 'STATUS', 'ISSUETYPE', 'SUMMARY', 'SQUAD', 'PRIORIDADE',
     'IMPEDIMENTO', 'ESTIMATIVA MACRO', 'ESTIMATIVA TOTAL',
     'DESENVOLVIMENTO', 'TESTE INTERNO', 'TESTE (QA)', 'HOMOLOGAÇÃO', 'PRODUÇÃO',
   ];
+
+  const fmtPrio = (t) => {
+    if (t.prioridadeInterna != null) {
+      const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(t.prioridadeInterna));
+      return meta ? `${meta.label} — ${meta.description}` : String(t.prioridadeInterna);
+    }
+    return t.priority || '';
+  };
 
   const data = [
     HEADERS,
@@ -65,8 +73,9 @@ function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
       t.issueType || '',
       t.summary || '',
       t.grupoSuporte || '',
+      fmtPrio(t),
       t.impedimento ? 'Sim' : 'Não',
-      t.estimativaMacroJira != null ? Number(t.estimativaMacroJira) : '',
+      t.estimativaMacroJira != null ? String(t.estimativaMacroJira) : '',
       t.estimativaTotal != null ? Number(t.estimativaTotal) : '',
       t.dataFimDesenvolvimento ? String(t.dataFimDesenvolvimento).slice(0, 10) : '',
       t.dataFimTesteInterno ? String(t.dataFimTesteInterno).slice(0, 10) : '',
@@ -1333,6 +1342,7 @@ const OperacaoHome = ({ userRole }) => {
                           <col className="col-type" />
                           <col className="col-summary" />
                           <col className="col-squad" />
+                          <col className="col-prio" />
                           <col className="col-imp" />
                           <col className="col-estim" />
                           <col className="col-estim" />
@@ -1351,6 +1361,7 @@ const OperacaoHome = ({ userRole }) => {
                             <th>ISSUETYPE</th>
                             <th>SUMMARY</th>
                             <th>SQUAD</th>
+                            <th>PRIORIDADE</th>
                             <th>IMPEDIMENTO</th>
                             <th>EST. MACRO</th>
                             <th>EST. TOTAL</th>
@@ -1450,11 +1461,32 @@ const OperacaoHome = ({ userRole }) => {
                                   ) : (ticket.grupoSuporte || '—');
                                 })()}
                               </td>
+                              <td>
+                                {(() => {
+                                  if (ticket.prioridadeInterna != null) {
+                                    const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(ticket.prioridadeInterna));
+                                    return meta ? (
+                                      <span style={{
+                                        display: 'inline-block',
+                                        background: `${meta.color}22`,
+                                        border: `1px solid ${meta.color}66`,
+                                        borderRadius: 5,
+                                        padding: '2px 8px',
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        color: meta.color,
+                                        whiteSpace: 'nowrap',
+                                      }}>{meta.label}</span>
+                                    ) : String(ticket.prioridadeInterna);
+                                  }
+                                  return ticket.priority || '—';
+                                })()}
+                              </td>
                               <td style={{ textAlign: 'center', color: ticket.impedimento === true ? '#eab308' : 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
                                 {ticket.impedimento === true ? '🚧' : '—'}
                               </td>
                               <td style={{ textAlign: 'right', paddingRight: 8 }}>
-                                {ticket.estimativaMacroJira != null && ticket.estimativaMacroJira !== '' ? Number(ticket.estimativaMacroJira).toLocaleString('pt-BR') : '—'}
+                                {ticket.estimativaMacroJira != null && ticket.estimativaMacroJira !== '' ? String(ticket.estimativaMacroJira) : '—'}
                               </td>
                               <td style={{ textAlign: 'right', paddingRight: 8 }}>
                                 {ticket.estimativaTotal != null && ticket.estimativaTotal !== '' ? Number(ticket.estimativaTotal).toLocaleString('pt-BR') : '—'}
