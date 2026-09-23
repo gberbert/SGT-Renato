@@ -127,8 +127,8 @@ export default function PlanejamentoCiclo() {
 
   const prioridadeOptions = useMemo(() => {
     const s = new Set();
-    enrichedTickets.forEach(t => { if (t.prioridadeInterna) s.add(t.prioridadeInterna); });
-    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    enrichedTickets.forEach(t => { if (t.prioridadeInterna != null) s.add(String(t.prioridadeInterna)); });
+    return [...s].sort((a, b) => Number(a) - Number(b));
   }, [enrichedTickets]);
 
   const respDevOptions = useMemo(() => {
@@ -148,7 +148,7 @@ export default function PlanejamentoCiclo() {
     if (escopoFilter !== 'all' && t.escopo !== escopoFilter) return false;
     if (squadFilter !== 'all' && (t._resolvedSquad || '') !== squadFilter) return false;
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
-    if (prioridadeFilter !== 'all' && (t.prioridadeInterna || '') !== prioridadeFilter) return false;
+    if (prioridadeFilter !== 'all' && String(t.prioridadeInterna ?? '') !== prioridadeFilter) return false;
     if (respDevFilter !== 'all' && (t.responsavelDesenvolvimento || '') !== respDevFilter) return false;
     if (respTesteFilter !== 'all' && (t.responsavelTesteInterno || '') !== respTesteFilter) return false;
     if (search) {
