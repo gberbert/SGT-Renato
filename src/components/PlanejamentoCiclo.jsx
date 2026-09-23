@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  collection, getDocs, query, where, orderBy,
+  collection, getDocs, query, orderBy,
   doc, updateDoc, arrayUnion,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
 import { Plus, ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { CicloSection, TicketRow, ESCOPOS_ALVO } from './PlanejamentoCicloHelpers';
@@ -49,17 +50,20 @@ export default function PlanejamentoCiclo() {
   useEffect(() => { return subscribeToCiclos(setCiclos); }, []);
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
       setLoading(true);
       try {
-        const snap = await getDocs(
-          query(collection(db, TICKETS_GLOBAL), where('escopo', 'in', ESCOPOS_ALVO))
-        );
-        setTickets(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+        const list = await fetchTicketsForRoadmap({ escopos: ESCOPOS_ALVO });
+        if (!cancelled) setTickets(list);
+      } catch (e) {
+        console.error('[PlanejamentoCiclo] erro ao carregar tickets:', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     load();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
