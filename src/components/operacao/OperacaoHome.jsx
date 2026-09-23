@@ -342,6 +342,8 @@ const OperacaoHome = ({ userRole }) => {
   const [drillStatusFilter, setDrillStatusFilter] = useState(null);
   const [demandaStatusFilters, setDemandaStatusFilters] = useState(() => new Set());
   const [filteringImpedidas, setFilteringImpedidas] = useState(false);
+  const [previstoExpanded, setPrevistoExpanded] = useState(true);
+  const [principalExpanded, setPrincipalExpanded] = useState(true);
   const [demandaModalTicket, setDemandaModalTicket] = useState(null);
   const [editModalTicket, setEditModalTicket] = useState(null);
   const [modalLoadingKey, setModalLoadingKey] = useState(null);
@@ -1233,23 +1235,42 @@ const OperacaoHome = ({ userRole }) => {
                             STATUS POR FLUXO DE TRABALHO
                           </Text>
                           {/* Row 0 — fila CPFL Previsto (pré-análise) */}
-                          <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(34,197,94,0.6)', fontWeight: 700, display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>
-                            Fila CPFL Previsto
-                          </Text>
-                          <Flex gap="2" wrap="wrap" mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                            {DEMANDA_STATUS_FLOW_PREVISTO.map(({ status, responsible }) => (
-                              <StatusCard key={status} status={status} responsible={responsible} />
-                            ))}
-                          </Flex>
+                          <button
+                            type="button"
+                            onClick={() => setPrevistoExpanded((v) => !v)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}
+                          >
+                            {previstoExpanded ? <ChevronDown size={14} color="rgba(34,197,94,0.7)" /> : <ChevronRight size={14} color="rgba(34,197,94,0.7)" />}
+                            <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(34,197,94,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>
+                              Fila CPFL Previsto
+                            </Text>
+                          </button>
+                          {previstoExpanded && (
+                            <Flex gap="2" wrap="wrap" mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                              {DEMANDA_STATUS_FLOW_PREVISTO.map(({ status, responsible }) => (
+                                <StatusCard key={status} status={status} responsible={responsible} />
+                              ))}
+                            </Flex>
+                          )}
+                          {!previstoExpanded && <Box mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }} />}
                           {/* Row 1 — fluxo principal */}
-                          <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(56,189,248,0.6)', fontWeight: 700, display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>
-                            Fluxo Principal
-                          </Text>
-                          <Flex gap="2" wrap="wrap" mb="3">
-                            {DEMANDA_STATUS_FLOW_ROW1.map(({ status, responsible }) => (
-                              <StatusCard key={status} status={status} responsible={responsible} />
-                            ))}
-                          </Flex>
+                          <button
+                            type="button"
+                            onClick={() => setPrincipalExpanded((v) => !v)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}
+                          >
+                            {principalExpanded ? <ChevronDown size={14} color="rgba(56,189,248,0.7)" /> : <ChevronRight size={14} color="rgba(56,189,248,0.7)" />}
+                            <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(56,189,248,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>
+                              Fluxo Principal
+                            </Text>
+                          </button>
+                          {principalExpanded && (
+                            <Flex gap="2" wrap="wrap" mb="3">
+                              {DEMANDA_STATUS_FLOW_ROW1.map(({ status, responsible }) => (
+                                <StatusCard key={status} status={status} responsible={responsible} />
+                              ))}
+                            </Flex>
+                          )}
                         </Box>
                       </Box>
                     );
