@@ -28,6 +28,7 @@ import {
   updateTicketRadarFields,
   PRIORIDADE_INTERNA_OPTIONS,
 } from '../../services/operacaoRadarService';
+import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
 import './operacao-radar.css';
 
 const formatNumber = (value) => {
@@ -60,7 +61,7 @@ function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
   const fmtPrio = (t) => {
     if (t.prioridadeInterna != null) {
       const meta = PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(t.prioridadeInterna));
-      return meta ? `${meta.label} — ${meta.description}` : String(t.prioridadeInterna);
+      return meta ? meta.description : String(t.prioridadeInterna);
     }
     return t.priority || '';
   };
@@ -72,7 +73,7 @@ function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
       t.status || '',
       t.issueType || '',
       t.summary || '',
-      t.grupoSuporte || '',
+      stripNumericPrefix(t.grupoSuporte) || '',
       fmtPrio(t),
       t.impedimento ? 'Sim' : 'Não',
       t.estimativaMacroJira != null ? String(t.estimativaMacroJira) : '',
@@ -340,6 +341,7 @@ const OperacaoHome = ({ userRole }) => {
   const [drillIssueTypeFilter, setDrillIssueTypeFilter] = useState(null);
   const [drillStatusFilter, setDrillStatusFilter] = useState(null);
   const [demandaStatusFilters, setDemandaStatusFilters] = useState(() => new Set());
+  const [filteringImpedidas, setFilteringImpedidas] = useState(false);
   const [demandaModalTicket, setDemandaModalTicket] = useState(null);
   const [editModalTicket, setEditModalTicket] = useState(null);
   const [modalLoadingKey, setModalLoadingKey] = useState(null);
@@ -356,7 +358,7 @@ const OperacaoHome = ({ userRole }) => {
       const gs = resolveGrupoSuporteFromTicket(ticket, systems);
       if (gs) { map.set(ticket.issueKey, gs); continue; }
       // 3. Fallback: direct ticket.grupoSuporte field
-      if (ticket.grupoSuporte) map.set(ticket.issueKey, ticket.grupoSuporte);
+      if (ticket.grupoSuporte) map.set(ticket.issueKey, stripNumericPrefix(ticket.grupoSuporte));
     }
     return map;
   }, [drillTickets, systems, squads]);
@@ -996,15 +998,35 @@ const OperacaoHome = ({ userRole }) => {
                     : [];
                   // ── DEMANDA: visão enriquecida por fluxo de status ──────────────────
                   if (activeEscopoTab === 'DEMANDA') {
-                    const totalDemandas = escopoTickets.length;
-                    const totalImpedidas = escopoTickets.filter((t) => t.impedimento === true).length;
+                    // When in "impedidas mode", visibleTickets = only impedidas within active status filters
+                    const visibleTickets = (() => {
+                      if (filteringImpedidas && demandaStatusFilters.size > 0) {
+                        return escopoTickets.filter(
+                          (t) => t.impedimento === true && demandaStatusFilters.has(String(t.status || '').trim())
+                        );
+                      }
+                      if (demandaStatusFilters.size > 0) {
+                        return escopoTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()));
+                      }
+                      return escopoTickets;
+                    })();
+                    const totalDemandas = visibleTickets.length;
+                    const totalImpedidas = filteringImpedidas
+                      ? totalDemandas
+                      : visibleTickets.filter((t) => t.impedimento === true).length;
+                    // When in impedidas mode, status card counts show only impedidas per status
                     const statusCounts = {};
-                    for (const t of escopoTickets) {
+                    const baseForCounts = filteringImpedidas
+                      ? escopoTickets.filter((t) => t.impedimento === true)
+                      : escopoTickets;
+                    for (const t of baseForCounts) {
                       const s = t.status ? String(t.status).trim() : '';
                       if (s) statusCounts[s] = (statusCounts[s] || 0) + 1;
                     }
 
                     const handleToggleDemandaStatus = (status) => {
+                      // Clicking a card always exits impedidas mode
+                      setFilteringImpedidas(false);
                       const next = new Set(demandaStatusFilters);
                       if (next.has(status)) {
                         next.delete(status);
@@ -1030,15 +1052,24 @@ const OperacaoHome = ({ userRole }) => {
                       const count = statusCounts[status] || 0;
                       const rs = RESPONSIBLE_STYLE[responsible] || RESPONSIBLE_STYLE['NTT Data'];
                       const isActive = demandaStatusFilters.has(status);
+                      const hasFilter = demandaStatusFilters.size > 0;
+                      // Dimmed when a filter is active but this card is not selected
+                      const isDimmed = hasFilter && !isActive;
                       return (
                         <button
                           type="button"
                           onClick={() => handleToggleDemandaStatus(status)}
                           disabled={drillLoading}
                           style={{
-                            background: isActive ? 'rgba(56,213,169,0.08)' : 'rgba(255,255,255,0.02)',
+                            background: isActive
+                              ? 'rgba(56,213,169,0.08)'
+                              : isDimmed
+                              ? 'rgba(255,255,255,0.01)'
+                              : 'rgba(255,255,255,0.02)',
                             border: isActive
                               ? '1px solid rgba(56,213,169,0.7)'
+                              : isDimmed
+                              ? '1px solid rgba(255,255,255,0.04)'
                               : count > 0
                               ? '1px solid rgba(56,213,169,0.3)'
                               : '1px solid rgba(255,255,255,0.07)',
@@ -1052,7 +1083,8 @@ const OperacaoHome = ({ userRole }) => {
                             flexDirection: 'column',
                             gap: 4,
                             boxShadow: isActive ? '0 0 0 2px rgba(56,213,169,0.18)' : 'none',
-                            transition: 'border 0.15s, box-shadow 0.15s',
+                            opacity: isDimmed ? 0.3 : 1,
+                            transition: 'border 0.15s, box-shadow 0.15s, opacity 0.15s',
                           }}
                           title={`Filtrar: ${status}`}
                         >
@@ -1100,7 +1132,13 @@ const OperacaoHome = ({ userRole }) => {
                           <Flex align="center" gap="4" wrap="wrap">
                             <button
                               type="button"
-                              onClick={() => openDrill('DEMANDA', 'Demandas')}
+                              onClick={() => {
+                                if (demandaStatusFilters.size > 0) {
+                                  openDrillDirect(visibleTickets, `Demandas · ${[...demandaStatusFilters].join(' + ')}`);
+                                } else {
+                                  openDrill('DEMANDA', 'Demandas');
+                                }
+                              }}
                               disabled={drillLoading}
                               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', lineHeight: 1 }}
                             >
@@ -1113,10 +1151,30 @@ const OperacaoHome = ({ userRole }) => {
                                 DEMANDAS NO ROADMAP
                               </Text>
                               {totalImpedidas > 0 && (
-                                <Flex align="center" gap="1" style={{ background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 6, padding: '3px 10px', width: 'fit-content' }}>
-                                  <Text size="1">🚧</Text>
-                                  <Text size="1" weight="bold" style={{ color: '#eab308' }}>{formatNumber(totalImpedidas)} impedida(s)</Text>
-                                </Flex>
+                                  <button
+                                  type="button"
+                                  onClick={() => {
+                                    const statusesWithImpedidas = new Set(
+                                      escopoTickets
+                                        .filter((t) => t.impedimento === true)
+                                        .map((t) => String(t.status || '').trim())
+                                        .filter(Boolean)
+                                    );
+                                    setDemandaStatusFilters(statusesWithImpedidas);
+                                    setFilteringImpedidas(true);
+                                    const imp = escopoTickets.filter(
+                                      (t) => t.impedimento === true
+                                    );
+                                    openDrillDirect(imp, `Impedidas · ${[...statusesWithImpedidas].join(' + ')}`);
+                                  }}
+                                  disabled={drillLoading}
+                                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                                >
+                                  <Flex align="center" gap="1" style={{ background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.35)', borderRadius: 6, padding: '3px 10px', width: 'fit-content' }}>
+                                    <Text size="1">🚧</Text>
+                                    <Text size="1" weight="bold" style={{ color: '#eab308' }}>{formatNumber(totalImpedidas)} impedida(s)</Text>
+                                  </Flex>
+                                </button>
                               )}
                             </Box>
                             {demandaStatusFilters.size > 0 && (
@@ -1148,6 +1206,7 @@ const OperacaoHome = ({ userRole }) => {
                                   type="button"
                                   onClick={() => {
                                     setDemandaStatusFilters(new Set());
+                                    setFilteringImpedidas(false);
                                     setDrillEscopo(null);
                                     setDrillTickets([]);
                                     setDrillLabel('');
@@ -1458,7 +1517,7 @@ const OperacaoHome = ({ userRole }) => {
                                       color: '#6ee7b7',
                                       whiteSpace: 'nowrap',
                                     }}>{sq}</span>
-                                  ) : (ticket.grupoSuporte || '—');
+                                  ) : (stripNumericPrefix(ticket.grupoSuporte) || '—');
                                 })()}
                               </td>
                               <td>
@@ -1476,7 +1535,7 @@ const OperacaoHome = ({ userRole }) => {
                                         fontWeight: 700,
                                         color: meta.color,
                                         whiteSpace: 'nowrap',
-                                      }}>{meta.label}</span>
+                                      }}>{meta.description}</span>
                                     ) : String(ticket.prioridadeInterna);
                                   }
                                   return ticket.priority || '—';
