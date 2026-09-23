@@ -197,7 +197,7 @@ export default function PlanejamentoCiclo() {
   const handleMoveToCiclo = async (ticket, fromCicloId, destCicloId) => {
     const key = ticket.issueKey || ticket.id;
     if (fromCicloId) await removeTicketFromCiclo(fromCicloId, key);
-    await addTicketToCiclo(destCicloId, key);
+    await addTicketToCiclo(destCicloId, key, ciclos);
     await trackCicloOnTicket(key, destCicloId);
   };
 
@@ -206,7 +206,7 @@ export default function PlanejamentoCiclo() {
   };
 
   const handleMoveFromBacklog = async (ticketKey, cicloId) => {
-    await addTicketToCiclo(cicloId, ticketKey);
+    await addTicketToCiclo(cicloId, ticketKey, ciclos);
     await trackCicloOnTicket(ticketKey, cicloId);
   };
 

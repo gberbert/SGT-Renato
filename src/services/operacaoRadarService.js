@@ -664,8 +664,9 @@ export function filterDrillTicketsByIssueKey(tickets, query) {
 }
 
 function mapFirestoreTicketDoc(d) {
-  const data = d.data();
+const data = d.data();
   return {
+    id: d.id,
     issueKey: data.issueKey || d.id,
     issueUrl: data.issueUrl,
     summary: data.summary,
