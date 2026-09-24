@@ -55,6 +55,7 @@ export default function PlanejamentoCiclo() {
   const [respDevFilter, setRespDevFilter] = useState(new Set());
   const [respTesteFilter, setRespTesteFilter] = useState(new Set());
   const [dateField, setDateField] = useState('none');
+  const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [showEstimativa, setShowEstimativa] = useState(
     () => localStorage.getItem('ciclo_showEstimativa') !== 'false'
   );
@@ -172,6 +173,7 @@ export default function PlanejamentoCiclo() {
     if (prioridadeFilter.size > 0 && !prioridadeFilter.has(String(t.prioridadeInterna ?? ''))) return false;
     if (respDevFilter.size > 0 && !respDevFilter.has(t.responsavelDesenvolvimento || '')) return false;
     if (respTesteFilter.size > 0 && !respTesteFilter.has(t.responsavelTesteInterno || '')) return false;
+    if (impedimentoFilter && t.impedimento !== true) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -271,7 +273,7 @@ export default function PlanejamentoCiclo() {
   }, [tickets]);
 
   const activeFilters = [escopoFilter, squadFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter]
-    .filter(s => s.size > 0).length + (search ? 1 : 0);
+    .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
@@ -407,6 +409,27 @@ export default function PlanejamentoCiclo() {
           {DATE_FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
+        {/* Toggle Impedimento */}
+        <label
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',
+            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+            padding: '3px 8px',
+            border: `1px solid ${impedimentoFilter ? '#ca8a04' : 'var(--gray-5)'}`,
+            borderRadius: 6,
+            background: impedimentoFilter ? 'rgba(251,191,36,0.1)' : 'var(--gray-2)',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={impedimentoFilter}
+            onChange={e => setImpedimentoFilter(e.target.checked)}
+            style={{ accentColor: '#eab308', width: 12, height: 12 }}
+          />
+          🚧 Impedidos
+        </label>
+
         {/* Toggle Estimativa Interna */}
         <label
           style={{
@@ -441,7 +464,7 @@ export default function PlanejamentoCiclo() {
 
         {activeFilters > 0 && (
           <button
-            onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSearch(''); }}
+            onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
             style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)' }}
           >
             Limpar filtros
