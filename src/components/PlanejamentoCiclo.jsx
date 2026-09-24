@@ -134,14 +134,14 @@ function WorkflowModal({ onClose }) {
             </thead>
             <tbody>
               {WORKFLOW_STEPS.map((step, idx) => (
-                <tr
+                  <tr
                   key={step.id}
                   style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}
                 >
-                  <td style={{ padding: '9px 14px', textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
-                  <td style={{ padding: '9px 14px', fontSize: 13, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
-                  <td style={{ padding: '9px 14px' }}><FilaTag fila={step.fila} /></td>
-                  <td style={{ padding: '9px 14px' }}><EscopoTag escopo={step.escopo} /></td>
+                  <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
+                  <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
+                  <td style={{ padding: '4px 14px' }}><FilaTag fila={step.fila} /></td>
+                  <td style={{ padding: '4px 14px' }}><EscopoTag escopo={step.escopo} /></td>
                 </tr>
               ))}
             </tbody>
