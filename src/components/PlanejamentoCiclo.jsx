@@ -1,17 +1,33 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   collection, getDocs, query, orderBy,
-  doc, updateDoc, arrayUnion,
+  doc, updateDoc, arrayUnion, addDoc, serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
 import { Plus, ChevronDown, ChevronRight, Filter } from 'lucide-react';
-import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS } from './PlanejamentoCicloHelpers';
+import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
 const TICKETS_GLOBAL = 'tickets_global';
+
+const DATE_FIELDS_TO_LOG = new Set([
+  'dataFimDesenvolvimento',
+  'dataFimTesteInterno',
+  'dataFimTesteQa',
+  'dataFimHomologacao',
+  'dataConclusao',
+]);
+
+const DATE_FIELD_LABELS = {
+  dataFimDesenvolvimento: 'Fim Desenvolvimento',
+  dataFimTesteInterno: 'Fim Teste Interno',
+  dataFimTesteQa: 'Fim Teste (QA)',
+  dataFimHomologacao: 'Fim Homologação',
+  dataConclusao: 'Conclusão',
+};
 
 const sel = {
   fontSize: 12,
@@ -32,13 +48,16 @@ export default function PlanejamentoCiclo() {
 
   // Global filters (apply to both ciclos and backlog)
   const [search, setSearch] = useState('');
-  const [escopoFilter, setEscopoFilter] = useState('all');
-  const [squadFilter, setSquadFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [prioridadeFilter, setPrioridadeFilter] = useState('all');
-  const [respDevFilter, setRespDevFilter] = useState('all');
-  const [respTesteFilter, setRespTesteFilter] = useState('all');
+  const [escopoFilter, setEscopoFilter] = useState(new Set());
+  const [squadFilter, setSquadFilter] = useState(new Set());
+  const [statusFilter, setStatusFilter] = useState(new Set());
+  const [prioridadeFilter, setPrioridadeFilter] = useState(new Set());
+  const [respDevFilter, setRespDevFilter] = useState(new Set());
+  const [respTesteFilter, setRespTesteFilter] = useState(new Set());
   const [dateField, setDateField] = useState('none');
+  const [showEstimativa, setShowEstimativa] = useState(
+    () => localStorage.getItem('ciclo_showEstimativa') !== 'false'
+  );
 
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
   const [showNewCiclo, setShowNewCiclo] = useState(false);
@@ -147,12 +166,12 @@ export default function PlanejamentoCiclo() {
 
   // Apply all global filters
   const filteredTickets = useMemo(() => enrichedTickets.filter(t => {
-    if (escopoFilter !== 'all' && t.escopo !== escopoFilter) return false;
-    if (squadFilter !== 'all' && (t._resolvedSquad || '') !== squadFilter) return false;
-    if (statusFilter !== 'all' && t.status !== statusFilter) return false;
-    if (prioridadeFilter !== 'all' && String(t.prioridadeInterna ?? '') !== prioridadeFilter) return false;
-    if (respDevFilter !== 'all' && (t.responsavelDesenvolvimento || '') !== respDevFilter) return false;
-    if (respTesteFilter !== 'all' && (t.responsavelTesteInterno || '') !== respTesteFilter) return false;
+    if (escopoFilter.size > 0 && !escopoFilter.has(t.escopo)) return false;
+    if (squadFilter.size > 0 && !squadFilter.has(t._resolvedSquad || '')) return false;
+    if (statusFilter.size > 0 && !statusFilter.has(t.status)) return false;
+    if (prioridadeFilter.size > 0 && !prioridadeFilter.has(String(t.prioridadeInterna ?? ''))) return false;
+    if (respDevFilter.size > 0 && !respDevFilter.has(t.responsavelDesenvolvimento || '')) return false;
+    if (respTesteFilter.size > 0 && !respTesteFilter.has(t.responsavelTesteInterno || '')) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -231,14 +250,28 @@ export default function PlanejamentoCiclo() {
     const t = tickets.find(x => (x.issueKey || x.id) === issueKey);
     if (!t) return;
     try {
+      const oldValue = t[field] ?? null;
+      const newValue = value ?? null;
       await updateDoc(doc(db, TICKETS_GLOBAL, t.id), { [field]: value });
+      // Registrar log de replanejamento para datas internas
+      if (DATE_FIELDS_TO_LOG.has(field) && oldValue !== newValue) {
+        await addDoc(collection(db, TICKETS_GLOBAL, t.id, 'replanningLog'), {
+          issueKey: t.issueKey || t.id,
+          field,
+          fieldLabel: DATE_FIELD_LABELS[field] || field,
+          oldValue,
+          newValue,
+          changedAt: serverTimestamp(),
+          changedBy: auth.currentUser?.displayName || auth.currentUser?.email || auth.currentUser?.uid || 'unknown',
+        });
+      }
       setTickets(prev => prev.map(x => x.id === t.id ? { ...x, [field]: value } : x));
       setSelectedTicket(prev => prev ? { ...prev, [field]: value } : prev);
     } catch (e) { console.error(e); }
   }, [tickets]);
 
   const activeFilters = [escopoFilter, squadFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter]
-    .filter(v => v !== 'all').length + (search ? 1 : 0);
+    .filter(s => s.size > 0).length + (search ? 1 : 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
@@ -315,46 +348,88 @@ export default function PlanejamentoCiclo() {
           )}
         </span>
 
-        {/* Escopo */}
-        <select value={escopoFilter} onChange={e => setEscopoFilter(e.target.value)} style={sel}>
-          <option value="all">Todos os escopos</option>
-          {ESCOPOS_ALVO.map(e => <option key={e} value={e}>{e}</option>)}
-        </select>
+        {/* Escopo (multi) */}
+        <MultiSelectFilter
+          options={ESCOPOS_ALVO}
+          selected={escopoFilter}
+          onChange={setEscopoFilter}
+          placeholder="Todos os escopos"
+          maxWidth={180}
+        />
 
-        {/* Squad */}
-        <select value={squadFilter} onChange={e => setSquadFilter(e.target.value)} style={sel}>
-          <option value="all">Todas as squads</option>
-          {squadOptions.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        {/* Squad (multi) */}
+        <MultiSelectFilter
+          options={squadOptions}
+          selected={squadFilter}
+          onChange={setSquadFilter}
+          placeholder="Todas as squads"
+          maxWidth={180}
+        />
 
-        {/* Status */}
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={sel}>
-          <option value="all">Todos os status</option>
-          {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        {/* Status (multi-select) */}
+        <MultiSelectFilter
+          options={statusOptions}
+          selected={statusFilter}
+          onChange={setStatusFilter}
+          placeholder="Todos os status"
+          maxWidth={200}
+        />
 
-        {/* Prioridade Interna */}
-        <select value={prioridadeFilter} onChange={e => setPrioridadeFilter(e.target.value)} style={sel}>
-          <option value="all">Todas as prioridades</option>
-          {prioridadeOptions.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
+        {/* Prioridade Interna (multi) */}
+        <MultiSelectFilter
+          options={prioridadeOptions}
+          selected={prioridadeFilter}
+          onChange={setPrioridadeFilter}
+          placeholder="Todas as prioridades"
+          maxWidth={180}
+        />
 
-        {/* Resp. Desenvolvimento */}
-        <select value={respDevFilter} onChange={e => setRespDevFilter(e.target.value)} style={{ ...sel, maxWidth: 190 }}>
-          <option value="all">Resp. Desenvolvimento</option>
-          {respDevOptions.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
+        {/* Resp. Desenvolvimento (multi) */}
+        <MultiSelectFilter
+          options={respDevOptions}
+          selected={respDevFilter}
+          onChange={setRespDevFilter}
+          placeholder="Resp. Desenvolvimento"
+          maxWidth={200}
+        />
 
-        {/* Resp. Teste Interno */}
-        <select value={respTesteFilter} onChange={e => setRespTesteFilter(e.target.value)} style={{ ...sel, maxWidth: 190 }}>
-          <option value="all">Resp. Teste Interno</option>
-          {respTesteOptions.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
+        {/* Resp. Teste Interno (multi) */}
+        <MultiSelectFilter
+          options={respTesteOptions}
+          selected={respTesteFilter}
+          onChange={setRespTesteFilter}
+          placeholder="Resp. Teste Interno"
+          maxWidth={190}
+        />
 
         {/* Data a exibir */}
         <select value={dateField} onChange={e => setDateField(e.target.value)} style={{ ...sel, maxWidth: 180 }}>
           {DATE_FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
+
+        {/* Toggle Estimativa Interna */}
+        <label
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 12, color: showEstimativa ? 'var(--indigo-11)' : 'var(--gray-10)',
+            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+            padding: '3px 8px',
+            border: `1px solid ${showEstimativa ? 'var(--indigo-8)' : 'var(--gray-5)'}`,
+            borderRadius: 6,
+            background: showEstimativa ? 'rgba(99,102,241,0.08)' : 'var(--gray-2)',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={showEstimativa}
+            onChange={e => {
+              setShowEstimativa(e.target.checked);
+              localStorage.setItem('ciclo_showEstimativa', String(e.target.checked));
+            }}
+            style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12 }}
+          />
+          ⏱ Est. Interna
+        </label>
 
         {/* Search */}
         <input
@@ -366,7 +441,7 @@ export default function PlanejamentoCiclo() {
 
         {activeFilters > 0 && (
           <button
-            onClick={() => { setEscopoFilter('all'); setSquadFilter('all'); setStatusFilter('all'); setPrioridadeFilter('all'); setRespDevFilter('all'); setRespTesteFilter('all'); setSearch(''); }}
+            onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSearch(''); }}
             style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)' }}
           >
             Limpar filtros
@@ -390,6 +465,7 @@ export default function PlanejamentoCiclo() {
           onMoveToBacklog={(ticket, cicloId) => handleMoveToBacklog(ticket, cicloId)}
           onTicketClick={setSelectedTicket}
           dateField={dateField}
+          showEstimativa={showEstimativa}
         />
       ))}
 
@@ -442,6 +518,7 @@ export default function PlanejamentoCiclo() {
                     onMoveToBacklog={() => {}}
                     onTicketClick={setSelectedTicket}
                     dateField={dateField}
+                    showEstimativa={showEstimativa}
                   />
                 ))
               )}

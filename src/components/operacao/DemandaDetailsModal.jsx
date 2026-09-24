@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { X, ChevronDown } from 'lucide-react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { X, ChevronDown, History } from 'lucide-react';
+import { collection, getDocs, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
 import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
@@ -254,6 +254,100 @@ function EditPersonCombobox({ label, fieldKey, value, onSave, members }) {
   );
 }
 
+const TICKETS_GLOBAL = 'tickets_global';
+
+function useReplanningLog(ticketDocId) {
+  const [log, setLog] = useState([]);
+  useEffect(() => {
+    if (!ticketDocId) return;
+    const q = query(
+      collection(db, TICKETS_GLOBAL, ticketDocId, 'replanningLog'),
+      orderBy('changedAt', 'desc')
+    );
+    const unsub = onSnapshot(q, snap => {
+      setLog(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
+    return unsub;
+  }, [ticketDocId]);
+  return log;
+}
+
+const fmtLogDate = (ts) => {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const fmtIsoDate = (v) => {
+  if (!v) return '—';
+  const s = String(v).slice(0, 10);
+  if (s.length < 10) return v;
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+function ReplanningLog({ ticketDocId }) {
+  const log = useReplanningLog(ticketDocId);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={{ marginTop: 20, borderTop: '1px solid var(--gray-5)', paddingTop: 14 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: '4px 0', color: 'var(--gray-10)', fontSize: 12, fontWeight: 700,
+          letterSpacing: '0.05em', textTransform: 'uppercase',
+        }}
+      >
+        <History size={13} />
+        HISTÓRICO DE REPLANEJAMENTO
+        {log.length > 0 && (
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: '1px 6px',
+            borderRadius: 10, background: 'rgba(251,146,60,0.2)',
+            color: '#fb923c', border: '1px solid rgba(251,146,60,0.35)',
+          }}>{log.length}</span>
+        )}
+        <ChevronDown size={13} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          {log.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--gray-9)', margin: 0 }}>Nenhuma alteração registrada.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: 'var(--gray-9)', textAlign: 'left' }}>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Campo</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>De</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Para</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Por</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Quando</th>
+                </tr>
+              </thead>
+              <tbody>
+                {log.map(entry => (
+                  <tr key={entry.id} style={{ borderBottom: '1px solid var(--gray-4)' }}>
+                    <td style={{ padding: '5px 8px', color: 'var(--gray-11)', fontWeight: 600 }}>{entry.fieldLabel || entry.field}</td>
+                    <td style={{ padding: '5px 8px', color: '#f87171' }}>{fmtIsoDate(entry.oldValue)}</td>
+                    <td style={{ padding: '5px 8px', color: '#4ade80' }}>{fmtIsoDate(entry.newValue)}</td>
+                    <td style={{ padding: '5px 8px', color: 'var(--gray-10)' }}>{entry.changedBy || '—'}</td>
+                    <td style={{ padding: '5px 8px', color: 'var(--gray-9)' }}>{fmtLogDate(entry.changedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PlanRow({ left, right }) {
   return (
     <div className="dmd-plan-row">
@@ -263,7 +357,7 @@ function PlanRow({ left, right }) {
   );
 }
 
-export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
+export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, ticketDocId: ticketDocIdProp }) {
   const [activeTab, setActiveTab] = useState('geral');
   const [squadPrincipal, setSquadPrincipal] = useState(ticket?.squadPrincipal ?? null);
   const isEdit = mode === 'edit';
@@ -290,7 +384,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
         (p) => String(p.value) === String(ticket.prioridadeInterna)
       );
       if (found) return found.description ? `${found.label} — ${found.description}` : found.label;
-      return `P${ticket.prioridadeInterna}`;
+      return String(ticket.prioridadeInterna);
     }
     return ticket.priority || '—';
   })();
@@ -422,7 +516,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                     fieldKey="prioridadeInterna"
                     options={PRIO_OPTIONS}
                     value={ticket.prioridadeInterna != null ? String(ticket.prioridadeInterna) : ''}
-                    onSave={(field, val) => save(field, val === null ? null : Number(val))}
+                    onSave={(field, val) => save(field, val)}
                   />
                 ) : (
                   <ReadField label="PRIORIDADE" value={prioLabel} />
@@ -430,6 +524,41 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                 <ReadField label="ESTIMATIVA MACRO" value={ticket.estimativaMacro} />
                 <ReadField label="ESTIMATIVA TOTAL" value={ticket.estimativaTotal} />
                 <ReadField label="NATUREZA DA OPERAÇÃO" value={ticket.naturezaOperacao} />
+              </div>
+
+              {/* Row 2b: ESTIMATIVA INTERNA + CICLO */}
+              <div className="dmd-row">
+                {isEdit ? (
+                  <EditNumber label="ESTIMATIVA INTERNA (h)" fieldKey="estimativaInterna" value={ticket.estimativaInterna} onSave={save} />
+                ) : (
+                  <ReadField label="ESTIMATIVA INTERNA (h)" value={ticket.estimativaInterna} />
+                )}
+                <div className="dmd-field">
+                  <FieldLabel>CICLO</FieldLabel>
+                  {Array.isArray(ticket.ciclos) && ticket.ciclos.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: 4 }}>
+                      {ticket.ciclos.map((c, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            background: 'rgba(99,102,241,0.18)',
+                            color: '#a5b4fc',
+                            border: '1px solid rgba(99,102,241,0.35)',
+                            borderRadius: 6,
+                            padding: '2px 10px',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {c.nome || c}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{ color: '#6b7280', fontSize: 13 }}>—</span>
+                  )}
+                </div>
               </div>
 
               {/* Row 3: SISTEMAS IMPACTADOS — tags (somente leitura) */}
@@ -640,6 +769,11 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave }) {
                   )
                 }
               />
+
+              {/* ── Histórico de replanejamento ── */}
+              <div style={{ padding: '0 0 8px' }}>
+                <ReplanningLog ticketDocId={ticketDocIdProp || ticket.id} />
+              </div>
             </div>
           )}
         </div>

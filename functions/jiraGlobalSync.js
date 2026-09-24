@@ -881,8 +881,8 @@ async function searchOperacaoIssues({
 
 // Campos gerenciados internamente pelo SGT — NUNCA devem ser sobrescritos pelo sync do Jira.
 // São preenchidos manualmente pela equipe via updateTicketRadarFields().
-// NOTA: prioridadeInterna é populado pelo sync com o valor da prioridade Jira na primeira carga
-// e pode ser revisado/editado internamente. Remova desta lista se quiser que o sync sempre atualize.
+// NOTA: prioridadeInterna recebe o valor da prioridade Jira APENAS na primeira carga (quando o
+// documento ainda não existe). Após isso é protegido aqui para preservar ajustes internos.
 const SGT_MANAGED_FIELDS = [
   "responsavelAtual",
   "dataPrevisao",
@@ -890,6 +890,16 @@ const SGT_MANAGED_FIELDS = [
   "estimativaMacro",
   "impedimento",
   "radarFieldsUpdatedAt",
+  "prioridadeInterna",
+  "estimativaTotal",
+  "estimativaInterna",
+  "squadPrincipal",
+  "dataFimDesenvolvimento",
+  "dataFimTesteInterno",
+  "dataFimTesteQa",
+  "dataFimHomologacao",
+  "dataConclusao",
+  "observacao",
 ];
 
 async function writeTicketsGlobal(tickets) {
@@ -1040,15 +1050,78 @@ async function processSyncStep(runId) {
   return { done: false, run: serializeRun(runSnap.id, updatedSnap.data()) };
 }
 
+/**
+ * Seed de prioridadeInterna: para tickets que nunca tiveram prioridadeInterna definida
+ * (campo ausente ou null), popula com o valor de `priority` (prioridade do Jira).
+ * Isso acontece quando um ticket é importado pela primeira vez após a proteção ser ativada.
+ * Retorna o número de tickets atualizados.
+ */
+async function seedPrioridadeInternaAusente() {
+  const db = getDb();
+  let seeded = 0;
+  let lastDoc = null;
+  const PAGE_SIZE = 200;
+
+  // Itera em páginas para não estourar memória em bases grandes
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    let query = db
+      .collection(TICKETS_GLOBAL)
+      .where("prioridadeInterna", "==", null)
+      .limit(PAGE_SIZE);
+    if (lastDoc) query = query.startAfter(lastDoc);
+
+    const snap = await query.get();
+    if (snap.empty) break;
+
+    let batch = db.batch();
+    let ops = 0;
+    for (const doc of snap.docs) {
+      const priority = doc.data().priority;
+      if (!priority) continue; // sem prioridade no Jira — não há o que semear
+      batch.update(doc.ref, { prioridadeInterna: priority });
+      ops += 1;
+      seeded += 1;
+      if (ops >= MAX_WRITE_BATCH) {
+        await batch.commit();
+        batch = db.batch();
+        ops = 0;
+      }
+    }
+    if (ops > 0) await batch.commit();
+
+    lastDoc = snap.docs[snap.docs.length - 1];
+    if (snap.size < PAGE_SIZE) break; // última página
+  }
+
+  return seeded;
+}
+
 async function finalizeSyncRun(runRef, run) {
   await finalizeOperacaoStats(runRef, run);
+
+  // Seed: popula prioridadeInterna para tickets novos que ainda não têm o campo
+  await runRef.update({
+    phase: "seeding_prioridade",
+    message: "Verificando prioridadeInterna em tickets novos...",
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  let seeded = 0;
+  try {
+    seeded = await seedPrioridadeInternaAusente();
+  } catch (e) {
+    console.warn("[finalizeSyncRun] seedPrioridadeInternaAusente falhou (não crítico):", e.message);
+  }
+
+  const seedMsg = seeded > 0 ? ` | ${seeded} tickets com prioridadeInterna inicializada.` : "";
   await runRef.update({
     status: "success",
     phase: "done",
     percent: 100,
+    seededPrioridadeInterna: seeded,
     finishedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-    message: `Carga concluída: ${run.ticketsUpserted || 0} tickets sincronizados.`,
+    message: `Carga concluída: ${run.ticketsUpserted || 0} tickets sincronizados.${seedMsg}`,
   });
 }
 

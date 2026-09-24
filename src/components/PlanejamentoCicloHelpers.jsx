@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar, Search } from 'lucide-react';
 import { updateCiclo, deleteCiclo } from '../services/cicloService';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
@@ -15,11 +15,156 @@ export const CICLO_STATUS_META = {
   concluido: { label: 'Concluido', color: '#8b5cf6' },
 };
 
+/**
+ * MultiSelectFilter
+ * props:
+ *   options: string[]
+ *   selected: Set<string>   (empty = "all")
+ *   onChange: (Set<string>) => void
+ *   placeholder: string
+ *   maxWidth?: number
+ */
+export function MultiSelectFilter({ options, selected, onChange, placeholder = 'Selecionar…', maxWidth = 200 }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => { if (!open) setQuery(''); }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q ? options.filter(o => o.toLowerCase().includes(q)) : options;
+  }, [options, query]);
+
+  const allSelected = selected.size === 0;
+  const allFilteredSelected = filtered.length > 0 && filtered.every(o => selected.has(o));
+
+  const toggle = (val) => {
+    const next = new Set(selected);
+    if (next.has(val)) next.delete(val); else next.add(val);
+    onChange(next);
+  };
+
+  const toggleAll = () => {
+    if (allFilteredSelected) {
+      const next = new Set(selected);
+      filtered.forEach(o => next.delete(o));
+      onChange(next);
+    } else {
+      const next = new Set(selected);
+      filtered.forEach(o => next.add(o));
+      onChange(next);
+    }
+  };
+
+  const clearAll = () => onChange(new Set());
+
+  const label = allSelected
+    ? placeholder
+    : selected.size === 1
+      ? [...selected][0]
+      : `${selected.size} status`;
+
+  const triggerStyle = {
+    fontSize: 12,
+    background: 'var(--gray-2)',
+    border: `1px solid ${allSelected ? 'var(--gray-5)' : 'var(--indigo-8)'}`,
+    borderRadius: 6,
+    padding: '3px 8px',
+    color: allSelected ? 'var(--gray-12)' : 'var(--indigo-11)',
+    maxWidth,
+    cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 5,
+    whiteSpace: 'nowrap', overflow: 'hidden',
+  };
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button type="button" style={triggerStyle} onClick={() => setOpen(v => !v)}>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+        <ChevronDown size={11} style={{ flexShrink: 0, opacity: 0.6 }} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '110%', left: 0, zIndex: 999,
+          background: 'var(--color-panel-solid)',
+          border: '1px solid var(--gray-5)',
+          borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.35)',
+          minWidth: 220, maxWidth: 280,
+        }}>
+          {/* search */}
+          <div style={{ padding: '8px 10px 6px', borderBottom: '1px solid var(--gray-4)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Search size={12} style={{ color: 'var(--gray-9)', flexShrink: 0 }} />
+            <input
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Buscar status…"
+              style={{ flex: 1, fontSize: 12, background: 'none', border: 'none', outline: 'none', color: 'var(--gray-12)' }}
+            />
+          </div>
+
+          {/* select all / clear */}
+          <div style={{ padding: '5px 10px', borderBottom: '1px solid var(--gray-4)', display: 'flex', gap: 8 }}>
+            <button
+              onClick={toggleAll}
+              style={{ fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--indigo-10)', padding: 0, fontWeight: 600 }}
+            >
+              {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+              {query.trim() ? ` (${filtered.length})` : ''}
+            </button>
+            {!allSelected && (
+              <>
+                <span style={{ color: 'var(--gray-6)' }}>|</span>
+                <button
+                  onClick={clearAll}
+                  style={{ fontSize: 11, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gray-9)', padding: 0 }}
+                >
+                  Limpar
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* options */}
+          <div style={{ maxHeight: 240, overflowY: 'auto', padding: '4px 0' }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '8px 12px', fontSize: 12, color: 'var(--gray-9)' }}>Nenhum resultado</div>
+            ) : filtered.map(o => (
+              <label
+                key={o}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', cursor: 'pointer', fontSize: 13 }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--gray-3)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.has(o)}
+                  onChange={() => toggle(o)}
+                  style={{ accentColor: 'var(--indigo-9)', width: 13, height: 13, flexShrink: 0 }}
+                />
+                <span style={{ color: 'var(--gray-12)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function getStatusColor(s) {
   if (!s) return '#6b7280';
   const l = String(s).toLowerCase();
   if (l.includes('conclu') || l.includes('done') || l.includes('resolvid')) return '#22c55e';
-  if (l.includes('andament') || l.includes('progress')) return '#3b82f6';
+  if (l.includes('andament') || l.includes('progress') || l.includes('execu')) return '#3b82f6';
   if (l.includes('block') || l.includes('impedi')) return '#ef4444';
   if (l.includes('analis') || l.includes('review')) return '#8b5cf6';
   if (l.includes('aguard') || l.includes('pendente')) return '#f59e0b';
@@ -44,7 +189,7 @@ function fmtDateShort(val) {
   return s;
 }
 
-export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField }) {
+export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true }) {
   const [open, setOpen] = useState(false);
   const em = ESCOPO_META[ticket.escopo] || { color: '#6b7280', short: (ticket.escopo || '?').slice(0, 4) };
   const sc = getStatusColor(ticket.status);
@@ -74,7 +219,7 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
           </span>
         );
       })()}
-      {ticket.estimativaInterna && (
+      {showEstimativa && ticket.estimativaInterna && (
         <span
           title={`Estimativa interna: ${ticket.estimativaInterna}`}
           style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 12, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.35)', flexShrink: 0, whiteSpace: 'nowrap' }}
@@ -144,7 +289,7 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
   );
 }
 
-export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField }) {
+export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editNome, setEditNome] = useState(ciclo.nome);
@@ -254,6 +399,7 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
                 onMoveToBacklog={() => onMoveToBacklog(t, ciclo.id)}
                 onTicketClick={onTicketClick}
                 dateField={dateField}
+                showEstimativa={showEstimativa}
               />
             ))
           )}

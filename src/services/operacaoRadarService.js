@@ -23,17 +23,17 @@ const STATS_DOC = doc(db, 'operacao_stats', 'summary');
 const PAGE_SIZE = 500;
 const DRILL_LIMIT = 2000;
 
-/** Prioridades internas SGT — valores P1 a P5, nao vem do Jira */
+/** Prioridades internas SGT — valor string do campo prioridadeInterna */
 export const PRIORIDADE_INTERNA_OPTIONS = [
-  { value: 1, label: 'P1', description: 'Crítica',     color: '#ef4444' },
-  { value: 2, label: 'P2', description: 'Alta',        color: '#f97316' },
-  { value: 3, label: 'P3', description: 'Média',       color: '#eab308' },
-  { value: 4, label: 'P4', description: 'Baixo',       color: '#3b82f6' },
-  { value: 5, label: 'P5', description: 'Muito Baixo', color: '#93c5fd' },
+  { value: 'Crise',       label: 'Crise',       description: 'Crise',       color: '#ef4444' },
+  { value: 'Alto',        label: 'Alto',        description: 'Alto',        color: '#f97316' },
+  { value: 'Medio',       label: 'Médio',       description: 'Médio',       color: '#eab308' },
+  { value: 'Baixo',       label: 'Baixo',       description: 'Baixo',       color: '#3b82f6' },
+  { value: 'Muito baixo', label: 'Muito baixo', description: 'Muito baixo', color: '#93c5fd' },
 ];
 
 export function getPrioridadeInternaMeta(value) {
-  return PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === Number(value)) || null;
+  return PRIORIDADE_INTERNA_OPTIONS.find((p) => p.value === String(value)) || null;
 }
 
 export const ESCOPO_RADAR_ORDER = [
@@ -725,6 +725,9 @@ const data = d.data();
     impedimento: data.impedimento === true,
     statusHistory: Array.isArray(data.statusHistory) ? data.statusHistory : [],
     squadPrincipal: data.squadPrincipal || null,
+    estimativaInterna: data.estimativaInterna ?? null,
+    ciclo: data.ciclo || null,
+    ciclos: Array.isArray(data.ciclos) ? data.ciclos : [],
   };
 }
 
@@ -758,11 +761,18 @@ export async function updateTicketRadarFields(issueKey, patch) {
   }
   if ('prioridadeInterna' in patch) {
     const val = patch.prioridadeInterna === '' || patch.prioridadeInterna == null
-      ? null : Number(patch.prioridadeInterna);
-    payload.prioridadeInterna = (Number.isFinite(val) && val >= 1 && val <= 5) ? val : null;
+      ? null : String(patch.prioridadeInterna);
+    const allowed = (PRIORIDADE_INTERNA_OPTIONS || []).map((p) => String(p.value));
+    payload.prioridadeInterna = val !== null && allowed.includes(val) ? val : null;
   }
   if ('impedimento' in patch) payload.impedimento = Boolean(patch.impedimento);
   if ('squadPrincipal' in patch) payload.squadPrincipal = patch.squadPrincipal || null;
+  if ('estimativaInterna' in patch) {
+    const numeric = patch.estimativaInterna === '' || patch.estimativaInterna == null
+      ? null : Number(patch.estimativaInterna);
+    payload.estimativaInterna = Number.isFinite(numeric) ? numeric : null;
+  }
+  if ('ciclo' in patch) payload.ciclo = patch.ciclo || null;
 
   const SGT_DATE_FIELDS = [
     'dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa',
