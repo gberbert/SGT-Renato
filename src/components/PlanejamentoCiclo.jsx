@@ -6,7 +6,7 @@ import {
 import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
-import { Plus, ChevronDown, ChevronRight, Filter } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X } from 'lucide-react';
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
@@ -39,6 +39,119 @@ const sel = {
   maxWidth: 170,
 };
 
+const WORKFLOW_STEPS = [
+  { id: 1,  status: 'Aguardando Aprovação Gestor Imediato', fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 2,  status: 'Escrita de Requerimento',              fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 3,  status: 'Validação Comitê',                     fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 4,  status: 'Aguardando Solicitante',               fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 5,  status: 'Detalhamento de Requisitos',           fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 6,  status: 'Aguardando Profissional de TI',        fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 7,  status: 'Aguardando Demanda/Projeto',           fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 8,  status: 'Revisão de Requisitos de Projeto',     fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 9,  status: 'Análise e T-Shirt',                    fila: 'NTT Data',      escopo: 'Precificação ativa' },
+  { id: 10, status: 'Aguardando Análise Técnica',           fila: 'CPFL',          escopo: 'Precificação ativa' },
+  { id: 11, status: 'Aguardando Aprovação T-Shirt',         fila: 'CPFL',          escopo: 'Precificação ativa' },
+  { id: 12, status: 'Planejamento',                         fila: 'NTT Data',      escopo: 'SLA em dias úteis' },
+  { id: 13, status: 'Aprovação de Planejamento',            fila: 'CPFL',          escopo: 'Planejamento' },
+  { id: 14, status: 'Execução',                             fila: 'NTT Data',      escopo: 'Demanda em execução' },
+  { id: 15, status: 'Teste (QA)',                           fila: 'CPFL',          escopo: 'Demanda a ser testada' },
+  { id: 16, status: 'Em homologação',                       fila: 'NTT Data',      escopo: 'Homologação' },
+  { id: 17, status: 'Revisão de homologação',               fila: 'CPFL',          escopo: 'Homologação' },
+  { id: 18, status: 'Etapa de KT',                          fila: 'NTT Data',      escopo: 'Homologação' },
+  { id: 19, status: 'Aguardando Mudança',                   fila: 'CPFL',          escopo: 'Homologação' },
+  { id: 20, status: 'Concluída',                            fila: 'CPFL',          escopo: 'Concluída' },
+];
+
+function FilaTag({ fila }) {
+  const isNTT = fila === 'NTT Data';
+  const isPrevisto = fila === 'CPFL Previsto';
+  // CPFL Previsto = neon laranja claro, CPFL = neon laranja, NTT Data = azul
+  const bg     = isNTT ? 'rgba(59,130,246,0.15)'  : isPrevisto ? 'rgba(255,180,50,0.15)'  : 'rgba(255,120,0,0.15)';
+  const color  = isNTT ? '#60a5fa'                 : isPrevisto ? '#ffd166'                : '#ff8c00';
+  const border = isNTT ? 'rgba(59,130,246,0.45)'   : isPrevisto ? 'rgba(255,180,50,0.5)'  : 'rgba(255,120,0,0.5)';
+  return (
+    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: bg, color, border: `1px solid ${border}`, whiteSpace: 'nowrap', flexShrink: 0 }}>
+      {fila}
+    </span>
+  );
+}
+
+function EscopoTag({ escopo }) {
+  return (
+    <span style={{ fontSize: 12, color: 'var(--gray-10)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      {escopo}
+    </span>
+  );
+}
+
+function WorkflowModal({ onClose }) {
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <div style={{
+        background: 'var(--color-panel-solid)',
+        border: '1px solid var(--gray-5)',
+        borderRadius: 14, width: '100%', maxWidth: 780,
+        maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--gray-4)' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--gray-12)' }}>Workflow de Demandas</h3>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--gray-9)' }}>Ordem dos status, fila responsável e escopo em cada etapa</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: 'var(--gray-9)', display: 'flex', alignItems: 'center' }}>
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Legenda */}
+        <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--gray-4)', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, color: 'var(--gray-9)', fontWeight: 600 }}>FILA:</span>
+          <FilaTag fila="CPFL Previsto" />
+          <FilaTag fila="CPFL" />
+          <FilaTag fila="NTT Data" />
+        </div>
+
+        {/* Table */}
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--gray-3)', position: 'sticky', top: 0, zIndex: 1 }}>
+                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'center', width: 40, borderBottom: '1px solid var(--gray-5)' }}>#</th>
+                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>STATUS</th>
+                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>FILA (RESPONSÁVEL)</th>
+                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>ESCOPO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {WORKFLOW_STEPS.map((step, idx) => (
+                <tr
+                  key={step.id}
+                  style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}
+                >
+                  <td style={{ padding: '9px 14px', textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
+                  <td style={{ padding: '9px 14px', fontSize: 13, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
+                  <td style={{ padding: '9px 14px' }}><FilaTag fila={step.fila} /></td>
+                  <td style={{ padding: '9px 14px' }}><EscopoTag escopo={step.escopo} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PlanejamentoCiclo() {
   const [tickets, setTickets] = useState([]);
   const [ciclos, setCiclos] = useState([]);
@@ -46,7 +159,6 @@ export default function PlanejamentoCiclo() {
   const [systems, setSystems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Global filters (apply to both ciclos and backlog)
   const [search, setSearch] = useState('');
   const [escopoFilter, setEscopoFilter] = useState(new Set());
   const [squadFilter, setSquadFilter] = useState(new Set());
@@ -62,6 +174,7 @@ export default function PlanejamentoCiclo() {
 
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
   const [showNewCiclo, setShowNewCiclo] = useState(false);
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
   const [newNome, setNewNome] = useState('');
   const [newInicio, setNewInicio] = useState('');
   const [newFim, setNewFim] = useState('');
@@ -133,7 +246,6 @@ export default function PlanejamentoCiclo() {
     [tickets, resolveSquad]
   );
 
-  // Filter option lists (derived from enrichedTickets)
   const statusOptions = useMemo(() => {
     const s = new Set();
     enrichedTickets.forEach(t => { if (t.status) s.add(t.status); });
@@ -141,10 +253,7 @@ export default function PlanejamentoCiclo() {
   }, [enrichedTickets]);
 
   const squadOptions = useMemo(() => {
-    return squads
-      .map(s => s.name)
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return squads.map(s => s.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [squads]);
 
   const prioridadeOptions = useMemo(() => {
@@ -165,7 +274,6 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [enrichedTickets]);
 
-  // Apply all global filters
   const filteredTickets = useMemo(() => enrichedTickets.filter(t => {
     if (escopoFilter.size > 0 && !escopoFilter.has(t.escopo)) return false;
     if (squadFilter.size > 0 && !squadFilter.has(t._resolvedSquad || '')) return false;
@@ -200,7 +308,6 @@ export default function PlanejamentoCiclo() {
     return filteredTickets.filter(t => keys.has(t.issueKey || t.id));
   }, [filteredTickets]);
 
-  // Mutations
   const trackCicloOnTicket = useCallback(async (ticketKey, cicloId) => {
     const ciclo = ciclos.find(c => c.id === cicloId);
     if (!ciclo) return;
@@ -210,9 +317,7 @@ export default function PlanejamentoCiclo() {
     try {
       await updateDoc(doc(db, TICKETS_GLOBAL, t.id), { ciclos: arrayUnion(entry) });
       setTickets(prev => prev.map(x =>
-        x.id === t.id
-          ? { ...x, ciclos: [...(Array.isArray(x.ciclos) ? x.ciclos : []), entry] }
-          : x
+        x.id === t.id ? { ...x, ciclos: [...(Array.isArray(x.ciclos) ? x.ciclos : []), entry] } : x
       ));
     } catch (e) { console.error('trackCicloOnTicket:', e); }
   }, [ciclos, tickets]);
@@ -255,7 +360,6 @@ export default function PlanejamentoCiclo() {
       const oldValue = t[field] ?? null;
       const newValue = value ?? null;
       await updateDoc(doc(db, TICKETS_GLOBAL, t.id), { [field]: value });
-      // Registrar log de replanejamento para datas internas
       if (DATE_FIELDS_TO_LOG.has(field) && oldValue !== newValue) {
         await addDoc(collection(db, TICKETS_GLOBAL, t.id, 'replanningLog'), {
           issueKey: t.issueKey || t.id,
@@ -284,17 +388,31 @@ export default function PlanejamentoCiclo() {
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Planejamento de Ciclos</h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--gray-10)' }}>Organize tickets em ciclos de entrega</p>
         </div>
-        <button
-          onClick={() => setShowNewCiclo(v => !v)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'var(--indigo-9)', color: '#fff',
-            border: 'none', borderRadius: 8, padding: '8px 16px',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}
-        >
-          <Plus size={15} /> Novo Ciclo
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => setShowWorkflowModal(true)}
+            title="Ver workflow de demandas"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'var(--gray-3)', color: 'var(--gray-10)',
+              border: '1px solid var(--gray-5)', borderRadius: 8, padding: '8px 14px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            <HelpCircle size={15} /> Workflow
+          </button>
+          <button
+            onClick={() => setShowNewCiclo(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'var(--indigo-9)', color: '#fff',
+              border: 'none', borderRadius: 8, padding: '8px 16px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            <Plus size={15} /> Novo Ciclo
+          </button>
+        </div>
       </div>
 
       {/* ── New ciclo form ───────────────────────────────────────────── */}
@@ -350,98 +468,39 @@ export default function PlanejamentoCiclo() {
           )}
         </span>
 
-        {/* Escopo (multi) */}
-        <MultiSelectFilter
-          options={ESCOPOS_ALVO}
-          selected={escopoFilter}
-          onChange={setEscopoFilter}
-          placeholder="Todos os escopos"
-          maxWidth={180}
-        />
+        <MultiSelectFilter options={ESCOPOS_ALVO} selected={escopoFilter} onChange={setEscopoFilter} placeholder="Todos os escopos" maxWidth={180} />
+        <MultiSelectFilter options={squadOptions} selected={squadFilter} onChange={setSquadFilter} placeholder="Todas as squads" maxWidth={180} />
+        <MultiSelectFilter options={statusOptions} selected={statusFilter} onChange={setStatusFilter} placeholder="Todos os status" maxWidth={200} />
+        <MultiSelectFilter options={prioridadeOptions} selected={prioridadeFilter} onChange={setPrioridadeFilter} placeholder="Todas as prioridades" maxWidth={180} />
+        <MultiSelectFilter options={respDevOptions} selected={respDevFilter} onChange={setRespDevFilter} placeholder="Resp. Desenvolvimento" maxWidth={200} />
+        <MultiSelectFilter options={respTesteOptions} selected={respTesteFilter} onChange={setRespTesteFilter} placeholder="Resp. Teste Interno" maxWidth={190} />
 
-        {/* Squad (multi) */}
-        <MultiSelectFilter
-          options={squadOptions}
-          selected={squadFilter}
-          onChange={setSquadFilter}
-          placeholder="Todas as squads"
-          maxWidth={180}
-        />
-
-        {/* Status (multi-select) */}
-        <MultiSelectFilter
-          options={statusOptions}
-          selected={statusFilter}
-          onChange={setStatusFilter}
-          placeholder="Todos os status"
-          maxWidth={200}
-        />
-
-        {/* Prioridade Interna (multi) */}
-        <MultiSelectFilter
-          options={prioridadeOptions}
-          selected={prioridadeFilter}
-          onChange={setPrioridadeFilter}
-          placeholder="Todas as prioridades"
-          maxWidth={180}
-        />
-
-        {/* Resp. Desenvolvimento (multi) */}
-        <MultiSelectFilter
-          options={respDevOptions}
-          selected={respDevFilter}
-          onChange={setRespDevFilter}
-          placeholder="Resp. Desenvolvimento"
-          maxWidth={200}
-        />
-
-        {/* Resp. Teste Interno (multi) */}
-        <MultiSelectFilter
-          options={respTesteOptions}
-          selected={respTesteFilter}
-          onChange={setRespTesteFilter}
-          placeholder="Resp. Teste Interno"
-          maxWidth={190}
-        />
-
-        {/* Data a exibir */}
         <select value={dateField} onChange={e => setDateField(e.target.value)} style={{ ...sel, maxWidth: 180 }}>
           {DATE_FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
-        {/* Toggle Impedimento */}
-        <label
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',
-            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
-            padding: '3px 8px',
-            border: `1px solid ${impedimentoFilter ? '#ca8a04' : 'var(--gray-5)'}`,
-            borderRadius: 6,
-            background: impedimentoFilter ? 'rgba(251,191,36,0.1)' : 'var(--gray-2)',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={impedimentoFilter}
-            onChange={e => setImpedimentoFilter(e.target.checked)}
-            style={{ accentColor: '#eab308', width: 12, height: 12 }}
-          />
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',
+          cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+          padding: '3px 8px',
+          border: `1px solid ${impedimentoFilter ? '#ca8a04' : 'var(--gray-5)'}`,
+          borderRadius: 6,
+          background: impedimentoFilter ? 'rgba(251,191,36,0.1)' : 'var(--gray-2)',
+        }}>
+          <input type="checkbox" checked={impedimentoFilter} onChange={e => setImpedimentoFilter(e.target.checked)} style={{ accentColor: '#eab308', width: 12, height: 12 }} />
           🚧 Impedidos
         </label>
 
-        {/* Toggle Estimativa Interna */}
-        <label
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 12, color: showEstimativa ? 'var(--indigo-11)' : 'var(--gray-10)',
-            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
-            padding: '3px 8px',
-            border: `1px solid ${showEstimativa ? 'var(--indigo-8)' : 'var(--gray-5)'}`,
-            borderRadius: 6,
-            background: showEstimativa ? 'rgba(99,102,241,0.08)' : 'var(--gray-2)',
-          }}
-        >
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          fontSize: 12, color: showEstimativa ? 'var(--indigo-11)' : 'var(--gray-10)',
+          cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+          padding: '3px 8px',
+          border: `1px solid ${showEstimativa ? 'var(--indigo-8)' : 'var(--gray-5)'}`,
+          borderRadius: 6,
+          background: showEstimativa ? 'rgba(99,102,241,0.08)' : 'var(--gray-2)',
+        }}>
           <input
             type="checkbox"
             checked={showEstimativa}
@@ -454,13 +513,7 @@ export default function PlanejamentoCiclo() {
           ⏱ Est. Interna
         </label>
 
-        {/* Search */}
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar…"
-          style={{ ...sel, maxWidth: 180, padding: '4px 10px' }}
-        />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…" style={{ ...sel, maxWidth: 180, padding: '4px 10px' }} />
 
         {activeFilters > 0 && (
           <button
@@ -549,6 +602,9 @@ export default function PlanejamentoCiclo() {
           )}
         </div>
       )}
+
+      {/* ── Workflow modal ───────────────────────────────────────────── */}
+      {showWorkflowModal && <WorkflowModal onClose={() => setShowWorkflowModal(false)} />}
 
       {/* ── Ticket detail modal ──────────────────────────────────────── */}
       {selectedTicket && (
