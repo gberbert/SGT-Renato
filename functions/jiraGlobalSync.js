@@ -621,30 +621,31 @@ async function finalizeOperacaoStats(runRef, run) {
   );
 }
 
+const JQL_CONFIGS = "jql_configs";
+
 /**
- * Carrega os batches de JQL aplicando overrides da collection `jql_overrides`.
- * Se um documento existir nessa collection para um dado escopoId, sua JQL prevalece.
- * Fallback transparente: se a leitura falhar ou a collection estiver vazia,
- * usa as JQLs do arquivo functions/data/jqls_carga.txt.
+ * Carrega os batches de JQL da collection `jql_configs` (fonte primária).
+ * Auto-seed: se a collection estiver vazia, popula a partir de jqls_carga.txt.
+ * Fallback transparente: se a leitura falhar, usa as JQLs do arquivo.
  */
 async function loadJqlBatchesWithOverrides() {
   const baseBatches = loadJqlBatches(); // sempre carrega do arquivo como fallback
   try {
     const db = getDb();
-    const snap = await db.collection("jql_overrides").get();
+    const snap = await db.collection(JQL_CONFIGS).get();
 
     // Auto-seed: se a collection estiver vazia, popula com as JQLs do arquivo
     if (snap.empty) {
-      console.log("[jiraGlobalSync] jql_overrides vazia — semeando com JQLs do arquivo...");
+      console.log("[jiraGlobalSync] jql_configs vazia — semeando com JQLs do arquivo...");
       const writeBatch = db.batch();
       for (const batch of baseBatches) {
-        const ref = db.collection("jql_overrides").doc(batch.escopoId);
+        const ref = db.collection(JQL_CONFIGS).doc(batch.escopoId);
         writeBatch.set(ref, {
           escopoId:    batch.escopoId,
           escopo:      batch.escopo,
           label:       batch.label,
           jql:         batch.jql,
-          originalJql: batch.jql,
+          jqlOriginal: batch.jql,
           ativo:       true,
           updatedAt:   FieldValue.serverTimestamp(),
           updatedBy:   "auto-seed",
@@ -652,32 +653,54 @@ async function loadJqlBatchesWithOverrides() {
         }, { merge: true });
       }
       await writeBatch.commit();
-      console.log(`[jiraGlobalSync] ${baseBatches.length} JQLs semeadas em jql_overrides`);
+      console.log(`[jiraGlobalSync] ${baseBatches.length} JQLs semeadas em ${JQL_CONFIGS}`);
       return baseBatches;
     }
 
-    const overridesMap = {};
+    // Monta mapa escopoId → dados do Firestore
+    const configsMap = {};
     snap.forEach((doc) => {
       const data = doc.data();
       if (data.escopoId && data.jql && data.ativo !== false) {
-        overridesMap[data.escopoId] = data.jql;
+        configsMap[data.escopoId] = data.jql;
       }
     });
 
     return baseBatches.map((batch) => {
-      const override = overridesMap[batch.escopoId];
-      return override ? { ...batch, jql: override } : batch;
+      const jqlFromFirestore = configsMap[batch.escopoId];
+      return jqlFromFirestore ? { ...batch, jql: jqlFromFirestore } : batch;
     });
   } catch (e) {
-    console.warn("[jiraGlobalSync] Falha ao carregar jql_overrides — usando JQLs do arquivo:", e.message);
+    console.warn(`[jiraGlobalSync] Falha ao carregar ${JQL_CONFIGS} — usando JQLs do arquivo:`, e.message);
     return baseBatches;
   }
 }
 
+/**
+ * Salva (upsert) a JQL de um escopo específico na collection jql_configs.
+ */
+async function saveJqlConfig({ escopoId, jql, updatedBy, description }) {
+  const db = getDb();
+  const ref = db.collection(JQL_CONFIGS).doc(escopoId);
+  await ref.set({
+    jql,
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: updatedBy || "manual",
+    ...(description != null ? { description } : {}),
+  }, { merge: true });
+}
+
+/**
+ * Lista todos os documentos da collection jql_configs.
+ */
+async function listJqlConfigs() {
+  const db = getDb();
+  const snap = await db.collection(JQL_CONFIGS).get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 async function previewCarga() {
   const batches = await loadJqlBatchesWithOverrides();
-  const combinedJql = buildCombinedOrJql(batches);
-  const uniqueTotal = await getApproxCount(combinedJql);
 
   const batchResults = [];
   for (const batch of batches) {
@@ -693,6 +716,7 @@ async function previewCarga() {
   }
 
   const totalRaw = batchResults.reduce((sum, b) => sum + b.total, 0);
+  const uniqueTotal = totalRaw; // soma dos escopos individuais (sem JQL combinado)
 
   // Amostra de changelog: busca 10 tickets do primeiro lote para validar coleta de change status
   let changelogSample = { sampleSize: 0, statusChangesFound: 0, avgPerTicket: 0 };
@@ -726,6 +750,7 @@ async function previewCarga() {
       recommendedDocSizeKb: "1-3",
       syncStrategy: "GET_with_changelog_expand",
       dashboardReads: "operacao_stats/summary (1 doc)",
+      countNote: "total é soma dos escopos individuais; pode haver duplicatas entre escopos",
     },
   };
 }
@@ -744,8 +769,14 @@ async function getJqlConfig() {
   };
 }
 
-async function createSyncRun({ startedBy, totalEstimated }) {
-  const batches = await loadJqlBatchesWithOverrides();
+async function createSyncRun({ startedBy, totalEstimated, escopoIds }) {
+  const allBatches = await loadJqlBatchesWithOverrides();
+  const batches =
+    Array.isArray(escopoIds) && escopoIds.length > 0
+      ? allBatches.filter(
+          (b) => escopoIds.includes(b.escopoId) || escopoIds.includes(b.escopo)
+        )
+      : allBatches;
   await seedEscopos();
 
   const db = getDb();
@@ -1187,4 +1218,6 @@ module.exports = {
   seedEscopos,
   getApproxCount,
   searchOperacaoIssues,
+  saveJqlConfig,
+  listJqlConfigs,
 };

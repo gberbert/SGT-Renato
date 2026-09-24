@@ -141,18 +141,23 @@ function fixProblemasJql(jql) {
   return `${wrapJqlClause(left)} OR ${wrapJqlClause(right)}`;
 }
 
-function fixDemandasJql(jql) {
-  if (jql.startsWith("((")) return jql;
-  const match = jql.match(/\)\s*OR\s*\(/i);
-  if (match) {
-    let left = jql.slice(0, match.index + 1).trim();
-    let right = jql.slice(match.index + 1).replace(/^\s*OR\s*/i, "").trim();
-    if (left.startsWith("(")) left = left.slice(1).trim();
-    if (right.startsWith("(") && right.endsWith(")")) right = right.slice(1, -1).trim();
-    return `((${left}) OR (${right}))`;
+function isFullyWrapped(jql) {
+  const trimmed = jql.trim();
+  if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) return false;
+  let depth = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    if (trimmed[i] === "(") depth++;
+    if (trimmed[i] === ")") depth--;
+    if (depth === 0 && i < trimmed.length - 1) return false;
   }
-  if (!jql.startsWith("(")) return `(${jql})`;
-  return jql;
+  return depth === 0;
+}
+
+function fixDemandasJql(jql) {
+  // Se já está totalmente envolvido em parênteses externos, não faz nada
+  if (isFullyWrapped(jql)) return jql;
+  // Caso contrário, envolve o JQL inteiro em parênteses
+  return `(${jql})`;
 }
 
 function readJqlCargaFile(filePath) {
