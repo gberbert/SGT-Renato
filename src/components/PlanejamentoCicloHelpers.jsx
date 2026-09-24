@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar } from 'lucide-react';
 import { updateCiclo, deleteCiclo } from '../services/cicloService';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
@@ -26,7 +26,25 @@ export function getStatusColor(s) {
   return '#6b7280';
 }
 
-export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick }) {
+export const DATE_FIELD_OPTIONS = [
+  { value: 'none', label: 'Nenhuma data' },
+  { value: 'dataFimDesenvolvimento', label: 'Fim Desenvolvimento' },
+  { value: 'dataFimTesteInterno', label: 'Fim Teste Interno' },
+  { value: 'dataFimTesteQa', label: 'Fim Teste (QA)' },
+  { value: 'dataFimHomologacao', label: 'Fim Homologação' },
+  { value: 'dataConclusao', label: 'Conclusão' },
+];
+
+function fmtDateShort(val) {
+  if (!val) return null;
+  const s = String(val);
+  // ISO yyyy-mm-dd or yyyy-mm-ddTHH...
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return s;
+}
+
+export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField }) {
   const [open, setOpen] = useState(false);
   const em = ESCOPO_META[ticket.escopo] || { color: '#6b7280', short: (ticket.escopo || '?').slice(0, 4) };
   const sc = getStatusColor(ticket.status);
@@ -64,6 +82,27 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
           ⏱ {ticket.estimativaInterna}
         </span>
       )}
+      {dateField && dateField !== 'none' && (() => {
+        const dateVal = ticket[dateField];
+        const label = DATE_FIELD_OPTIONS.find(o => o.value === dateField)?.label || dateField;
+        return (
+          <span
+            title={`${label}: ${dateVal || '—'}`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 3,
+              fontSize: 11, fontWeight: 600,
+              padding: '2px 8px', borderRadius: 12,
+              background: dateVal ? 'rgba(251,191,36,0.12)' : 'rgba(107,114,128,0.1)',
+              color: dateVal ? '#fbbf24' : 'var(--gray-8)',
+              border: `1px solid ${dateVal ? 'rgba(251,191,36,0.35)' : 'var(--gray-5)'}`,
+              flexShrink: 0, whiteSpace: 'nowrap',
+            }}
+          >
+            <Calendar size={10} />
+            {fmtDateShort(dateVal) || '—'}
+          </span>
+        );
+      })()}
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <button
           onClick={() => setOpen(!open)}
@@ -105,7 +144,7 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
   );
 }
 
-export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveToBacklog, onTicketClick }) {
+export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editNome, setEditNome] = useState(ciclo.nome);
@@ -157,6 +196,15 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
             )}
             <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: meta.color + '22', color: meta.color }}>{meta.label}</span>
             <span style={{ fontSize: 12, color: 'var(--gray-10)' }}>({tickets.length} tickets)</span>
+            {(() => {
+              const total = tickets.reduce((acc, t) => acc + (Number(t.estimativaInterna) || 0), 0);
+              if (!total) return null;
+              return (
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', marginLeft: 2 }}>
+                  ⏱ {total}h
+                </span>
+              );
+            })()}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
@@ -205,6 +253,7 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
                 onMoveToCiclo={destId => onMoveToCiclo(t, ciclo.id, destId)}
                 onMoveToBacklog={() => onMoveToBacklog(t, ciclo.id)}
                 onTicketClick={onTicketClick}
+                dateField={dateField}
               />
             ))
           )}

@@ -7,7 +7,7 @@ import { db } from '../firebase';
 import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
 import { Plus, ChevronDown, ChevronRight, Filter } from 'lucide-react';
-import { CicloSection, TicketRow, ESCOPOS_ALVO } from './PlanejamentoCicloHelpers';
+import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
@@ -38,6 +38,7 @@ export default function PlanejamentoCiclo() {
   const [prioridadeFilter, setPrioridadeFilter] = useState('all');
   const [respDevFilter, setRespDevFilter] = useState('all');
   const [respTesteFilter, setRespTesteFilter] = useState('all');
+  const [dateField, setDateField] = useState('none');
 
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
   const [showNewCiclo, setShowNewCiclo] = useState(false);
@@ -350,6 +351,11 @@ export default function PlanejamentoCiclo() {
           {respTesteOptions.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
 
+        {/* Data a exibir */}
+        <select value={dateField} onChange={e => setDateField(e.target.value)} style={{ ...sel, maxWidth: 180 }}>
+          {DATE_FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+
         {/* Search */}
         <input
           value={search}
@@ -383,6 +389,7 @@ export default function PlanejamentoCiclo() {
           onMoveToCiclo={(ticket, fromId, destId) => handleMoveToCiclo(ticket, fromId, destId)}
           onMoveToBacklog={(ticket, cicloId) => handleMoveToBacklog(ticket, cicloId)}
           onTicketClick={setSelectedTicket}
+          dateField={dateField}
         />
       ))}
 
@@ -407,6 +414,15 @@ export default function PlanejamentoCiclo() {
             <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'var(--gray-5)', color: 'var(--gray-11)' }}>
               {backlogTickets.length} tickets
             </span>
+            {(() => {
+              const total = backlogTickets.reduce((acc, t) => acc + (Number(t.estimativaInterna) || 0), 0);
+              if (!total) return null;
+              return (
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', marginLeft: 2 }}>
+                  ⏱ {total}h
+                </span>
+              );
+            })()}
           </div>
 
           {!backlogCollapsed && (
@@ -425,6 +441,7 @@ export default function PlanejamentoCiclo() {
                     onMoveToCiclo={destId => handleMoveFromBacklog(t.issueKey || t.id, destId)}
                     onMoveToBacklog={() => {}}
                     onTicketClick={setSelectedTicket}
+                    dateField={dateField}
                   />
                 ))
               )}
