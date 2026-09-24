@@ -15,9 +15,13 @@ AND "demanda fast[dropdown]" = Sim
 CONSULTA 3 DEMANDAS 
 (issuetype = História
 AND project = SUST
-AND "torre de atuação da demanda[dropdown]" IN ( "ADM & LEGADOS", BI, "SISTEMAS WEB")
+AND "torre de atuação da demanda[dropdown]" IN ("ADM & LEGADOS", BI, "SISTEMAS WEB", "CANAIS DIGITAIS")
+AND "empresa[dropdown]" = "NTT DATA"
+AND status NOT IN (Cancelada, Concluída))
 OR (project IN (DEMANDA, SUST)
 AND "torre de atuação da demanda[dropdown]" IN ("CANAIS DIGITAIS", "SISTEMAS CORPORATIVOS")
+AND "empresa[dropdown]" IN ("GLOBAL NTT", "NTT DATA", "NTT Ltda", empty)
+AND status NOT IN (Cancelada, Concluída, Fechado, "Não Aplicável")
 AND type = Solicitação)
 
 CONSULTA 4 INCIDENTES
