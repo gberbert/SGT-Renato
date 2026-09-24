@@ -2077,8 +2077,6 @@ const OperacaoHome = ({ userRole }) => {
                           <col className="col-date" />
                           <col className="col-date" />
                           <col className="col-date" />
-                          <col className="col-date" />
-                          <col className="col-date" />
                         </colgroup>
                         <thead>
                           <tr>
@@ -2095,8 +2093,6 @@ const OperacaoHome = ({ userRole }) => {
                             <th>EST. TOTAL</th>
                             <th>DESENVOLVIMENTO</th>
                             <th>TESTE INTERNO</th>
-                            <th>TESTE (QA)</th>
-                            <th>HOMOLOGAÇÃO</th>
                             <th>PRODUÇÃO</th>
                           </tr>
                         </thead>
@@ -2221,8 +2217,6 @@ const OperacaoHome = ({ userRole }) => {
                               </td>
                               <td>{fmtDate(ticket.dataFimDesenvolvimento)}</td>
                               <td>{fmtDate(ticket.dataFimTesteInterno)}</td>
-                              <td>{fmtDate(ticket.dataFimTesteQa)}</td>
-                              <td>{fmtDate(ticket.dataFimHomologacao)}</td>
                               <td>{fmtDate(ticket.dataConclusao)}</td>
                             </tr>
                           ))}

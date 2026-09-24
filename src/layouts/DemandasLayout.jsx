@@ -13,7 +13,7 @@ import RunMigration from '../components/RunMigration';
 import Specifications from '../components/Specifications';
 import TechSpecs from '../components/TechSpecs';
 import TShirts from '../components/TShirts';
-import CapacityPlanning from '../components/CapacityPlanning';
+import PlanejamentoLayout from '../components/PlanejamentoLayout';
 import MyActivities from '../components/MyActivities';
 import HelpFlow from '../components/HelpFlow';
 import TicketDetailsModal from '../components/TicketDetailsModal';
@@ -111,7 +111,7 @@ const DemandasLayout = ({
             <Route path="/projetos/:projectId" element={<ProjectDetails userRole={userRole} />} />
             <Route path="/ajuda" element={<HelpFlow />} />
             <Route path="/configuracoes" element={userRole === 'admin' ? <Settings userRole={userRole} /> : <Navigate to="/" replace />} />
-            <Route path="/planejamento" element={(userRole === 'admin' || userRole === 'squad_leader') ? <CapacityPlanning userRole={userRole} /> : <Navigate to="/" replace />} />
+            <Route path="/planejamento" element={(userRole === 'admin' || userRole === 'squad_leader') ? <PlanejamentoLayout userRole={userRole} /> : <Navigate to="/" replace />} />
             <Route path="/secops/permissions" element={<SecopsPermissionsLayout userRole={userRole} />} />
             <Route path="/team" element={<Team userRole={userRole} />} />
             <Route path="/organograma" element={<Organograma userRole={userRole} />} />

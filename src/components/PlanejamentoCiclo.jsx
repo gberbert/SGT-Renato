@@ -120,10 +120,11 @@ export default function PlanejamentoCiclo() {
   }, [enrichedTickets]);
 
   const squadOptions = useMemo(() => {
-    const names = new Set(squads.map(s => s.name).filter(Boolean));
-    enrichedTickets.forEach(t => { if (t._resolvedSquad) names.add(t._resolvedSquad); });
-    return [...names].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [squads, enrichedTickets]);
+    return squads
+      .map(s => s.name)
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [squads]);
 
   const prioridadeOptions = useMemo(() => {
     const s = new Set();
@@ -436,8 +437,9 @@ export default function PlanejamentoCiclo() {
       {selectedTicket && (
         <DemandaDetailsModal
           ticket={selectedTicket}
+          mode="edit"
           onClose={() => setSelectedTicket(null)}
-          onSaveField={handleSaveField}
+          onSave={handleSaveField}
         />
       )}
     </div>
