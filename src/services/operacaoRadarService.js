@@ -728,6 +728,10 @@ const data = d.data();
     estimativaInterna: data.estimativaInterna ?? null,
     ciclo: data.ciclo || null,
     ciclos: Array.isArray(data.ciclos) ? data.ciclos : [],
+    responsavelDesenvolvimento: data.responsavelDesenvolvimento || null,
+    responsavelTesteInterno: data.responsavelTesteInterno || null,
+    naturezaOperacao: data.naturezaOperacao || data.naturezaIniciativa || '',
+    observacao: data.observacao || '',
   };
 }
 
@@ -773,6 +777,8 @@ export async function updateTicketRadarFields(issueKey, patch) {
     payload.estimativaInterna = Number.isFinite(numeric) ? numeric : null;
   }
   if ('ciclo' in patch) payload.ciclo = patch.ciclo || null;
+  if ('responsavelDesenvolvimento' in patch) payload.responsavelDesenvolvimento = patch.responsavelDesenvolvimento || null;
+  if ('responsavelTesteInterno' in patch) payload.responsavelTesteInterno = patch.responsavelTesteInterno || null;
 
   const SGT_DATE_FIELDS = [
     'dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa',
