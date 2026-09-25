@@ -6,8 +6,8 @@ import {
 import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
-import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X } from 'lucide-react';
-import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter } from './PlanejamentoCicloHelpers';
+import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download } from 'lucide-react';
+import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
@@ -40,27 +40,59 @@ const sel = {
 };
 
 const WORKFLOW_STEPS = [
-  { id: 1,  status: 'Aguardando Aprovação Gestor Imediato', fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
-  { id: 2,  status: 'Escrita de Requerimento',              fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
-  { id: 3,  status: 'Validação Comitê',                     fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
-  { id: 4,  status: 'Aguardando Solicitante',               fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
-  { id: 5,  status: 'Detalhamento de Requisitos',           fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
-  { id: 6,  status: 'Aguardando Profissional de TI',        fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
-  { id: 7,  status: 'Aguardando Demanda/Projeto',           fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
-  { id: 8,  status: 'Revisão de Requisitos de Projeto',     fila: 'CPFL Previsto', escopo: 'Demanda em andamento' },
+  { id: 1,  status: 'Aguardando Aprovação Gestor Imediato', fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
+  { id: 2,  status: 'Escrita de Requerimento',              fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
+  { id: 3,  status: 'Validação Comitê',                     fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
+  { id: 4,  status: 'Aguardando Solicitante',               fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
+  { id: 5,  status: 'Detalhamento de Requisitos',           fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
+  { id: 6,  status: 'Aguardando Profissional de TI',        fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
+  { id: 7,  status: 'Aguardando Demanda/Projeto',           fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
+  { id: 8,  status: 'Revisão de Requisitos de Projeto',     fila: 'CPFL Prevista', escopo: 'Demanda em andamento' },
   { id: 9,  status: 'Análise e T-Shirt',                    fila: 'NTT Data',      escopo: 'Precificação ativa' },
   { id: 10, status: 'Aguardando Análise Técnica',           fila: 'CPFL',          escopo: 'Precificação ativa' },
   { id: 11, status: 'Aguardando Aprovação T-Shirt',         fila: 'CPFL',          escopo: 'Precificação ativa' },
   { id: 12, status: 'Planejamento',                         fila: 'NTT Data',      escopo: 'SLA em dias úteis' },
   { id: 13, status: 'Aprovação de Planejamento',            fila: 'CPFL',          escopo: 'Planejamento' },
-  { id: 14, status: 'Execução',                             fila: 'NTT Data',      escopo: 'Demanda em execução' },
-  { id: 15, status: 'Teste (QA)',                           fila: 'CPFL',          escopo: 'Demanda a ser testada' },
-  { id: 16, status: 'Em homologação',                       fila: 'NTT Data',      escopo: 'Homologação' },
-  { id: 17, status: 'Revisão de homologação',               fila: 'CPFL',          escopo: 'Homologação' },
-  { id: 18, status: 'Etapa de KT',                          fila: 'NTT Data',      escopo: 'Homologação' },
-  { id: 19, status: 'Aguardando Mudança',                   fila: 'CPFL',          escopo: 'Homologação' },
-  { id: 20, status: 'Concluída',                            fila: 'CPFL',          escopo: 'Concluída' },
+  { id: 14, status: 'Aguardando Planejamento',              fila: 'CPFL Prevista', escopo: 'Planejamento' },
+  { id: 15, status: 'Em Execução',                          fila: 'NTT Data',      escopo: 'Demanda em execução' },
+  { id: 16, status: 'Em Teste',                             fila: 'CPFL',          escopo: 'Demanda a ser testada' },
+  { id: 17, status: 'Em homologação',                       fila: 'CPFL',          escopo: 'Homologação' },
+  { id: 18, status: 'Revisão de homologação',               fila: 'NTT Data',      escopo: 'Homologação' },
+  { id: 19, status: 'Etapa de KT',                          fila: 'NTT Data',      escopo: 'Homologação' },
+  { id: 20, status: 'Aguardando Mudança',                   fila: 'NTT Data',      escopo: 'Homologação' },
+  { id: 21, status: 'Concluída',                            fila: 'CPFL',          escopo: 'Concluída' },
 ];
+
+// Mapa de status por fila
+const FILA_STATUS_MAP = {
+  'CPFL Prevista': [
+    'Aguardando Aprovação Gestor Imediato',
+    'Escrita de Requerimento',
+    'Validação Comitê',
+    'Aguardando Solicitante',
+    'Detalhamento de Requisitos',
+    'Aguardando Profissional de TI',
+    'Aguardando Demanda/Projeto',
+    'Revisão de Requisitos de Projeto',
+    'Aguardando Planejamento',
+  ],
+  'NTT Data': [
+    'Análise e T-Shirt',
+    'Planejamento',
+    'Em Execução',
+    'Revisão de homologação',
+    'Aguardando Mudança',
+    'Etapa de KT',
+  ],
+  'CPFL': [
+    'Aguardando Análise Técnica',
+    'Aguardando Aprovação T-Shirt',
+    'Aprovação de Planejamento',
+    'Em Teste',
+    'Em homologação',
+    'Concluída',
+  ],
+};
 
 function FilaTag({ fila }) {
   const isNTT = fila === 'NTT Data';
@@ -162,6 +194,7 @@ export default function PlanejamentoCiclo() {
   const [search, setSearch] = useState('');
   const [escopoFilter, setEscopoFilter] = useState(new Set());
   const [squadFilter, setSquadFilter] = useState(new Set());
+  const [filaFilter, setFilaFilter] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(new Set());
   const [prioridadeFilter, setPrioridadeFilter] = useState(new Set());
   const [respDevFilter, setRespDevFilter] = useState(new Set());
@@ -274,6 +307,28 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [enrichedTickets]);
 
+  const handleFilaFilterChange = useCallback((newFilaSelection) => {
+    setFilaFilter(newFilaSelection);
+    const newStatusSelection = new Set();
+    newFilaSelection.forEach(fila => {
+      const statusesForFila = FILA_STATUS_MAP[fila] || [];
+      statusesForFila.forEach(status => newStatusSelection.add(status));
+    });
+    setStatusFilter(newStatusSelection);
+  }, []);
+
+  const handleStatusFilterChange = useCallback((newStatusSelection) => {
+    setStatusFilter(newStatusSelection);
+    const filaSet = new Set();
+    Object.entries(FILA_STATUS_MAP).forEach(([fila, statuses]) => {
+      const hasAllStatus = statuses.every(s => newStatusSelection.has(s));
+      if (hasAllStatus) {
+        filaSet.add(fila);
+      }
+    });
+    setFilaFilter(filaSet);
+  }, []);
+
   const filteredTickets = useMemo(() => enrichedTickets.filter(t => {
     if (escopoFilter.size > 0 && !escopoFilter.has(t.escopo)) return false;
     if (squadFilter.size > 0 && !squadFilter.has(t._resolvedSquad || '')) return false;
@@ -376,7 +431,7 @@ export default function PlanejamentoCiclo() {
     } catch (e) { console.error(e); }
   }, [tickets]);
 
-  const activeFilters = [escopoFilter, squadFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter]
+  const activeFilters = [escopoFilter, squadFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0);
 
   return (
@@ -389,6 +444,21 @@ export default function PlanejamentoCiclo() {
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--gray-10)' }}>Organize tickets em ciclos de entrega</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => {
+              const filename = `tickets_planejamento_${new Date().toISOString().slice(0, 10)}.xlsx`;
+              exportTicketsToXlsx(filteredTickets, filename);
+            }}
+            title="Exportar tickets filtrados em XLSX"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'var(--gray-3)', color: 'var(--gray-10)',
+              border: '1px solid var(--gray-5)', borderRadius: 8, padding: '8px 14px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            <Download size={15} /> Exportar XLSX
+          </button>
           <button
             onClick={() => setShowWorkflowModal(true)}
             title="Ver workflow de demandas"
@@ -470,7 +540,8 @@ export default function PlanejamentoCiclo() {
 
         <MultiSelectFilter options={ESCOPOS_ALVO} selected={escopoFilter} onChange={setEscopoFilter} placeholder="Todos os escopos" maxWidth={180} />
         <MultiSelectFilter options={squadOptions} selected={squadFilter} onChange={setSquadFilter} placeholder="Todas as squads" maxWidth={180} />
-        <MultiSelectFilter options={statusOptions} selected={statusFilter} onChange={setStatusFilter} placeholder="Todos os status" maxWidth={200} />
+        <MultiSelectFilter options={Object.keys(FILA_STATUS_MAP)} selected={filaFilter} onChange={handleFilaFilterChange} placeholder="Todas as filas" maxWidth={140} />
+        <MultiSelectFilter options={statusOptions} selected={statusFilter} onChange={handleStatusFilterChange} placeholder="Todos os status" maxWidth={200} />
         <MultiSelectFilter options={prioridadeOptions} selected={prioridadeFilter} onChange={setPrioridadeFilter} placeholder="Todas as prioridades" maxWidth={180} />
         <MultiSelectFilter options={respDevOptions} selected={respDevFilter} onChange={setRespDevFilter} placeholder="Resp. Desenvolvimento" maxWidth={200} />
         <MultiSelectFilter options={respTesteOptions} selected={respTesteFilter} onChange={setRespTesteFilter} placeholder="Resp. Teste Interno" maxWidth={190} />
@@ -517,7 +588,7 @@ export default function PlanejamentoCiclo() {
 
         {activeFilters > 0 && (
           <button
-            onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
+            onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
             style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)' }}
           >
             Limpar filtros

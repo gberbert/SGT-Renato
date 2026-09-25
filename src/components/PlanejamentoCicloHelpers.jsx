@@ -180,6 +180,131 @@ export const DATE_FIELD_OPTIONS = [
   { value: 'dataConclusao', label: 'Conclusão' },
 ];
 
+// Ordem de status para exportação (workflow das demandas)
+export const STATUS_EXPORT_ORDER = [
+  'Aguardando Aprovação Gestor Imediato',
+  'Escrita de Requerimento',
+  'Validação Comitê',
+  'Aguardando Solicitante',
+  'Detalhamento de Requisitos',
+  'Aguardando Profissional de TI',
+  'Aguardando Demanda/Projeto',
+  'Revisão de Requisitos de Projeto',
+  'Análise e T-Shirt',
+  'Aguardando Análise Técnica',
+  'Aguardando Aprovação T-Shirt',
+  'Planejamento',
+  'Aprovação de Planejamento',
+  'Aguardando Planejamento',
+  'Em Execução',
+  'Em Teste',
+  'Em homologação',
+  'Revisão de homologação',
+  'Etapa de KT',
+  'Aguardando Mudança',
+  'Concluída',
+];
+
+export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
+  if (!tickets || tickets.length === 0) {
+    alert('Nenhum ticket para exportar');
+    return;
+  }
+
+  // Importar XLSX dinamicamente
+  import('xlsx').then(({ utils: XLSXUtils, writeFile }) => {
+    // Criar mapa de status para ordenação
+    const statusIndexMap = {};
+    STATUS_EXPORT_ORDER.forEach((status, index) => {
+      statusIndexMap[status] = index;
+    });
+
+    // Ordenar tickets conforme a ordem de status
+    const sortedTickets = [...tickets].sort((a, b) => {
+      const statusA = a.status || '';
+      const statusB = b.status || '';
+      const orderA = statusIndexMap[statusA] ?? STATUS_EXPORT_ORDER.length;
+      const orderB = statusIndexMap[statusB] ?? STATUS_EXPORT_ORDER.length;
+      return orderA - orderB;
+    });
+
+    // Preparar dados para exportação
+    const data = sortedTickets.map(t => ({
+      'ISSUE_KEY': t.issueKey || t.id || '',
+      'SUMMARY': t.summary || '',
+      'Status': t.status || '',
+      'Estimativa Macro': t.estimativaMacro || '',
+      'Sistemas Impactados': t.sistemasImpactados || '',
+      'Squad': t._resolvedSquad || t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '',
+      'Prioridade': t.prioridadeInterna || '',
+      'Natureza da Iniciativa': t.naturezaIniciativa || '',
+      'Impedido?': t.impedimento ? 'Sim' : 'Não',
+      'Motivo Impedimento / Observação': t.motivoImpedimento || '',
+      'Observação': t.observacao || '',
+      'Estimativa Total': t.estimativaTotal || '',
+      'Data Fim Testes (NTT)': t.dataFimTesteInterno ? formatDateForExport(t.dataFimTesteInterno) : '',
+      'Data Conclusão (CPFL)': t.dataConclusao ? formatDateForExport(t.dataConclusao) : '',
+    }));
+
+    // Criar worksheet
+    const ws = XLSXUtils.json_to_sheet(data, {
+      header: [
+        'ISSUE_KEY',
+        'SUMMARY',
+        'Status',
+        'Estimativa Macro',
+        'Sistemas Impactados',
+        'Squad',
+        'Prioridade',
+        'Natureza da Iniciativa',
+        'Impedido?',
+        'Motivo Impedimento / Observação',
+        'Observação',
+        'Estimativa Total',
+        'Data Fim Testes (NTT)',
+        'Data Conclusão (CPFL)',
+      ],
+    });
+
+    // Configurar largura das colunas
+    ws['!cols'] = [
+      { wch: 15 }, // ISSUE_KEY
+      { wch: 40 }, // SUMMARY
+      { wch: 20 }, // Status
+      { wch: 18 }, // Estimativa Macro
+      { wch: 25 }, // Sistemas Impactados
+      { wch: 18 }, // Squad
+      { wch: 12 }, // Prioridade
+      { wch: 25 }, // Natureza da Iniciativa
+      { wch: 12 }, // Impedido?
+      { wch: 30 }, // Motivo Impedimento
+      { wch: 30 }, // Observação
+      { wch: 15 }, // Estimativa Total
+      { wch: 18 }, // Data Fim Testes (NTT)
+      { wch: 18 }, // Data Conclusão (CPFL)
+    ];
+
+    // Criar workbook
+    const wb = XLSXUtils.book_new();
+    XLSXUtils.book_append_sheet(wb, ws, 'Tickets');
+
+    // Exportar arquivo
+    writeFile(wb, filename);
+  }).catch(err => {
+    console.error('Erro ao exportar XLSX:', err);
+    alert('Erro ao exportar arquivo');
+  });
+}
+
+function formatDateForExport(dateStr) {
+  if (!dateStr) return '';
+  const s = String(dateStr);
+  // Converte yyyy-mm-dd ou yyyy-mm-ddTHH... para dd/mm/yyyy
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return s;
+}
+
 function fmtDateShort(val) {
   if (!val) return null;
   const s = String(val);

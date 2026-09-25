@@ -394,7 +394,11 @@ exports.searchJiraTickets = onCall({
     timeoutSeconds: 120,
     memory: "512MiB"
 }, async (request) => {
-    const payload = request.data || {};
+    // Desembrulha payload: pode vir como request.data ou request.data.data
+    let payload = request.data || {};
+    if (payload.data && typeof payload.data === 'object' && !payload.jql) {
+        payload = payload.data;
+    }
 
     if (payload.approximateCount === true) {
         if (!payload.jql) {

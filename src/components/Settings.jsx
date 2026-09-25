@@ -130,6 +130,9 @@ const Settings = ({ userRole = 'admin' }) => {
   const [loadingAi, setLoadingAi] = useState(true);
   const [savingAi, setSavingAi] = useState(false);
 
+  // Jira Operacao Inner Tab State
+  const [jiraOperacaoTab, setJiraOperacaoTab] = useState('config');
+
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
       setTicketTypes(data);
@@ -1250,11 +1253,20 @@ const Settings = ({ userRole = 'admin' }) => {
             </Tabs.Content>
 
             <Tabs.Content value="jiraOperacao">
-              {searchParams.get('jira') === 'carga' ? (
-                <OperacaoCarga userRole={userRole} embedded={true} />
-              ) : (
-                <OperacaoConfig userRole={userRole} embedded={true} />
-              )}
+              <Tabs.Root value={jiraOperacaoTab} onValueChange={setJiraOperacaoTab}>
+                <Tabs.List>
+                  <Tabs.Trigger value="config">Configuração</Tabs.Trigger>
+                  <Tabs.Trigger value="carga">Carga Jira</Tabs.Trigger>
+                </Tabs.List>
+                <Box pt="4">
+                  <Tabs.Content value="config">
+                    <OperacaoConfig userRole={userRole} embedded={true} />
+                  </Tabs.Content>
+                  <Tabs.Content value="carga">
+                    <OperacaoCarga userRole={userRole} embedded={true} />
+                  </Tabs.Content>
+                </Box>
+              </Tabs.Root>
             </Tabs.Content>
 
             <Tabs.Content value="auditoria">

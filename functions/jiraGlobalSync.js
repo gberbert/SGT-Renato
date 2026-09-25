@@ -163,7 +163,13 @@ function normalizeJqlForCombine(jql) {
 }
 
 function buildCombinedOrJql(batches) {
-  return batches
+  // Filtra apenas batches com JQL válido (não vazio/null)
+  const validBatches = batches.filter((b) => b.jql && typeof b.jql === 'string' && b.jql.trim());
+  if (validBatches.length === 0) {
+    console.warn("[buildCombinedOrJql] Nenhum JQL válido encontrado nos batches!");
+    return "";
+  }
+  return validBatches
     .map((b) => `(${normalizeJqlForCombine(b.jql)})`)
     .join(" OR ");
 }
@@ -620,88 +626,98 @@ async function finalizeOperacaoStats(runRef, run) {
   );
 }
 
-const JQL_CONFIGS = "jql_configs";
-
 /**
- * Carrega os batches de JQL exclusivamente da collection `jql_configs`.
- * Auto-seed: se a collection estiver vazia, popula a partir de JQLS_DEFAULT.
- * Os JQLs são editáveis pelo usuário via UI; o Firestore é a única fonte de verdade.
+ * Carrega os batches de JQL do documento `operacao_config/jql_overrides`.
+ * Fallback: se o documento não existe ou está vazio, usa JQLS_DEFAULT.
+ * Os JQLs são editáveis pelo usuário via UI (OperacaoConfig.jsx);
+ * o Firestore é a única fonte de verdade.
  */
 async function loadJqlBatchesWithOverrides() {
   try {
     const db = getDb();
-    const snap = await db.collection(JQL_CONFIGS).get();
+    const docRef = db.doc('operacao_config/jql_overrides');
+    const snap = await docRef.get();
 
-    // Auto-seed: se a collection estiver vazia, popula com as JQLs do arquivo
-    if (snap.empty) {
-      console.log("[jiraGlobalSync] jql_configs vazia — semeando com JQLS_DEFAULT...");
-      const writeBatch = db.batch();
-      for (const batch of JQLS_DEFAULT) {
-        const ref = db.collection(JQL_CONFIGS).doc(batch.escopoId);
-        writeBatch.set(ref, {
-          escopoId:    batch.escopoId,
-          escopo:      batch.escopo,
-          label:       batch.label,
-          jql:         batch.jql,
-          jqlOriginal: batch.jql,
-          ativo:       true,
-          updatedAt:   FieldValue.serverTimestamp(),
-          updatedBy:   "auto-seed",
-          description: "JQL semeada automaticamente na primeira execução",
-        }, { merge: true });
-      }
-      await writeBatch.commit();
-      console.log(`[jiraGlobalSync] ${JQLS_DEFAULT.length} JQLs semeadas em ${JQL_CONFIGS}`);
+    // Se o documento não existe ou está vazio, usa JQLS_DEFAULT
+    if (!snap.exists) {
+      console.log("[jiraGlobalSync] operacao_config/jql_overrides não encontrado — usando JQLS_DEFAULT...");
       return JQLS_DEFAULT;
     }
 
-    // Monta mapa escopoId → dados do Firestore
-    const configsMap = {};
-    snap.forEach((doc) => {
-      const data = doc.data();
-      if (data.escopoId && data.jql && data.ativo !== false) {
-        configsMap[data.escopoId] = data.jql;
+    const data = snap.data() || {};
+    
+    // Monta mapa escopoId → JQL do Firestore
+    const overridesMap = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value && typeof value === 'string') {
+        overridesMap[key] = value;
       }
-    });
+    }
 
+    // Se não há overrides, retorna JQLS_DEFAULT
+    if (Object.keys(overridesMap).length === 0) {
+      console.log("[jiraGlobalSync] operacao_config/jql_overrides vazio — usando JQLS_DEFAULT...");
+      return JQLS_DEFAULT;
+    }
+
+    // Substitui JQL de cada escopo pelo override, se existir
+    console.log(`[jiraGlobalSync] Carregados ${Object.keys(overridesMap).length} overrides de JQL`);
     return JQLS_DEFAULT.map((batch) => {
-      const jqlFromFirestore = configsMap[batch.escopoId];
-      return jqlFromFirestore ? { ...batch, jql: jqlFromFirestore } : batch;
+      const jqlFromFirestore = overridesMap[batch.escopoId];
+      if (jqlFromFirestore) {
+        console.log(`[jiraGlobalSync] Override encontrado para ${batch.escopoId}`);
+        return { ...batch, jql: jqlFromFirestore };
+      }
+      return batch;
     });
   } catch (e) {
-    console.warn(`[jiraGlobalSync] Falha ao carregar ${JQL_CONFIGS} — usando JQLS_DEFAULT:`, e.message);
+    console.warn(`[jiraGlobalSync] Falha ao carregar operacao_config/jql_overrides:`, e.message);
     return JQLS_DEFAULT;
   }
 }
 
 /**
- * Salva (upsert) a JQL de um escopo específico na collection jql_configs.
+ * Salva (upsert) a JQL de um escopo específico em operacao_config/jql_overrides.
+ * Chamado pela UI quando o usuário edita um JQL em OperacaoConfig.jsx
  */
-async function saveJqlConfig({ escopoId, jql, updatedBy, description }) {
+async function saveJqlConfig({ escopoId, jql }) {
   const db = getDb();
-  const ref = db.collection(JQL_CONFIGS).doc(escopoId);
+  const ref = db.doc('operacao_config/jql_overrides');
   await ref.set({
-    jql,
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: updatedBy || "manual",
-    ...(description != null ? { description } : {}),
+    [escopoId]: jql.trim()
   }, { merge: true });
+  console.log(`[jiraGlobalSync] JQL override salvo para ${escopoId}`);
 }
 
 /**
- * Lista todos os documentos da collection jql_configs.
+ * Lista todos os overrides de JQL salvos em operacao_config/jql_overrides.
  */
 async function listJqlConfigs() {
   const db = getDb();
-  const snap = await db.collection(JQL_CONFIGS).get();
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snap = await db.doc('operacao_config/jql_overrides').get();
+  if (!snap.exists) {
+    return [];
+  }
+  const data = snap.data() || {};
+  return Object.entries(data)
+    .filter(([_, value]) => typeof value === 'string')
+    .map(([escopoId, jql]) => ({ escopoId, jql }));
 }
 
 async function previewCarga() {
   const batches = await loadJqlBatchesWithOverrides();
 
+  // Valida e filtra batches com JQL vazios
+  const validBatches = batches.filter((b) => {
+    if (!b.jql || typeof b.jql !== 'string' || !b.jql.trim()) {
+      console.warn(`[previewCarga] Batch ${b.label} (${b.escopoId}) tem JQL vazio/inválido, pulando...`);
+      return false;
+    }
+    return true;
+  });
+
   const batchResults = [];
-  for (const batch of batches) {
+  for (const batch of validBatches) {
     const total = await getApproxCount(batch.jql);
     batchResults.push({
       label: batch.label,
@@ -720,8 +736,8 @@ async function previewCarga() {
   let changelogSample = { sampleSize: 0, statusChangesFound: 0, avgPerTicket: 0 };
   try {
     const fieldIds = await resolveTicketFieldIds();
-    const firstBatch = batches[0];
-    if (firstBatch) {
+    const firstBatch = validBatches[0];
+    if (firstBatch && firstBatch.jql && firstBatch.jql.trim()) {
       const samplePage = await searchIssuesPageGet(firstBatch.jql, { startAt: 0, fieldIds, maxResults: 10 });
       const sampleIssues = samplePage.issues || [];
       const sampleChanges = sampleIssues.reduce((acc, issue) => acc + extractStatusHistory(issue).length, 0);
