@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar, Search, AlertCircle } from 'lucide-react';
 import { updateCiclo, deleteCiclo } from '../services/cicloService';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
@@ -206,8 +206,10 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
         {tkey}
       </button>
       <span style={{ flex: 1, fontSize: 13, color: 'var(--gray-12)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ticket.summary}>{ticket.summary || '(sem titulo)'}</span>
-      {ticket.issueType && (
-        <span style={{ fontSize: 11, color: 'var(--gray-10)', flexShrink: 0, maxWidth: 88, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.issueType}</span>
+      {ticket.impedimento && (
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }} title="Ticket impedido">
+          <AlertCircle size={13} />
+        </span>
       )}
       <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: sc + '22', color: sc, flexShrink: 0, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.status || 'Sem status'}</span>
       {(() => {

@@ -8,13 +8,13 @@
  */
 
 const admin = require('firebase-admin');
-const { loadJqlBatches } = require('./jqlCarga');
+const { JQLS_DEFAULT } = require('./jqlCarga');
 
 admin.initializeApp({ projectId: 'sgt-renato' });
 const db = admin.firestore();
 
 async function main() {
-  const batches = loadJqlBatches();
+  const batches = JQLS_DEFAULT;
   console.log(`\n📋 ${batches.length} JQL(s) encontrada(s)\n`);
 
   for (const batch of batches) {

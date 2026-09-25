@@ -1,8 +1,5 @@
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
-
 const ESCOPOS_VALIDOS = [
   "PROBLEMAS",
   "DEMANDA FAST",
@@ -71,151 +68,100 @@ const TICKET_FIELD_DEFINITIONS = {
 };
 
 const ESCOPO_SEED = [
-  { id: "problemas", nome: "PROBLEMAS", ordem: 1 },
+  { id: "problemas",    nome: "PROBLEMAS",    ordem: 1 },
   { id: "demanda-fast", nome: "DEMANDA FAST", ordem: 2 },
-  { id: "demanda", nome: "DEMANDA", ordem: 3 },
-  { id: "incidente", nome: "INCIDENTE", ordem: 4 },
-  { id: "solicitacao", nome: "SOLICITACAO", ordem: 5 },
-  { id: "catalogo", nome: "CATALOGO", ordem: 6 },
+  { id: "demanda",      nome: "DEMANDA",      ordem: 3 },
+  { id: "incidente",    nome: "INCIDENTE",    ordem: 4 },
+  { id: "solicitacao",  nome: "SOLICITACAO",  ordem: 5 },
+  { id: "catalogo",     nome: "CATALOGO",     ordem: 6 },
 ];
 
 function escopoNomeToId(nome) {
   const map = {
-    PROBLEMAS: "problemas",
+    "PROBLEMAS":    "problemas",
     "DEMANDA FAST": "demanda-fast",
-    DEMANDA: "demanda",
-    INCIDENTE: "incidente",
-    SOLICITACAO: "solicitacao",
-    CATALOGO: "catalogo",
+    "DEMANDA":      "demanda",
+    "INCIDENTE":    "incidente",
+    "SOLICITACAO":  "solicitacao",
+    "CATALOGO":     "catalogo",
   };
   return map[nome] || nome.toLowerCase().replace(/\s+/g, "-");
 }
 
-function getJqlCargaFilePath() {
-  return path.join(__dirname, "data", "jqls_carga.txt");
-}
-
-function normalizeEscopo(consultaName) {
-  const name = consultaName.trim().replace(/\s+/g, " ").toUpperCase();
-  if (name.includes("PROBLEMA")) return "PROBLEMAS";
-  if (/DEMANDAS?\s+FAST/.test(name)) return "DEMANDA FAST";
-  if (/CAT.*LOGO/.test(name)) return "CATALOGO";
-  if (name.includes("INCIDENTE")) return "INCIDENTE";
-  if (name.includes("SOLICITA")) return "SOLICITACAO";
-  if (name.includes("DEMANDA")) return "DEMANDA";
-  return consultaName.trim().toUpperCase();
-}
-
-function formatJqlLines(lines) {
-  const text = lines
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .join(" ");
-  return text.replace(/\s+/g, " ").trim();
-}
-
-function wrapJqlClause(expr) {
-  const trimmed = expr.trim();
-  if (!trimmed) return trimmed;
-  if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
-    let depth = 0;
-    let wrapsWhole = true;
-    for (let i = 0; i < trimmed.length; i += 1) {
-      if (trimmed[i] === "(") depth += 1;
-      if (trimmed[i] === ")") depth -= 1;
-      if (depth === 0 && i < trimmed.length - 1) {
-        wrapsWhole = false;
-        break;
-      }
-    }
-    if (wrapsWhole && depth === 0) return trimmed;
-  }
-  return `(${trimmed})`;
-}
-
-function fixProblemasJql(jql) {
-  const match = jql.match(/\sOR\s*\(/i);
-  if (!match) return jql;
-  const left = jql.slice(0, match.index).trim();
-  const right = jql.slice(match.index).replace(/^\s*OR\s*/i, "").trim();
-  return `${wrapJqlClause(left)} OR ${wrapJqlClause(right)}`;
-}
-
-function isFullyWrapped(jql) {
-  const trimmed = jql.trim();
-  if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) return false;
-  let depth = 0;
-  for (let i = 0; i < trimmed.length; i++) {
-    if (trimmed[i] === "(") depth++;
-    if (trimmed[i] === ")") depth--;
-    if (depth === 0 && i < trimmed.length - 1) return false;
-  }
-  return depth === 0;
-}
-
-function fixDemandasJql(jql) {
-  // Se já está totalmente envolvido em parênteses externos, não faz nada
-  if (isFullyWrapped(jql)) return jql;
-  // Caso contrário, envolve o JQL inteiro em parênteses
-  return `(${jql})`;
-}
-
-function readJqlCargaFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Arquivo de JQL não encontrado: ${filePath}`);
-  }
-  const batches = [];
-  let currentName = null;
-  let currentLines = [];
-
-  const flush = () => {
-    if (!currentName) return;
-    let jql = formatJqlLines(currentLines);
-    if (!jql) return;
-    const escopo = normalizeEscopo(currentName);
-    if (escopo === "PROBLEMAS") {
-      jql = fixProblemasJql(jql);
-    } else if (escopo === "DEMANDA") {
-      jql = fixDemandasJql(jql);
-    }
-    batches.push({
-      label: escopo,
-      escopo,
-      escopoId: escopoNomeToId(escopo),
-      field: "escopo",
-      jql,
-    });
-    currentName = null;
-    currentLines = [];
-  };
-
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const match = line.match(/^\s*CONSULTA\s+\d+\s+(.+)\s*$/i);
-    if (match) {
-      flush();
-      currentName = match[1].trim();
-      currentLines = [];
-      continue;
-    }
-    if (currentName !== null) currentLines.push(line);
-  }
-  flush();
-
-  if (!batches.length) {
-    throw new Error(`Nenhuma consulta encontrada em ${filePath}`);
-  }
-  return batches;
-}
-
-function loadJqlBatches() {
-  return readJqlCargaFile(getJqlCargaFilePath());
-}
+/**
+ * JQLs padrão de cada escopo — fonte de verdade quando a collection
+ * jql_configs ainda não foi populada no Firestore.
+ * Estes valores são usados no auto-seed e no script seed_jql_configs.mjs.
+ * Nunca são lidos diretamente durante a carga; após o seed inicial o Firestore
+ * é a única fonte utilizada.
+ */
+const JQLS_DEFAULT = [
+  {
+    escopoId: "problemas",
+    escopo:   "PROBLEMAS",
+    label:    "PROBLEMAS",
+    jql: "((project = TI AND type = Problem AND \"fornecedores[dropdown]\" = \"NTT Data\") OR (type = Problem AND project = PROB AND cf[10382] = \"ari:cloud:cmdb::object/4fc8c668-3c28-445a-921f-4cd66d1f865e/432192\") OR (type != Problem AND project = PROB AND cf[10382] = \"ari:cloud:cmdb::object/4fc8c668-3c28-445a-921f-4cd66d1f865e/432192\"))",
+  },
+  {
+    escopoId: "demanda-fast",
+    escopo:   "DEMANDA FAST",
+    label:    "DEMANDA FAST",
+    jql: "project = SERVICE AND \"grupo solucionador[group picker (single group)]\" IN (TI_GED_Perfil, TI_Perfil_Ariba, TI_Perfil_CanaisAtendimento, TI_Perfil_CRM, TI_PERFIL_CWS, TI_PERFIL_CWSi_LEC, TI_PERFIL_CWSi_OP, TI_Perfil_Espaider, TI_Perfil_GISD, TI_PERFIL_IB, TI_Perfil_MasterSaf, TI_Perfil_Previsao_Atendimento, TI_PERFIL_RDCT, \"TI_PERFIL_PROJETOS PARTICULARES\", TI_Perfil_SEFIC, TI_Perfil_SPAP, TI_PERFIL_SPIR, TI_PERFIL_WEB_LOGRADOUROS, TI_SGDO_PERFIL, TI_PERFIL_SGDO, TI_Perfil_UtilityIQ, TI_Perfil_SGCE, TI_RPA, TI_Solucionador_Mastersaf, TI_BI_ST_Operação, TI_BI_Tableau, TI_BI_EVI, TI_BI_Alteryx, TI_BI_ST_BDGD_SUSTAIN, TI_NEXO, TI_Renováveis_BPMS, Ti_Perfil_WBC, TI_Perfil_RGESUL_SGC, TI_Perfil_Logos_Oracle_PPBG, TI_Solucionador_CRM, TI_Renováveis_SGE, TI_Perfil_Meetime, TI_Perfil_OSGT, TI_SALESFORCE, TI_SANF, TI_SEFIC, TI_SGA, TI_Sharepoint, TI_Siase, TI_SIGA, TI_Solucionador_DCAF, TI_Solucionador_EPM, \"TI_Solucionador_Logos Web\", TI_Solucionador_Projetos_Particulares, TI_SPAP, TI_WEB_Agência_Virtual, TI_WEB_ApontamentoHoras, TI_WEB_Comercial, TI_WEB_ControleGarantias, TI_WEB_Energia, TI_WEB_Clientes_VIP, TI_WEB_CPFLEmpresas, TI_WEB_Corporativo, TI_WEB_GDO, TI_WEB_GISMA, TI_WEB_GMP, \"TI_WEB_Inspeções Rapidas\", TI_WEB_Logos, TI_WebLogradouros, TI_WEB_PID, TI_WEB_RDCT, TI_WEB_SEFIC, TI_WEB_SGA, TI_WEB_SIGA, TI_WEB_SPAP, TI_WEB_WebLogradouros, TI_WEB_VBA_Gestão_de_Energia, TI_WEB_SIGEn, TI_WEB_SANF, TI_WEB_RHAP, TI_WEB_Resoluções, TI_WEB_PortalOperações, TI_WEB_PRVG, TI_WEB_NSGCSR, TI_CWS, TI_GED_FOR, TI_Renováveis_ARQUIVEI, TI_Renováveis_AZIX, TI_Renováveis_INTRANET, TI_Renováveis_PPM, TI_Renováveis_SIS, TI_Renováveis_SOGI, TI_Agência_Virtual, TI_WEB_Lumens, TI_SICLOPE, \"TI - WEB - Novo GED_Suporte\", \"TI - WEB - Novo GED_Suporte_N2\", \"TI _Cadeia_Reversa_Mobilidade\", TI_CDRE_N1, TI_PERFIL_SALESFORCE) AND \"demanda fast[dropdown]\" = Sim",
+  },
+  {
+    escopoId: "demanda",
+    escopo:   "DEMANDA",
+    label:    "DEMANDA",
+    jql: "((issuetype = História AND project = SUST AND \"torre de atuação da demanda[dropdown]\" IN (\"ADM & LEGADOS\", BI, \"SISTEMAS WEB\", \"CANAIS DIGITAIS\") AND \"empresa[dropdown]\" = \"NTT DATA\" AND status NOT IN (Cancelada, Concluída)) OR (project IN (DEMANDA, SUST) AND \"torre de atuação da demanda[dropdown]\" IN (\"CANAIS DIGITAIS\", \"SISTEMAS CORPORATIVOS\") AND \"empresa[dropdown]\" IN (\"GLOBAL NTT\", \"NTT DATA\", \"NTT Ltda\", empty) AND status NOT IN (Cancelada, Concluída, Fechado, \"Não Aplicável\") AND type = Solicitação))",
+  },
+  {
+    escopoId: "incidente",
+    escopo:   "INCIDENTE",
+    label:    "INCIDENTE",
+    jql: "Project = SERVICE AND \"grupo solucionador[group picker (single group)]\" IN (TI_SALESFORCE, TI_SANF, TI_SEFIC, TI_SGA, TI_Sharepoint, TI_Siase, TI_SIGA, TI_Solucionador_DCAF, TI_Solucionador_EPM, \"TI_Solucionador_Logos Web\", TI_Solucionador_Projetos_Particulares, TI_SPAP, TI_WEB_Agência_Virtual, TI_WEB_ApontamentoHoras, TI_WEB_Comercial, TI_WEB_ControleGarantias, TI_WEB_Energia, TI_WEB_Clientes_VIP, TI_WEB_CPFLEmpresas, TI_WEB_Corporativo, TI_WEB_GDO, TI_WEB_GISMA, TI_WEB_GMP, \"TI_WEB_Inspeções Rapidas\", TI_WEB_Logos, TI_WebLogradouros, TI_WEB_PID, TI_WEB_RDCT, TI_WEB_SEFIC, TI_WEB_SGA, TI_WEB_SIGA, TI_WEB_SPAP, TI_WEB_WebLogradouros, TI_WEB_VBA_Gestão_de_Energia, TI_WEB_SIGEn, TI_WEB_SANF, TI_WEB_RHAP, TI_WEB_Resoluções, TI_WEB_PortalOperações, TI_WEB_PRVG, TI_WEB_NSGCSR, TI_CWS, TI_GED_FOR, TI_Renováveis_ARQUIVEI, TI_Renováveis_AZIX, TI_Renováveis_INTRANET, TI_Renováveis_PPM, TI_Renováveis_SIS, TI_Renováveis_SOGI, TI_Agência_Virtual, TI_WEB_Lumens, TI_SICLOPE, \"TI - WEB - Novo GED_Suporte\", \"TI - WEB - Novo GED_Suporte_N2\", \"TI _Cadeia_Reversa_Mobilidade\", \"TI_Hydro 4.0 - Aplicação\", TI_WEB_Operação) AND \"Demanda Fast[Dropdown]\" IN (empty, choiceOption(\"\"), Não) AND Type in (\"[System] Incidente\")",
+  },
+  {
+    escopoId: "solicitacao",
+    escopo:   "SOLICITACAO",
+    label:    "SOLICITACAO",
+    jql: [
+      "project = SERVICE",
+      "AND \"grupo solucionador[group picker (single group)]\" IN (",
+      "TI_SANF, TI_SEFIC, TI_SGA, TI_Sharepoint, TI_Siase, TI_SIGA,",
+      "TI_Solucionador_DCAF, TI_Solucionador_EPM, \"TI_Solucionador_Logos Web\",",
+      "TI_Solucionador_Projetos_Particulares, TI_SPAP,",
+      "TI_WEB_Agência_Virtual, TI_WEB_ApontamentoHoras, TI_WEB_Comercial,",
+      "TI_WEB_ControleGarantias, TI_WEB_Energia, TI_WEB_Clientes_VIP,",
+      "TI_WEB_CPFLEmpresas, TI_WEB_Corporativo, TI_WEB_GDO, TI_WEB_GISMA, TI_WEB_GMP,",
+      "TI_WEB_Logos, TI_WebLogradouros, TI_WEB_PID, TI_WEB_RDCT,",
+      "TI_WEB_SEFIC, TI_WEB_SGA, TI_WEB_SIGA, TI_WEB_SPAP, TI_WEB_WebLogradouros,",
+      "TI_WEB_VBA_Gestão_de_Energia, TI_WEB_SIGEn, TI_WEB_SANF, TI_WEB_RHAP,",
+      "TI_WEB_Resoluções, TI_WEB_PortalOperações, TI_WEB_PRVG, TI_WEB_NSGCSR,",
+      "TI_CWS, TI_GED_FOR,",
+      "TI_Renováveis_ARQUIVEI, TI_Renováveis_AZIX, TI_Renováveis_INTRANET,",
+      "TI_Renováveis_PPM, TI_Renováveis_SIS, TI_Renováveis_SOGI,",
+      "TI_Agência_Virtual, TI_CPFLEmpresas, \"TI_Inspeções Rapidas\",",
+      "TI_Logos, TI_WEB_Lumens, TI_WEB_Operação, TI_Solucionador_SGCE,",
+      "TI_WEB_EVI, TI_Renováveis_VBA_APROVADOR_WORKFLOW,",
+      "\"TI - WEB - Novo GED_Suporte\", \"TI - WEB - Novo GED_Suporte_N2\",",
+      "\"TI _Cadeia_Reversa_Mobilidade\", TI_Suporte_TOTEM_Sistema,",
+      "TI_PERFIL_SALESFORCE, TI_SALESFORCE, TI_CDRE_N1)",
+      "AND \"Demanda Fast[Dropdown]\" IN (empty, choiceOption(\"\"), Não)",
+      "AND type in (\"[System] Service request\")",
+    ].join(" "),
+  },
+  {
+    escopoId: "catalogo",
+    escopo:   "CATALOGO",
+    label:    "CATALOGO",
+    jql: "\"fornecedores[dropdown]\" IN (\"NTT DATA\", \"NTT DATA AMS\") AND project = AHF",
+  },
+];
 
 module.exports = {
   ESCOPOS_VALIDOS,
   TICKET_FIELD_DEFINITIONS,
   ESCOPO_SEED,
+  JQLS_DEFAULT,
   escopoNomeToId,
-  getJqlCargaFilePath,
-  loadJqlBatches,
 };

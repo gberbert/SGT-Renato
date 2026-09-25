@@ -1,102 +1,122 @@
+#!/usr/bin/env node
+
 /**
- * Seed / visualiza a collection jql_configs no Firestore.
- *
+ * Script para semear a collection `jql_configs` no Firebase com os JQLs padrão.
+ * 
  * Uso:
- *   node scripts/seed_jql_configs.mjs          # lista configs atuais
- *   node scripts/seed_jql_configs.mjs --seed   # força re-seed a partir de jqls_carga.txt
- *
- * Requer: functions/.env com FIREBASE_SA_PATH (ou Arquivos_Gerais/ com o arquivo de SA)
+ *   GOOGLE_APPLICATION_CREDENTIALS=path/to/serviceAccountKey.json node scripts/seed_jql_configs.mjs
+ * 
+ * Ou usando Firebase emulator:
+ *   firebase emulators:start
+ *   export FIREBASE_EMULATOR_HOST=localhost:8080
+ *   node scripts/seed_jql_configs.mjs
  */
 
-import { createRequire } from "module";
-import { fileURLToPath } from "url";
-import path from "path";
-import fs from "fs";
-import dotenv from "dotenv";
+import admin from 'firebase-admin';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, "../functions/.env") });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// --- Localiza o service account ---
-function findServiceAccount() {
-  const envPath = process.env.FIREBASE_SA_PATH;
-  if (envPath && fs.existsSync(envPath)) return envPath;
+// Importar JQLS_DEFAULT de jqlCarga.js (Node.js comum, não módulo)
+const jqlCargaPath = resolve(__dirname, '../functions/jqlCarga.js');
+const jqlCargaContent = readFileSync(jqlCargaPath, 'utf-8');
 
-  const dir = path.resolve(__dirname, "../Arquivos_Gerais");
-  if (fs.existsSync(dir)) {
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json") && f.includes("firebase-adminsdk"));
-    if (files.length) return path.join(dir, files[0]);
-  }
-  return null;
-}
-
-const saPath = findServiceAccount();
-if (!saPath) {
-  console.error("Service account não encontrado. Defina FIREBASE_SA_PATH ou coloque o JSON em Arquivos_Gerais/");
+// Extrair JQLS_DEFAULT usando regex simples
+const jqlsMatch = jqlCargaContent.match(/const JQLS_DEFAULT = \[([\s\S]*?)\];/);
+if (!jqlsMatch) {
+  console.error('❌ Não foi possível extrair JQLS_DEFAULT de jqlCarga.js');
   process.exit(1);
 }
 
-// --- Inicializa Firebase Admin ---
-import { initializeApp, cert } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+// Parse usando eval (seguro aqui pois é um arquivo local do projeto)
+let JQLS_DEFAULT;
+try {
+  eval(`JQLS_DEFAULT = [${jqlsMatch[1]}];`);
+} catch (e) {
+  console.error('❌ Erro ao parsear JQLS_DEFAULT:', e.message);
+  process.exit(1);
+}
 
-const sa = JSON.parse(fs.readFileSync(saPath, "utf8"));
-initializeApp({ credential: cert(sa) });
-const db = getFirestore(undefined, "default");
+if (!Array.isArray(JQLS_DEFAULT) || JQLS_DEFAULT.length === 0) {
+  console.error('❌ JQLS_DEFAULT não é um array válido ou está vazio');
+  process.exit(1);
+}
 
-// --- Carrega JQLs do arquivo via jqlCarga.js ---
-const require = createRequire(import.meta.url);
-const { loadJqlBatches } = require("../functions/jqlCarga");
+console.log(`✓ Encontrado ${JQLS_DEFAULT.length} JQLs padrão`);
 
-const JQL_CONFIGS = "jql_configs";
-const forceSeed = process.argv.includes("--seed");
+// Inicializar Firebase Admin SDK
+if (process.env.FIREBASE_EMULATOR_HOST) {
+  console.log(`🔥 Usando Firebase Emulator: ${process.env.FIREBASE_EMULATOR_HOST}`);
+}
 
-async function main() {
-  const batches = loadJqlBatches();
-  console.log(`\n📋 JQLs encontradas no arquivo: ${batches.length}`);
+try {
+  admin.initializeApp();
+} catch (e) {
+  // Admin SDK já inicializado
+}
 
-  const snap = await db.collection(JQL_CONFIGS).get();
-  console.log(`📦 Documentos atuais em ${JQL_CONFIGS}: ${snap.size}\n`);
+const db = admin.firestore();
+const JQL_CONFIGS_COLLECTION = 'jql_configs';
 
-  if (!forceSeed && !snap.empty) {
-    console.log("--- Configs atuais em Firestore ---");
-    snap.docs.forEach((d) => {
-      const data = d.data();
-      console.log(`  [${d.id}]  escopo=${data.escopo || "–"}  ativo=${data.ativo !== false}  updatedBy=${data.updatedBy || "–"}`);
-      console.log(`    JQL: ${(data.jql || "").slice(0, 120)}${(data.jql || "").length > 120 ? "…" : ""}`);
-    });
-    console.log("\n💡 Use --seed para forçar re-seed a partir do arquivo.");
-    process.exit(0);
-  }
+async function seedJqlConfigs() {
+  console.log(`\n📝 Semeando collection "${JQL_CONFIGS_COLLECTION}"...`);
 
-  // --- Seed ---
-  console.log(`🌱 Semeando ${batches.length} entradas em ${JQL_CONFIGS}...`);
-  const writeBatch = db.batch();
-  for (const batch of batches) {
-    const ref = db.collection(JQL_CONFIGS).doc(batch.escopoId);
-    writeBatch.set(
+  const batch = db.batch();
+  let count = 0;
+
+  for (const item of JQLS_DEFAULT) {
+    const { escopoId, escopo, label, jql } = item;
+
+    if (!escopoId || !jql) {
+      console.warn(`⚠️  Pulando item inválido: ${JSON.stringify(item)}`);
+      continue;
+    }
+
+    const ref = db.collection(JQL_CONFIGS_COLLECTION).doc(escopoId);
+    batch.set(
       ref,
       {
-        escopoId:    batch.escopoId,
-        escopo:      batch.escopo,
-        label:       batch.label,
-        jql:         batch.jql,
-        jqlOriginal: batch.jql,
-        ativo:       true,
-        updatedAt:   FieldValue.serverTimestamp(),
-        updatedBy:   "seed_script",
-        description: `JQL semeada via scripts/seed_jql_configs.mjs`,
+        escopoId,
+        escopo,
+        label,
+        jql,
+        jqlOriginal: jql, // Guardar cópia original para referência
+        ativo: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedBy: 'seed-script',
+        description: 'JQL semeada automaticamente durante setup inicial',
       },
       { merge: true }
     );
-  }
-  await writeBatch.commit();
 
-  console.log(`✅ ${batches.length} entradas gravadas em ${JQL_CONFIGS}:\n`);
-  batches.forEach((b) => {
-    console.log(`  [${b.escopoId}]  escopo=${b.escopo}  label=${b.label}`);
-    console.log(`    JQL: ${b.jql.slice(0, 120)}${b.jql.length > 120 ? "…" : ""}\n`);
-  });
+    count += 1;
+    console.log(`  [${count}] ${label} (${escopo})`);
+  }
+
+  if (count === 0) {
+    console.warn('⚠️  Nenhum JQL válido para semear');
+    return;
+  }
+
+  try {
+    await batch.commit();
+    console.log(`\n✅ ${count} JQL(s) semeada(s) com sucesso em "${JQL_CONFIGS_COLLECTION}"`);
+  } catch (error) {
+    console.error(`❌ Erro ao committar batch: ${error.message}`);
+    process.exit(1);
+  }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// Executar
+seedJqlConfigs()
+  .then(() => {
+    console.log('\n✅ Seed finalizado com sucesso!');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('\n❌ Erro durante seed:', error);
+    process.exit(1);
+  });

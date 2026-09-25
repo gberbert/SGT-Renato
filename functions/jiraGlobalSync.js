@@ -3,10 +3,9 @@
 const admin = require("firebase-admin");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const {
-  loadJqlBatches,
+  JQLS_DEFAULT,
   ESCOPO_SEED,
   TICKET_FIELD_DEFINITIONS,
-  getJqlCargaFilePath,
 } = require("./jqlCarga");
 
 const TICKETS_GLOBAL = "tickets_global";
@@ -624,21 +623,20 @@ async function finalizeOperacaoStats(runRef, run) {
 const JQL_CONFIGS = "jql_configs";
 
 /**
- * Carrega os batches de JQL da collection `jql_configs` (fonte primária).
- * Auto-seed: se a collection estiver vazia, popula a partir de jqls_carga.txt.
- * Fallback transparente: se a leitura falhar, usa as JQLs do arquivo.
+ * Carrega os batches de JQL exclusivamente da collection `jql_configs`.
+ * Auto-seed: se a collection estiver vazia, popula a partir de JQLS_DEFAULT.
+ * Os JQLs são editáveis pelo usuário via UI; o Firestore é a única fonte de verdade.
  */
 async function loadJqlBatchesWithOverrides() {
-  const baseBatches = loadJqlBatches(); // sempre carrega do arquivo como fallback
   try {
     const db = getDb();
     const snap = await db.collection(JQL_CONFIGS).get();
 
     // Auto-seed: se a collection estiver vazia, popula com as JQLs do arquivo
     if (snap.empty) {
-      console.log("[jiraGlobalSync] jql_configs vazia — semeando com JQLs do arquivo...");
+      console.log("[jiraGlobalSync] jql_configs vazia — semeando com JQLS_DEFAULT...");
       const writeBatch = db.batch();
-      for (const batch of baseBatches) {
+      for (const batch of JQLS_DEFAULT) {
         const ref = db.collection(JQL_CONFIGS).doc(batch.escopoId);
         writeBatch.set(ref, {
           escopoId:    batch.escopoId,
@@ -653,8 +651,8 @@ async function loadJqlBatchesWithOverrides() {
         }, { merge: true });
       }
       await writeBatch.commit();
-      console.log(`[jiraGlobalSync] ${baseBatches.length} JQLs semeadas em ${JQL_CONFIGS}`);
-      return baseBatches;
+      console.log(`[jiraGlobalSync] ${JQLS_DEFAULT.length} JQLs semeadas em ${JQL_CONFIGS}`);
+      return JQLS_DEFAULT;
     }
 
     // Monta mapa escopoId → dados do Firestore
@@ -666,13 +664,13 @@ async function loadJqlBatchesWithOverrides() {
       }
     });
 
-    return baseBatches.map((batch) => {
+    return JQLS_DEFAULT.map((batch) => {
       const jqlFromFirestore = configsMap[batch.escopoId];
       return jqlFromFirestore ? { ...batch, jql: jqlFromFirestore } : batch;
     });
   } catch (e) {
-    console.warn(`[jiraGlobalSync] Falha ao carregar ${JQL_CONFIGS} — usando JQLs do arquivo:`, e.message);
-    return baseBatches;
+    console.warn(`[jiraGlobalSync] Falha ao carregar ${JQL_CONFIGS} — usando JQLS_DEFAULT:`, e.message);
+    return JQLS_DEFAULT;
   }
 }
 
@@ -741,7 +739,6 @@ async function previewCarga() {
     total: uniqueTotal,
     totalRaw,
     approximate: true,
-    jqlFile: getJqlCargaFilePath(),
     batches: batchResults,
     changelogSample,
     mitigation: {
@@ -758,7 +755,6 @@ async function previewCarga() {
 async function getJqlConfig() {
   const batches = await loadJqlBatchesWithOverrides();
   return {
-    jqlFile: getJqlCargaFilePath(),
     batches: batches.map((b) => ({
       label: b.label,
       escopo: b.escopo,

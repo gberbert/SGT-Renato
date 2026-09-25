@@ -784,6 +784,90 @@ exports.getOperacaoStats = onCall({
     }
 });
 
+/**
+ * Cloud Function HTTP: List all JQL configurations
+ * Requer autenticação de admin
+ */
+exports.listJqlConfigsHttp = onRequest(async (request, response) => {
+    if (request.method !== "GET") {
+        response.status(405).json({ ok: false, error: "Method Not Allowed. Use GET." });
+        return;
+    }
+
+    try {
+        await requireAdminFromAuthorization(request);
+        const configs = await jiraGlobalSync.listJqlConfigs();
+        response.status(200).json({ ok: true, configs });
+    } catch (e) {
+        const statusCode = e?.code === "permission-denied" ? 403 : e?.code === "unauthenticated" ? 401 : 500;
+        response.status(statusCode).json({ ok: false, error: e?.message || String(e) });
+    }
+});
+
+/**
+ * Cloud Function HTTP: Save/Update a JQL configuration
+ * Requer autenticação de admin
+ * Body: { escopoId, jql, description? }
+ */
+exports.saveJqlConfigHttp = onRequest(async (request, response) => {
+    if (request.method !== "POST") {
+        response.status(405).json({ ok: false, error: "Method Not Allowed. Use POST." });
+        return;
+    }
+
+    try {
+        const uid = await requireAdminFromAuthorization(request);
+        const { escopoId, jql, description } = request.body || {};
+
+        if (!escopoId || !jql) {
+            response.status(400).json({ ok: false, error: "escopoId e jql são obrigatórios." });
+            return;
+        }
+
+        await jiraGlobalSync.saveJqlConfig({
+            escopoId,
+            jql,
+            updatedBy: uid,
+            description: description || null,
+        });
+
+        response.status(200).json({ ok: true, message: "JQL salva com sucesso." });
+    } catch (e) {
+        const statusCode = e?.code === "permission-denied" ? 403 : e?.code === "unauthenticated" ? 401 : 500;
+        response.status(statusCode).json({ ok: false, error: e?.message || String(e) });
+    }
+});
+
+/**
+ * Cloud Function HTTP: Delete a JQL configuration
+ * Requer autenticação de admin
+ * Body: { escopoId }
+ */
+exports.deleteJqlConfigHttp = onRequest(async (request, response) => {
+    if (request.method !== "POST") {
+        response.status(405).json({ ok: false, error: "Method Not Allowed. Use POST." });
+        return;
+    }
+
+    try {
+        await requireAdminFromAuthorization(request);
+        const { escopoId } = request.body || {};
+
+        if (!escopoId) {
+            response.status(400).json({ ok: false, error: "escopoId é obrigatório." });
+            return;
+        }
+
+        const db = getFirestore(undefined, "default");
+        await db.collection("jql_configs").doc(escopoId).delete();
+
+        response.status(200).json({ ok: true, message: "JQL deletada com sucesso." });
+    } catch (e) {
+        const statusCode = e?.code === "permission-denied" ? 403 : e?.code === "unauthenticated" ? 401 : 500;
+        response.status(statusCode).json({ ok: false, error: e?.message || String(e) });
+    }
+});
+
 function requireAdminFromAuthorization(request) {
   return (async () => {
     const authHeader = request.headers.authorization || request.headers.Authorization;

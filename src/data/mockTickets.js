@@ -16,6 +16,7 @@ export const initialTickets = [
     columnId: 'col-done',
     assignee: 'Renato',
     comments: 2,
+    impedimento: true,
   },
   {
     id: 'ticket-2',
@@ -26,6 +27,7 @@ export const initialTickets = [
     columnId: 'col-in-progress',
     assignee: 'Gabriel',
     comments: 5,
+    impedimento: false,
   },
   {
     id: 'ticket-3',

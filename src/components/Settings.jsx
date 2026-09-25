@@ -32,8 +32,9 @@ import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search, 
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import ImportDataExcel from './ImportDataExcel';
-import OperacaoJiraSettings from './operacao/OperacaoJiraSettings';
 import PermissionsManager from './PermissionsManager';
+import OperacaoConfig from './operacao/OperacaoConfig';
+import OperacaoCarga from './operacao/OperacaoCarga';
 import AuditDashboard from './AuditDashboard';
 import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -1249,7 +1250,11 @@ const Settings = ({ userRole = 'admin' }) => {
             </Tabs.Content>
 
             <Tabs.Content value="jiraOperacao">
-              <OperacaoJiraSettings userRole={userRole} />
+              {searchParams.get('jira') === 'carga' ? (
+                <OperacaoCarga userRole={userRole} embedded={true} />
+              ) : (
+                <OperacaoConfig userRole={userRole} embedded={true} />
+              )}
             </Tabs.Content>
 
             <Tabs.Content value="auditoria">
