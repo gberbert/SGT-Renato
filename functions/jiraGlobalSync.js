@@ -141,8 +141,11 @@ function getJiraCredentials() {
 }
 
 async function jiraFetch(path, { method = "GET", body } = {}) {
-  const { authHeader, baseUrl } = getJiraCredentials();
-  const response = await fetch(`${baseUrl}${path}`, {
+  const { authHeader, baseUrl, domain, email } = getJiraCredentials();
+  const fullUrl = `${baseUrl}${path}`;
+  console.log(`[jiraFetch] ${method} ${fullUrl} | Auth user: ${email}`);
+  
+  const response = await fetch(fullUrl, {
     method,
     headers: {
       Authorization: authHeader,
@@ -151,11 +154,16 @@ async function jiraFetch(path, { method = "GET", body } = {}) {
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
+  
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`[jiraFetch] Erro HTTP ${response.status}:`, errorText);
     throw new Error(`Jira retornou ${response.status}: ${errorText}`);
   }
-  return response.json();
+  
+  const data = await response.json();
+  console.log(`[jiraFetch] Resposta OK | Total docs/items:`, data.total || data.length || 'N/A');
+  return data;
 }
 
 function normalizeJqlForCombine(jql) {
@@ -213,15 +221,23 @@ function buildCombinedOrJql(batches) {
 }
 
 async function getApproxCount(jql) {
-  const data = await jiraFetch("/rest/api/3/search", {
-    method: "POST",
-    body: {
-      jql: jql || "",
-      maxResults: 0,
-      fields: [],
-    },
-  });
-  return Number(data.total) || 0;
+  console.log("[getApproxCount] Iniciando contagem com JQL:", jql?.substring(0, 100));
+  try {
+    const data = await jiraFetch("/rest/api/3/search/jql", {
+      method: "POST",
+      body: {
+        jql: jql || "",
+        maxResults: 0,
+        fields: [],
+      },
+    });
+    const count = Number(data.total) || 0;
+    console.log("[getApproxCount] Contagem retornada com sucesso:", count);
+    return count;
+  } catch (error) {
+    console.error("[getApproxCount] Erro ao contar no Jira:", error.message);
+    throw error;
+  }
 }
 
 function stripNumericPrefix(str) {
@@ -728,7 +744,7 @@ async function loadJqlBatchesWithOverrides() {
 async function searchIssuesPageGet(jql, { startAt = 0, fieldIds, maxResults = ISSUES_PER_STEP }) {
   const fields = buildJiraFieldList(fieldIds);
   
-  const data = await jiraFetch("/rest/api/3/search", {
+  const data = await jiraFetch("/rest/api/3/search/jql", {
     method: "POST",
     body: {
       jql: jql || "",

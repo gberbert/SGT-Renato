@@ -405,10 +405,12 @@ exports.searchJiraTickets = onCall({
             throw new HttpsError("invalid-argument", "jql é obrigatório para contagem aproximada.");
         }
         try {
+            console.log("[searchJiraTickets] Contagem aproximada com JQL:", payload.jql);
             const count = await jiraGlobalSync.getApproxCount(payload.jql);
+            console.log("[searchJiraTickets] Contagem retornada:", count);
             return { count, approximate: true };
         } catch (error) {
-            console.error("Erro na contagem Jira:", error);
+            console.error("[searchJiraTickets] Erro na contagem Jira:", error.message);
             throw new HttpsError("failed-precondition", error.message || "Falha ao consultar contagem no Jira.");
         }
     }
@@ -442,7 +444,7 @@ exports.searchJiraTickets = onCall({
     const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
     // JQL from user request
     const jql = 'project = DEMANDA AND type = Solicitação AND "empresa[dropdown]" IN ("NTT Ltda", "NTT DATA", "GLOBAL NTT") AND ("torre de atuação da demanda[dropdown]" IN ("ADM & LEGADOS", "BI", "CANAIS DIGITAIS", "SISTEMAS CORPORATIVOS", "SISTEMAS WEB") OR "torre de atuação da demanda[dropdown]" IS EMPTY) ORDER BY created DESC';
-    const jiraUrl = `https://${domain}/rest/api/3/search`;
+    const jiraUrl = `https://${domain}/rest/api/3/search/jql`;
 
     try {
         const response = await fetch(jiraUrl, {
