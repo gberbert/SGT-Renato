@@ -442,7 +442,7 @@ exports.searchJiraTickets = onCall({
     const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
     // JQL from user request
     const jql = 'project = DEMANDA AND type = Solicitação AND "empresa[dropdown]" IN ("NTT Ltda", "NTT DATA", "GLOBAL NTT") AND ("torre de atuação da demanda[dropdown]" IN ("ADM & LEGADOS", "BI", "CANAIS DIGITAIS", "SISTEMAS CORPORATIVOS", "SISTEMAS WEB") OR "torre de atuação da demanda[dropdown]" IS EMPTY) ORDER BY created DESC';
-    const jiraUrl = `https://${domain}/rest/api/3/search/jql`;
+    const jiraUrl = `https://${domain}/rest/api/3/search`;
 
     try {
         const response = await fetch(jiraUrl, {
@@ -454,8 +454,10 @@ exports.searchJiraTickets = onCall({
             },
             body: JSON.stringify({
                 jql: jql,
+                startAt: 0,
                 maxResults: 100,
-                fields: ["summary", "description", "priority", "status", "creator", "reporter", "assignee", "issuetype", "duedate", "environment", "labels", "created"]
+                fields: ["summary", "description", "priority", "status", "creator", "reporter", "assignee", "issuetype", "duedate", "environment", "labels", "created"],
+                expand: ["changelog"]
             })
         });
 

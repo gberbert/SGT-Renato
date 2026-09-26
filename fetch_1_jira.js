@@ -18,7 +18,7 @@ const domain = envVars.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
 const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
 
 const jql = 'issue = TI-22822';
-const jiraUrl = `https://${domain}/rest/api/3/search/jql`;
+const jiraUrl = `https://${domain}/rest/api/3/search`;
 
 async function fetchJira() {
     try {

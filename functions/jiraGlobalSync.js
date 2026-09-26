@@ -213,11 +213,15 @@ function buildCombinedOrJql(batches) {
 }
 
 async function getApproxCount(jql) {
-  const data = await jiraFetch("/rest/api/3/search/approximate-count", {
+  const data = await jiraFetch("/rest/api/3/search", {
     method: "POST",
-    body: { jql },
+    body: {
+      jql: jql || "",
+      maxResults: 0,
+      fields: [],
+    },
   });
-  return Number(data.count) || 0;
+  return Number(data.total) || 0;
 }
 
 function stripNumericPrefix(str) {
@@ -417,7 +421,7 @@ function buildJiraFieldList(fieldIds) {
   const custom = new Set(
     Object.values(fieldIds || {}).filter((id) => id && String(id).startsWith("customfield_"))
   );
-  return [...STANDARD_JIRA_FIELDS, ...custom];
+  return [...STANDARD_JIRA_FIELDS, ...Array.from(custom)];
 }
 
 function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }) {
@@ -717,33 +721,30 @@ async function loadJqlBatchesWithOverrides() {
 }
 
 /**
- * Salva (upsert) a JQL de um escopo específico em operacao_config/jql_overrides.
- * Chamado pela UI quando o usuário edita um JQL em OperacaoConfig.jsx
+ * Busca issues com paginação via startAt (POST).
+ * Com expand=changelog para capturar o histórico de status.
+ * Retorna: { issues: [], total, nextPageToken }
  */
-async function saveJqlConfig({ escopoId, jql }) {
-  const db = getDb();
-  const ref = db.doc('operacao_config/jql_overrides');
-  await ref.set({
-    [escopoId]: jql.trim()
-  }, { merge: true });
-  console.log(`[jiraGlobalSync] JQL override salvo para ${escopoId}`);
+async function searchIssuesPageGet(jql, { startAt = 0, fieldIds, maxResults = ISSUES_PER_STEP }) {
+  const fields = buildJiraFieldList(fieldIds);
+  
+  const data = await jiraFetch("/rest/api/3/search", {
+    method: "POST",
+    body: {
+      jql: jql || "",
+      startAt: Number(startAt),
+      maxResults: Number(maxResults),
+      fields: Array.isArray(fields) ? fields : [],
+      expand: ["changelog"],
+    }
+  });
+  
+  return {
+    issues: data.issues || [],
+    total: data.total || 0,
+    nextPageToken: null, // startAt paging não usa token
+  };
 }
-
-/**
- * Lista todos os overrides de JQL salvos em operacao_config/jql_overrides.
- */
-async function listJqlConfigs() {
-  const db = getDb();
-  const snap = await db.doc('operacao_config/jql_overrides').get();
-  if (!snap.exists) {
-    return [];
-  }
-  const data = snap.data() || {};
-  return Object.entries(data)
-    .filter(([_, value]) => typeof value === 'string')
-    .map(([escopoId, jql]) => ({ escopoId, jql }));
-}
-
 async function previewCarga() {
   const batches = await loadJqlBatchesWithOverrides();
 
@@ -901,66 +902,6 @@ function extractStatusHistory(issue) {
     return result.slice(result.length - MAX_STATUS_HISTORY);
   }
   return result;
-}
-
-/**
- * Extrai o valor completo do campo sem remover prefixos numéricos.
- * Usado para campos como naturezaIniciativa onde "Técnica - Regulatória"
- * deve ser preservado integralmente. Prioriza "displayValue" para campos select.
- */
-function extractFieldValueFull(raw) {
-  if (raw == null) return null;
-  if (typeof raw === "string") return raw.trim() || null;
-  if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
-  if (Array.isArray(raw)) {
-    const values = raw.map(extractFieldValueFull).filter(Boolean);
-    return values.length ? values.join(", ") : null;
-  }
-  if (typeof raw === "object") {
-    // Para campos select, prioriza displayValue que vem com o texto completo (ex: "Técnica - Regulatória")
-    // value pode vir truncado em alguns casos
-    if (raw.displayValue) {
-      const displayVal = String(raw.displayValue).trim();
-      if (displayVal) return displayVal;
-    }
-    // Fallback para outros tipos de campo
-    for (const key of ["value", "name", "displayName", "key"]) {
-      if (raw[key]) return String(raw[key]).trim() || null;
-    }
-    if (Array.isArray(raw.content)) {
-      const parts = [];
-      for (const block of raw.content) {
-        for (const item of block.content || []) {
-          if (item.type === "text" && item.text) parts.push(item.text);
-        }
-      }
-      return parts.length ? parts.join("\n") : null;
-    }
-  }
-  return null;
-}
-
-/**
- * Busca issues com paginação via startAt (GET).
- * Com expand=changelog para capturar status history.
- * Retorna: { issues: [], total, nextPageToken }
- */
-async function searchIssuesPageGet(jql, { startAt = 0, fieldIds, maxResults = ISSUES_PER_STEP }) {
-  const fields = buildJiraFieldList(fieldIds);
-  const path = `/rest/api/3/search?${new URLSearchParams({
-    jql: jql || "",
-    startAt,
-    maxResults,
-    fields: fields.join(","),
-    expand: "changelog",
-  })}`;
-  
-  const data = await jiraFetch(path);
-  return {
-    issues: data.issues || [],
-    total: data.total || 0,
-    nextPageToken: null, // startAt paging não usa token
-  };
 }
 
 async function searchOperacaoIssues({
@@ -1348,6 +1289,4 @@ module.exports = {
   seedEscopos,
   getApproxCount,
   searchOperacaoIssues,
-  saveJqlConfig,
-  listJqlConfigs,
 };

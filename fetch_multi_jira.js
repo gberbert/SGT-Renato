@@ -10,7 +10,7 @@ const authHeader = `Basic ${Buffer.from(`${envVars.JIRA_USER_EMAIL}:${envVars.JI
 const domain = envVars.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
 
 const jql = 'issue IN (TI-21465, TI-22093, TI-22518, TI-22530, TI-22822, TI-22875, TI-23957, TI-27191, TI-32457, TI-35149, TI-37022)';
-const jiraUrl = `https://${domain}/rest/api/3/search/jql?expand=names`;
+const jiraUrl = `https://${domain}/rest/api/3/search?expand=names`;
 
 async function fetchJira() {
     try {
