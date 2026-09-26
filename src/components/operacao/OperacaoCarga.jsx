@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Box, Flex, Text, Card, Button, Progress, Callout, Badge, Table, Grid } from '@radix-ui/themes';
-import { Database, Play, Search, Square, AlertTriangle, CheckCircle2, Loader2, Clock } from 'lucide-react';
+import { Box, Flex, Text, Card, Button, Progress, Callout, Badge, Table, Grid, Checkbox } from '@radix-ui/themes';
+import { Database, Play, Search, Square, AlertTriangle, CheckCircle2, Loader2, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { previewJiraGlobalCarga, runJiraGlobalCarga } from '../../services/operacaoSyncService';
 import { logSyncAction } from '../../services/auditService';
 import { auth } from '../../firebase';
@@ -183,6 +183,8 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
   const [previewError, setPreviewError] = useState('');
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [lastSyncTickets, setLastSyncTickets] = useState(null);
+  const [selectedEscopos, setSelectedEscopos] = useState(new Set());
+  const [showScopeSelector, setShowScopeSelector] = useState(false);
   const isAdmin = userRole === 'admin';
 
   // Estado da carga vem do store global (persiste entre navegações)
@@ -227,6 +229,9 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
       return;
     }
 
+    // Se há escopos selecionados, filtra apenas os escopos escolhidos
+    const escoposToSync = selectedEscopos.size > 0 ? Array.from(selectedEscopos) : [];
+
     const syncStartTime = Date.now();
 
     const initialRun = {
@@ -238,6 +243,7 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
       totalEstimated: preview.total || 0,
       batchIndex: 0,
       totalBatches: preview.batches?.length || 6,
+      escoposRequested: escoposToSync,
     };
     startSyncLoading(initialRun);
 
@@ -252,6 +258,7 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
           label: b.label,
           total: b.total || 0,
         })),
+        escopoIds: escoposToSync,
         signal: controller.signal,
         onProgress: (run) => setSyncRun(run),
       });
@@ -259,6 +266,9 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
       await refreshRadar();
       // Auditoria: registra carga bem-sucedida
       logSyncAction(auth.currentUser, finalRun, syncStartTime);
+      // Limpa seleção após sucesso
+      setSelectedEscopos(new Set());
+      setShowScopeSelector(false);
     } catch (err) {
       const errMsg = formatCallableError(err);
       const errorRun = syncRun ? { ...syncRun, status: 'error', message: errMsg } : null;
@@ -269,6 +279,26 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
       _activeAbortController = null;
       fetchLastSyncInfo();
     }
+  };
+
+  const toggleEscopo = (escopoId) => {
+    const newSet = new Set(selectedEscopos);
+    if (newSet.has(escopoId)) {
+      newSet.delete(escopoId);
+    } else {
+      newSet.add(escopoId);
+    }
+    setSelectedEscopos(newSet);
+  };
+
+  const selectAllEscopos = () => {
+    if (preview?.batches) {
+      setSelectedEscopos(new Set(preview.batches.map((b) => b.escopoId)));
+    }
+  };
+
+  const clearEscopoSelection = () => {
+    setSelectedEscopos(new Set());
   };
 
   const handleCancel = () => {
@@ -354,7 +384,56 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
             <Square size={16} /> Parar
           </Button>
         )}
+        <Button
+          variant="soft"
+          onClick={() => setShowScopeSelector(!showScopeSelector)}
+          disabled={!preview || syncLoading}
+        >
+          {showScopeSelector ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          Filtrar escopos ({selectedEscopos.size})
+        </Button>
       </Flex>
+
+      {showScopeSelector && preview?.batches && (
+        <Card className="glass-panel" style={{ border: '1px solid var(--glass-border)', marginBottom: '1rem' }}>
+          <Flex direction="column" gap="3" p="4">
+            <Flex justify="between" align="center">
+              <Text size="4" weight="bold">Selecionar escopos para carga</Text>
+              <Flex gap="2">
+                <Button size="1" variant="soft" onClick={selectAllEscopos}>
+                  Todos
+                </Button>
+                <Button size="1" variant="soft" color="gray" onClick={clearEscopoSelection}>
+                  Limpar
+                </Button>
+              </Flex>
+            </Flex>
+            <Flex direction="column" gap="2">
+              {preview.batches.map((batch) => (
+                <Flex key={batch.escopoId} align="center" gap="2">
+                  <Checkbox
+                    checked={selectedEscopos.has(batch.escopoId)}
+                    onCheckedChange={() => toggleEscopo(batch.escopoId)}
+                  />
+                  <Text size="2">
+                    <Badge color="blue">{batch.label}</Badge>
+                  </Text>
+                  <Text size="1" color="gray">
+                    {formatNumber(batch.total)} tickets
+                  </Text>
+                </Flex>
+              ))}
+            </Flex>
+            {selectedEscopos.size > 0 && (
+              <Callout.Root color="blue">
+                <Callout.Text>
+                  {selectedEscopos.size} escopo(s) selecionado(s) para carga
+                </Callout.Text>
+              </Callout.Root>
+            )}
+          </Flex>
+        </Card>
+      )}
 
       <CargaProgressPanel syncRun={syncRun} syncLoading={syncLoading} />
 

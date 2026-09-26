@@ -65,6 +65,12 @@ const TICKET_FIELD_DEFINITIONS = {
     "Natureza de Iniciativa",
     "natureza de iniciativa",
   ],
+  data_limite_regulatoria: [
+    "Data Limite Regulatória",
+    "data limite regulatória",
+    "Data Limite Regulatoria",
+    "data limite regulatoria",
+  ],
 };
 
 const ESCOPO_SEED = [

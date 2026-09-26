@@ -252,8 +252,8 @@ function extractFieldValue(raw) {
 
 /**
  * Extrai o valor completo do campo sem remover prefixos numéricos.
- * Usado para campos como naturezaIniciativa onde "1 - Manutenção Evolutiva"
- * deve ser preservado integralmente.
+ * Usado para campos como naturezaIniciativa onde "Negócios - Melhoria"
+ * deve ser preservado integralmente. Prioriza "displayValue" para campos select.
  */
 function extractFieldValueFull(raw) {
   if (raw == null) return null;
@@ -264,7 +264,8 @@ function extractFieldValueFull(raw) {
     return values.length ? values.join(", ") : null;
   }
   if (typeof raw === "object") {
-    for (const key of ["value", "name", "displayName", "key"]) {
+    // Prioriza displayValue e value para capturar o texto completo de campos select/radio
+    for (const key of ["displayValue", "value", "name", "displayName", "key"]) {
       if (raw[key]) return String(raw[key]).trim() || null;
     }
     if (Array.isArray(raw.content)) {
@@ -392,6 +393,7 @@ const KNOWN_DATE_FIELD_IDS = {
   data_entrega_producao_prevista: "customfield_10263",
   estimativa_horas: "customfield_10437",
   data_fim_planejado: "customfield_16711",
+  data_limite_regulatoria: "customfield_10438",
 };
 
 async function resolveTicketFieldIds() {
@@ -440,8 +442,8 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
       extracted[col] = null;
       continue;
     }
-    // natureza_iniciativa deve preservar o valor completo (com prefixo numérico)
-    if (col === "natureza_iniciativa") {
+    // natureza_iniciativa e data_limite_regulatoria devem preservar o valor completo
+    if (col === "natureza_iniciativa" || col === "data_limite_regulatoria") {
       extracted[col] = extractFieldValueFull(fields[fid]);
     } else {
       extracted[col] = extractFieldValue(fields[fid]);
@@ -487,7 +489,6 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     projectName: project.name || null,
     issueType: issueType.name || null,
     priority: priorityName,
-    prioridadeInterna: priorityName,
     escopo: escopo || null,
     syncBatch: syncBatch || null,
     empresa,
@@ -511,6 +512,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     dataEntregaProducaoPrevista: extracted.data_entrega_producao_prevista || null,
     estimativaHoras: extracted.estimativa_horas != null ? Number(extracted.estimativa_horas) : null,
     dataFimPlanejado: extracted.data_fim_planejado || null,
+    dataLimiteRegulatoria: extracted.data_limite_regulatoria || null,
     issueLinksDetailed: extractIssueLinksDetailed(issue),
     labels,
     components,
@@ -902,34 +904,63 @@ function extractStatusHistory(issue) {
 }
 
 /**
- * Busca uma página de issues usando GET /rest/api/3/search com expand=changelog.
- * Usa startAt para paginação (a API GET não suporta nextPageToken).
+ * Extrai o valor completo do campo sem remover prefixos numéricos.
+ * Usado para campos como naturezaIniciativa onde "Técnica - Regulatória"
+ * deve ser preservado integralmente. Prioriza "displayValue" para campos select.
  */
-async function searchIssuesPageGet(jql, { startAt = 0, fieldIds, maxResults = ISSUES_PER_STEP }) {
-  const fields = buildJiraFieldList(fieldIds).join(",");
-  const params = new URLSearchParams({
-    jql,
-    maxResults: String(maxResults),
-    startAt: String(startAt),
-    expand: "changelog",
-    fields,
-  });
-  return jiraFetch(`/rest/api/3/search?${params.toString()}`, { method: "GET" });
+function extractFieldValueFull(raw) {
+  if (raw == null) return null;
+  if (typeof raw === "string") return raw.trim() || null;
+  if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
+  if (Array.isArray(raw)) {
+    const values = raw.map(extractFieldValueFull).filter(Boolean);
+    return values.length ? values.join(", ") : null;
+  }
+  if (typeof raw === "object") {
+    // Para campos select, prioriza displayValue que vem com o texto completo (ex: "Técnica - Regulatória")
+    // value pode vir truncado em alguns casos
+    if (raw.displayValue) {
+      const displayVal = String(raw.displayValue).trim();
+      if (displayVal) return displayVal;
+    }
+    // Fallback para outros tipos de campo
+    for (const key of ["value", "name", "displayName", "key"]) {
+      if (raw[key]) return String(raw[key]).trim() || null;
+    }
+    if (Array.isArray(raw.content)) {
+      const parts = [];
+      for (const block of raw.content) {
+        for (const item of block.content || []) {
+          if (item.type === "text" && item.text) parts.push(item.text);
+        }
+      }
+      return parts.length ? parts.join("\n") : null;
+    }
+  }
+  return null;
 }
 
-/** Versão sem changelog — usada na prévia de contagem (mais rápida) */
-async function searchIssuesPage(jql, { pageToken, fieldIds, maxResults = ISSUES_PER_STEP }) {
-  const body = {
-    jql,
+/**
+ * Busca issues com paginação via startAt (GET).
+ * Com expand=changelog para capturar status history.
+ * Retorna: { issues: [], total, nextPageToken }
+ */
+async function searchIssuesPageGet(jql, { startAt = 0, fieldIds, maxResults = ISSUES_PER_STEP }) {
+  const fields = buildJiraFieldList(fieldIds);
+  const path = `/rest/api/3/search?${new URLSearchParams({
+    jql: jql || "",
+    startAt,
     maxResults,
-    fields: buildJiraFieldList(fieldIds),
+    fields: fields.join(","),
+    expand: "changelog",
+  })}`;
+  
+  const data = await jiraFetch(path);
+  return {
+    issues: data.issues || [],
+    total: data.total || 0,
+    nextPageToken: null, // startAt paging não usa token
   };
-  if (pageToken) body.nextPageToken = pageToken;
-
-  return jiraFetch("/rest/api/3/search/jql", {
-    method: "POST",
-    body,
-  });
 }
 
 async function searchOperacaoIssues({
@@ -941,8 +972,8 @@ async function searchOperacaoIssues({
 }) {
   const fieldIds = await resolveTicketFieldIds();
   const { baseUrl } = getJiraCredentials();
-  const page = await searchIssuesPage(jql, {
-    pageToken: nextPageToken || undefined,
+  const page = await searchIssuesPageGet(jql, {
+    startAt: 0,
     fieldIds,
     maxResults,
   });
@@ -1047,8 +1078,13 @@ async function processSyncStep(runId) {
   const { baseUrl } = getJiraCredentials();
   const currentBatch = batches[batchIndex];
 
-  // Usa GET com expand=changelog para capturar o histórico de status
+  // Registra timestamp de início deste escopo se for a primeira página
   const currentStartAt = run.pageStartAt || 0;
+  if (currentStartAt === 0 && !currentBatch.startedAt) {
+    currentBatch.startedAt = new Date().toISOString();
+  }
+
+  // Usa GET com expand=changelog para capturar o histórico de status
   const page = await searchIssuesPageGet(currentBatch.jql, {
     startAt: currentStartAt,
     fieldIds,
@@ -1085,6 +1121,7 @@ async function processSyncStep(runId) {
 
   if (!hasMorePages) {
     currentBatch.done = true;
+    currentBatch.finishedAt = new Date().toISOString();
     nextBatchIndex += 1;
     if (nextBatchIndex < batches.length) {
       message = `Lote ${currentBatch.label} concluído. Iniciando ${batches[nextBatchIndex].label}...`;
@@ -1129,6 +1166,42 @@ async function processSyncStep(runId) {
   await runRef.update(partialRun);
   const updatedSnap = await runRef.get();
   return { done: false, run: serializeRun(runSnap.id, updatedSnap.data()) };
+}
+
+/**
+ * Registra o histórico de uma carga completa em carga_history/{timestamp}.
+ * Chamado ao final de finalizeSyncRun() para preservar um registro imutável.
+ */
+async function recordCargoHistory(runId, run) {
+  const db = getDb();
+  const batchHistory = (run.batches || []).map((b) => ({
+    escopoId: b.escopoId,
+    label: b.label,
+    escopo: b.escopo,
+    fetched: b.fetched || 0,
+    upserted: b.upserted || 0,
+    startedAt: b.startedAt || null,
+    finishedAt: b.finishedAt || null,
+  }));
+
+  const historyDoc = {
+    runId,
+    status: run.status,
+    startedAt: run.startedAt || null,
+    finishedAt: run.finishedAt || null,
+    totalTicketsFetched: run.ticketsFetched || 0,
+    totalTicketsUpserted: run.ticketsUpserted || 0,
+    totalStatusChanges: run.totalStatusChanges || 0,
+    batchHistory,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+
+  // Usa timestamp em ms como ID do documento para ordenação natural
+  const docId = String(Date.now());
+  const ref = db.collection("carga_history").doc(docId);
+  await ref.set(historyDoc);
+  
+  console.log(`[recordCargoHistory] Histórico de carga registrado: ${docId}`);
 }
 
 /**
@@ -1204,6 +1277,13 @@ async function finalizeSyncRun(runRef, run) {
     updatedAt: FieldValue.serverTimestamp(),
     message: `Carga concluída: ${run.ticketsUpserted || 0} tickets sincronizados.${seedMsg}`,
   });
+
+  // Registra o histórico imutável desta carga
+  try {
+    await recordCargoHistory(runRef.id, run);
+  } catch (e) {
+    console.warn("[finalizeSyncRun] recordCargoHistory falhou (não crítico):", e.message);
+  }
 }
 
 function serializeRun(id, run) {

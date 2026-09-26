@@ -131,6 +131,7 @@ function emitProgress(state, onProgress) {
 export async function runJiraGlobalCarga({
   totalEstimated = 0,
   batchEstimates = [],
+  escopoIds = [],
   onProgress,
   signal,
 } = {}) {
@@ -141,12 +142,19 @@ export async function runJiraGlobalCarga({
   const overrides = await loadJqlOverrides();
   
   // Mescla overrides com batches estáticos
-  const batches = staticBatches.map((b) => {
+  let batches = staticBatches.map((b) => {
     const override = overrides[b.escopoId];
     return (override != null && override !== '')
       ? { ...b, jql: override, isOverridden: true }
       : b;
   });
+
+  // Filtra apenas os escopos selecionados, se houver
+  if (escopoIds && escopoIds.length > 0) {
+    batches = batches.filter(
+      (b) => escopoIds.includes(b.escopoId) || escopoIds.includes(b.escopo)
+    );
+  }
   
   const estimates =
     batchEstimates.length > 0
