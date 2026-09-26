@@ -147,16 +147,6 @@ export function parseJqlCargaText(fileText) {
   return batches;
 }
 
-function normalizeJqlForCombine(jql) {
-  return jql.replace(/\s+ORDER BY\s+updated\s+DESC\s*$/i, '').trim();
-}
-
-export function buildCombinedOrJql(batches) {
-  return batches
-    .map((b) => `(${normalizeJqlForCombine(b.jql)})`)
-    .join(' OR ');
-}
-
 export function getOperacaoJqlConfig() {
   const batches = parseJqlCargaText(jqlsRaw);
   return {

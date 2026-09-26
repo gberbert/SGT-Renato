@@ -1,6 +1,7 @@
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '../firebase';
-import { buildCombinedOrJql, getOperacaoJqlConfig } from '../utils/jqlCargaClient';
+import { doc, getDoc } from 'firebase/firestore';
+import { functions, db } from '../firebase';
+import { getOperacaoJqlConfig } from '../utils/jqlCargaClient';
 import { buildRadarByEscopoFromStorageMap } from './operacaoRadarService';
 import {
   seedEscoposFirestore,
@@ -17,6 +18,15 @@ import {
 export { fetchOperacaoStatsLocal };
 
 const searchJira = httpsCallable(functions, 'searchJiraTickets');
+
+async function loadJqlOverrides() {
+  try {
+    const snap = await getDoc(doc(db, 'operacao_config', 'jql_overrides'));
+    return snap.exists() ? (snap.data() || {}) : {};
+  } catch {
+    return {};
+  }
+}
 
 async function jiraApproxCount(jql) {
   const result = await searchJira({ approximateCount: true, jql });
@@ -37,12 +47,20 @@ async function jiraOperacaoPage({ jql, nextPageToken, escopo, syncBatch, maxResu
 
 export async function previewJiraGlobalCarga() {
   const config = getOperacaoJqlConfig();
-  const batches = config.batches;
-  const combinedJql = buildCombinedOrJql(batches);
+  const staticBatches = config.batches;
+  
+  // Carrega overrides de Firestore
+  const overrides = await loadJqlOverrides();
+  
+  // Mescla overrides com batches estáticos
+  const batches = staticBatches.map((b) => {
+    const override = overrides[b.escopoId];
+    return (override != null && override !== '')
+      ? { ...b, jql: override, isOverridden: true }
+      : b;
+  });
 
-  const uniqueTotal = await jiraApproxCount(combinedJql);
   const batchResults = [];
-
   for (const batch of batches) {
     const total = await jiraApproxCount(batch.jql);
     batchResults.push({
@@ -58,13 +76,13 @@ export async function previewJiraGlobalCarga() {
   const totalRaw = batchResults.reduce((sum, b) => sum + b.total, 0);
 
   return {
-    total: uniqueTotal,
+    total: totalRaw,
     totalRaw,
     approximate: true,
     jqlFile: config.jqlFile,
     batches: batchResults,
     mitigation: {
-      estimatedDocs: uniqueTotal,
+      estimatedDocs: totalRaw,
       firestoreLimitDocs: 1000000,
       recommendedDocSizeKb: '1-3',
       syncStrategy: 'frontend_orchestrated_with_searchJiraTickets',
@@ -117,7 +135,19 @@ export async function runJiraGlobalCarga({
   signal,
 } = {}) {
   const config = getOperacaoJqlConfig();
-  const batches = config.batches;
+  const staticBatches = config.batches;
+  
+  // Carrega overrides de Firestore
+  const overrides = await loadJqlOverrides();
+  
+  // Mescla overrides com batches estáticos
+  const batches = staticBatches.map((b) => {
+    const override = overrides[b.escopoId];
+    return (override != null && override !== '')
+      ? { ...b, jql: override, isOverridden: true }
+      : b;
+  });
+  
   const estimates =
     batchEstimates.length > 0
       ? batchEstimates

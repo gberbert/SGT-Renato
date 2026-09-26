@@ -159,18 +159,56 @@ async function jiraFetch(path, { method = "GET", body } = {}) {
 }
 
 function normalizeJqlForCombine(jql) {
-  return jql.replace(/\s+ORDER BY\s+updated\s+DESC\s*$/i, "").trim();
+  if (!jql || typeof jql !== 'string') return "";
+  // Remove ORDER BY e outros modificadores finais
+  let normalized = jql
+    .replace(/\s+ORDER BY\s+.*$/i, "")
+    .replace(/\s+LIMIT\s+\d+\s*$/i, "")
+    .trim();
+  
+  // Garante balanceamento de parênteses removendo extras no final
+  let openCount = 0;
+  for (const char of normalized) {
+    if (char === '(') openCount++;
+    if (char === ')') openCount--;
+  }
+  
+  // Se há mais fechamentos que aberturas, remove os extras do final
+  while (openCount < 0 && normalized.endsWith(')')) {
+    normalized = normalized.slice(0, -1).trim();
+    openCount++;
+  }
+  
+  // Se há mais aberturas que fechamentos, adiciona os fechamentos necessários
+  while (openCount > 0) {
+    normalized += ')';
+    openCount--;
+  }
+  
+  return normalized;
 }
 
 function buildCombinedOrJql(batches) {
   // Filtra apenas batches com JQL válido (não vazio/null)
-  const validBatches = batches.filter((b) => b.jql && typeof b.jql === 'string' && b.jql.trim());
+  const validBatches = batches
+    .filter((b) => b.jql && typeof b.jql === 'string' && b.jql.trim())
+    .map((b) => {
+      const normalized = normalizeJqlForCombine(b.jql);
+      if (!normalized) {
+        console.warn(`[buildCombinedOrJql] JQL vazio após normalizar para batch ${b.label || b.escopoId}`);
+        return null;
+      }
+      return { ...b, normalized };
+    })
+    .filter(Boolean);
+  
   if (validBatches.length === 0) {
     console.warn("[buildCombinedOrJql] Nenhum JQL válido encontrado nos batches!");
     return "";
   }
+  
   return validBatches
-    .map((b) => `(${normalizeJqlForCombine(b.jql)})`)
+    .map((b) => `(${b.normalized})`)
     .join(" OR ");
 }
 
