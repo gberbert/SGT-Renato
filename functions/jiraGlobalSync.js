@@ -754,18 +754,41 @@ async function previewCarga() {
     return true;
   });
 
-  const batchResults = [];
-  for (const batch of validBatches) {
-    const total = await getApproxCount(batch.jql);
-    batchResults.push({
-      label: batch.label,
-      escopo: batch.escopo,
-      escopoId: batch.escopoId,
-      jql: batch.jql,
-      total,
-      approximate: true,
-    });
-  }
+  const fieldIds = await resolveTicketFieldIds();
+  
+  // Busca todos os batches em paralelo para eficiência
+  const batchResults = await Promise.all(
+    validBatches.map(async (batch) => {
+      try {
+        // Busca a primeira página (maxResults mínimo) para obter o total real via search/jql
+        const page = await searchIssuesPage(batch.jql, {
+          pageToken: null,
+          fieldIds,
+          maxResults: 1, // mínimo para obter o total sem carregar muitos dados
+        });
+        const total = page.total || 0;
+        return {
+          label: batch.label,
+          escopo: batch.escopo,
+          escopoId: batch.escopoId,
+          jql: batch.jql,
+          total,
+          approximate: false,
+        };
+      } catch (e) {
+        console.warn(`[previewCarga] Erro ao buscar batch ${batch.label}:`, e.message);
+        return {
+          label: batch.label,
+          escopo: batch.escopo,
+          escopoId: batch.escopoId,
+          jql: batch.jql,
+          total: 0,
+          approximate: false,
+          error: e.message,
+        };
+      }
+    })
+  );
 
   const totalRaw = batchResults.reduce((sum, b) => sum + b.total, 0);
   const uniqueTotal = totalRaw; // soma dos escopos individuais (sem JQL combinado)
