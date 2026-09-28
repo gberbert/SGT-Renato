@@ -207,6 +207,7 @@ const OperacaoCarga = ({ userRole, embedded = false }) => {
     setPreviewLoading(true);
     setPreviewError('');
     try {
+      // Usa a CF nova que retorna amostras de tickets reais
       const data = await previewJiraGlobalCarga();
       setPreview(data);
     } catch (err) {

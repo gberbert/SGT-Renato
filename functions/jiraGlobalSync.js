@@ -1,7 +1,9 @@
 "use strict";
+// v2 — força redeploy: migração completa para /rest/api/3/search/jql (CHANGE-2046)
 
 const admin = require("firebase-admin");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const functions = require("firebase-functions");
 const {
   JQLS_DEFAULT,
   ESCOPO_SEED,
@@ -129,13 +131,18 @@ function getDb() {
 }
 
 function getJiraCredentials() {
-  const token = process.env.JIRA_API_TOKEN;
-  const email = process.env.JIRA_USER_EMAIL;
-  const domain = process.env.JIRA_DOMAIN || "jiracpfl.atlassian.net";
+  const config = functions.config();
+  const token = config.jira?.api_token || process.env.JIRA_API_TOKEN;
+  const email = config.jira?.user_email || process.env.JIRA_USER_EMAIL;
+  // JIRA_DOMAIN: domínio do Jira (ex: jiracpfl.atlassian.net)
+  // JIRA_API: path da API (ex: /rest/api/3/) — NÃO é uma URL base, ignorado na construção da URL
+  const domain = config.jira?.domain || process.env.JIRA_DOMAIN || "jiracpfl.atlassian.net";
   if (!token || !email) {
     throw new Error("Credenciais do Jira não configuradas no servidor.");
   }
   const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString("base64")}`;
+  // baseUrl é sempre construído a partir do domínio — os paths completos são fornecidos
+  // pelas chamadas individuais (ex: /rest/api/3/search/jql)
   const baseUrl = `https://${domain}`;
   return { token, email, domain, authHeader, baseUrl };
 }
@@ -223,12 +230,15 @@ function buildCombinedOrJql(batches) {
 async function getApproxCount(jql) {
   console.log("[getApproxCount] Iniciando contagem com JQL:", jql?.substring(0, 100));
   try {
+    // maxResults: 1 + fields: ["summary"] minimiza dados trafegados.
+    // NOTA: "approximateTotal" NÃO é um parâmetro válido do endpoint /rest/api/3/search/jql
+    // — causava 400 "Invalid request payload". Removido.
     const data = await jiraFetch("/rest/api/3/search/jql", {
       method: "POST",
       body: {
         jql: jql || "",
-        maxResults: 0,
-        fields: [],
+        maxResults: 1,
+        fields: ["summary"],
       },
     });
     const count = Number(data.total) || 0;
@@ -382,7 +392,7 @@ let _fieldIdsCache = null;
 
 async function getFieldMap() {
   if (_fieldMapCache) return _fieldMapCache;
-  const fields = await jiraFetch("/rest/api/3/field");
+  const fields = await jiraFetch("/rest/api/3/field", { method: "GET" });
   _fieldMapCache = {};
   for (const field of fields) {
     if (field.name && field.id) {
@@ -775,7 +785,14 @@ async function previewCarga() {
 
   const batchResults = [];
   for (const batch of validBatches) {
-    const total = await getApproxCount(batch.jql);
+    let total = 0;
+    let batchError = null;
+    try {
+      total = await getApproxCount(batch.jql);
+    } catch (e) {
+      console.error(`[previewCarga] Falha ao contar batch "${batch.label}":`, e.message);
+      batchError = e.message;
+    }
     batchResults.push({
       label: batch.label,
       escopo: batch.escopo,
@@ -783,6 +800,7 @@ async function previewCarga() {
       jql: batch.jql,
       total,
       approximate: true,
+      ...(batchError ? { error: batchError } : {}),
     });
   }
 
@@ -1295,8 +1313,119 @@ async function getOperacaoStats() {
   };
 }
 
+/**
+ * Busca tickets de amostra para cada batch/escopo
+ * Retorna: { key, summary, status, issueType } para os primeiros 5 tickets
+ */
+async function fetchSampleTickets(jql, fieldIds, maxResults = 5) {
+  try {
+    const { baseUrl } = getJiraCredentials();
+    const page = await searchIssuesPageGet(jql, {
+      startAt: 0,
+      fieldIds,
+      maxResults,
+    });
+    
+    return (page.issues || []).map((issue) => ({
+      key: issue.key,
+      summary: (issue.fields || {}).summary || "Sem título",
+      status: ((issue.fields || {}).status || {}).name || "Desconhecido",
+      issueType: ((issue.fields || {}).issuetype || {}).name || "Desconhecido",
+    }));
+  } catch (e) {
+    console.warn(`[fetchSampleTickets] Erro ao buscar amostras para JQL:`, e.message);
+    return [];
+  }
+}
+
+/**
+ * Preview com amostras reais de tickets por batch
+ * Similar a previewCarga() mas também busca 5 primeiros tickets de cada escopo
+ */
+async function previewCargoWithSamples() {
+  const batches = await loadJqlBatchesWithOverrides();
+
+  // Valida e filtra batches com JQL vazios
+  const validBatches = batches.filter((b) => {
+    if (!b.jql || typeof b.jql !== 'string' || !b.jql.trim()) {
+      console.warn(`[previewCargoWithSamples] Batch ${b.label} (${b.escopoId}) tem JQL vazio/inválido, pulando...`);
+      return false;
+    }
+    return true;
+  });
+
+  const fieldIds = await resolveTicketFieldIds();
+  const batchResults = [];
+
+  for (const batch of validBatches) {
+    let total = 0;
+    let samples = [];
+    let batchError = null;
+
+    try {
+      // Contagem
+      total = await getApproxCount(batch.jql);
+      
+      // Amostras (primeiros 5 tickets)
+      samples = await fetchSampleTickets(batch.jql, fieldIds, 5);
+    } catch (e) {
+      console.error(`[previewCargoWithSamples] Falha ao processar batch "${batch.label}":`, e.message);
+      batchError = e.message;
+    }
+
+    batchResults.push({
+      label: batch.label,
+      escopo: batch.escopo,
+      escopoId: batch.escopoId,
+      jql: batch.jql,
+      total,
+      approximate: true,
+      samples,
+      ...(batchError ? { error: batchError } : {}),
+    });
+  }
+
+  const totalRaw = batchResults.reduce((sum, b) => sum + b.total, 0);
+  const uniqueTotal = totalRaw;
+
+  // Amostra de changelog: busca 10 tickets do primeiro lote para validar coleta de change status
+  let changelogSample = { sampleSize: 0, statusChangesFound: 0, avgPerTicket: 0 };
+  try {
+    const firstBatch = validBatches[0];
+    if (firstBatch && firstBatch.jql && firstBatch.jql.trim()) {
+      const samplePage = await searchIssuesPageGet(firstBatch.jql, { startAt: 0, fieldIds, maxResults: 10 });
+      const sampleIssues = samplePage.issues || [];
+      const sampleChanges = sampleIssues.reduce((acc, issue) => acc + extractStatusHistory(issue).length, 0);
+      changelogSample = {
+        sampleSize: sampleIssues.length,
+        statusChangesFound: sampleChanges,
+        avgPerTicket: sampleIssues.length > 0 ? Math.round(sampleChanges / sampleIssues.length * 10) / 10 : 0,
+      };
+    }
+  } catch (e) {
+    changelogSample = { sampleSize: 0, statusChangesFound: 0, avgPerTicket: 0, error: e.message };
+  }
+
+  return {
+    total: uniqueTotal,
+    totalRaw,
+    approximate: true,
+    batches: batchResults,
+    changelogSample,
+    mitigation: {
+      estimatedDocs: uniqueTotal,
+      firestoreLimitDocs: 1000000,
+      recommendedDocSizeKb: "1-3",
+      syncStrategy: "GET_with_changelog_expand",
+      dashboardReads: "operacao_stats/summary (1 doc)",
+      countNote: "total é soma dos escopos individuais; pode haver duplicatas entre escopos",
+    },
+  };
+}
+
 module.exports = {
   previewCarga,
+  previewCargoWithSamples,
   getJqlConfig,
   createSyncRun,
   processSyncStep,

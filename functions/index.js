@@ -80,6 +80,7 @@ exports.onCreateNotification = onDocumentCreated({
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const functions = require("firebase-functions");
 
 exports.generateFunctionalSpec = onCall({
     maxInstances: 10,
@@ -260,7 +261,7 @@ REGRAS CRÍTICAS DE GERAÇÃO:
 exports.importJiraTicket = onCall({
     maxInstances: 10,
     timeoutSeconds: 30,
-    memory: "256MiB"
+    memory: "256MiB",
 }, async (request) => {
     const { ticketKey } = request.data;
 
@@ -268,9 +269,10 @@ exports.importJiraTicket = onCall({
         throw new HttpsError("invalid-argument", "Chave do ticket (ticketKey) não fornecida.");
     }
 
-    const token = process.env.JIRA_API_TOKEN;
-    const email = process.env.JIRA_USER_EMAIL;
-    const domain = process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
+    const config = functions.config();
+    const token = config.jira?.api_token || process.env.JIRA_API_TOKEN;
+    const email = config.jira?.user_email || process.env.JIRA_USER_EMAIL;
+    const domain = config.jira?.domain || process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
 
     if (!token || !email) {
         throw new HttpsError("failed-precondition", "Credenciais do Jira não configuradas no servidor.");
@@ -392,7 +394,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 exports.searchJiraTickets = onCall({
     maxInstances: 10,
     timeoutSeconds: 120,
-    memory: "512MiB"
+    memory: "512MiB",
 }, async (request) => {
     // Desembrulha payload: pode vir como request.data ou request.data.data
     let payload = request.data || {};
@@ -433,9 +435,10 @@ exports.searchJiraTickets = onCall({
         }
     }
 
-    const token = process.env.JIRA_API_TOKEN;
-    const email = process.env.JIRA_USER_EMAIL;
-    const domain = process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
+    const config = functions.config();
+    const token = config.jira?.api_token || process.env.JIRA_API_TOKEN;
+    const email = config.jira?.user_email || process.env.JIRA_USER_EMAIL;
+    const domain = config.jira?.domain || process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
 
     if (!token || !email) {
         throw new HttpsError("failed-precondition", "Credenciais do Jira não configuradas no servidor.");
@@ -550,6 +553,30 @@ exports.previewJiraGlobalCarga = onCall(OPERACAO_SYNC_OPTIONS, async (request) =
         return await jiraGlobalSync.previewCarga();
     } catch (error) {
         console.error("Erro no preview Jira global:", error);
+        throw new HttpsError("internal", error.message);
+    }
+});
+
+exports.getOperacaoPreviewWithTickets = onCall(OPERACAO_SYNC_OPTIONS, async (request) => {
+    await assertOperacaoAdmin(request);
+    try {
+        // Valida credenciais Jira antes de chamar o preview
+        const config = functions.config();
+        const token = config.jira?.api_token || process.env.JIRA_API_TOKEN;
+        const email = config.jira?.user_email || process.env.JIRA_USER_EMAIL;
+        const domain = config.jira?.domain || process.env.JIRA_DOMAIN || 'jiracpfl.atlassian.net';
+        
+        if (!token || !email) {
+            throw new HttpsError("failed-precondition", 
+                "Credenciais do Jira não configuradas no servidor (JIRA_API_TOKEN, JIRA_USER_EMAIL). " +
+                "Configure as variáveis de ambiente necessárias no Firebase Cloud Functions."
+            );
+        }
+        
+        console.log(`[getOperacaoPreviewWithTickets] Usando Jira domain: ${domain}, email: ${email}`);
+        return await jiraGlobalSync.previewCargoWithSamples();
+    } catch (error) {
+        console.error("Erro no preview com amostras:", error);
         throw new HttpsError("internal", error.message);
     }
 });

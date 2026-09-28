@@ -17,14 +17,16 @@ export function formatCallableError(err) {
   }
   if (code === 'functions/not-found') {
     return (
-      'Function searchJiraTickets não encontrada ou desatualizada. ' +
+      'Cloud Function não encontrada ou não foi implantada ainda. ' +
       'Execute: firebase deploy --only functions --project sgt-renato'
     );
   }
-  if (code === 'functions/internal' || message === 'internal') {
+  if (code === 'functions/internal') {
+    // Expõe a mensagem real lançada pelo servidor (ex: "Jira retornou 410: …")
+    if (message && message !== 'internal') return message;
     return (
-      'Erro interno em searchJiraTickets. Confira os logs no Firebase Console ' +
-      '(Functions → searchJiraTickets → Logs) e rode: firebase deploy --only functions'
+      'Erro interno no servidor. Verifique os logs no Firebase Console ' +
+      '(Functions → Logs) e rode: firebase deploy --only functions'
     );
   }
   if (details) return String(details);

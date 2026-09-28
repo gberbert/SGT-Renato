@@ -45,50 +45,12 @@ async function jiraOperacaoPage({ jql, nextPageToken, escopo, syncBatch, maxResu
   return result.data;
 }
 
+const previewJiraGlobalCargaFn = httpsCallable(functions, 'previewJiraGlobalCarga');
+
 export async function previewJiraGlobalCarga() {
-  const config = getOperacaoJqlConfig();
-  const staticBatches = config.batches;
-  
-  // Carrega overrides de Firestore
-  const overrides = await loadJqlOverrides();
-  
-  // Mescla overrides com batches estáticos
-  const batches = staticBatches.map((b) => {
-    const override = overrides[b.escopoId];
-    return (override != null && override !== '')
-      ? { ...b, jql: override, isOverridden: true }
-      : b;
-  });
-
-  const batchResults = [];
-  for (const batch of batches) {
-    const total = await jiraApproxCount(batch.jql);
-    batchResults.push({
-      label: batch.label,
-      escopo: batch.escopo,
-      escopoId: batch.escopoId,
-      jql: batch.jql,
-      total,
-      approximate: true,
-    });
-  }
-
-  const totalRaw = batchResults.reduce((sum, b) => sum + b.total, 0);
-
-  return {
-    total: totalRaw,
-    totalRaw,
-    approximate: true,
-    jqlFile: config.jqlFile,
-    batches: batchResults,
-    mitigation: {
-      estimatedDocs: totalRaw,
-      firestoreLimitDocs: 1000000,
-      recommendedDocSizeKb: '1-3',
-      syncStrategy: 'frontend_orchestrated_with_searchJiraTickets',
-      dashboardReads: 'operacao_stats/summary (1 doc)',
-    },
-  };
+  // Delega ao Cloud Function server-side que usa /rest/api/3/search/jql (CHANGE-2046)
+  const result = await previewJiraGlobalCargaFn({});
+  return result.data;
 }
 
 function computePercent({
