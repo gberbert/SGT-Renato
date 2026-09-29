@@ -48,10 +48,16 @@ function useTeamMembers() {
 
 const fmtDate = (v) => {
   if (!v) return '—';
-  const s = String(v).slice(0, 10);
-  if (s.length < 10) return String(v);
-  const [y, m, d] = s.split('-');
-  return `${d}/${m}/${y}`;
+  const s = String(v).trim();
+  // Full ISO: yyyy-mm-dd (optionally followed by time)
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  // Partial Jira format: mm-dd or mm-ddThh:mm:ss (no year prefix) — assume current year
+  const mmdd = s.match(/^(\d{2})-(\d{2})/);
+  if (mmdd) return `${mmdd[2]}/${mmdd[1]}/${new Date().getFullYear()}`;
+  // Already dd/mm/yyyy
+  if (s.match(/^\d{2}\/\d{2}\/\d{4}/)) return s.slice(0, 10);
+  return s;
 };
 
 function FieldLabel({ children }) {
@@ -118,7 +124,7 @@ function EditNumber({ label, fieldKey, value, onSave }) {
   );
 }
 
-function EditSelect({ label, fieldKey, options, value, onSave }) {
+function EditSelect({ label, fieldKey, options, value, onSave, placeholder }) {
   return (
     <div className="dmd-field">
       <FieldLabel>{label}</FieldLabel>
@@ -127,7 +133,7 @@ function EditSelect({ label, fieldKey, options, value, onSave }) {
         value={value ?? ''}
         onChange={(e) => onSave(fieldKey, e.target.value === '' ? null : e.target.value)}
       >
-        <option value="">—</option>
+        <option value="">{placeholder || '—'}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
@@ -360,21 +366,43 @@ function PlanRow({ left, right }) {
 export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, ticketDocId: ticketDocIdProp }) {
   const [activeTab, setActiveTab] = useState('geral');
   const [squadPrincipal, setSquadPrincipal] = useState(ticket?.squadPrincipal ?? null);
+  const [pendingChanges, setPendingChanges] = useState({});
+  const [saving, setSaving] = useState(false);
   const isEdit = mode === 'edit';
   const teamMembers = useTeamMembers();
   const systems = useSystems();
   const squads = useSquads();
+  const hasPending = Object.keys(pendingChanges).length > 0;
 
-  useEffect(() => { setActiveTab('geral'); }, [ticket?.issueKey]);
-  useEffect(() => { setSquadPrincipal(ticket?.squadPrincipal ?? null); }, [ticket?.squadPrincipal]);
+  useEffect(() => { setActiveTab('geral'); setSquadPrincipal(ticket?.squadPrincipal ?? null); setPendingChanges({}); }, [ticket?.issueKey]);
 
+  // Buffer edits locally — nothing goes to Firestore until SALVAR
   const save = useCallback(
     (field, value) => {
       if (!ticket?.issueKey) return;
-      onSave(ticket.issueKey, field, value);
+      setPendingChanges((prev) => ({ ...prev, [field]: value }));
     },
-    [ticket, onSave]
+    [ticket]
   );
+
+  const handleSave = useCallback(async () => {
+    if (!ticket?.issueKey || saving) return;
+    setSaving(true);
+    try {
+      for (const [field, value] of Object.entries(pendingChanges)) {
+        await onSave(ticket.issueKey, field, value);
+      }
+      setPendingChanges({});
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }, [ticket, pendingChanges, onSave, onClose, saving]);
+
+  const handleCancel = useCallback(() => {
+    setPendingChanges({});
+    onClose();
+  }, [onClose]);
 
   if (!ticket) return null;
 
@@ -393,7 +421,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
   const statusLabel = ticket.status || '—';
 
   return (
-    <div className="dmd-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="dmd-overlay">
       <div className="dmd-modal">
         {/* ── HEADER ── */}
         <div className="dmd-modal-header">
@@ -474,7 +502,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
               });
             })()}
           </div>
-          <button className="dmd-close-btn" onClick={onClose} title="Fechar">
+          <button className="dmd-close-btn" onClick={handleCancel} title="Fechar">
             <X size={18} />
           </button>
         </div>
@@ -517,6 +545,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                     options={PRIO_OPTIONS}
                     value={ticket.prioridadeInterna != null ? String(ticket.prioridadeInterna) : ''}
                     onSave={(field, val) => save(field, val)}
+                    placeholder={ticket.priority || '—'}
                   />
                 ) : (
                   <ReadField label="PRIORIDADE" value={prioLabel} />
@@ -541,9 +570,9 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                         <span
                           key={i}
                           style={{
-                            background: 'rgba(99,102,241,0.18)',
-                            color: '#a5b4fc',
-                            border: '1px solid rgba(99,102,241,0.35)',
+                            background: 'rgba(6,182,212,0.15)',
+                            color: '#22d3ee',
+                            border: '1px solid rgba(6,182,212,0.35)',
                             borderRadius: 6,
                             padding: '2px 10px',
                             fontSize: 12,
@@ -559,6 +588,12 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                     <span style={{ color: '#6b7280', fontSize: 13 }}>—</span>
                   )}
                 </div>
+              </div>
+
+              {/* Row 2c: PLANEJAMENTO HORAS DEMANDA FAST + DEMANDA VULNERABILIDADE */}
+              <div className="dmd-row">
+                <ReadField label="PLAN. HORAS DEMANDA FAST" value={ticket.planejamentoHorasDemandaFast} />
+                <ReadField label="DEMANDA VULNERABILIDADE" value={ticket.demandaVulnerabilidade} />
               </div>
 
               {/* Row 3: SISTEMAS IMPACTADOS — tags (somente leitura) */}
@@ -650,6 +685,54 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 )}
               </div>
 
+
+              {/* Row 3c: TICKETS VINCULADOS */}
+              <div className="dmd-row">
+                {isEdit ? (
+                  <EditText
+                    label="TICKETS VINCULADOS"
+                    fieldKey="ticketsVinculados"
+                    value={ticket.ticketsVinculados}
+                    onSave={save}
+                    wide
+                  />
+                ) : (
+                  <div className="dmd-field dmd-field--wide">
+                    <FieldLabel>TICKETS VINCULADOS</FieldLabel>
+                    {ticket.ticketsVinculados && String(ticket.ticketsVinculados).trim() !== '' ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: 4 }}>
+                        {String(ticket.ticketsVinculados)
+                          .split(',')
+                          .map((k) => k.trim())
+                          .filter(Boolean)
+                          .map((key, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                background: 'rgba(6,182,212,0.12)',
+                                border: '1px solid rgba(6,182,212,0.35)',
+                                borderRadius: 6,
+                                padding: '4px 10px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: '#22d3ee',
+                                letterSpacing: '0.03em',
+                                fontFamily: 'monospace',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {key}
+                            </span>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="dmd-field-value">—</div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Row 4: IMPEDIDO + MOTIVO IMPEDIMENTO */}
               <div className="dmd-row">
@@ -777,6 +860,50 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
             </div>
           )}
         </div>
+
+        {/* ── FOOTER ── */}
+        {isEdit && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10,
+            padding: '12px 20px',
+            borderTop: '1px solid var(--gray-5)',
+            background: 'var(--color-panel-solid)',
+            borderRadius: '0 0 14px 14px',
+            flexShrink: 0,
+          }}>
+            {hasPending && (
+              <span style={{ fontSize: 11, color: '#fb923c', fontWeight: 600, marginRight: 'auto' }}>
+                ● {Object.keys(pendingChanges).length} alteração(ões) não salva(s)
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleCancel}
+              style={{
+                padding: '7px 20px', borderRadius: 8, border: '1px solid var(--gray-6)',
+                background: 'var(--gray-3)', color: 'var(--gray-11)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !hasPending}
+              style={{
+                padding: '7px 22px', borderRadius: 8, border: 'none',
+                background: hasPending ? 'var(--indigo-9)' : 'var(--gray-5)',
+                color: hasPending ? '#fff' : 'var(--gray-9)',
+                fontSize: 13, fontWeight: 700, cursor: hasPending ? 'pointer' : 'default',
+                transition: 'background 0.15s',
+                opacity: saving ? 0.7 : 1,
+              }}
+            >
+              {saving ? 'Salvando…' : 'Salvar'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

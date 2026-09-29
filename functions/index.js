@@ -405,8 +405,53 @@ exports.searchJiraTickets = onCall({
             throw new HttpsError("invalid-argument", "jql é obrigatório para contagem aproximada.");
         }
         try {
-            const count = await jiraGlobalSync.getApproxCount(payload.jql);
-            return { count, approximate: true };
+            const token = process.env.JIRA_API_TOKEN;
+            const email = process.env.JIRA_USER_EMAIL;
+            const domain = process.env.JIRA_DOMAIN || "jiracpfl.atlassian.net";
+            const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString("base64")}`;
+
+            // Endpoint correto: /rest/api/3/search/jql (cursor-based, classic foi removido 410)
+            // Usa maxResults:1 para ver se há pelo menos 1 resultado
+            const jqlToSend = payload.jql || "";
+            console.log("[searchJiraTickets] approximateCount JQL FULL:", jqlToSend);
+            const rawResp = await fetch(`https://${domain}/rest/api/3/search/jql`, {
+                method: "POST",
+                headers: {
+                    Authorization: authHeader,
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    jql: jqlToSend,
+                    maxResults: 1,
+                    fields: ["summary"],
+                }),
+            });
+
+            const rawStatus = rawResp.status;
+            let rawData = {};
+            try { rawData = await rawResp.json(); } catch(_) {}
+
+            console.log("[searchJiraTickets] approximateCount result:", JSON.stringify({
+                httpStatus: rawStatus,
+                issuesLength: (rawData.issues || []).length,
+                isLast: rawData.isLast,
+                errorMessages: rawData.errorMessages,
+                topLevelKeys: Object.keys(rawData),
+            }));
+
+            if (!rawResp.ok) {
+                throw new Error(`Jira retornou ${rawStatus}: ${JSON.stringify(rawData.errorMessages || rawData)}`);
+            }
+
+            // Se retornou pelo menos 1 issue, usa contagem paginada real
+            if ((rawData.issues || []).length > 0 || rawData.isLast === false) {
+                const count = await jiraGlobalSync.getApproxCount(jqlToSend);
+                return { count, approximate: true };
+            }
+
+            // isLast:true + issues:[] = genuinamente 0 resultados para essas credenciais
+            return { count: 0, approximate: false, jqlSent: jqlToSend.substring(0, 200) };
         } catch (error) {
             console.error("Erro na contagem Jira:", error);
             throw new HttpsError("failed-precondition", error.message || "Falha ao consultar contagem no Jira.");
@@ -439,9 +484,14 @@ exports.searchJiraTickets = onCall({
         throw new HttpsError("failed-precondition", "Credenciais do Jira não configuradas no servidor.");
     }
 
+    if (!payload.jql) {
+        throw new HttpsError("invalid-argument", "jql é obrigatório para busca de tickets.");
+    }
+
     const authHeader = `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
-    // JQL from user request
-    const jql = 'project = DEMANDA AND type = Solicitação AND "empresa[dropdown]" IN ("NTT Ltda", "NTT DATA", "GLOBAL NTT") AND ("torre de atuação da demanda[dropdown]" IN ("ADM & LEGADOS", "BI", "CANAIS DIGITAIS", "SISTEMAS CORPORATIVOS", "SISTEMAS WEB") OR "torre de atuação da demanda[dropdown]" IS EMPTY) ORDER BY created DESC';
+    const jql = payload.jql;
+    const maxResults = payload.maxResults || 100;
+    const nextPageToken = payload.nextPageToken || undefined;
     const jiraUrl = `https://${domain}/rest/api/3/search/jql`;
 
     try {
@@ -454,7 +504,8 @@ exports.searchJiraTickets = onCall({
             },
             body: JSON.stringify({
                 jql: jql,
-                maxResults: 100,
+                maxResults,
+                ...(nextPageToken ? { nextPageToken } : {}),
                 fields: ["summary", "description", "priority", "status", "creator", "reporter", "assignee", "issuetype", "duedate", "environment", "labels", "created"]
             })
         });
@@ -467,7 +518,7 @@ exports.searchJiraTickets = onCall({
         const data = await response.json();
         const issues = data.issues || [];
 
-        return issues.map(issue => {
+        const mapped = issues.map(issue => {
             const fields = issue.fields || {};
             
             let description = '';
@@ -508,6 +559,12 @@ exports.searchJiraTickets = onCall({
                 rawUrl: `https://${domain}/browse/${issue.key}`
             };
         });
+
+        return {
+            issues: mapped,
+            nextPageToken: data.nextPageToken || null,
+            isLast: data.isLast !== false,
+        };
     } catch (error) {
         console.error("Erro ao pesquisar no Jira:", error);
         throw new HttpsError("internal", "Falha de Pesquisa no Jira: " + error.message);

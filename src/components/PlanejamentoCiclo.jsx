@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  collection, getDocs, query, orderBy,
+  collection, getDocs, getDoc, query, orderBy,
   doc, updateDoc, arrayUnion, addDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
-import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock } from 'lucide-react';
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
@@ -190,10 +190,13 @@ export default function PlanejamentoCiclo() {
   const [squads, setSquads] = useState([]);
   const [systems, setSystems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [totalTickets, setTotalTickets] = useState(null);
 
   const [search, setSearch] = useState('');
   const [escopoFilter, setEscopoFilter] = useState(new Set());
   const [squadFilter, setSquadFilter] = useState(new Set());
+  const [grupoSolucionadorFilter, setGrupoSolucionadorFilter] = useState(new Set());
   const [filaFilter, setFilaFilter] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState(new Set());
   const [prioridadeFilter, setPrioridadeFilter] = useState(new Set());
@@ -221,8 +224,25 @@ export default function PlanejamentoCiclo() {
     async function load() {
       setLoading(true);
       try {
-        const list = await fetchTicketsForRoadmap({ escopos: ESCOPOS_ALVO });
-        if (!cancelled) setTickets(list);
+        const [list, statsSnap] = await Promise.all([
+          fetchTicketsForRoadmap({ escopos: ESCOPOS_ALVO }),
+          getDoc(doc(db, 'operacao_stats', 'summary')),
+        ]);
+        if (!cancelled) {
+          setTickets(list);
+          const statsData = statsSnap.data();
+          const rawTs = statsData?.lastSyncAt;
+          if (rawTs) {
+            let d = null;
+            if (typeof rawTs.toDate === 'function') d = rawTs.toDate();
+            else if (rawTs._seconds) d = new Date(Number(rawTs._seconds) * 1000);
+            else if (rawTs.seconds) d = new Date(Number(rawTs.seconds) * 1000);
+            else d = new Date(rawTs);
+            if (d && !Number.isNaN(d.getTime())) setLastSyncAt(d);
+          }
+          const total = statsData?.totalTicketsExact ?? statsData?.totalTickets ?? null;
+          if (total != null) setTotalTickets(Number(total));
+        }
       } catch (e) {
         console.error('[PlanejamentoCiclo] erro ao carregar tickets:', e);
       } finally {
@@ -301,6 +321,15 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [enrichedTickets]);
 
+  const grupoSolucionadorOptions = useMemo(() => {
+    const s = new Set();
+    enrichedTickets.forEach(t => {
+      const v = stripNumericPrefix(t.grupoSuporte);
+      if (v) s.add(v);
+    });
+    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [enrichedTickets]);
+
   const respTesteOptions = useMemo(() => {
     const s = new Set();
     enrichedTickets.forEach(t => { if (t.responsavelTesteInterno) s.add(t.responsavelTesteInterno); });
@@ -332,6 +361,7 @@ export default function PlanejamentoCiclo() {
   const filteredTickets = useMemo(() => enrichedTickets.filter(t => {
     if (escopoFilter.size > 0 && !escopoFilter.has(t.escopo)) return false;
     if (squadFilter.size > 0 && !squadFilter.has(t._resolvedSquad || '')) return false;
+    if (grupoSolucionadorFilter.size > 0 && !grupoSolucionadorFilter.has(stripNumericPrefix(t.grupoSuporte) || '')) return false;
     if (statusFilter.size > 0 && !statusFilter.has(t.status)) return false;
     if (prioridadeFilter.size > 0 && !prioridadeFilter.has(String(t.prioridadeInterna ?? ''))) return false;
     if (respDevFilter.size > 0 && !respDevFilter.has(t.responsavelDesenvolvimento || '')) return false;
@@ -431,7 +461,7 @@ export default function PlanejamentoCiclo() {
     } catch (e) { console.error(e); }
   }, [tickets]);
 
-  const activeFilters = [escopoFilter, squadFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter]
+  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0);
 
   return (
@@ -444,6 +474,24 @@ export default function PlanejamentoCiclo() {
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--gray-10)' }}>Organize tickets em ciclos de entrega</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {lastSyncAt && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)' }}>
+              <Clock size={13} color="#38bdf8" />
+              <span style={{ fontSize: 12, color: 'var(--gray-10)' }}>
+                Última carga:{' '}
+                <strong style={{ color: 'var(--gray-12)' }}>
+                  {lastSyncAt instanceof Date && !Number.isNaN(lastSyncAt.getTime())
+                    ? lastSyncAt.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : '—'}
+                </strong>
+                {totalTickets != null && (
+                  <span style={{ color: 'var(--gray-9)', fontWeight: 400 }}>
+                    {' · '}{totalTickets.toLocaleString('pt-BR')} tickets
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
           <button
             onClick={() => {
               const filename = `tickets_planejamento_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -483,6 +531,22 @@ export default function PlanejamentoCiclo() {
             <Plus size={15} /> Novo Ciclo
           </button>
         </div>
+      </div>
+
+      {/* ── Search bar ──────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 12 }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍  Buscar por chave ou título…"
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            fontSize: 13, background: 'var(--gray-2)',
+            border: '1px solid var(--gray-5)', borderRadius: 8,
+            padding: '8px 14px', color: 'var(--gray-12)',
+            outline: 'none',
+          }}
+        />
       </div>
 
       {/* ── New ciclo form ───────────────────────────────────────────── */}
@@ -525,75 +589,143 @@ export default function PlanejamentoCiclo() {
       {/* ── Global filter bar ────────────────────────────────────────── */}
       <div style={{
         background: 'var(--gray-2)', border: '1px solid var(--gray-5)',
-        borderRadius: 10, padding: '12px 16px', marginBottom: 18,
-        display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
+        borderRadius: 10, marginBottom: 18, overflow: 'hidden',
       }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--gray-10)', flexShrink: 0 }}>
-          <Filter size={13} />
-          FILTROS
+
+        {/* Row 1: squad tags + escopo tags */}
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8,
+          padding: '10px 14px',
+          borderBottom: '1px solid var(--gray-5)',
+        }}>
+          {/* Squad tags — left */}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: 'var(--gray-10)', flexShrink: 0, marginRight: 4 }}>
+            <Filter size={13} />
+            SQUAD
+          </span>
+          {squadOptions.map(sq => {
+            const active = squadFilter.has(sq);
+            return (
+              <button key={sq} type="button"
+                onClick={() => { const next = new Set(squadFilter); active ? next.delete(sq) : next.add(sq); setSquadFilter(next); }}
+                style={{
+                  fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10,
+                  cursor: 'pointer', userSelect: 'none',
+                  border: active ? '1px solid rgba(99,102,241,0.7)' : '1px solid var(--gray-5)',
+                  background: active ? 'rgba(99,102,241,0.2)' : 'var(--gray-3)',
+                  color: active ? '#a5b4fc' : 'var(--gray-10)',
+                  transition: 'all 0.12s',
+                }}
+              >{sq}</button>
+            );
+          })}
+
+          {/* Divider */}
+          <span style={{ width: 1, height: 20, background: 'var(--gray-5)', flexShrink: 0, margin: '0 4px' }} />
+
+          {/* Escopo tags — right */}
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-10)', flexShrink: 0 }}>ESCOPO</span>
+          {ESCOPOS_ALVO.map(esc => {
+            const active = escopoFilter.has(esc);
+            return (
+              <button key={esc} type="button"
+                onClick={() => { const next = new Set(escopoFilter); active ? next.delete(esc) : next.add(esc); setEscopoFilter(next); }}
+                style={{
+                  fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
+                  cursor: 'pointer', userSelect: 'none',
+                  border: active ? '1px solid rgba(52,211,153,0.7)' : '1px solid var(--gray-5)',
+                  background: active ? 'rgba(52,211,153,0.15)' : 'var(--gray-3)',
+                  color: active ? '#6ee7b7' : 'var(--gray-10)',
+                  transition: 'all 0.12s',
+                }}
+              >{esc}</button>
+            );
+          })}
+
+          {/* Active badge + clear */}
           {activeFilters > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: 'var(--indigo-9)', color: '#fff' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: 'var(--indigo-9)', color: '#fff', marginLeft: 4 }}>
               {activeFilters}
             </span>
           )}
-        </span>
+          {activeFilters > 0 && (
+            <button
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
+              style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
+            >
+              Limpar filtros
+            </button>
+          )}
+        </div>
 
-        <MultiSelectFilter options={ESCOPOS_ALVO} selected={escopoFilter} onChange={setEscopoFilter} placeholder="Todos os escopos" maxWidth={180} />
-        <MultiSelectFilter options={squadOptions} selected={squadFilter} onChange={setSquadFilter} placeholder="Todas as squads" maxWidth={180} />
-        <MultiSelectFilter options={Object.keys(FILA_STATUS_MAP)} selected={filaFilter} onChange={handleFilaFilterChange} placeholder="Todas as filas" maxWidth={140} />
-        <MultiSelectFilter options={statusOptions} selected={statusFilter} onChange={handleStatusFilterChange} placeholder="Todos os status" maxWidth={200} />
-        <MultiSelectFilter options={prioridadeOptions} selected={prioridadeFilter} onChange={setPrioridadeFilter} placeholder="Todas as prioridades" maxWidth={180} />
-        <MultiSelectFilter options={respDevOptions} selected={respDevFilter} onChange={setRespDevFilter} placeholder="Resp. Desenvolvimento" maxWidth={200} />
-        <MultiSelectFilter options={respTesteOptions} selected={respTesteFilter} onChange={setRespTesteFilter} placeholder="Resp. Teste Interno" maxWidth={190} />
+        {/* Row 2: main dropdowns */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
+          <MultiSelectFilter options={grupoSolucionadorOptions} selected={grupoSolucionadorFilter} onChange={setGrupoSolucionadorFilter} placeholder="Grupo solucionador" maxWidth={190} />
+          <MultiSelectFilter options={Object.keys(FILA_STATUS_MAP)} selected={filaFilter} onChange={handleFilaFilterChange} placeholder="Todas as filas" maxWidth={140} />
+          <MultiSelectFilter options={statusOptions} selected={statusFilter} onChange={handleStatusFilterChange} placeholder="Todos os status" maxWidth={200} />
+          <MultiSelectFilter options={prioridadeOptions} selected={prioridadeFilter} onChange={setPrioridadeFilter} placeholder="Todas as prioridades" maxWidth={180} />
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',
+            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+            padding: '3px 8px',
+            border: `1px solid ${impedimentoFilter ? '#ca8a04' : 'var(--gray-5)'}`,
+            borderRadius: 6,
+            background: impedimentoFilter ? 'rgba(251,191,36,0.1)' : 'var(--gray-3)',
+          }}>
+            <input type="checkbox" checked={impedimentoFilter} onChange={e => setImpedimentoFilter(e.target.checked)} style={{ accentColor: '#eab308', width: 12, height: 12 }} />
+            🚧 Impedidos
+          </label>
+        </div>
 
-        <select value={dateField} onChange={e => setDateField(e.target.value)} style={{ ...sel, maxWidth: 180 }}>
-          {DATE_FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        {/* Row 3: grouped boxes */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', padding: '10px 14px' }}>
 
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',
-          cursor: 'pointer', userSelect: 'none', flexShrink: 0,
-          padding: '3px 8px',
-          border: `1px solid ${impedimentoFilter ? '#ca8a04' : 'var(--gray-5)'}`,
-          borderRadius: 6,
-          background: impedimentoFilter ? 'rgba(251,191,36,0.1)' : 'var(--gray-2)',
-        }}>
-          <input type="checkbox" checked={impedimentoFilter} onChange={e => setImpedimentoFilter(e.target.checked)} style={{ accentColor: '#eab308', width: 12, height: 12 }} />
-          🚧 Impedidos
-        </label>
+          {/* Box: Responsáveis */}
+          <div style={{
+            display: 'flex', flexWrap: 'nowrap', gap: 8, alignItems: 'center',
+            border: '1px solid var(--gray-5)', borderRadius: 8,
+            padding: '6px 12px', background: 'var(--gray-3)',
+            flex: '1 1 auto',
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 4 }}>RESPONSÁVEIS</span>
+            <MultiSelectFilter options={respDevOptions} selected={respDevFilter} onChange={setRespDevFilter} placeholder="Resp. Desenvolvimento" maxWidth={210} />
+            <MultiSelectFilter options={respTesteOptions} selected={respTesteFilter} onChange={setRespTesteFilter} placeholder="Resp. Teste Interno" maxWidth={200} />
+          </div>
 
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          fontSize: 12, color: showEstimativa ? 'var(--indigo-11)' : 'var(--gray-10)',
-          cursor: 'pointer', userSelect: 'none', flexShrink: 0,
-          padding: '3px 8px',
-          border: `1px solid ${showEstimativa ? 'var(--indigo-8)' : 'var(--gray-5)'}`,
-          borderRadius: 6,
-          background: showEstimativa ? 'rgba(99,102,241,0.08)' : 'var(--gray-2)',
-        }}>
-          <input
-            type="checkbox"
-            checked={showEstimativa}
-            onChange={e => {
-              setShowEstimativa(e.target.checked);
-              localStorage.setItem('ciclo_showEstimativa', String(e.target.checked));
-            }}
-            style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12 }}
-          />
-          ⏱ Est. Interna
-        </label>
-
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…" style={{ ...sel, maxWidth: 180, padding: '4px 10px' }} />
-
-        {activeFilters > 0 && (
-          <button
-            onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
-            style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)' }}
-          >
-            Limpar filtros
-          </button>
-        )}
+          {/* Box: Exibição */}
+          <div style={{
+            display: 'flex', flexWrap: 'nowrap', gap: 8, alignItems: 'center',
+            border: '1px solid var(--gray-5)', borderRadius: 8,
+            padding: '6px 12px', background: 'var(--gray-3)',
+            flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 4 }}>EXIBIÇÃO</span>
+            <select value={dateField} onChange={e => setDateField(e.target.value)} style={{ ...sel, maxWidth: 180 }}>
+              {DATE_FIELD_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 12, color: showEstimativa ? 'var(--indigo-11)' : 'var(--gray-10)',
+              cursor: 'pointer', userSelect: 'none',
+              padding: '3px 8px',
+              border: `1px solid ${showEstimativa ? 'var(--indigo-8)' : 'var(--gray-5)'}`,
+              borderRadius: 6,
+              background: showEstimativa ? 'rgba(99,102,241,0.08)' : 'transparent',
+            }}>
+              <input
+                type="checkbox"
+                checked={showEstimativa}
+                onChange={e => {
+                  setShowEstimativa(e.target.checked);
+                  localStorage.setItem('ciclo_showEstimativa', String(e.target.checked));
+                }}
+                style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12 }}
+              />
+              ⏱ Est. Interna
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* ── Loading ──────────────────────────────────────────────────── */}

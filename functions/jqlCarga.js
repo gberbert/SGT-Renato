@@ -65,6 +65,21 @@ const TICKET_FIELD_DEFINITIONS = {
     "Natureza de Iniciativa",
     "natureza de iniciativa",
   ],
+  planejamento_horas_demanda_fast: [
+    "Planejamento de Horas Demanda Fast",
+    "planejamento de horas demanda fast",
+    "Planejamento de Horas Demanda Fast[Number]",
+  ],
+  demanda_vulnerabilidade: [
+    "Demanda de Vulnerabilidade",
+    "demanda de vulnerabilidade",
+    "Demanda de Vulnerabilidade[Dropdown]",
+  ],
+  responsavel_execucao: [
+    "Responsável pela Execução",
+    "responsavel pela execucao",
+    "Responsável pela Execução[User Picker (single user)]",
+  ],
 };
 
 const ESCOPO_SEED = [

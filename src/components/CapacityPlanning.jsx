@@ -311,63 +311,120 @@ const CapacityPlanning = ({ userRole }) => {
 
   if (!selectedDemanda) {
     return (
-      <div className="view-content" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <div className="welcome-banner" style={{ marginBottom: 0 }}>
-          <Text as="h1" size="6" weight="bold">Planejamento de Capacidade</Text>
-          <Text as="p" size="3" color="gray">Aloque recursos e planeje o cronograma das squads.</Text>
+      <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+
+        {/* ── Page header ─────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Planejamento de Capacidade</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--gray-10)' }}>Aloque recursos e planeje o cronograma das squads.</p>
+          </div>
+          <button
+            onClick={() => setSelectedDemanda('all')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'var(--indigo-9)', color: '#fff',
+              border: 'none', borderRadius: 8, padding: '8px 16px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            <Calendar size={15} /> Ver Calendário Geral
+          </button>
         </div>
 
-        <Card size="3" className="glass-panel">
-          <Flex justify="between" align="center" mb="4">
-            <Text as="h2" size="4" weight="bold">Demandas Pendentes de Alocação</Text>
-            <Button onClick={() => setSelectedDemanda('all')} color="indigo" variant="soft">
-              <Calendar size={16} style={{ marginRight: '8px' }} /> Ver Calendário Geral
-            </Button>
-          </Flex>
-          <Table.Root variant="surface">
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeaderCell>Demanda</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Squad</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>Prioridade</Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {demandsWithPendingActivities.map(d => {
+        {/* ── Pending demands panel ────────────────────────────────── */}
+        <div style={{ marginBottom: 14 }}>
+          {/* Section header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '9px 13px',
+            background: 'var(--gray-3)',
+            borderRadius: '8px 8px 0 0',
+            border: '1px solid var(--gray-5)',
+            borderBottom: 'none',
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-12)' }}>Demandas Pendentes de Alocação</span>
+            <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'var(--gray-5)', color: 'var(--gray-11)' }}>
+              {demandsWithPendingActivities.length} demandas
+            </span>
+          </div>
+
+          {/* Table */}
+          <div style={{ border: '1px solid var(--gray-5)', borderTop: 'none', borderRadius: '0 0 8px 8px', background: 'var(--color-background)' }}>
+            {/* Table header */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 160px 110px 100px',
+              padding: '6px 14px',
+              background: 'var(--gray-3)',
+              borderBottom: '1px solid var(--gray-5)',
+            }}>
+              {['Demanda', 'Squad', 'Prioridade', 'Ações'].map((h, i) => (
+                <span key={h} style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: i === 3 ? 'right' : 'left' }}>{h.toUpperCase()}</span>
+              ))}
+            </div>
+
+            {/* Table rows */}
+            {demandsWithPendingActivities.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--gray-9)', fontSize: 13, padding: '28px 0' }}>
+                Todas as demandas estão devidamente alocadas! ✅
+              </div>
+            ) : (
+              demandsWithPendingActivities.map((d, idx) => {
                 const sqName = (d.squadIds && d.squadIds.length > 0)
                   ? d.squadIds.map(id => squads.find(s => s.id === id)?.name).filter(Boolean).join(', ')
                   : squads.find(s => s.id === d.squadId)?.name;
+                const prioColor = d.priority === 'high' ? '#ef4444' : d.priority === 'medium' ? '#f97316' : '#22c55e';
+                const prioLabel = d.priority === 'high' ? 'Alta' : d.priority === 'medium' ? 'Média' : 'Baixa';
                 return (
-                  <Table.Row key={d.id} align="center">
-                    <Table.Cell>
-                      <Flex align="center" gap="2">
-                        <Badge color="blue">{d.code}</Badge>
-                        <Text weight="bold">{d.title}</Text>
-                      </Flex>
-                    </Table.Cell>
-                    <Table.Cell>{sqName || '-'}</Table.Cell>
-                    <Table.Cell>
-                      <Badge color={d.priority === 'high' ? 'red' : d.priority === 'medium' ? 'orange' : 'green'}>
-                        {d.priority === 'high' ? 'Alta' : d.priority === 'medium' ? 'Média' : 'Baixa'}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell align="right">
-                      <Button variant="soft" onClick={() => setSelectedDemanda(d)}>Planejar</Button>
-                    </Table.Cell>
-                  </Table.Row>
+                  <div
+                    key={d.id}
+                    style={{
+                      display: 'grid', gridTemplateColumns: '1fr 160px 110px 100px',
+                      alignItems: 'center',
+                      padding: '10px 14px',
+                      background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)',
+                      borderBottom: '1px solid var(--gray-3)',
+                    }}
+                  >
+                    {/* Demanda */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
+                        background: 'rgba(99,102,241,0.15)', color: '#a5b4fc',
+                        border: '1px solid rgba(99,102,241,0.3)', whiteSpace: 'nowrap', flexShrink: 0,
+                      }}>{d.code}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-12)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {d.title}
+                      </span>
+                    </div>
+                    {/* Squad */}
+                    <span style={{ fontSize: 13, color: 'var(--gray-11)' }}>{sqName || '-'}</span>
+                    {/* Prioridade */}
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 10,
+                      background: `${prioColor}22`, color: prioColor,
+                      border: `1px solid ${prioColor}55`, display: 'inline-block',
+                    }}>{prioLabel}</span>
+                    {/* Ação */}
+                    <div style={{ textAlign: 'right' }}>
+                      <button
+                        onClick={() => setSelectedDemanda(d)}
+                        style={{
+                          fontSize: 12, fontWeight: 600, padding: '5px 14px',
+                          background: 'var(--gray-3)', color: 'var(--gray-11)',
+                          border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer',
+                        }}
+                      >
+                        Planejar
+                      </button>
+                    </div>
+                  </div>
                 );
-              })}
-              {demandsWithPendingActivities.length === 0 && (
-                <Table.Row>
-                  <Table.Cell colSpan={4} style={{ textAlign: 'center', padding: '24px' }}>
-                    Todas as demandas estão devidamente alocadas!
-                  </Table.Cell>
-                </Table.Row>
-              )}
-            </Table.Body>
-          </Table.Root>
-        </Card>
+              })
+            )}
+          </div>
+        </div>
+
       </div>
     );
   }

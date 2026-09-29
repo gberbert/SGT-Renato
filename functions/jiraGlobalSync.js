@@ -36,6 +36,11 @@ function normalizeEscopoKey(raw) {
   if (!value) return "";
   if (value.startsWith("SOLICIT")) return "SOLICITACAO";
   if (value.startsWith("CATAL")) return "CATALOGO";
+  // Aliases: plurais ou grafias alternativas
+  if (value === "DEMANDAS FAST") return "DEMANDA FAST";
+  if (value === "INCIDENTES")    return "INCIDENTE";
+  if (value === "DEMANDAS")      return "DEMANDA";
+  if (value === "PROBLEMAS")     return "PROBLEMAS";
   return value;
 }
 
@@ -269,6 +274,8 @@ function extractFieldValue(raw) {
  * Extrai o valor completo do campo sem remover prefixos numéricos.
  * Usado para campos como naturezaIniciativa onde "1 - Manutenção Evolutiva"
  * deve ser preservado integralmente.
+ * Suporta cascading selects do Jira: { value: "Parent", child: { value: "Child" } }
+ * → "Parent - Child"
  */
 function extractFieldValueFull(raw) {
   if (raw == null) return null;
@@ -279,7 +286,16 @@ function extractFieldValueFull(raw) {
     return values.length ? values.join(", ") : null;
   }
   if (typeof raw === "object") {
-    for (const key of ["value", "name", "displayName", "key"]) {
+    // Cascading select: { value: "Técnica", child: { value: "Risco" } }
+    if (raw.value != null) {
+      const parent = String(raw.value).trim();
+      if (raw.child && raw.child.value != null) {
+        const child = String(raw.child.value).trim();
+        if (child) return `${parent} - ${child}`;
+      }
+      return parent || null;
+    }
+    for (const key of ["name", "displayName", "key"]) {
       if (raw[key]) return String(raw[key]).trim() || null;
     }
     if (Array.isArray(raw.content)) {
@@ -407,6 +423,9 @@ const KNOWN_DATE_FIELD_IDS = {
   data_entrega_producao_prevista: "customfield_10263",
   estimativa_horas: "customfield_10437",
   data_fim_planejado: "customfield_16711",
+  planejamento_horas_demanda_fast: "customfield_14314",
+  demanda_vulnerabilidade: "customfield_19626",
+  responsavel_execucao: "customfield_10608",
 };
 
 async function resolveTicketFieldIds() {
@@ -526,6 +545,9 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     dataEntregaProducaoPrevista: extracted.data_entrega_producao_prevista || null,
     estimativaHoras: extracted.estimativa_horas != null ? Number(extracted.estimativa_horas) : null,
     dataFimPlanejado: extracted.data_fim_planejado || null,
+    planejamentoHorasDemandaFast: extracted.planejamento_horas_demanda_fast != null ? Number(extracted.planejamento_horas_demanda_fast) : null,
+    demandaVulnerabilidade: extracted.demanda_vulnerabilidade || null,
+    responsavelExecucao: extracted.responsavel_execucao || null,
     issueLinksDetailed: extractIssueLinksDetailed(issue),
     labels,
     components,
@@ -713,10 +735,36 @@ async function loadJqlBatchesWithOverrides() {
       return JQLS_DEFAULT;
     }
 
-    // Substitui JQL de cada escopo pelo override, se existir
+    // Substitui JQL de cada escopo pelo override, se existir.
+    // Tenta múltiplas chaves para tolerar grafias alternativas gravadas pelo UI
+    // (ex: "DEMANDAS FAST", "demanda-fast", "DEMANDA FAST", "incidente", etc.)
     console.log(`[jiraGlobalSync] Carregados ${Object.keys(overridesMap).length} overrides de JQL`);
+
+    // Normaliza todas as chaves do mapa para slug lowercase (ex: "demanda-fast")
+    const slugKey = (s) =>
+      String(s || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
+
+    const overridesNormalized = {};
+    for (const [k, v] of Object.entries(overridesMap)) {
+      overridesNormalized[slugKey(k)] = v;
+    }
+
     return JQLS_DEFAULT.map((batch) => {
-      const jqlFromFirestore = overridesMap[batch.escopoId];
+      // Candidatos de chave: escopoId canônico, escopo normalizado, label normalizado
+      const candidates = [
+        batch.escopoId,
+        slugKey(batch.escopo),
+        slugKey(batch.label),
+      ];
+      let jqlFromFirestore = null;
+      for (const candidate of candidates) {
+        if (overridesMap[candidate]) { jqlFromFirestore = overridesMap[candidate]; break; }
+        if (overridesNormalized[candidate]) { jqlFromFirestore = overridesNormalized[candidate]; break; }
+      }
       if (jqlFromFirestore) {
         console.log(`[jiraGlobalSync] Override encontrado para ${batch.escopoId}`);
         return { ...batch, jql: jqlFromFirestore };
