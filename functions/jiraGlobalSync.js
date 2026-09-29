@@ -14,8 +14,6 @@ const GRUPO_ATENDIMENTO = "grupo_atendimento";
 const ESCOPO_COLLECTION = "escopo";
 const OPERACAO_STATS_DOC = "operacao_stats/summary";
 
-// Com changelog (expand=changelog), cada issue retorna muito mais dados.
-// Menos issues por step = respostas Jira menores + batch writes mais rápidos.
 const ISSUES_PER_STEP = 20;
 const MAX_WRITE_BATCH = 200;
 // Limite máximo de entradas no statusHistory por ticket (evita documentos gigantes)
@@ -212,12 +210,29 @@ function buildCombinedOrJql(batches) {
     .join(" OR ");
 }
 
+/**
+ * Conta o total real de issues para um JQL paginando via cursor-based API.
+ * Usa maxResults:5000 (máximo permitido) e fields:["summary"] para minimizar payload.
+ * Retorna o número exato de issues encontrados.
+ */
+async function countAllIssues(jql) {
+  let total = 0;
+  let nextPageToken = null;
+  do {
+    const body = { jql, maxResults: 5000, fields: ["summary"] };
+    if (nextPageToken) body.nextPageToken = nextPageToken;
+    const data = await jiraFetch("/rest/api/3/search/jql", { method: "POST", body });
+    // Se a API retornar total diretamente, usa e para
+    if (data.total != null) return Number(data.total);
+    total += (data.issues || []).length;
+    nextPageToken = data.nextPageToken || null;
+    if (data.isLast !== false) break; // isLast:true ou undefined = última página
+  } while (nextPageToken);
+  return total;
+}
+
 async function getApproxCount(jql) {
-  const data = await jiraFetch("/rest/api/3/search/approximate-count", {
-    method: "POST",
-    body: { jql },
-  });
-  return Number(data.count) || 0;
+  return countAllIssues(jql);
 }
 
 function stripNumericPrefix(str) {
@@ -757,16 +772,11 @@ async function previewCarga() {
   const fieldIds = await resolveTicketFieldIds();
   
   // Busca todos os batches em paralelo para eficiência
+  // Usa countAllIssues para paginar e contar o total real (API cursor-based não retorna total)
   const batchResults = await Promise.all(
     validBatches.map(async (batch) => {
       try {
-        // Busca a primeira página (maxResults mínimo) para obter o total real via search/jql
-        const page = await searchIssuesPage(batch.jql, {
-          pageToken: null,
-          fieldIds,
-          maxResults: 1, // mínimo para obter o total sem carregar muitos dados
-        });
-        const total = page.total || 0;
+        const total = await countAllIssues(batch.jql);
         return {
           label: batch.label,
           escopo: batch.escopo,
@@ -799,7 +809,7 @@ async function previewCarga() {
     const fieldIds = await resolveTicketFieldIds();
     const firstBatch = validBatches[0];
     if (firstBatch && firstBatch.jql && firstBatch.jql.trim()) {
-      const samplePage = await searchIssuesPageGet(firstBatch.jql, { startAt: 0, fieldIds, maxResults: 10 });
+      const samplePage = await searchIssuesPageGet(firstBatch.jql, { fieldIds, maxResults: 10 });
       const sampleIssues = samplePage.issues || [];
       const sampleChanges = sampleIssues.reduce((acc, issue) => acc + extractStatusHistory(issue).length, 0);
       changelogSample = {
@@ -925,19 +935,22 @@ function extractStatusHistory(issue) {
 }
 
 /**
- * Busca uma página de issues usando GET /rest/api/3/search com expand=changelog.
- * Usa startAt para paginação (a API GET não suporta nextPageToken).
+ * Busca uma página de issues via POST /rest/api/3/search/jql (cursor-based pagination).
+ * Inclui expand=["changelog"] para coletar o histórico de transições de status
+ * (usado por extractStatusHistory). Sem esse expand, statusHistory seria sempre [].
  */
-async function searchIssuesPageGet(jql, { startAt = 0, fieldIds, maxResults = ISSUES_PER_STEP }) {
-  const fields = buildJiraFieldList(fieldIds).join(",");
-  const params = new URLSearchParams({
+async function searchIssuesPageGet(jql, { nextPageToken, fieldIds, maxResults = ISSUES_PER_STEP }) {
+  const body = {
     jql,
-    maxResults: String(maxResults),
-    startAt: String(startAt),
-    expand: "changelog",
-    fields,
+    maxResults,
+    fields: buildJiraFieldList(fieldIds),
+    expand: ["changelog"],
+  };
+  if (nextPageToken) body.nextPageToken = nextPageToken;
+  return jiraFetch("/rest/api/3/search/jql", {
+    method: "POST",
+    body,
   });
-  return jiraFetch(`/rest/api/3/search?${params.toString()}`, { method: "GET" });
 }
 
 /** Versão sem changelog — usada na prévia de contagem (mais rápida) */
@@ -1006,31 +1019,67 @@ const SGT_MANAGED_FIELDS = [
   "observacao",
 ];
 
+/**
+ * Escreve (upsert) tickets na collection tickets_global respeitando campos protegidos.
+ *
+ * Regras:
+ * - Campos em SGT_MANAGED_FIELDS nunca são sobrescritos pelo sync do Jira.
+ * - Exceção: na PRIMEIRA carga de um ticket (documento novo), prioridadeInterna
+ *   é inicializado com o valor da prioridade do Jira (priority). Após isso fica
+ *   protegido e só pode ser alterado manualmente via UI.
+ * - statusHistory é sempre atualizado a partir do changelog do Jira
+ *   (requer expand=["changelog"] na busca, garantido em searchIssuesPageGet).
+ *
+ * Implementação: faz getAll dos refs antes de escrever para detectar docs novos
+ * sem custo extra de transactions. Chunks de até CHUNK_SIZE para respeitar
+ * o limite de 500 refs por chamada getAll do Firestore.
+ */
 async function writeTicketsGlobal(tickets) {
   if (!tickets.length) return;
   const db = getDb();
-  let batch = db.batch();
-  let ops = 0;
 
-  for (const ticket of tickets) {
-    const ref = db.collection(TICKETS_GLOBAL).doc(ticket.issueKey);
+  // Limite conservador abaixo dos 500 do getAll e do MAX_WRITE_BATCH
+  const CHUNK_SIZE = 200;
 
-    // Remove explicitamente os campos SGT do payload do sync para garantir
-    // que nunca sejam zerados, mesmo que acidentalmente cheguem até aqui.
-    const payload = { ...ticket, syncedAt: FieldValue.serverTimestamp() };
-    for (const field of SGT_MANAGED_FIELDS) {
-      delete payload[field];
+  for (let start = 0; start < tickets.length; start += CHUNK_SIZE) {
+    const chunk = tickets.slice(start, start + CHUNK_SIZE);
+    const refs = chunk.map((t) => db.collection(TICKETS_GLOBAL).doc(t.issueKey));
+
+    // Uma leitura em batch para detectar quais docs são novos (não existem ainda)
+    const snaps = await db.getAll(...refs);
+    const existingKeys = new Set(snaps.filter((s) => s.exists).map((s) => s.id));
+
+    let batch = db.batch();
+    let ops = 0;
+
+    for (const ticket of chunk) {
+      const ref = db.collection(TICKETS_GLOBAL).doc(ticket.issueKey);
+      const isNew = !existingKeys.has(ticket.issueKey);
+
+      // Remove campos SGT do payload para não sobrescrever dados gerenciados internamente
+      const payload = { ...ticket, syncedAt: FieldValue.serverTimestamp() };
+      for (const field of SGT_MANAGED_FIELDS) {
+        delete payload[field];
+      }
+
+      // Exceção: na PRIMEIRA carga (doc novo), inicializa prioridadeInterna com a
+      // prioridade do Jira para que o campo tenha valor ao aparecer na UI.
+      // Após isso fica protegido pelo SGT_MANAGED_FIELDS e só muda via UI.
+      if (isNew && ticket.priority) {
+        payload.prioridadeInterna = ticket.priority;
+      }
+
+      batch.set(ref, payload, { merge: true });
+      ops += 1;
+      if (ops >= MAX_WRITE_BATCH) {
+        await batch.commit();
+        batch = db.batch();
+        ops = 0;
+      }
     }
 
-    batch.set(ref, payload, { merge: true });
-    ops += 1;
-    if (ops >= MAX_WRITE_BATCH) {
-      await batch.commit();
-      batch = db.batch();
-      ops = 0;
-    }
+    if (ops > 0) await batch.commit();
   }
-  if (ops > 0) await batch.commit();
 }
 
 function computePercent(run) {
@@ -1070,10 +1119,10 @@ async function processSyncStep(runId) {
   const { baseUrl } = getJiraCredentials();
   const currentBatch = batches[batchIndex];
 
-  // Usa GET com expand=changelog para capturar o histórico de status
-  const currentStartAt = run.pageStartAt || 0;
+  // Usa POST /rest/api/3/search/jql com paginação por cursor
+  const currentPageToken = run.pageToken || null;
   const page = await searchIssuesPageGet(currentBatch.jql, {
-    startAt: currentStartAt,
+    nextPageToken: currentPageToken,
     fieldIds,
   });
 
@@ -1100,9 +1149,8 @@ async function processSyncStep(runId) {
   const statusChangesInBatch = parsed.reduce((acc, t) => acc + (t.statusHistory?.length || 0), 0);
   const totalStatusChanges = (run.totalStatusChanges || 0) + statusChangesInBatch;
 
-  // Paginação via startAt para o GET
-  const nextStartAt = currentStartAt + issues.length;
-  const hasMorePages = issues.length === ISSUES_PER_STEP && nextStartAt < (page.total || Infinity);
+  // Paginação cursor-based: nextPageToken presente = há mais páginas
+  const hasMorePages = !!page.nextPageToken;
   let nextBatchIndex = batchIndex;
   let message = `Processando ${currentBatch.label}: ${currentBatch.upserted} tickets (${totalStatusChanges} change status).`;
 
@@ -1120,7 +1168,7 @@ async function processSyncStep(runId) {
   const partialRun = {
     ...run,
     batchIndex: nextBatchIndex,
-    pageStartAt: hasMorePages ? nextStartAt : 0,
+    pageToken: hasMorePages ? page.nextPageToken : null,
     totalStatusChanges,
     ticketsFetched,
     ticketsUpserted,
