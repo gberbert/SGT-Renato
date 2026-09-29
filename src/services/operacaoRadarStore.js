@@ -1,5 +1,5 @@
 import { formatCallableError } from '../utils/callableError';
-import { fetchRadarBootstrap } from './operacaoRadarService';
+import { fetchRadarBootstrap, subscribeOperacaoStats } from './operacaoRadarService';
 
 const EMPTY_FILTER_OPTIONS = { grupos: [], squads: [], statuses: [] };
 
@@ -17,6 +17,8 @@ let state = {
 
 let loadToken = 0;
 let activeBootstrapPromise = null;
+let statsDocUnsubscribe = null;
+let statsRefreshTimer = null;
 const listeners = new Set();
 
 function cloneFilterOptions(options = EMPTY_FILTER_OPTIONS) {
@@ -81,6 +83,21 @@ async function runBootstrapLoad(uid, { force = false } = {}) {
         }
       : {}),
   });
+
+  // Ativa listener real-time no doc operacao_stats/summary (uma vez por sessão)
+  if (!statsDocUnsubscribe) {
+    statsDocUnsubscribe = subscribeOperacaoStats((stats) => {
+      if (!stats || state.bootLoading) return;
+      // Compara fingerprint: se mudou, agenda refresh com debounce de 2s
+      const newFingerprint = buildStatsFingerprint(stats);
+      if (newFingerprint !== state.statsFingerprint) {
+        clearTimeout(statsRefreshTimer);
+        statsRefreshTimer = setTimeout(() => {
+          if (state.uid) runBootstrapLoad(state.uid, { force: true });
+        }, 2000);
+      }
+    });
+  }
 
   try {
     const bootstrap = await fetchRadarBootstrap();
@@ -157,6 +174,12 @@ export function refreshOperacaoRadar(uid) {
 export function resetOperacaoRadarStore() {
   loadToken += 1;
   activeBootstrapPromise = null;
+  if (statsDocUnsubscribe) {
+    statsDocUnsubscribe();
+    statsDocUnsubscribe = null;
+  }
+  clearTimeout(statsRefreshTimer);
+  statsRefreshTimer = null;
   state = {
     uid: null,
     bootLoading: false,

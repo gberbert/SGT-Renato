@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -913,6 +914,13 @@ export function getFilterSummary(filters) {
     return 'Filtros independentes: selecione grupo, squad, status ou qualquer combinação.';
   }
   return `Filtro ativo: ${parts.join(', ')}. Filtros funcionam de forma independente ou combinada.`;
+}
+
+/** Escuta mudanças em tempo real no doc operacao_stats/summary. Retorna unsubscribe. */
+export function subscribeOperacaoStats(onChange) {
+  return onSnapshot(STATS_DOC, (snap) => {
+    onChange(snap.exists() ? snap.data() : null);
+  });
 }
 
 export { ESCOPO_SEED };

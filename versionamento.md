@@ -1,5 +1,10 @@
 # Versionamento do Projeto
 
+## [0.1.296] - 2026-09-29
+- **Fix (Radar Operação — Stats desatualizados):** Removidos 982 tickets classificados incorretamente como INCIDENTE e DEMANDA FAST do Firestore (`tickets_global`). Corrigido `operacao_stats/summary`: totais de INCIDENTE (179→0), DEMANDA FAST (980→0) e `totalTickets` (10.483→9.324) ajustados via script `fix_stats_incidente.mjs`.
+- **Feature (Radar Operação — Auto-refresh em tempo real):** O store do radar (`operacaoRadarStore.js`) agora assina `onSnapshot` em `operacao_stats/summary` logo no primeiro bootstrap. Quando o documento é atualizado (ex.: após carga JQL), um debounce de 2s dispara `runBootstrapLoad({ force: true })` automaticamente — o painel do radar atualiza sem necessidade de reload manual. O listener é cancelado em `resetOperacaoRadarStore()`.
+- **Backend:** Nova função `subscribeOperacaoStats` em `operacaoRadarService.js` expõe o listener real-time do doc de stats para consumo pelo store.
+
 ## [0.1.236] - 2026-08-25
 - **UX (Roadmap Geral — Toolbar):** "Agrupar por" movido para o lado de "Filtros" na mesma barra de controles. Adicionados badges/chips exibindo os filtros ativos diretamente na toolbar (Escopo, Squad, Grupo, Status), permitindo visualizar rapidamente o que está filtrado sem reabrir o popover.
 
