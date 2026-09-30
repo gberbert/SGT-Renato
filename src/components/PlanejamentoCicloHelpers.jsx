@@ -360,6 +360,27 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
           <Link2 size={13} />
         </span>
       )}
+      {(() => {
+        const pct = ticket.percentualConclusao != null && ticket.percentualConclusao !== ''
+          ? Math.min(100, Math.max(0, Number(ticket.percentualConclusao)))
+          : 0;
+        const pctColor = pct >= 100 ? '#4ade80' : pct >= 75 ? '#22d3ee' : pct >= 40 ? '#fbbf24' : '#f87171';
+        return (
+          <span
+            title={`% Conclusão: ${pct}%`}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              fontSize: 11, fontWeight: 700,
+              padding: '2px 8px', borderRadius: 12,
+              background: pctColor + '22', color: pctColor,
+              border: `1px solid ${pctColor}55`,
+              flexShrink: 0, whiteSpace: 'nowrap', minWidth: 46, justifyContent: 'center',
+            }}
+          >
+            {pct}%
+          </span>
+        );
+      })()}
       <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: sc + '22', color: sc, flexShrink: 0, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.status || 'Sem status'}</span>
       {(() => {
         const squadName = ticket._resolvedSquad || ticket.squadPrincipal || stripNumericPrefix(ticket.grupoSuporte) || ticket.squad || null;

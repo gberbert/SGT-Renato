@@ -632,6 +632,12 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
             GERAL
           </button>
           <button
+            className={`dmd-tab${activeTab === 'plano' ? ' dmd-tab--active' : ''}`}
+            onClick={() => setActiveTab('plano')}
+          >
+            PLANO DE AÇÃO
+          </button>
+          <button
             className={`dmd-tab${activeTab === 'planejamento' ? ' dmd-tab--active' : ''}`}
             onClick={() => setActiveTab('planejamento')}
           >
@@ -672,13 +678,8 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 <ReadField label="SEVERIDADE" value={ticket.severidade} />
               </div>
 
-              {/* Row 2b: ESTIMATIVA INTERNA + % CONCLUSÃO + CICLO */}
+              {/* Row 2b: % CONCLUSÃO + CICLO */}
               <div className="dmd-row">
-                {isEdit ? (
-                  <EditNumber label="ESTIMATIVA INTERNA (h)" fieldKey="estimativaInterna" value={ticket.estimativaInterna} onSave={save} />
-                ) : (
-                  <ReadField label="ESTIMATIVA INTERNA (h)" value={ticket.estimativaInterna} />
-                )}
                 {isEdit ? (
                   <EditPercent label="% CONCLUSÃO" fieldKey="percentualConclusao" value={ticket.percentualConclusao} onSave={save} />
                 ) : (
@@ -902,6 +903,19 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                   <EditTextarea label="OBSERVAÇÃO" fieldKey="observacao" value={ticket.observacao} onSave={save} />
                 ) : (
                   <ReadField label="OBSERVAÇÃO" value={ticket.observacao} wide tall />
+                )}
+              </div>
+            </div>
+          ) : activeTab === 'plano' ? (
+            <div className="dmd-tab-content">
+              <div style={{ padding: '12px 0 4px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--gray-4)', marginBottom: 12 }}>
+                Estimativas & Execução
+              </div>
+              <div className="dmd-row">
+                {isEdit ? (
+                  <EditNumber label="ESTIMATIVA INTERNA (h)" fieldKey="estimativaInterna" value={ticket.estimativaInterna} onSave={save} />
+                ) : (
+                  <ReadField label="ESTIMATIVA INTERNA (h)" value={ticket.estimativaInterna} />
                 )}
               </div>
             </div>

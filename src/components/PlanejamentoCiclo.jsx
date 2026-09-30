@@ -202,6 +202,7 @@ export default function PlanejamentoCiclo() {
   const [prioridadeFilter, setPrioridadeFilter] = useState(new Set());
   const [respDevFilter, setRespDevFilter] = useState(new Set());
   const [respTesteFilter, setRespTesteFilter] = useState(new Set());
+  const [sistemasFilter, setSistemasFilter] = useState(new Set());
   const [dateField, setDateField] = useState('none');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [showEstimativa, setShowEstimativa] = useState(
@@ -336,6 +337,17 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [enrichedTickets]);
 
+  const sistemasOptions = useMemo(() => {
+    const s = new Set();
+    enrichedTickets.forEach(t => {
+      const val = t.sistemasImpactados;
+      if (!val) return;
+      if (Array.isArray(val)) val.forEach(v => { if (v) s.add(v); });
+      else if (typeof val === 'string') val.split(',').map(v => v.trim()).filter(Boolean).forEach(v => s.add(v));
+    });
+    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [enrichedTickets]);
+
   const handleFilaFilterChange = useCallback((newFilaSelection) => {
     setFilaFilter(newFilaSelection);
     const newStatusSelection = new Set();
@@ -366,6 +378,11 @@ export default function PlanejamentoCiclo() {
     if (prioridadeFilter.size > 0 && !prioridadeFilter.has(String(t.prioridadeInterna ?? ''))) return false;
     if (respDevFilter.size > 0 && !respDevFilter.has(t.responsavelDesenvolvimento || '')) return false;
     if (respTesteFilter.size > 0 && !respTesteFilter.has(t.responsavelTesteInterno || '')) return false;
+    if (sistemasFilter.size > 0) {
+      const val = t.sistemasImpactados;
+      const vals = Array.isArray(val) ? val : (typeof val === 'string' ? val.split(',').map(v => v.trim()).filter(Boolean) : []);
+      if (!vals.some(v => sistemasFilter.has(v))) return false;
+    }
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -375,7 +392,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, impedimentoFilter, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, impedimentoFilter, search]);
 
   const allCicloKeys = useMemo(() => {
     const s = new Set();
@@ -461,7 +478,7 @@ export default function PlanejamentoCiclo() {
     } catch (e) { console.error(e); }
   }, [tickets]);
 
-  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter]
+  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0);
 
   return (
@@ -650,7 +667,7 @@ export default function PlanejamentoCiclo() {
           )}
           {activeFilters > 0 && (
             <button
-              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
               style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
             >
               Limpar filtros
@@ -664,6 +681,7 @@ export default function PlanejamentoCiclo() {
           <MultiSelectFilter options={Object.keys(FILA_STATUS_MAP)} selected={filaFilter} onChange={handleFilaFilterChange} placeholder="Todas as filas" maxWidth={140} />
           <MultiSelectFilter options={statusOptions} selected={statusFilter} onChange={handleStatusFilterChange} placeholder="Todos os status" maxWidth={200} />
           <MultiSelectFilter options={prioridadeOptions} selected={prioridadeFilter} onChange={setPrioridadeFilter} placeholder="Todas as prioridades" maxWidth={180} />
+          <MultiSelectFilter options={sistemasOptions} selected={sistemasFilter} onChange={setSistemasFilter} placeholder="Sistemas impactados" maxWidth={190} />
           <label style={{
             display: 'flex', alignItems: 'center', gap: 5,
             fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',

@@ -1,5 +1,10 @@
 # Versionamento do Projeto
 
+## [0.1.302] - 2026-09-30
+- **Feature (Planejamento Ciclo — Filtro Sistemas Impactados):** Adicionado filtro `MultiSelectFilter` por "Sistemas Impactados" (`sistemasImpactados`) na toolbar do Planejamento de Ciclo. Suporta valores em array ou string CSV. O filtro é incluído no contador de "Filtros ativos" e limpo pelo botão "Limpar filtros".
+- **UX (Planejamento Ciclo — Badge % Conclusão):** Badge colorido de `percentualConclusao` exibido em cada linha da tabela de tickets (`TicketRow`), com paleta progressiva (vermelho → amarelo → ciano → verde) refletindo o progresso do ticket visualmente.
+- **UX (Modal Demanda — Aba "Plano de Ação"):** Nova aba **PLANO DE AÇÃO** adicionada ao `DemandaDetailsModal` (entre os tabs existentes). Campo **ESTIMATIVA INTERNA (h)** movido da aba Geral para esta nova aba, agrupado sob seção "Estimativas & Execução".
+
 ## [0.1.297] - 2026-09-30
 - **UX (Modal Demanda — Header):** Badge colorido de escopo exibido no header do modal (`DemandaDetailsModal`), com paleta de cores por tipo (PROBLEMAS, DEMANDA, DEMANDA FAST, INCIDENTE, SOLICITACAO, CATÁLOGO). Campo **SEVERIDADE** adicionado na aba Geral.
 - **Feature (Radar Operação — Fluxo DEMANDA FAST):** Adicionado mapa de status `DEMANDA_FAST_STATUS_FLOW` em `OperacaoHome` com todos os estados do fluxo de DEMANDA FAST e respectivos responsáveis (NTT Data / CPFL).
