@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.306] - 2026-09-30
+- **Fix (Configuração JQL — DEMANDA duplicado):** `CONSULTA 7 PRECIFICACAO DEMANDAS` do arquivo `jqls_carga.txt` normalizava incorretamente para `DEMANDA` (escopoId `demanda`), causando dois cards com o mesmo título na tela de Configuração JQL. `normalizeEscopo` agora detecta `PRECIF` antes do check genérico de `DEMANDA`, retornando `DEMANDA PRECIFICACAO` (escopoId `demanda-precificacao`). `ESCOPO_SEED`, `escopoNomeToId` e `ESCOPOS_VALIDOS` atualizados com a nova entrada.
+
 ## [0.1.305] - 2026-09-30
 - **UX (Planejamento Ciclo — Exportar XLSX — ordem de colunas):** As 10 colunas prioritárias do export XLSX (`Issue_Key`, `Resumo`, `Status`, `Estimativa Macro`, `Sistemas Impactados`, `Squad`, `Impedido`, `Observação`, `Data Fim Teste Interno`, `% Conclusão`) foram reposicionadas como primeiras colunas da planilha, facilitando a leitura imediata dos campos mais relevantes sem necessidade de rolar horizontalmente.
 

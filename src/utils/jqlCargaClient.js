@@ -4,6 +4,7 @@ const ESCOPOS_VALIDOS = [
   'PROBLEMAS',
   'DEMANDA FAST',
   'DEMANDA',
+  'DEMANDA PRECIFICACAO',
   'CATALOGO',
   'INCIDENTE',
   'SOLICITACAO',
@@ -29,9 +30,10 @@ export const ESCOPO_SEED = [
   { id: 'problemas', nome: 'PROBLEMAS', ordem: 1 },
   { id: 'demanda-fast', nome: 'DEMANDA FAST', ordem: 2 },
   { id: 'demanda', nome: 'DEMANDA', ordem: 3 },
-  { id: 'incidente', nome: 'INCIDENTE', ordem: 4 },
-  { id: 'solicitacao', nome: 'SOLICITACAO', ordem: 5 },
-  { id: 'catalogo', nome: 'CATALOGO', ordem: 6 },
+  { id: 'demanda-precificacao', nome: 'DEMANDA PRECIFICACAO', ordem: 4 },
+  { id: 'incidente', nome: 'INCIDENTE', ordem: 5 },
+  { id: 'solicitacao', nome: 'SOLICITACAO', ordem: 6 },
+  { id: 'catalogo', nome: 'CATALOGO', ordem: 7 },
 ];
 
 function escopoNomeToId(nome) {
@@ -39,6 +41,7 @@ function escopoNomeToId(nome) {
     PROBLEMAS: 'problemas',
     'DEMANDA FAST': 'demanda-fast',
     DEMANDA: 'demanda',
+    'DEMANDA PRECIFICACAO': 'demanda-precificacao',
     INCIDENTE: 'incidente',
     SOLICITACAO: 'solicitacao',
     CATALOGO: 'catalogo',
@@ -53,6 +56,7 @@ function normalizeEscopo(consultaName) {
   if (/CAT.*LOGO/.test(name)) return 'CATALOGO';
   if (name.includes('INCIDENTE')) return 'INCIDENTE';
   if (name.includes('SOLICITA')) return 'SOLICITACAO';
+  if (name.includes('PRECIF')) return 'DEMANDA PRECIFICACAO';
   if (name.includes('DEMANDA')) return 'DEMANDA';
   return consultaName.trim().toUpperCase();
 }

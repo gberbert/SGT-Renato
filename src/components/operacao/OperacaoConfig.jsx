@@ -116,13 +116,32 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
     getPermissionProfile(userRole).then((p) => setAllowedFunctions(Array.isArray(p?.allowedFunctions) ? p.allowedFunctions : [])).catch(() => setAllowedFunctions([]));
   }, [userRole]);
 
-  const config = useMemo(() => ({
-    ...staticConfig,
-    batches: staticConfig.batches.map((b) => {
+  const config = useMemo(() => {
+    // Batches estáticas (do arquivo txt) mescladas com overrides do Firestore
+    const mergedBatches = staticConfig.batches.map((b) => {
       const ov = overrides[b.escopoId];
       return ov != null && ov !== '' ? { ...b, jql: ov, isOverridden: true } : b;
-    }),
-  }), [staticConfig, overrides]);
+    });
+
+    // Entradas extras inseridas diretamente no Firestore (sem batch estática correspondente)
+    // Comparação case-insensitive para evitar duplicatas (ex: "DEMANDA" vs "demanda")
+    const existingIds = new Set(staticConfig.batches.map((b) => b.escopoId.toLowerCase()));
+    const extraBatches = Object.entries(overrides)
+      .filter(([id, jql]) => !existingIds.has(id.toLowerCase()) && jql != null && jql !== '')
+      .map(([id, jql]) => ({
+        label: id.toUpperCase().replace(/-/g, ' '),
+        escopo: id.toUpperCase().replace(/-/g, ' '),
+        escopoId: id,
+        jql,
+        isOverridden: true,
+        isExtraOnly: true,
+      }));
+
+    return {
+      ...staticConfig,
+      batches: [...mergedBatches, ...extraBatches],
+    };
+  }, [staticConfig, overrides]);
 
   const canEdit = (b) => { if (isAdmin) return true; const pk = JQL_EDIT_PERMISSION_MAP[b.escopoId]; return pk ? allowedFunctions.includes(pk) : false; };
   const hasAny = isAdmin || Object.values(JQL_EDIT_PERMISSION_MAP).some((k) => allowedFunctions.includes(k));

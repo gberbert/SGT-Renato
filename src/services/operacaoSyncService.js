@@ -53,12 +53,28 @@ export async function previewJiraGlobalCarga() {
   const overrides = await loadJqlOverrides();
   
   // Mescla overrides com batches estáticos
-  const batches = staticBatches.map((b) => {
+  const mergedBatches = staticBatches.map((b) => {
     const override = overrides[b.escopoId];
     return (override != null && override !== '')
       ? { ...b, jql: override, isOverridden: true }
       : b;
   });
+
+  // Entradas extras inseridas diretamente no Firestore (sem batch estática correspondente)
+  // Comparação case-insensitive para evitar duplicatas (ex: "DEMANDA" vs "demanda")
+  const existingIds = new Set(staticBatches.map((b) => b.escopoId.toLowerCase()));
+  const extraBatches = Object.entries(overrides)
+    .filter(([id, jql]) => !existingIds.has(id.toLowerCase()) && jql != null && jql !== '')
+    .map(([id, jql]) => ({
+      label: id.toUpperCase().replace(/-/g, ' '),
+      escopo: id.toUpperCase().replace(/-/g, ' '),
+      escopoId: id,
+      jql,
+      isOverridden: true,
+      isExtraOnly: true,
+    }));
+
+  const batches = [...mergedBatches, ...extraBatches];
 
   const batchResults = [];
   for (const batch of batches) {
@@ -141,13 +157,29 @@ export async function runJiraGlobalCarga({
   const overrides = await loadJqlOverrides();
   
   // Mescla overrides com batches estáticos
-  const batches = staticBatches.map((b) => {
+  const mergedBatchesRun = staticBatches.map((b) => {
     const override = overrides[b.escopoId];
     return (override != null && override !== '')
       ? { ...b, jql: override, isOverridden: true }
       : b;
   });
-  
+
+  // Entradas extras inseridas diretamente no Firestore (sem batch estática correspondente)
+  // Comparação case-insensitive para evitar duplicatas (ex: "DEMANDA" vs "demanda")
+  const existingIdsRun = new Set(staticBatches.map((b) => b.escopoId.toLowerCase()));
+  const extraBatchesRun = Object.entries(overrides)
+    .filter(([id, jql]) => !existingIdsRun.has(id.toLowerCase()) && jql != null && jql !== '')
+    .map(([id, jql]) => ({
+      label: id.toUpperCase().replace(/-/g, ' '),
+      escopo: id.toUpperCase().replace(/-/g, ' '),
+      escopoId: id,
+      jql,
+      isOverridden: true,
+      isExtraOnly: true,
+    }));
+
+  const batches = [...mergedBatchesRun, ...extraBatchesRun];
+
   const estimates =
     batchEstimates.length > 0
       ? batchEstimates

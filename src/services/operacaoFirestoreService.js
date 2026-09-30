@@ -71,10 +71,11 @@ export async function writeTicketsGlobalBatch(tickets) {
 
   for (const ticket of tickets) {
     if (!ticket.issueKey) continue;
+    // Usa set sem merge para garantir que todos os campos (inclusive status)
+    // sejam sobrescritos a partir do Jira a cada carga.
     batch.set(
       doc(db, TICKETS_GLOBAL, ticket.issueKey),
-      { ...ticket, syncedAt: serverTimestamp() },
-      { merge: true }
+      { ...ticket, syncedAt: serverTimestamp() }
     );
     ops += 1;
     if (ops >= MAX_BATCH) {
