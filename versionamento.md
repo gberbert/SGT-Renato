@@ -1,5 +1,13 @@
 # Versionamento do Projeto
 
+## [0.1.304] - 2026-09-30
+- **Fix (Planejamento Ciclo — Total Est. Interna condicional):** O badge de total de estimativas internas (`⏱ Xh`) no cabeçalho de cada ciclo agora só é exibido quando o toggle "Est. Interna" está ativo na toolbar de exibição, alinhando o comportamento do cabeçalho do grupo com as linhas de ticket.
+- **Feature (Planejamento Ciclo — Exportar XLSX completo):** Exportação XLSX expandida para 47 colunas cobrindo todos os campos da Collection `ciclos_tickets`: identificação (ISSUE_KEY, JIRA_ID, SUMMARY, ISSUE_TYPE, ESCOPO, PROJECT_KEY, PROJECT_NAME), status/fluxo (Status Category, Resolução, % Conclusão), responsáveis (Grupo Suporte, Grupo Solucionador, Fila, Assignee, Reporter, Criado Por, Resp. Desenvolvimento, Resp. Teste Interno, Resp. Atual, Resp. Execução), classificação (Torre de Atuação, Empresa, Ambiente), estimativas (Estimativa Macro, Estimativa Interna (h), Estimativa Total), impedimentos/observações (Tickets Vinculados), datas completas (Criação, Atualização, Fim Desenvolvimento, Fim Teste QA, Fim Homologação), além de Ciclo ID, URL Jira e Sync Batch. Filtros ativos são respeitados integralmente.
+
+## [0.1.303] - 2026-09-30
+- **Fix (Planejamento Ciclo — Est. Interna condicional):** Total de estimativa interna (`⏱ Xh`) nos cabeçalhos de ciclo e na seção Backlog agora só é exibido quando o toggle "Est. Interna" estiver ativo na toolbar de exibição, alinhando o comportamento do cabeçalho do grupo com a coluna já existente nas linhas de ticket.
+- **Feature (Planejamento Ciclo — Exportar XLSX completo):** Exportação XLSX agora inclui todos os campos da Collection `ciclos_tickets` (25+ colunas: chave, título, squad, escopo, status, prioridade, grupo solucionador, sistemas impactados, responsáveis, estimativas, percentual de conclusão, ciclo, datas, etc.), respeitando integralmente os filtros ativos na tela no momento da exportação.
+
 ## [0.1.302] - 2026-09-30
 - **Feature (Planejamento Ciclo — Filtro Sistemas Impactados):** Adicionado filtro `MultiSelectFilter` por "Sistemas Impactados" (`sistemasImpactados`) na toolbar do Planejamento de Ciclo. Suporta valores em array ou string CSV. O filtro é incluído no contador de "Filtros ativos" e limpo pelo botão "Limpar filtros".
 - **UX (Planejamento Ciclo — Badge % Conclusão):** Badge colorido de `percentualConclusao` exibido em cada linha da tabela de tickets (`TicketRow`), com paleta progressiva (vermelho → amarelo → ciano → verde) refletindo o progresso do ticket visualmente.

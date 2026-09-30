@@ -733,6 +733,10 @@ const data = d.data();
     responsavelTesteInterno: data.responsavelTesteInterno || null,
     naturezaOperacao: data.naturezaOperacao || data.naturezaIniciativa || '',
     observacao: data.observacao || '',
+    percentualConclusao: data.percentualConclusao ?? null,
+    ticketsVinculados: data.ticketsVinculados || '',
+    motivoImpedimento: data.motivoImpedimento || '',
+    fila: data.fila || '',
   };
 }
 

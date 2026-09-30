@@ -244,61 +244,97 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       return orderA - orderB;
     });
 
-    // Preparar dados para exportação
+    // Preparar dados para exportação — todos os campos da Collection
     const data = sortedTickets.map(t => ({
+      // Identificação
       'ISSUE_KEY': t.issueKey || t.id || '',
+      'JIRA_ID': t.jiraId || '',
       'SUMMARY': t.summary || '',
+      'ISSUE_TYPE': t.issueType || '',
+      'ESCOPO': t.escopo || '',
+      'PROJECT_KEY': t.projectKey || '',
+      'PROJECT_NAME': t.projectName || '',
+
+      // Status / Fluxo
       'Status': t.status || '',
-      'Estimativa Macro': t.estimativaMacro || '',
-      'Sistemas Impactados': t.sistemasImpactados || '',
+      'Status Category': t.statusCategory || '',
+      'Resolução': t.resolution || '',
+      '% Conclusão': t.percentualConclusao != null ? t.percentualConclusao : '',
+
+      // Responsáveis
       'Squad': t._resolvedSquad || t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '',
-      'Prioridade': t.prioridadeInterna || '',
-      'Natureza da Iniciativa': t.naturezaIniciativa || '',
+      'Grupo Suporte': t.grupoSuporte || '',
+      'Grupo Solucionador': t.grupoSolucionador || '',
+      'Fila': t.fila || '',
+      'Assignee': t.assignee || '',
+      'Assignee Email': t.assigneeEmail || '',
+      'Reporter': t.reporter || '',
+      'Reporter Email': t.reporterEmail || '',
+      'Criado Por': t.creator || '',
+      'Resp. Desenvolvimento': t.responsavelDesenvolvimento || '',
+      'Resp. Teste Interno': t.responsavelTesteInterno || '',
+      'Resp. Atual': t.responsavelAtual || '',
+      'Resp. Execução': t.responsavelExecucao || '',
+
+      // Classificação
+      'Prioridade': t.prioridadeInterna || t.priority || '',
+      'Natureza da Iniciativa': t.naturezaIniciativa || t.naturezaOperacao || '',
+      'Torre de Atuação': t.torreAtuacao || '',
+      'Empresa': t.empresa || '',
+      'Sistemas Impactados': t.sistemasImpactados || '',
+      'Ambiente': t.environment || '',
+
+      // Estimativas
+      'Estimativa Macro': t.estimativaMacro || '',
+      'Estimativa Interna (h)': t.estimativaInterna || '',
+      'Estimativa Total': t.estimativaTotal || '',
+
+      // Impedimento / Observações
       'Impedido?': t.impedimento ? 'Sim' : 'Não',
       'Motivo Impedimento / Observação': t.motivoImpedimento || '',
       'Observação': t.observacao || '',
-      'Estimativa Total': t.estimativaTotal || '',
+      'Tickets Vinculados': t.ticketsVinculados || '',
+
+      // Datas
+      'Data Criação': t.dataCriacao ? formatDateForExport(t.dataCriacao) : '',
+      'Data Atualização': t.dataAtualizacao ? formatDateForExport(t.dataAtualizacao) : '',
+      'Data Fim Desenvolvimento': t.dataFimDesenvolvimento ? formatDateForExport(t.dataFimDesenvolvimento) : '',
       'Data Fim Testes (NTT)': t.dataFimTesteInterno ? formatDateForExport(t.dataFimTesteInterno) : '',
+      'Data Fim Teste QA': t.dataFimTesteQa ? formatDateForExport(t.dataFimTesteQa) : '',
+      'Data Fim Homologação': t.dataFimHomologacao ? formatDateForExport(t.dataFimHomologacao) : '',
       'Data Conclusão (CPFL)': t.dataConclusao ? formatDateForExport(t.dataConclusao) : '',
+
+      // Ciclo / Planejamento
+      'Ciclo ID': t.cicloId || '',
+      'URL Jira': t.issueUrl || '',
+      'Sync Batch': t.syncBatch || '',
     }));
 
+    const HEADERS = [
+      'ISSUE_KEY', 'JIRA_ID', 'SUMMARY', 'ISSUE_TYPE', 'ESCOPO', 'PROJECT_KEY', 'PROJECT_NAME',
+      'Status', 'Status Category', 'Resolução', '% Conclusão',
+      'Squad', 'Grupo Suporte', 'Grupo Solucionador', 'Fila',
+      'Assignee', 'Assignee Email', 'Reporter', 'Reporter Email', 'Criado Por',
+      'Resp. Desenvolvimento', 'Resp. Teste Interno', 'Resp. Atual', 'Resp. Execução',
+      'Prioridade', 'Natureza da Iniciativa', 'Torre de Atuação', 'Empresa', 'Sistemas Impactados', 'Ambiente',
+      'Estimativa Macro', 'Estimativa Interna (h)', 'Estimativa Total',
+      'Impedido?', 'Motivo Impedimento / Observação', 'Observação', 'Tickets Vinculados',
+      'Data Criação', 'Data Atualização', 'Data Fim Desenvolvimento',
+      'Data Fim Testes (NTT)', 'Data Fim Teste QA', 'Data Fim Homologação', 'Data Conclusão (CPFL)',
+      'Ciclo ID', 'URL Jira', 'Sync Batch',
+    ];
+
     // Criar worksheet
-    const ws = XLSXUtils.json_to_sheet(data, {
-      header: [
-        'ISSUE_KEY',
-        'SUMMARY',
-        'Status',
-        'Estimativa Macro',
-        'Sistemas Impactados',
-        'Squad',
-        'Prioridade',
-        'Natureza da Iniciativa',
-        'Impedido?',
-        'Motivo Impedimento / Observação',
-        'Observação',
-        'Estimativa Total',
-        'Data Fim Testes (NTT)',
-        'Data Conclusão (CPFL)',
-      ],
-    });
+    const ws = XLSXUtils.json_to_sheet(data, { header: HEADERS });
 
     // Configurar largura das colunas
-    ws['!cols'] = [
-      { wch: 15 }, // ISSUE_KEY
-      { wch: 40 }, // SUMMARY
-      { wch: 20 }, // Status
-      { wch: 18 }, // Estimativa Macro
-      { wch: 25 }, // Sistemas Impactados
-      { wch: 18 }, // Squad
-      { wch: 12 }, // Prioridade
-      { wch: 25 }, // Natureza da Iniciativa
-      { wch: 12 }, // Impedido?
-      { wch: 30 }, // Motivo Impedimento
-      { wch: 30 }, // Observação
-      { wch: 15 }, // Estimativa Total
-      { wch: 18 }, // Data Fim Testes (NTT)
-      { wch: 18 }, // Data Conclusão (CPFL)
-    ];
+    ws['!cols'] = HEADERS.map(h => {
+      if (['SUMMARY', 'Motivo Impedimento / Observação', 'Observação', 'Tickets Vinculados'].includes(h)) return { wch: 40 };
+      if (['ISSUE_KEY', 'JIRA_ID', 'PROJECT_KEY', 'Ciclo ID', 'Sync Batch'].includes(h)) return { wch: 16 };
+      if (h.startsWith('Data')) return { wch: 20 };
+      if (h === 'URL Jira') return { wch: 45 };
+      return { wch: 22 };
+    });
 
     // Criar workbook
     const wb = XLSXUtils.book_new();
@@ -513,7 +549,7 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
             )}
             <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: meta.color + '22', color: meta.color }}>{meta.label}</span>
             <span style={{ fontSize: 12, color: 'var(--gray-10)' }}>({tickets.length} tickets)</span>
-            {(() => {
+            {showEstimativa && (() => {
               const total = tickets.reduce((acc, t) => acc + (Number(t.estimativaInterna) || 0), 0);
               if (!total) return null;
               return (

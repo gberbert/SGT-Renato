@@ -48,6 +48,8 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
   const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [vulnerabilidade, setVulnerabilidade] = useState(false);
+  const [regulatorio, setRegulatorio] = useState(false);
 
   const chatEndRef = useRef(null);
 
@@ -68,6 +70,8 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
       setDependsOn(ticket.dependsOn || '');
       setIsBlocked(ticket.isBlocked || false);
       setCustomData(ticket.customData || {});
+      setVulnerabilidade(ticket.vulnerabilidade || false);
+      setRegulatorio(ticket.regulatorio || false);
 
       if (ticket.board === 'atividades' && ticket.parentId) {
         getTicketById(ticket.parentId).then(pt => {
@@ -730,6 +734,34 @@ const TicketDetailsModal = ({ isOpen, onClose, ticket, userRole }) => {
                         />
                         <Text size="2" weight="bold" color={isBlocked ? "red" : "gray"}>
                           {isBlocked ? "Ticket Bloqueado" : "Marcar como Bloqueado"}
+                        </Text>
+                      </Flex>
+                    </Box>
+                    <Box>
+                      <Flex align="center" gap="2" mt="4">
+                        <Switch 
+                          checked={vulnerabilidade} 
+                          onCheckedChange={(checked) => {
+                            setVulnerabilidade(checked);
+                            handleUpdateField('vulnerabilidade', checked);
+                          }} 
+                        />
+                        <Text size="2" weight="bold" color={vulnerabilidade ? "amber" : "gray"}>
+                          {vulnerabilidade ? "Vulnerabilidade Identificada" : "Marcar como Vulnerabilidade"}
+                        </Text>
+                      </Flex>
+                    </Box>
+                    <Box>
+                      <Flex align="center" gap="2" mt="4">
+                        <Switch 
+                          checked={regulatorio} 
+                          onCheckedChange={(checked) => {
+                            setRegulatorio(checked);
+                            handleUpdateField('regulatorio', checked);
+                          }} 
+                        />
+                        <Text size="2" weight="bold" color={regulatorio ? "cyan" : "gray"}>
+                          {regulatorio ? "Aspecto Regulatório" : "Marcar como Regulatório"}
                         </Text>
                       </Flex>
                     </Box>

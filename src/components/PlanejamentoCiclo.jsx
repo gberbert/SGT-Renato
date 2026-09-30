@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   collection, getDocs, getDoc, query, orderBy,
   doc, updateDoc, arrayUnion, addDoc, serverTimestamp,
@@ -6,10 +6,16 @@ import {
 import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
-import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock, Save, Trash2 } from 'lucide-react';
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
+import {
+  subscribeToCicloViews,
+  saveCicloView,
+  deleteCicloView,
+  deserializeFilters,
+} from '../services/cicloViewsService';
 
 const TICKETS_GLOBAL = 'tickets_global';
 
@@ -206,7 +212,7 @@ export default function PlanejamentoCiclo() {
   const [dateField, setDateField] = useState('none');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [showEstimativa, setShowEstimativa] = useState(
-    () => localStorage.getItem('ciclo_showEstimativa') !== 'false'
+    () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
 
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
@@ -218,7 +224,52 @@ export default function PlanejamentoCiclo() {
   const [creating, setCreating] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
 
+  // ── Visões Salvas ──────────────────────────────────────────────
+  const [savedViews, setSavedViews] = useState([]);
+  const [showViewsPanel, setShowViewsPanel] = useState(false);
+  const [newViewName, setNewViewName] = useState('');
+  const [newViewIsPrincipal, setNewViewIsPrincipal] = useState(false);
+  const [savingView, setSavingView] = useState(false);
+  const principalApplied = useRef(false);
+  const viewsPanelRef = useRef(null);
+
   useEffect(() => { return subscribeToCiclos(setCiclos); }, []);
+  useEffect(() => { return subscribeToCicloViews(setSavedViews); }, []);
+
+  // Fecha painel de visões ao clicar fora
+  useEffect(() => {
+    if (!showViewsPanel) return;
+    function handleClickOutside(e) {
+      if (viewsPanelRef.current && !viewsPanelRef.current.contains(e.target)) {
+        setShowViewsPanel(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showViewsPanel]);
+
+  // Aplica visão principal automaticamente na primeira carga
+  useEffect(() => {
+    if (principalApplied.current) return;
+    const principal = savedViews.find(v => v.isPrincipal);
+    if (!principal) return;
+    principalApplied.current = true;
+    const f = deserializeFilters(principal.filters);
+    if (!f) return;
+    setSearch(f.search);
+    setEscopoFilter(f.escopoFilter);
+    setSquadFilter(f.squadFilter);
+    setGrupoSolucionadorFilter(f.grupoSolucionadorFilter);
+    setFilaFilter(f.filaFilter);
+    setStatusFilter(f.statusFilter);
+    setPrioridadeFilter(f.prioridadeFilter);
+    setRespDevFilter(f.respDevFilter);
+    setRespTesteFilter(f.respTesteFilter);
+    setSistemasFilter(f.sistemasFilter);
+    setDateField(f.dateField);
+    setImpedimentoFilter(f.impedimentoFilter);
+    setShowEstimativa(f.showEstimativa);
+  }, [savedViews]);
 
   useEffect(() => {
     let cancelled = false;
@@ -392,7 +443,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, impedimentoFilter, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, impedimentoFilter, search]);
 
   const allCicloKeys = useMemo(() => {
     const s = new Set();
@@ -478,6 +529,50 @@ export default function PlanejamentoCiclo() {
     } catch (e) { console.error(e); }
   }, [tickets]);
 
+  const applyView = useCallback((view) => {
+    const f = deserializeFilters(view.filters);
+    if (!f) return;
+    setSearch(f.search);
+    setEscopoFilter(f.escopoFilter);
+    setSquadFilter(f.squadFilter);
+    setGrupoSolucionadorFilter(f.grupoSolucionadorFilter);
+    setFilaFilter(f.filaFilter);
+    setStatusFilter(f.statusFilter);
+    setPrioridadeFilter(f.prioridadeFilter);
+    setRespDevFilter(f.respDevFilter);
+    setRespTesteFilter(f.respTesteFilter);
+    setSistemasFilter(f.sistemasFilter);
+    setDateField(f.dateField);
+    setImpedimentoFilter(f.impedimentoFilter);
+    setShowEstimativa(f.showEstimativa);
+    setShowViewsPanel(false);
+  }, []);
+
+  const handleSaveView = useCallback(async () => {
+    if (!newViewName.trim()) return;
+    setSavingView(true);
+    try {
+      await saveCicloView(
+        newViewName.trim(),
+        {
+          search, escopoFilter, squadFilter, grupoSolucionadorFilter,
+          filaFilter, statusFilter, prioridadeFilter, respDevFilter,
+          respTesteFilter, sistemasFilter, dateField, impedimentoFilter, showEstimativa,
+        },
+        newViewIsPrincipal,
+      );
+      setNewViewName('');
+      setNewViewIsPrincipal(false);
+    } finally {
+      setSavingView(false);
+    }
+  }, [
+    newViewName, newViewIsPrincipal,
+    search, escopoFilter, squadFilter, grupoSolucionadorFilter,
+    filaFilter, statusFilter, prioridadeFilter, respDevFilter,
+    respTesteFilter, sistemasFilter, dateField, impedimentoFilter, showEstimativa,
+  ]);
+
   const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0);
 
@@ -509,6 +604,131 @@ export default function PlanejamentoCiclo() {
               </span>
             </div>
           )}
+          {/* ── Visões Salvas ── */}
+          <div ref={viewsPanelRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowViewsPanel(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: showViewsPanel ? 'rgba(99,102,241,0.15)' : 'var(--gray-3)',
+                color: showViewsPanel ? '#a5b4fc' : 'var(--gray-10)',
+                border: `1px solid ${showViewsPanel ? 'rgba(99,102,241,0.5)' : 'var(--gray-5)'}`,
+                borderRadius: 8, padding: '8px 14px',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              <Save size={15} />
+              Visões Salvas{savedViews.length > 0 ? ` (${savedViews.length})` : ''}
+            </button>
+
+            {showViewsPanel && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                width: 340, zIndex: 300,
+                background: 'var(--color-panel-solid)',
+                border: '1px solid var(--gray-5)',
+                borderRadius: 12,
+                boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
+                padding: '16px',
+              }}>
+                {/* Salvar visão */}
+                <p style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700, color: 'var(--gray-12)' }}>
+                  Salvar visão atual
+                </p>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <input
+                    value={newViewName}
+                    onChange={e => setNewViewName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveView(); }}
+                    placeholder="Nome da visão..."
+                    style={{
+                      flex: 1, fontSize: 13, background: 'var(--gray-2)',
+                      border: '1px solid var(--indigo-7)', borderRadius: 8,
+                      padding: '7px 12px', color: 'var(--gray-12)', outline: 'none',
+                    }}
+                  />
+                  <button
+                    onClick={handleSaveView}
+                    disabled={savingView || !newViewName.trim()}
+                    style={{
+                      padding: '7px 14px', background: 'var(--gray-4)',
+                      color: 'var(--gray-11)', border: '1px solid var(--gray-5)',
+                      borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                      opacity: (!newViewName.trim() || savingView) ? 0.5 : 1,
+                    }}
+                  >
+                    {savingView ? '…' : 'Salvar'}
+                  </button>
+                </div>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  fontSize: 12, color: 'var(--gray-10)', cursor: 'pointer',
+                  marginBottom: savedViews.length > 0 ? 14 : 0,
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={newViewIsPrincipal}
+                    onChange={e => setNewViewIsPrincipal(e.target.checked)}
+                    style={{ accentColor: 'var(--indigo-9)', width: 13, height: 13 }}
+                  />
+                  Definir como visão principal (carrega ao abrir)
+                </label>
+
+                {savedViews.length > 0 && (
+                  <>
+                    <div style={{ borderTop: '1px solid var(--gray-5)', margin: '14px 0 10px' }} />
+                    <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 700, color: 'var(--gray-12)' }}>
+                      Carregar visão
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                      {savedViews.map(view => (
+                        <div
+                          key={view.id}
+                          onClick={() => applyView(view)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+                            background: 'var(--gray-3)', border: '1px solid var(--gray-5)',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            readOnly
+                            checked={false}
+                            onClick={e => { e.stopPropagation(); applyView(view); }}
+                            style={{ accentColor: 'var(--indigo-9)', width: 13, height: 13, flexShrink: 0 }}
+                          />
+                          <span style={{ flex: 1, fontSize: 13, color: 'var(--gray-12)', fontWeight: 500 }}>
+                            {view.name}
+                          </span>
+                          {view.isPrincipal && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: '2px 7px',
+                              borderRadius: 8, background: 'var(--indigo-9)', color: '#fff',
+                            }}>
+                              principal
+                            </span>
+                          )}
+                          <button
+                            onClick={e => { e.stopPropagation(); deleteCicloView(view.id); }}
+                            title="Excluir visão"
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              padding: 4, color: 'var(--red-9)',
+                              display: 'flex', alignItems: 'center', flexShrink: 0,
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => {
               const filename = `tickets_planejamento_${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -787,7 +1007,7 @@ export default function PlanejamentoCiclo() {
             <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'var(--gray-5)', color: 'var(--gray-11)' }}>
               {backlogTickets.length} tickets
             </span>
-            {(() => {
+            {showEstimativa && (() => {
               const total = backlogTickets.reduce((acc, t) => acc + (Number(t.estimativaInterna) || 0), 0);
               if (!total) return null;
               return (

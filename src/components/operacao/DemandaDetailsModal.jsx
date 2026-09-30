@@ -125,19 +125,52 @@ function EditNumber({ label, fieldKey, value, onSave }) {
 }
 
 function EditSelect({ label, fieldKey, options, value, onSave, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selected = options.find((o) => String(o.value) === String(value ?? ''));
+
   return (
-    <div className="dmd-field">
+    <div className="dmd-field" ref={wrapRef} style={{ position: 'relative' }}>
       <FieldLabel>{label}</FieldLabel>
-      <select
-        className="dmd-input"
-        value={value ?? ''}
-        onChange={(e) => onSave(fieldKey, e.target.value === '' ? null : e.target.value)}
+      <button
+        type="button"
+        className="dmd-combobox-trigger"
+        onClick={() => setOpen((v) => !v)}
       >
-        <option value="">{placeholder || '—'}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+        <span className={selected ? 'dmd-combobox-value' : 'dmd-combobox-placeholder'}>
+          {selected ? selected.label : (placeholder || '—')}
+        </span>
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div className="dmd-combobox-dropdown">
+          <div className="dmd-combobox-list">
+            <button type="button" className="dmd-combobox-item dmd-combobox-item--clear"
+              onClick={() => { onSave(fieldKey, null); setOpen(false); }}>
+              {placeholder || '—'}
+            </button>
+            {options.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className={`dmd-combobox-item${selected?.value === String(o.value) ? ' dmd-combobox-item--selected' : ''}`}
+                onClick={() => { onSave(fieldKey, o.value); setOpen(false); }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -430,6 +463,60 @@ function ReplanningLog({ ticketDocId }) {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SquadSelect({ label, value, squads, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const sorted = squads.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
+
+  return (
+    <div className="dmd-field" ref={wrapRef} style={{ position: 'relative' }}>
+      <FieldLabel>{label}</FieldLabel>
+      <button
+        type="button"
+        className="dmd-combobox-trigger"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className={value ? 'dmd-combobox-value' : 'dmd-combobox-placeholder'}>
+          {value || '— Nenhuma —'}
+        </span>
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div className="dmd-combobox-dropdown">
+          <div className="dmd-combobox-list">
+            <button
+              type="button"
+              className="dmd-combobox-item dmd-combobox-item--clear"
+              onClick={() => { onChange(null); setOpen(false); }}
+            >
+              — Nenhuma —
+            </button>
+            {sorted.map((sq) => (
+              <button
+                key={sq.id}
+                type="button"
+                className={`dmd-combobox-item${value === sq.name ? ' dmd-combobox-item--selected' : ''}`}
+                onClick={() => { onChange(sq.name); setOpen(false); }}
+              >
+                {sq.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -759,26 +846,12 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
               {/* Row 3b: SQUAD PRINCIPAL */}
               <div className="dmd-row">
                 {isEdit ? (
-                  <div className="dmd-field">
-                    <FieldLabel>SQUAD PRINCIPAL</FieldLabel>
-                    <select
-                      className="dmd-input"
-                      value={squadPrincipal ?? ''}
-                      onChange={(e) => {
-                        const next = e.target.value === '' ? null : e.target.value;
-                        setSquadPrincipal(next);
-                        save('squadPrincipal', next);
-                      }}
-                    >
-                      <option value="">— Nenhuma —</option>
-                      {squads
-                        .slice()
-                        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
-                        .map((sq) => (
-                          <option key={sq.id} value={sq.name}>{sq.name}</option>
-                        ))}
-                    </select>
-                  </div>
+                  <SquadSelect
+                    label="SQUAD PRINCIPAL"
+                    value={squadPrincipal}
+                    squads={squads}
+                    onChange={(next) => { setSquadPrincipal(next); save('squadPrincipal', next); }}
+                  />
                   ) : (
                     <div className="dmd-field">
                     <FieldLabel>SQUAD PRINCIPAL</FieldLabel>
