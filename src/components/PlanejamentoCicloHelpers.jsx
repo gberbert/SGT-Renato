@@ -247,9 +247,9 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
     // Preparar dados para exportação — todos os campos da Collection
     const data = sortedTickets.map(t => ({
       // Identificação
-      'ISSUE_KEY': t.issueKey || t.id || '',
+      'Issue_Key': t.issueKey || t.id || '',
       'JIRA_ID': t.jiraId || '',
-      'SUMMARY': t.summary || '',
+      'Resumo': t.summary || '',
       'ISSUE_TYPE': t.issueType || '',
       'ESCOPO': t.escopo || '',
       'PROJECT_KEY': t.projectKey || '',
@@ -290,7 +290,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       'Estimativa Total': t.estimativaTotal || '',
 
       // Impedimento / Observações
-      'Impedido?': t.impedimento ? 'Sim' : 'Não',
+      'Impedido': t.impedimento ? 'Sim' : 'Não',
       'Motivo Impedimento / Observação': t.motivoImpedimento || '',
       'Observação': t.observacao || '',
       'Tickets Vinculados': t.ticketsVinculados || '',
@@ -299,7 +299,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       'Data Criação': t.dataCriacao ? formatDateForExport(t.dataCriacao) : '',
       'Data Atualização': t.dataAtualizacao ? formatDateForExport(t.dataAtualizacao) : '',
       'Data Fim Desenvolvimento': t.dataFimDesenvolvimento ? formatDateForExport(t.dataFimDesenvolvimento) : '',
-      'Data Fim Testes (NTT)': t.dataFimTesteInterno ? formatDateForExport(t.dataFimTesteInterno) : '',
+      'Data Fim Teste Interno': t.dataFimTesteInterno ? formatDateForExport(t.dataFimTesteInterno) : '',
       'Data Fim Teste QA': t.dataFimTesteQa ? formatDateForExport(t.dataFimTesteQa) : '',
       'Data Fim Homologação': t.dataFimHomologacao ? formatDateForExport(t.dataFimHomologacao) : '',
       'Data Conclusão (CPFL)': t.dataConclusao ? formatDateForExport(t.dataConclusao) : '',
@@ -311,16 +311,21 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
     }));
 
     const HEADERS = [
-      'ISSUE_KEY', 'JIRA_ID', 'SUMMARY', 'ISSUE_TYPE', 'ESCOPO', 'PROJECT_KEY', 'PROJECT_NAME',
-      'Status', 'Status Category', 'Resolução', '% Conclusão',
-      'Squad', 'Grupo Suporte', 'Grupo Solucionador', 'Fila',
+      // ── Colunas prioritárias (exibidas primeiro) ───────────────
+      'Issue_Key', 'Resumo', 'Status', 'Estimativa Macro',
+      'Sistemas Impactados', 'Squad', 'Impedido', 'Observação',
+      'Data Fim Teste Interno', '% Conclusão',
+      // ── Demais campos ──────────────────────────────────────────
+      'JIRA_ID', 'ISSUE_TYPE', 'ESCOPO', 'PROJECT_KEY', 'PROJECT_NAME',
+      'Status Category', 'Resolução',
+      'Grupo Suporte', 'Grupo Solucionador', 'Fila',
       'Assignee', 'Assignee Email', 'Reporter', 'Reporter Email', 'Criado Por',
       'Resp. Desenvolvimento', 'Resp. Teste Interno', 'Resp. Atual', 'Resp. Execução',
-      'Prioridade', 'Natureza da Iniciativa', 'Torre de Atuação', 'Empresa', 'Sistemas Impactados', 'Ambiente',
-      'Estimativa Macro', 'Estimativa Interna (h)', 'Estimativa Total',
-      'Impedido?', 'Motivo Impedimento / Observação', 'Observação', 'Tickets Vinculados',
+      'Prioridade', 'Natureza da Iniciativa', 'Torre de Atuação', 'Empresa', 'Ambiente',
+      'Estimativa Interna (h)', 'Estimativa Total',
+      'Motivo Impedimento / Observação', 'Tickets Vinculados',
       'Data Criação', 'Data Atualização', 'Data Fim Desenvolvimento',
-      'Data Fim Testes (NTT)', 'Data Fim Teste QA', 'Data Fim Homologação', 'Data Conclusão (CPFL)',
+      'Data Fim Teste QA', 'Data Fim Homologação', 'Data Conclusão (CPFL)',
       'Ciclo ID', 'URL Jira', 'Sync Batch',
     ];
 
@@ -329,8 +334,8 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
 
     // Configurar largura das colunas
     ws['!cols'] = HEADERS.map(h => {
-      if (['SUMMARY', 'Motivo Impedimento / Observação', 'Observação', 'Tickets Vinculados'].includes(h)) return { wch: 40 };
-      if (['ISSUE_KEY', 'JIRA_ID', 'PROJECT_KEY', 'Ciclo ID', 'Sync Batch'].includes(h)) return { wch: 16 };
+      if (['Resumo', 'Motivo Impedimento / Observação', 'Observação', 'Tickets Vinculados'].includes(h)) return { wch: 40 };
+      if (['Issue_Key', 'JIRA_ID', 'PROJECT_KEY', 'Ciclo ID', 'Sync Batch'].includes(h)) return { wch: 16 };
       if (h.startsWith('Data')) return { wch: 20 };
       if (h === 'URL Jira') return { wch: 45 };
       return { wch: 22 };

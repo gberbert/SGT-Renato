@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.305] - 2026-09-30
+- **UX (Planejamento Ciclo — Exportar XLSX — ordem de colunas):** As 10 colunas prioritárias do export XLSX (`Issue_Key`, `Resumo`, `Status`, `Estimativa Macro`, `Sistemas Impactados`, `Squad`, `Impedido`, `Observação`, `Data Fim Teste Interno`, `% Conclusão`) foram reposicionadas como primeiras colunas da planilha, facilitando a leitura imediata dos campos mais relevantes sem necessidade de rolar horizontalmente.
+
 ## [0.1.304] - 2026-09-30
 - **Fix (Planejamento Ciclo — Total Est. Interna condicional):** O badge de total de estimativas internas (`⏱ Xh`) no cabeçalho de cada ciclo agora só é exibido quando o toggle "Est. Interna" está ativo na toolbar de exibição, alinhando o comportamento do cabeçalho do grupo com as linhas de ticket.
 - **Feature (Planejamento Ciclo — Exportar XLSX completo):** Exportação XLSX expandida para 47 colunas cobrindo todos os campos da Collection `ciclos_tickets`: identificação (ISSUE_KEY, JIRA_ID, SUMMARY, ISSUE_TYPE, ESCOPO, PROJECT_KEY, PROJECT_NAME), status/fluxo (Status Category, Resolução, % Conclusão), responsáveis (Grupo Suporte, Grupo Solucionador, Fila, Assignee, Reporter, Criado Por, Resp. Desenvolvimento, Resp. Teste Interno, Resp. Atual, Resp. Execução), classificação (Torre de Atuação, Empresa, Ambiente), estimativas (Estimativa Macro, Estimativa Interna (h), Estimativa Total), impedimentos/observações (Tickets Vinculados), datas completas (Criação, Atualização, Fim Desenvolvimento, Fim Teste QA, Fim Homologação), além de Ciclo ID, URL Jira e Sync Batch. Filtros ativos são respeitados integralmente.
