@@ -136,6 +136,29 @@ const DEMANDA_STATUS_FLOW_ROW1 = [
 ];
 const DEMANDA_STATUS_FLOW_ROW2 = [];
 
+/** Status do fluxo de trabalho de DEMANDA FAST */
+const DEMANDA_FAST_STATUS_FLOW = [
+  { status: 'Aguardando Atendimento',          responsible: 'NTT Data' },
+  { status: 'Em Atendimento',                  responsible: 'NTT Data' },
+  { status: 'Resolvido',                       responsible: 'CPFL'     },
+  { status: 'Reaberto',                        responsible: 'NTT Data' },
+  { status: 'Fechada',                         responsible: 'CPFL'     },
+  { status: 'Canceled',                        responsible: 'CPFL'     },
+  { status: 'Aprovação Demanda Fast',          responsible: 'CPFL'     },
+  { status: 'Aguardando Aprovação Gestor',     responsible: 'CPFL'     },
+  { status: 'Aguardando Aprovação Tecnica',    responsible: 'CPFL'     },
+  { status: 'Aguardando Aprovação Adicional',  responsible: 'CPFL'     },
+  { status: 'Aprovado',                        responsible: 'NTT Data' },
+  { status: 'Reprovado',                       responsible: 'NTT Data' },
+  { status: 'Agendado',                        responsible: 'NTT Data' },
+  { status: 'Aguardando Compra',               responsible: 'CPFL'     },
+  { status: 'Aguardando Validação',            responsible: 'CPFL'     },
+  { status: 'Aguardando Problema',             responsible: 'NTT Data' },
+  { status: 'Aguardando Mudança',              responsible: 'NTT Data' },
+  { status: 'Aguardando Fornecedor',           responsible: 'CPFL'     },
+  { status: 'Aguardando Solicitante',          responsible: 'CPFL'     },
+];
+
 const RESPONSIBLE_STYLE = {
   'NTT Data': { bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.4)', color: '#38bdf8' },
   CPFL:       { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',  color: '#22c55e' },
@@ -145,6 +168,7 @@ const RADAR_TAB_DEFS = [
   { value: 'GERAL', slug: 'geral', label: 'Geral', requiredFn: PermissionFunctionKeys.RADAR_GERAL_VIEW },
   { value: 'PROBLEMAS', slug: 'problemas', label: 'Problemas', requiredFn: PermissionFunctionKeys.RADAR_PROBLEMAS_VIEW },
   { value: 'DEMANDA', slug: 'demandas', label: 'Demandas', requiredFn: PermissionFunctionKeys.RADAR_DEMANDAS_TAB_VIEW },
+  { value: 'DEMANDA FAST', slug: 'demanda-fast', label: 'Demanda Fast', requiredFn: PermissionFunctionKeys.RADAR_DEMANDA_FAST_TAB_VIEW },
   { value: 'INCIDENTE', slug: 'incidentes', label: 'Incidentes', requiredFn: PermissionFunctionKeys.RADAR_INCIDENTES_VIEW },
   { value: 'SOLICITACAO', slug: 'solicitacoes', label: 'Solicitações', requiredFn: PermissionFunctionKeys.RADAR_SOLICITACOES_VIEW },
   { value: 'CATALOGO', slug: 'catalogo', label: 'Catálogo', requiredFn: PermissionFunctionKeys.RADAR_CATALOGO_VIEW },
@@ -594,7 +618,7 @@ const OperacaoHome = ({ userRole }) => {
   // 1) Ao entrar na tela Radar, restaurar cache de sessão por escopo silenciosamente
   useEffect(() => {
     if (!statsFingerprint) return;
-    const escoposToTry = ['PROBLEMAS', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO'];
+    const escoposToTry = ['PROBLEMAS', 'DEMANDA', 'DEMANDA FAST', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO'];
     const restored = [];
     const restoredEscopos = new Set();
     for (const esc of escoposToTry) {
@@ -617,6 +641,15 @@ const OperacaoHome = ({ userRole }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statsFingerprint]);
+
+  // Auto-abre o drill com todos os tickets quando a aba DEMANDA FAST está ativa e os dados já estão carregados
+  useEffect(() => {
+    if (activeEscopoTab !== 'DEMANDA FAST') return;
+    if (!loadedEscopos.has('DEMANDA FAST')) return;
+    if (drillEscopo !== null) return;
+    openDrill('DEMANDA FAST', 'Demanda Fast');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEscopoTab, loadedEscopos.size, drillEscopo]);
 
   /**
    * Carrega tickets do Firestore sob demanda (chamado pelo botão em cada aba).
@@ -1032,7 +1065,7 @@ const OperacaoHome = ({ userRole }) => {
                       )
                     : [];
                   // ── DEMANDA: visão enriquecida por fluxo de status ──────────────────
-                  if (activeEscopoTab === 'DEMANDA') {
+                  if (activeEscopoTab === 'DEMANDA' || activeEscopoTab === 'DEMANDA FAST') {
                     // todayStr / plus1Str / plus2Str are defined at component scope above
 
                     // Compute due-date filtered base tickets
@@ -1239,7 +1272,7 @@ const OperacaoHome = ({ userRole }) => {
                             </button>
                             <Box>
                               <Text weight="bold" style={{ fontSize: 13, color: 'var(--gray-11)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
-                                DEMANDAS NO ROADMAP
+                                {activeEscopoTab === 'DEMANDA FAST' ? 'DEMANDA FAST NO ROADMAP' : 'DEMANDAS NO ROADMAP'}
                               </Text>
                               {totalImpedidas > 0 && (
                                   <button
@@ -1918,42 +1951,54 @@ const OperacaoHome = ({ userRole }) => {
                           <Text style={{ fontSize: 11, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', fontWeight: 700, display: 'block', marginBottom: 12 }}>
                             STATUS POR FLUXO DE TRABALHO
                           </Text>
-                          {/* Row 0 — fila CPFL Previsto (pré-análise) */}
-                          <button
-                            type="button"
-                            onClick={() => setPrevistoExpanded((v) => !v)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}
-                          >
-                            {previstoExpanded ? <ChevronDown size={14} color="rgba(34,197,94,0.7)" /> : <ChevronRight size={14} color="rgba(34,197,94,0.7)" />}
-                            <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(34,197,94,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>
-                              Fila CPFL Previsto
-                            </Text>
-                          </button>
-                          {previstoExpanded && (
-                            <Flex gap="2" wrap="wrap" mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                              {DEMANDA_STATUS_FLOW_PREVISTO.map(({ status, responsible }) => (
-                                <StatusCard key={status} status={status} responsible={responsible} />
-                              ))}
-                            </Flex>
-                          )}
-                          {!previstoExpanded && <Box mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }} />}
-                          {/* Row 1 — fluxo principal */}
-                          <button
-                            type="button"
-                            onClick={() => setPrincipalExpanded((v) => !v)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}
-                          >
-                            {principalExpanded ? <ChevronDown size={14} color="rgba(56,189,248,0.7)" /> : <ChevronRight size={14} color="rgba(56,189,248,0.7)" />}
-                            <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(56,189,248,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>
-                              Fluxo Principal
-                            </Text>
-                          </button>
-                          {principalExpanded && (
+                          {activeEscopoTab === 'DEMANDA FAST' ? (
+                            /* ── Demanda Fast: fluxo único com os 19 status ── */
                             <Flex gap="2" wrap="wrap" mb="3">
-                              {DEMANDA_STATUS_FLOW_ROW1.map(({ status, responsible }) => (
+                              {DEMANDA_FAST_STATUS_FLOW.map(({ status, responsible }) => (
                                 <StatusCard key={status} status={status} responsible={responsible} />
                               ))}
                             </Flex>
+                          ) : (
+                            /* ── Demanda: dois grupos recolhíveis ── */
+                            <>
+                              {/* Row 0 — fila CPFL Previsto (pré-análise) */}
+                              <button
+                                type="button"
+                                onClick={() => setPrevistoExpanded((v) => !v)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}
+                              >
+                                {previstoExpanded ? <ChevronDown size={14} color="rgba(34,197,94,0.7)" /> : <ChevronRight size={14} color="rgba(34,197,94,0.7)" />}
+                                <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(34,197,94,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>
+                                  Fila CPFL Previsto
+                                </Text>
+                              </button>
+                              {previstoExpanded && (
+                                <Flex gap="2" wrap="wrap" mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                                  {DEMANDA_STATUS_FLOW_PREVISTO.map(({ status, responsible }) => (
+                                    <StatusCard key={status} status={status} responsible={responsible} />
+                                  ))}
+                                </Flex>
+                              )}
+                              {!previstoExpanded && <Box mb="4" style={{ paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }} />}
+                              {/* Row 1 — fluxo principal */}
+                              <button
+                                type="button"
+                                onClick={() => setPrincipalExpanded((v) => !v)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}
+                              >
+                                {principalExpanded ? <ChevronDown size={14} color="rgba(56,189,248,0.7)" /> : <ChevronRight size={14} color="rgba(56,189,248,0.7)" />}
+                                <Text style={{ fontSize: 10, letterSpacing: '0.08em', color: 'rgba(56,189,248,0.6)', fontWeight: 700, textTransform: 'uppercase' }}>
+                                  Fluxo Principal
+                                </Text>
+                              </button>
+                              {principalExpanded && (
+                                <Flex gap="2" wrap="wrap" mb="3">
+                                  {DEMANDA_STATUS_FLOW_ROW1.map(({ status, responsible }) => (
+                                    <StatusCard key={status} status={status} responsible={responsible} />
+                                  ))}
+                                </Flex>
+                              )}
+                            </>
                           )}
                         </Box>
                       </Box>

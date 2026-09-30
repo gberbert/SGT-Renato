@@ -1,5 +1,10 @@
 # Versionamento do Projeto
 
+## [0.1.297] - 2026-09-30
+- **UX (Modal Demanda — Header):** Badge colorido de escopo exibido no header do modal (`DemandaDetailsModal`), com paleta de cores por tipo (PROBLEMAS, DEMANDA, DEMANDA FAST, INCIDENTE, SOLICITACAO, CATÁLOGO). Campo **SEVERIDADE** adicionado na aba Geral.
+- **Feature (Radar Operação — Fluxo DEMANDA FAST):** Adicionado mapa de status `DEMANDA_FAST_STATUS_FLOW` em `OperacaoHome` com todos os estados do fluxo de DEMANDA FAST e respectivos responsáveis (NTT Data / CPFL).
+- **Fix (Planejamento Ciclo — Dropdown MultiSelect):** Dropdown `MultiSelectFilter` migrado de `position: absolute` para `position: fixed` com cálculo de coordenadas via `getBoundingClientRect`. Resolve clipping em containers com `overflow: hidden`; `zIndex` elevado para 9999.
+
 ## [0.1.296] - 2026-09-29
 - **Fix (Radar Operação — Stats desatualizados):** Removidos 982 tickets classificados incorretamente como INCIDENTE e DEMANDA FAST do Firestore (`tickets_global`). Corrigido `operacao_stats/summary`: totais de INCIDENTE (179→0), DEMANDA FAST (980→0) e `totalTickets` (10.483→9.324) ajustados via script `fix_stats_incidente.mjs`.
 - **Feature (Radar Operação — Auto-refresh em tempo real):** O store do radar (`operacaoRadarStore.js`) agora assina `onSnapshot` em `operacao_stats/summary` logo no primeiro bootstrap. Quando o documento é atualizado (ex.: após carga JQL), um debounce de 2s dispara `runBootstrapLoad({ force: true })` automaticamente — o painel do radar atualiza sem necessidade de reload manual. O listener é cancelado em `resetOperacaoRadarStore()`.

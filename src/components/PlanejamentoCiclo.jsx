@@ -589,7 +589,7 @@ export default function PlanejamentoCiclo() {
       {/* ── Global filter bar ────────────────────────────────────────── */}
       <div style={{
         background: 'var(--gray-2)', border: '1px solid var(--gray-5)',
-        borderRadius: 10, marginBottom: 18, overflow: 'hidden',
+        borderRadius: 10, marginBottom: 18,
       }}>
 
         {/* Row 1: squad tags + escopo tags */}

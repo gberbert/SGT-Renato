@@ -426,6 +426,7 @@ const KNOWN_DATE_FIELD_IDS = {
   planejamento_horas_demanda_fast: "customfield_14314",
   demanda_vulnerabilidade: "customfield_19626",
   responsavel_execucao: "customfield_10608",
+  severidade: "customfield_10882",
 };
 
 async function resolveTicketFieldIds() {
@@ -548,6 +549,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     planejamentoHorasDemandaFast: extracted.planejamento_horas_demanda_fast != null ? Number(extracted.planejamento_horas_demanda_fast) : null,
     demandaVulnerabilidade: extracted.demanda_vulnerabilidade || null,
     responsavelExecucao: extracted.responsavel_execucao || null,
+    severidade: extracted.severidade || null,
     issueLinksDetailed: extractIssueLinksDetailed(issue),
     labels,
     components,

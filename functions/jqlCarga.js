@@ -80,6 +80,11 @@ const TICKET_FIELD_DEFINITIONS = {
     "responsavel pela execucao",
     "Responsável pela Execução[User Picker (single user)]",
   ],
+  severidade: [
+    "Severidade",
+    "severidade",
+    "Severidade[Dropdown]",
+  ],
 };
 
 const ESCOPO_SEED = [

@@ -27,7 +27,9 @@ export const CICLO_STATUS_META = {
 export function MultiSelectFilter({ options, selected, onChange, placeholder = 'Selecionar…', maxWidth = 200 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const ref = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -36,6 +38,17 @@ export function MultiSelectFilter({ options, selected, onChange, placeholder = '
   }, []);
 
   useEffect(() => { if (!open) setQuery(''); }, [open]);
+
+  const handleOpen = () => {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      });
+    }
+    setOpen(v => !v);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -86,18 +99,21 @@ export function MultiSelectFilter({ options, selected, onChange, placeholder = '
 
   return (
     <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
-      <button type="button" style={triggerStyle} onClick={() => setOpen(v => !v)}>
+      <button ref={triggerRef} type="button" style={triggerStyle} onClick={handleOpen}>
         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         <ChevronDown size={11} style={{ flexShrink: 0, opacity: 0.6 }} />
       </button>
 
       {open && (
         <div style={{
-          position: 'absolute', top: '110%', left: 0, zIndex: 999,
+          position: 'fixed',
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          zIndex: 9999,
           background: 'var(--color-panel-solid)',
           border: '1px solid var(--gray-5)',
           borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.35)',
-          minWidth: 220, maxWidth: 280,
+          minWidth: 220, maxWidth: 320,
         }}>
           {/* search */}
           <div style={{ padding: '8px 10px 6px', borderBottom: '1px solid var(--gray-4)', display: 'flex', alignItems: 'center', gap: 6 }}>

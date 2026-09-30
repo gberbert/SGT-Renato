@@ -427,6 +427,39 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
         <div className="dmd-modal-header">
           <div className="dmd-modal-header-left">
             <span className="dmd-modal-issue-key">{ticket.issueKey}</span>
+            {ticket.escopo && (() => {
+              const ESCOPO_COLORS = {
+                'PROBLEMAS':     '#ff4d4f',
+                'DEMANDA':       '#1f77b4',
+                'DEMANDA FAST':  '#ff9f43',
+                'INCIDENTE':     '#2ecc71',
+                'SOLICITACAO':   '#00c2ff',
+                'CATALOGO':      '#a855f7',
+              };
+              const key = String(ticket.escopo).trim().toUpperCase().replace(/_/g, ' ');
+              const c = ESCOPO_COLORS[key] || '#6b7280';
+              return (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: c + '22',
+                    border: '1px solid ' + c + '66',
+                    borderRadius: 999,
+                    padding: '3px 12px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: c,
+                    letterSpacing: '0.07em',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                  }}
+                >
+                  {ticket.escopo}
+                </span>
+              );
+            })()}
             <span className="dmd-badge dmd-badge--squad">{squadLabel}</span>
             <span className="dmd-badge dmd-badge--status">{statusLabel}</span>
             {/* Squad tags derivadas dos sistemas impactados — clicáveis em modo edição */}
@@ -553,6 +586,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 <ReadField label="ESTIMATIVA MACRO" value={ticket.estimativaMacro} />
                 <ReadField label="ESTIMATIVA TOTAL" value={ticket.estimativaTotal} />
                 <ReadField label="NATUREZA DA OPERAÇÃO" value={ticket.naturezaOperacao} />
+                <ReadField label="SEVERIDADE" value={ticket.severidade} />
               </div>
 
               {/* Row 2b: ESTIMATIVA INTERNA + CICLO */}
