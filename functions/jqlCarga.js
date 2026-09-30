@@ -1,12 +1,13 @@
 "use strict";
 
 const ESCOPOS_VALIDOS = [
-  "PROBLEMAS",
-  "DEMANDA FAST",
-  "DEMANDA",
-  "CATALOGO",
-  "INCIDENTE",
-  "SOLICITACAO",
+"PROBLEMAS",
+"DEMANDA FAST",
+"DEMANDA",
+"CATALOGO",
+"INCIDENTE",
+"SOLICITACAO",
+"PRECIFICACAO DEMANDAS",
 ];
 
 const TICKET_FIELD_DEFINITIONS = {
@@ -93,7 +94,8 @@ const ESCOPO_SEED = [
   { id: "demanda",      nome: "DEMANDA",      ordem: 3 },
   { id: "incidente",    nome: "INCIDENTE",    ordem: 4 },
   { id: "solicitacao",  nome: "SOLICITACAO",  ordem: 5 },
-  { id: "catalogo",     nome: "CATALOGO",     ordem: 6 },
+  { id: "catalogo",              nome: "CATALOGO",              ordem: 6 },
+  { id: "precificacao-demandas", nome: "PRECIFICACAO DEMANDAS", ordem: 7 },
 ];
 
 function escopoNomeToId(nome) {
@@ -103,7 +105,8 @@ function escopoNomeToId(nome) {
     "DEMANDA":      "demanda",
     "INCIDENTE":    "incidente",
     "SOLICITACAO":  "solicitacao",
-    "CATALOGO":     "catalogo",
+    "CATALOGO":              "catalogo",
+    "PRECIFICACAO DEMANDAS": "precificacao-demandas",
   };
   return map[nome] || nome.toLowerCase().replace(/\s+/g, "-");
 }
@@ -175,6 +178,12 @@ const JQLS_DEFAULT = [
     escopo:   "CATALOGO",
     label:    "CATALOGO",
     jql: "\"fornecedores[dropdown]\" IN (\"NTT DATA\", \"NTT DATA AMS\") AND project = AHF",
+  },
+  {
+    escopoId: "precificacao-demandas",
+    escopo:   "PRECIFICACAO DEMANDAS",
+    label:    "PRECIFICACAO DEMANDAS",
+    jql: "project = \"Gestão de Demandas e Projetos de TI\" AND issuetype IN (\"Precificação da Demanda\", Precificação) AND \"torre de atuação da demanda[dropdown]\" IN (\"CANAIS DIGITAIS\", \"SISTEMAS CORPORATIVOS\", \"SISTEMAS WEB\", \"ADM & LEGADOS\", BI) AND status NOT IN (Cancelada, Fechado, \"Não Aplicável\", \"Requisito Enviado\")",
   },
 ];
 

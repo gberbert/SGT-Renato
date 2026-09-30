@@ -26,6 +26,7 @@ const ESCOPO_RADAR_ORDER = [
   { key: "INCIDENTE", label: "INCIDENTE", color: "#4ade80" },
   { key: "SOLICITACAO", label: "SOLICITACAO", color: "#22d3ee" },
   { key: "CATALOGO", label: "CATALOGO", color: "#a78bfa" },
+  { key: "PRECIFICACAO DEMANDAS", label: "PRECIFICACAO DEMANDAS", color: "#f472b6" },
 ];
 
 function normalizeEscopoKey(raw) {
@@ -36,6 +37,7 @@ function normalizeEscopoKey(raw) {
   if (!value) return "";
   if (value.startsWith("SOLICIT")) return "SOLICITACAO";
   if (value.startsWith("CATAL")) return "CATALOGO";
+  if (value.startsWith("PRECIF")) return "PRECIFICACAO DEMANDAS";
   // Aliases: plurais ou grafias alternativas
   if (value === "DEMANDAS FAST") return "DEMANDA FAST";
   if (value === "INCIDENTES")    return "INCIDENTE";

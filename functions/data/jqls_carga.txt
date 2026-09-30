@@ -38,5 +38,12 @@ AND "Demanda Fast[Dropdown]" IN (empty, choiceOption(""), Não)
 AND type in ("[System] Service request")
 
 
-CONSULTA 6 CATÁLOGO DE HORAS 
+CONSULTA 6 CATÁLOGO DE HORAS
 "fornecedores[dropdown]" IN ("NTT DATA", "NTT DATA AMS") AND project = AHF
+
+
+CONSULTA 7 PRECIFICACAO DEMANDAS
+project = "Gestão de Demandas e Projetos de TI"
+AND issuetype IN ("Precificação da Demanda", Precificação)
+AND "torre de atuação da demanda[dropdown]" IN ("CANAIS DIGITAIS", "SISTEMAS CORPORATIVOS", "SISTEMAS WEB", "ADM & LEGADOS", BI)
+AND status NOT IN (Cancelada, Fechado, "Não Aplicável", "Requisito Enviado")

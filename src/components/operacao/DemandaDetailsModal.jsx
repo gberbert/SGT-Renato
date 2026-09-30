@@ -435,6 +435,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 'INCIDENTE':     '#2ecc71',
                 'SOLICITACAO':   '#00c2ff',
                 'CATALOGO':      '#a855f7',
+                'PRECIFICACAO DEMANDAS': '#f472b6',
               };
               const key = String(ticket.escopo).trim().toUpperCase().replace(/_/g, ' ');
               const c = ESCOPO_COLORS[key] || '#6b7280';

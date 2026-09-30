@@ -172,6 +172,7 @@ const RADAR_TAB_DEFS = [
   { value: 'INCIDENTE', slug: 'incidentes', label: 'Incidentes', requiredFn: PermissionFunctionKeys.RADAR_INCIDENTES_VIEW },
   { value: 'SOLICITACAO', slug: 'solicitacoes', label: 'Solicitações', requiredFn: PermissionFunctionKeys.RADAR_SOLICITACOES_VIEW },
   { value: 'CATALOGO', slug: 'catalogo', label: 'Catálogo', requiredFn: PermissionFunctionKeys.RADAR_CATALOGO_VIEW },
+  { value: 'PRECIFICACAO DEMANDAS', slug: 'precificacao-demandas', label: 'Precificação', requiredFn: PermissionFunctionKeys.RADAR_PRECIFICACAO_DEMANDAS_VIEW },
   { value: 'EFICIENCIA', slug: 'eficiencia', label: 'Eficiência', requiredFn: PermissionFunctionKeys.RADAR_EFICIENCIA_VIEW },
   { value: 'OBSERVABILIDADE', slug: 'observabilidade', label: 'Observabilidade', requiredFn: PermissionFunctionKeys.RADAR_OBSERVABILIDADE_VIEW },
 ];
@@ -618,7 +619,7 @@ const OperacaoHome = ({ userRole }) => {
   // 1) Ao entrar na tela Radar, restaurar cache de sessão por escopo silenciosamente
   useEffect(() => {
     if (!statsFingerprint) return;
-    const escoposToTry = ['PROBLEMAS', 'DEMANDA', 'DEMANDA FAST', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO'];
+    const escoposToTry = ['PROBLEMAS', 'DEMANDA', 'DEMANDA FAST', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO', 'PRECIFICACAO DEMANDAS'];
     const restored = [];
     const restoredEscopos = new Set();
     for (const esc of escoposToTry) {
@@ -836,6 +837,11 @@ const OperacaoHome = ({ userRole }) => {
         label: 'SOLICITACAO',
         total: findTotal('SOLICITACAO'),
         color: '#00c2ff',
+      },
+      {
+        key: 'PRECIFICACAO DEMANDAS',
+        label: 'Precificação',
+        total: findTotal('PRECIFICACAO DEMANDAS'),
       },
       {
         key: 'CATALOGO',
