@@ -181,6 +181,88 @@ function EditDate({ label, fieldKey, value, onSave }) {
   );
 }
 
+function ReadPercent({ label, value }) {
+  const pct = value != null && value !== '' ? Math.min(100, Math.max(0, Number(value))) : null;
+  return (
+    <div className="dmd-field">
+      <FieldLabel>{label}</FieldLabel>
+      {pct != null ? (
+        <div style={{ paddingTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              flex: 1, height: 8, borderRadius: 99,
+              background: 'rgba(255,255,255,0.08)',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${pct}%`,
+                borderRadius: 99,
+                background: pct >= 100
+                  ? '#4ade80'
+                  : pct >= 75
+                    ? '#22d3ee'
+                    : pct >= 40
+                      ? '#fbbf24'
+                      : '#f87171',
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-11)', minWidth: 38, textAlign: 'right' }}>
+              {pct}%
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="dmd-field-value">—</div>
+      )}
+    </div>
+  );
+}
+
+function EditPercent({ label, fieldKey, value, onSave }) {
+  const [local, setLocal] = useState(value != null && value !== '' ? Number(value) : '');
+  useEffect(() => { setLocal(value != null && value !== '' ? Number(value) : ''); }, [value]);
+  const pct = local !== '' ? Math.min(100, Math.max(0, Number(local))) : null;
+  return (
+    <div className="dmd-field">
+      <FieldLabel>{label}</FieldLabel>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            className="dmd-input"
+            style={{ width: 72 }}
+            value={local}
+            onChange={(e) => setLocal(e.target.value === '' ? '' : Number(e.target.value))}
+            onBlur={() => onSave(fieldKey, local === '' ? null : Math.min(100, Math.max(0, Number(local))))}
+          />
+          <span style={{ fontSize: 13, color: 'var(--gray-10)', fontWeight: 600 }}>%</span>
+        </div>
+        {pct != null && (
+          <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', width: '100%' }}>
+            <div style={{
+              height: '100%',
+              width: `${pct}%`,
+              borderRadius: 99,
+              background: pct >= 100
+                ? '#4ade80'
+                : pct >= 75
+                  ? '#22d3ee'
+                  : pct >= 40
+                    ? '#fbbf24'
+                    : '#f87171',
+              transition: 'width 0.2s ease',
+            }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const PRIO_OPTIONS = (PRIORIDADE_INTERNA_OPTIONS || []).map((p) => ({
   value: String(p.value),
   label: p.description ? `${p.label} — ${p.description}` : p.label,
@@ -590,12 +672,17 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 <ReadField label="SEVERIDADE" value={ticket.severidade} />
               </div>
 
-              {/* Row 2b: ESTIMATIVA INTERNA + CICLO */}
+              {/* Row 2b: ESTIMATIVA INTERNA + % CONCLUSÃO + CICLO */}
               <div className="dmd-row">
                 {isEdit ? (
                   <EditNumber label="ESTIMATIVA INTERNA (h)" fieldKey="estimativaInterna" value={ticket.estimativaInterna} onSave={save} />
                 ) : (
                   <ReadField label="ESTIMATIVA INTERNA (h)" value={ticket.estimativaInterna} />
+                )}
+                {isEdit ? (
+                  <EditPercent label="% CONCLUSÃO" fieldKey="percentualConclusao" value={ticket.percentualConclusao} onSave={save} />
+                ) : (
+                  <ReadPercent label="% CONCLUSÃO" value={ticket.percentualConclusao} />
                 )}
                 <div className="dmd-field">
                   <FieldLabel>CICLO</FieldLabel>
