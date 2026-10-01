@@ -1058,17 +1058,25 @@ const SGT_MANAGED_FIELDS = [
   "observacaoAdicional",
   "estimativaMacro",
   "impedimento",
+  "impedido",
   "radarFieldsUpdatedAt",
   "prioridadeInterna",
   "estimativaTotal",
   "estimativaInterna",
   "squadPrincipal",
+  "squad",
+  // "sistemasImpactados" → AUSENTE: deve ser sempre atualizado pelo sync do Jira
+  "percentualConclusao",
+  "responsavelDesenvolvimento",
+  "responsavelTesteInterno",
   "dataFimDesenvolvimento",
   "dataFimTesteInterno",
   "dataFimTesteQa",
   "dataFimHomologacao",
   "dataConclusao",
   "observacao",
+  "cicloId",
+  "ticketsVinculados",
 ];
 
 /**

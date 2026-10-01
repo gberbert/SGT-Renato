@@ -79,14 +79,18 @@ const SGT_MANAGED_FIELDS = [
   'estimativaInterna',
   'squadPrincipal',
   'squad',
-  'sistemasImpactados',
+  // 'sistemasImpactados' → REMOVIDO: deve ser sempre atualizado pelo sync do Jira
   'percentualConclusao',
+  'responsavelDesenvolvimento',
+  'responsavelTesteInterno',
   'dataFimDesenvolvimento',
   'dataFimTesteInterno',
   'dataFimTesteQa',
   'dataFimHomologacao',
   'dataConclusao',
   'observacao',
+  'cicloId',
+  'ticketsVinculados',
 ];
 
 export async function writeTicketsGlobalBatch(tickets) {

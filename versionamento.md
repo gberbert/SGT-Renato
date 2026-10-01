@@ -1,5 +1,8 @@
 # Versionamento do Projeto
 
+## [0.1.308] - 2026-09-30
+- **Fix (Sync Jira — SGT_MANAGED_FIELDS):** Listas `SGT_MANAGED_FIELDS` em `operacaoFirestoreService.js` (client) e `functions/jiraGlobalSync.js` (Cloud Function) sincronizadas com os mesmos 23 campos protegidos (`estimativaMacro`, `impedimento`, `impedido`, `observacao`, `percentualConclusao`, `squad`, `squadPrincipal`, `dataFimTesteInterno`, `dataConclusao`, `cicloId`, `ticketsVinculados`, entre outros). Garante que o sync do Jira não sobrescreve dados gerenciados internamente pelo SGT em nenhum caminho de escrita.
+
 ## [0.1.306] - 2026-09-30
 - **Fix (Configuração JQL — DEMANDA duplicado):** `CONSULTA 7 PRECIFICACAO DEMANDAS` do arquivo `jqls_carga.txt` normalizava incorretamente para `DEMANDA` (escopoId `demanda`), causando dois cards com o mesmo título na tela de Configuração JQL. `normalizeEscopo` agora detecta `PRECIF` antes do check genérico de `DEMANDA`, retornando `DEMANDA PRECIFICACAO` (escopoId `demanda-precificacao`). `ESCOPO_SEED`, `escopoNomeToId` e `ESCOPOS_VALIDOS` atualizados com a nova entrada.
 
