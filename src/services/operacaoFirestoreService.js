@@ -64,6 +64,31 @@ export async function resetOperacaoStats() {
   await batch.commit();
 }
 
+// Campos gerenciados internamente pelo SGT — nunca devem ser sobrescritos pelo sync do Jira.
+// Preenchidos manualmente pela equipe via UI; qualquer valor enviado pelo Jira seria incorreto.
+const SGT_MANAGED_FIELDS = [
+  'responsavelAtual',
+  'dataPrevisao',
+  'observacaoAdicional',
+  'estimativaMacro',
+  'impedimento',
+  'impedido',
+  'radarFieldsUpdatedAt',
+  'prioridadeInterna',
+  'estimativaTotal',
+  'estimativaInterna',
+  'squadPrincipal',
+  'squad',
+  'sistemasImpactados',
+  'percentualConclusao',
+  'dataFimDesenvolvimento',
+  'dataFimTesteInterno',
+  'dataFimTesteQa',
+  'dataFimHomologacao',
+  'dataConclusao',
+  'observacao',
+];
+
 export async function writeTicketsGlobalBatch(tickets) {
   if (!tickets?.length) return;
   let batch = writeBatch(db);
@@ -71,11 +96,19 @@ export async function writeTicketsGlobalBatch(tickets) {
 
   for (const ticket of tickets) {
     if (!ticket.issueKey) continue;
-    // Usa set sem merge para garantir que todos os campos (inclusive status)
-    // sejam sobrescritos a partir do Jira a cada carga.
+
+    // Remove campos SGT do payload para nunca sobrescrever dados gerenciados internamente.
+    // O status (e todos os demais campos do Jira) é atualizado normalmente porque vem
+    // no payload do Jira. Usa merge:true para preservar campos SGT ausentes no payload.
+    const payload = { ...ticket, syncedAt: serverTimestamp() };
+    for (const field of SGT_MANAGED_FIELDS) {
+      delete payload[field];
+    }
+
     batch.set(
       doc(db, TICKETS_GLOBAL, ticket.issueKey),
-      { ...ticket, syncedAt: serverTimestamp() }
+      payload,
+      { merge: true }
     );
     ops += 1;
     if (ops >= MAX_BATCH) {
