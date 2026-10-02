@@ -969,6 +969,71 @@ const FIELDS = [
   "uf",
 ];
 
+exports.seedSquadRoles = onCall({
+    maxInstances: 1,
+    timeoutSeconds: 30,
+    memory: "256MiB",
+}, async (request) => {
+    // Requer autenticação de admin
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Autenticação necessária.");
+    }
+
+    const db = getFirestore(undefined, "default");
+    const userDoc = await db.collection("users").doc(request.auth.uid).get();
+    
+    if (!userDoc.exists || userDoc.data()?.role !== "admin") {
+        throw new HttpsError("permission-denied", "Apenas administradores podem seedear roles.");
+    }
+
+    try {
+        const SQUAD_ROLES = [
+            { name: "Arquiteto", description: "Responsável pela arquitetura e design de soluções", order: 1 },
+            { name: "Developer", description: "Desenvolvedor de software", order: 2 },
+            { name: "Functional", description: "Analista funcional", order: 3 },
+            { name: "GP", description: "Gerente de Projeto", order: 4 },
+            { name: "Scrum Master", description: "Scrum Master", order: 5 },
+        ];
+
+        let created = 0;
+        let skipped = 0;
+
+        for (const role of SQUAD_ROLES) {
+            const docId = role.name.toLowerCase().replace(/\s+/g, "_");
+            const ref = db.collection("squadRoles").doc(docId);
+            const existing = await ref.get();
+
+            if (existing.exists) {
+                skipped++;
+                console.log(`[seedSquadRoles] Role ${role.name} já existe, pulando.`);
+                continue;
+            }
+
+            const roleDoc = {
+                name: role.name,
+                description: role.description,
+                order: role.order,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+
+            await ref.set(roleDoc);
+            created++;
+            console.log(`[seedSquadRoles] Role criada: ${role.name}`);
+        }
+
+        return {
+            ok: true,
+            created,
+            skipped,
+            message: `${created} roles criados, ${skipped} já existiam.`,
+        };
+    } catch (error) {
+        console.error("[seedSquadRoles] ERROR:", error);
+        throw new HttpsError("internal", error.message || String(error));
+    }
+});
+
 exports.enrichUsersFromTeamHttp = onRequest(async (request, response) => {
   if (request.method !== "POST") {
     response.status(405).json({ ok: false, error: "Method Not Allowed. Use POST." });

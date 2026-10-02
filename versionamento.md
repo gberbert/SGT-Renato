@@ -1,5 +1,16 @@
 # Versionamento do Projeto
 
+## [0.1.321] - 2026-10-02
+- **Fix (Firestore Security Rules — journeyPeriods):** Restauradas regras de segurança do Firestore corrigidas. As regras anteriormente eram muito restritivas e bloqueavam a leitura e escrita de dados de usuários, impedindo o salvamento e consulta de `journeyPeriods` (férias) no modal "Controle de Jornada". Novas regras permitem:
+  1. Leitura pública para usuários autenticados em todas as coleções
+  2. Escrita controlada: usuários podem escrever em seu próprio documento (`users/{userId}`) ou admins podem escrever em qualquer lugar
+  3. Proteção de coleções críticas (perfis de permissão, projetos) restrita a admins
+  - Afeta: `UserDetailsModal.jsx` → `JornadaTab` → `journeyPeriods` salvos e recuperados via `settingsService.js`
+  - Deploy: Firestore Console → Aba Segurança (règles atualizadas manualmente)
+
+## [0.1.320] - 2026-10-02
+(anterior)
+
 ## [0.1.316] - 2026-10-02
 - **UX (Planejamento de Ciclos — Layout):** Título e subtítulo da página repositionados — título "Planejamento de Ciclos" e descrição "Organize tickets em ciclos de entrega" movidos para o header acima da barra de ações. Botões (Visões Salvas, Exportar XLSX, Workflow, Novo Ciclo) reposicionados abaixo do título como segunda linha, mantendo alinhamento visual consistente. Layout responsivo e melhorada legibilidade da interface.
 

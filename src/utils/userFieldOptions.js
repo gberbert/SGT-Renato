@@ -11,6 +11,8 @@ export const UF_OPTIONS = sortAlpha([
 
 export const CONTRATO_OPTIONS = sortAlpha(['Consultoria', 'GDNe', 'Subcontratado']);
 
+export const SQUAD_ROLE_OPTIONS = sortAlpha(['Arquiteto', 'Developer', 'Functional', 'GP', 'Scrum Master', 'Tester']);
+
 export const SENIORIDADE_OPTIONS = sortAlpha(['Especialista', 'Sênior', 'Pleno', 'Júnior']);
 
 export const SENIORIDADE_RATECARD_OPTIONS = sortAlpha(['Especialista', 'Sênior', 'Pleno', 'Júnior']);
@@ -102,4 +104,5 @@ export const SELECT_OPTIONS_BY_KEY = {
   seniority: SENIORIDADE_OPTIONS,
   rcSeniority: SENIORIDADE_RATECARD_OPTIONS,
   perfilRatecard: PERFIL_RATECARD_OPTIONS,
+  squadRole: SQUAD_ROLE_OPTIONS,
 };

@@ -7,6 +7,7 @@ import { Card, Flex, Text, TextField } from "@radix-ui/themes";
 import { Edit2, Eye, Filter, BarChart3 } from "lucide-react";
 import UserDetailsModal from "./UserDetailsModal";
 import TeamCapacityModal from "./TeamCapacityModal";
+import CalendarBase from "./CalendarBase";
 import { STATUS_OPTIONS, CONTRATO_OPTIONS, FOUNDATION_OPTIONS } from "../utils/userFieldOptions";
 
 function safe(v) {
@@ -109,6 +110,7 @@ function formatDate(v) {
 }
 
 export default function Team({ currentUser }) {
+  const [activeTab, setActiveTab] = useState("team");
   const [loadingSquads, setLoadingSquads] = useState(true);
   const [squads, setSquads] = useState([]);
   const [users, setUsers] = useState([]);
@@ -260,21 +262,6 @@ export default function Team({ currentUser }) {
                 onChange={(e) => setUserSearchTerm(e.target.value)}
                 style={{ flexGrow: 1, minWidth: 260 }}
               />
-              <button
-                onClick={() => setCapacityModalOpen(true)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700,
-                  background: "rgba(99,102,241,0.12)", color: "#a5b4fc",
-                  border: "1px solid rgba(99,102,241,0.35)", cursor: "pointer",
-                  transition: "all 0.15s", whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(99,102,241,0.22)"; e.currentTarget.style.borderColor = "rgba(99,102,241,0.6)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(99,102,241,0.12)"; e.currentTarget.style.borderColor = "rgba(99,102,241,0.35)"; }}
-                title="Revisar horas projetadas e baseline de capacidade"
-              >
-                <BarChart3 size={15} /> TEAM CAPACITY
-              </button>
               {(userSearchTerm || selectedStatuses.size > 0 || selectedSquads.size > 0 || selectedContracts.size > 0 || selectedFoundations.size > 0) && (
                 <button
                   type="button"
@@ -359,7 +346,84 @@ export default function Team({ currentUser }) {
           </Card>
         </div>
 
+        {/* TABS NAVIGATION */}
+        <div style={{ display: "flex", gap: "8px", padding: "12px 0 0 0", borderBottom: "1px solid var(--gray-5)", background: "transparent" }}>
+          <button
+            onClick={() => setActiveTab("team")}
+            style={{
+              padding: "10px 16px",
+              fontSize: "13px",
+              fontWeight: "700",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              background: "transparent",
+              color: activeTab === "team" ? "var(--indigo-11)" : "var(--gray-10)",
+              border: "none",
+              borderBottom: activeTab === "team" ? "2px solid var(--indigo-11)" : "2px solid transparent",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== "team") e.currentTarget.style.color = "var(--gray-11)";
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== "team") e.currentTarget.style.color = "var(--gray-10)";
+            }}
+          >
+            TEAM
+          </button>
+          <button
+            onClick={() => setActiveTab("capacity")}
+            style={{
+              padding: "10px 16px",
+              fontSize: "13px",
+              fontWeight: "700",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              background: "transparent",
+              color: activeTab === "capacity" ? "var(--indigo-11)" : "var(--gray-10)",
+              border: "none",
+              borderBottom: activeTab === "capacity" ? "2px solid var(--indigo-11)" : "2px solid transparent",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== "capacity") e.currentTarget.style.color = "var(--gray-11)";
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== "capacity") e.currentTarget.style.color = "var(--gray-10)";
+            }}
+          >
+            TEAM CAPACITY
+          </button>
+          <button
+            onClick={() => setActiveTab("calendar")}
+            style={{
+              padding: "10px 16px",
+              fontSize: "13px",
+              fontWeight: "700",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              background: "transparent",
+              color: activeTab === "calendar" ? "var(--indigo-11)" : "var(--gray-10)",
+              border: "none",
+              borderBottom: activeTab === "calendar" ? "2px solid var(--indigo-11)" : "2px solid transparent",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== "calendar") e.currentTarget.style.color = "var(--gray-11)";
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== "calendar") e.currentTarget.style.color = "var(--gray-10)";
+            }}
+          >
+            CALENDARIO BASE
+          </button>
+        </div>
+
         {/* ── TABLE (scrollable) ── */}
+        {activeTab === "team" && (
         <Card size="4" style={{ marginTop: 0 }}>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -457,6 +521,60 @@ export default function Team({ currentUser }) {
             </table>
           </div>
         </Card>
+        )}
+
+        {/* TEAM CAPACITY TAB */}
+        {activeTab === "capacity" && (
+          <Card size="4" style={{ marginTop: 0 }}>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={TH}>Nome</th>
+                    <th style={TH}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersFiltered.length === 0 && (
+                    <tr>
+                      <td colSpan={2} style={{ ...TD, textAlign: "center", color: "var(--gray-8)", padding: "32px" }}>
+                        Nenhum membro encontrado.
+                      </td>
+                    </tr>
+                  )}
+                  {usersFiltered.map((u) => (
+                    <tr key={u.id} style={{ cursor: "pointer" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                      {/* Nome */}
+                      <td style={TD}>
+                        <div style={{ fontWeight: 600, color: "var(--gray-12)" }}>{getUserLabel(u)}</div>
+                      </td>
+                      {/* Status */}
+                      <td style={TD}>
+                        <Badge label={u?.status || "—"} color={statusColor(u?.status)} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {/* CALENDAR TAB */}
+        {activeTab === "calendar" && (
+          <div style={{ marginTop: 0 }}>
+            <div style={{ display: "flex", gap: "24px" }}>
+              <div style={{ maxWidth: "320px" }}>
+                <CalendarBase />
+              </div>
+              <div style={{ flex: 1, minHeight: "400px", padding: "20px", background: "rgba(255,255,255,0.02)", borderRadius: "8px", border: "1px solid var(--gray-6)" }}>
+                <p style={{ color: "var(--gray-9)" }}>Selecione um dia no calendário para visualizar detalhes...</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

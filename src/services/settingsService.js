@@ -1,4 +1,5 @@
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../firebase';
 
 export const subscribeToTicketTypes = (callback) => {
@@ -283,6 +284,57 @@ export const saveAISettings = async (settingsData) => {
     }, { merge: true });
   } catch (error) {
     console.error("Erro ao salvar configurações de IA:", error);
+    throw error;
+  }
+};
+
+// Squad Roles Management
+export const subscribeToSquadRoles = (callback) => {
+  const q = query(collection(db, 'squadRoles'), orderBy('order', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const roles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(roles);
+  });
+};
+
+export const saveSquadRole = async (roleData) => {
+  try {
+    if (roleData.id) {
+      const docRef = doc(db, 'squadRoles', roleData.id);
+      await updateDoc(docRef, {
+        ...roleData,
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      await addDoc(collection(db, 'squadRoles'), {
+        ...roleData,
+        createdAt: serverTimestamp()
+      });
+    }
+  } catch (error) {
+    console.error("Erro ao salvar papel de squad:", error);
+    throw error;
+  }
+};
+
+export const deleteSquadRole = async (roleId) => {
+  try {
+    await deleteDoc(doc(db, 'squadRoles', roleId));
+  } catch (error) {
+    console.error("Erro ao excluir papel de squad:", error);
+    throw error;
+  }
+};
+
+// Seed Squad Roles from Cloud Function
+export const seedSquadRoles = async () => {
+  try {
+    const functions = getFunctions();
+    const seedSquadRolesCallable = httpsCallable(functions, 'seedSquadRoles');
+    const result = await seedSquadRolesCallable();
+    return result.data;
+  } catch (error) {
+    console.error("Erro ao seedear papéis de squad:", error);
     throw error;
   }
 };

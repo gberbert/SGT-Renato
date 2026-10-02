@@ -33,6 +33,7 @@ import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } f
 import WorkflowStagesModal from './WorkflowStagesModal';
 import ImportDataExcel from './ImportDataExcel';
 import PermissionsManager from './PermissionsManager';
+import SquadRolesManagerModal from './SquadRolesManagerModal';
 import OperacaoConfig from './operacao/OperacaoConfig';
 import OperacaoCarga from './operacao/OperacaoCarga';
 import AuditDashboard from './AuditDashboard';
@@ -41,6 +42,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
 import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
+import { subscribeToSquadRoles, saveSquadRole, deleteSquadRole } from '../services/squadRolesService';
 
 const Settings = ({ userRole = 'admin' }) => {
   const [searchParams] = useSearchParams();
@@ -134,6 +136,15 @@ const Settings = ({ userRole = 'admin' }) => {
   // Jira Operacao Inner Tab State
   const [jiraOperacaoTab, setJiraOperacaoTab] = useState('config');
 
+  // Squad Roles Modal State
+  const [isSquadRolesModalOpen, setIsSquadRolesModalOpen] = useState(false);
+  
+  const [squadRoles, setSquadRoles] = useState([]);
+  const [loadingSquadRoles, setLoadingSquadRoles] = useState(true);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [editingRoleData, setEditingRoleData] = useState({ id: '', name: '', description: '' });
+  const [savingRole, setSavingRole] = useState(false);
+
   useEffect(() => {
     const unsubscribeTypes = subscribeToTicketTypes((data) => {
       setTicketTypes(data);
@@ -173,6 +184,11 @@ const Settings = ({ userRole = 'admin' }) => {
       if (data) setAiSettings(data);
       setLoadingAi(false);
     });
+    
+    const unsubscribeSquadRoles = subscribeToSquadRoles((data) => {
+      setSquadRoles(data);
+      setLoadingSquadRoles(false);
+    });
 
     async function loadPermissionProfilesOnce() {
       setLoadingPermissionProfiles(true);
@@ -208,6 +224,7 @@ const Settings = ({ userRole = 'admin' }) => {
       unsubscribeAutomations();
       unsubscribeProjects();
       unsubscribeAI();
+      unsubscribeSquadRoles();
     };
   }, []);
 
@@ -272,6 +289,40 @@ const Settings = ({ userRole = 'admin' }) => {
       await updateUserRole(userId, newRole);
     } catch (e) {
       alert("Erro ao atualizar o papel do usuário.");
+    }
+  };
+
+  const openNewRoleModal = () => {
+    setEditingRoleData({ id: '', name: '', description: '' });
+    setIsRoleModalOpen(true);
+  };
+
+  const openEditRoleModal = (role) => {
+    setEditingRoleData({ id: role.id, name: role.name || '', description: role.description || '' });
+    setIsRoleModalOpen(true);
+  };
+
+  const handleSaveRole = async (e) => {
+    e.preventDefault();
+    if (!editingRoleData.name.trim()) return;
+    setSavingRole(true);
+    try {
+      await saveSquadRole({
+        id: editingRoleData.id || undefined,
+        name: editingRoleData.name,
+        description: editingRoleData.description,
+      });
+      setIsRoleModalOpen(false);
+    } catch (err) {
+      alert("Erro ao salvar papel.");
+    } finally {
+      setSavingRole(false);
+    }
+  };
+
+  const handleDeleteRole = async (roleId) => {
+    if (confirm("Deseja realmente excluir este papel?")) {
+      await deleteSquadRole(roleId);
     }
   };
 
@@ -729,6 +780,7 @@ const Settings = ({ userRole = 'admin' }) => {
               <Tabs.Trigger value="users">Usuários</Tabs.Trigger>
               <Tabs.Trigger value="systems">Sistemas</Tabs.Trigger>
               <Tabs.Trigger value="components">Componentes (Tags)</Tabs.Trigger>
+              <Tabs.Trigger value="squadRoles"><Briefcase size={14} style={{ display: 'inline', marginRight: 4 }}/> Papéis de Squad</Tabs.Trigger>
               <Tabs.Trigger value="ticketTypes">Tipos de Ticket</Tabs.Trigger>
               <Tabs.Trigger value="customFields">Campos Custom</Tabs.Trigger>
               <Tabs.Trigger value="workflows">Workflows</Tabs.Trigger>
@@ -750,6 +802,7 @@ const Settings = ({ userRole = 'admin' }) => {
                 <Select.Item value="users">Usuários</Select.Item>
                 <Select.Item value="systems">Sistemas</Select.Item>
                 <Select.Item value="components">Componentes (Tags)</Select.Item>
+                <Select.Item value="squadRoles">Papéis de Squad</Select.Item>
                 <Select.Item value="ticketTypes">Tipos de Ticket</Select.Item>
                 <Select.Item value="customFields">Campos Custom</Select.Item>
                 <Select.Item value="workflows">Workflows</Select.Item>
@@ -1134,6 +1187,57 @@ const Settings = ({ userRole = 'admin' }) => {
                         </Table.Cell>
                       </Table.Row>
                     ))}
+                  </Table.Body>
+                </Table.Root>
+              )}
+            </Tabs.Content>
+
+            {/* SQUAD ROLES TAB */}
+            <Tabs.Content value="squadRoles">
+              <Flex justify="between" align="center" mb="4">
+                <Box>
+                  <Text as="h2" size="4" weight="bold">Papéis de Squad</Text>
+                  <Text color="gray" as="p">Configure os papéis que os membros podem assumir nas squads.</Text>
+                </Box>
+                <Button size="2" onClick={openNewRoleModal}>
+                  <Plus size={18} />
+                  Novo Papel
+                </Button>
+              </Flex>
+              
+              {loadingSquadRoles ? <Loader2 className="spinner-icon" /> : (
+                <Table.Root variant="surface">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Nome do Papel</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell>Descrição</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    {squadRoles.map(role => (
+                      <Table.Row key={role.id} align="center">
+                        <Table.Cell><Text weight="bold">{role.name}</Text></Table.Cell>
+                        <Table.Cell><Text color="gray">{role.description || '-'}</Text></Table.Cell>
+                        <Table.Cell justify="end">
+                          <Flex gap="2" justify="end">
+                            <Button size="1" variant="soft" onClick={() => openEditRoleModal(role)}>
+                              <Edit2 size={14} /> Editar
+                            </Button>
+                            <Button size="1" color="red" variant="soft" onClick={() => handleDeleteRole(role.id)}>
+                              <Trash2 size={14} /> Excluir
+                            </Button>
+                          </Flex>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                    {squadRoles.length === 0 && (
+                      <Table.Row>
+                        <Table.Cell colSpan={3}>
+                          <Text color="gray" size="2" style={{ textAlign: 'center' }}>Nenhum papel cadastrado. Clique em "Novo Papel" para criar.</Text>
+                        </Table.Cell>
+                      </Table.Row>
+                    )}
                   </Table.Body>
                 </Table.Root>
               )}
@@ -1850,6 +1954,43 @@ const Settings = ({ userRole = 'admin' }) => {
           <Database size={16} /> Injetar Feriados no Banco (JSON)
         </Button>
       </Card>
+
+      {/* Edit/New Role Modal */}
+      <Dialog.Root open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <Dialog.Title>{editingRoleData.id ? 'Editar Papel' : 'Criar Novo Papel'}</Dialog.Title>
+          <form onSubmit={handleSaveRole}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome do Papel</Text>
+                <TextField.Root 
+                  required
+                  value={editingRoleData.name} 
+                  onChange={(e) => setEditingRoleData({...editingRoleData, name: e.target.value})} 
+                  placeholder="Ex: Tech Lead, Desenvolvedor Senior" 
+                />
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Descrição (Opcional)</Text>
+                <TextArea 
+                  value={editingRoleData.description} 
+                  onChange={(e) => setEditingRoleData({...editingRoleData, description: e.target.value})} 
+                  placeholder="Ex: Líder técnico da squad responsável pela arquitetura"
+                  rows={4}
+                />
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingRole}>
+                {savingRole ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
 
       <WorkflowStagesModal 
         isOpen={!!selectedWorkflowForStages} 

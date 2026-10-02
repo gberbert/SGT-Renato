@@ -3,6 +3,7 @@ import { Dialog, Button, Flex, Text, Box, Table, Checkbox, IconButton, Select, T
 import { Loader2, Trash2, Box as BoxIcon } from 'lucide-react';
 import { updateSquad, deleteSquad } from '../services/squadService';
 import { subscribeToUsers, subscribeToSystems } from '../services/settingsService';
+import { SQUAD_ROLE_OPTIONS } from '../utils/userFieldOptions';
 
 const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
   const [users, setUsers] = useState([]);
@@ -205,12 +206,9 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
                             >
                               <Select.Trigger style={{ width: '130px' }} />
                               <Select.Content>
-                                <Select.Item value="Arquiteto">Arquiteto</Select.Item>
-                                <Select.Item value="Developer">Developer</Select.Item>
-                                <Select.Item value="Tester">Tester</Select.Item>
-                                <Select.Item value="Functional">Functional</Select.Item>
-                                <Select.Item value="Scrum Master">Scrum Master</Select.Item>
-                                <Select.Item value="GP">GP</Select.Item>
+                                {SQUAD_ROLE_OPTIONS.map(role => (
+                                  <Select.Item key={role} value={role}>{role}</Select.Item>
+                                ))}
                               </Select.Content>
                             </Select.Root>
                           ) : (

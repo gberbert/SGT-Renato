@@ -16,7 +16,7 @@ export const FIELDS = {
     {row:[["shortName","NOME RESUMIDO"],["email","EMAIL"],["contato","CONTATO"]],cols:"1fr 1fr 1fr"},
     {row:[["cidade","CIDADE"],["uf","UF"],["dataNascimento","NASCIMENTO"]],cols:"1fr 80px 1fr"},
   ],
-  "CONTRATAÇÃO":[["dataInicio","INÍCIO NTT"],["contract","CONTRATO"],["foundation","FOUNDATION"],["perfilNTT","CARGO"],["seniority","SENIORIDADE"],["csr","CSR"]],
+  "CONTRATAÇÃO":[["dataInicio","INÍCIO NTT"],["contract","CONTRATO"],["foundation","FOUNDATION"],["perfilNTT","CARGO"],["seniority","SENIORIDADE"],["squadRole","PAPEL NA SQUAD"],["csr","CSR"]],
   "RATECARD":[["perfilRatecard","PERFIL RATECARD"],["rcSeniority","SENIORIDADE RATECARD"],["rc","RATE CARD"]],
   "DADOS CLIENTE":[["clienteId","ID CLIENTE"],["clienteEmail","EMAIL CLIENTE"]],
   "CONTROLE DE JORNADA":[],
@@ -54,8 +54,24 @@ export const persistVal = (key, value) => {
     const d = new Date(value);
     return isNaN(d.getTime()) ? null : d;
   }
-  // For arrays, return as-is (important for journeyPeriods)
-  if (Array.isArray(value)) return value;
+  // For arrays (like journeyPeriods), convert date fields inside objects
+  if (Array.isArray(value)) {
+    return value.map(item => {
+      if (typeof item === "object" && item !== null) {
+        const converted = { ...item };
+        // Convert dataInicio string to Date
+        if (converted.dataInicio) {
+          converted.dataInicio = typeof converted.dataInicio === "string" ? fromInputDate(converted.dataInicio) : converted.dataInicio;
+        }
+        // Convert dataFim string to Date
+        if (converted.dataFim) {
+          converted.dataFim = typeof converted.dataFim === "string" ? fromInputDate(converted.dataFim) : converted.dataFim;
+        }
+        return converted;
+      }
+      return item;
+    });
+  }
   return value ?? null;
 };
 export const calcDays = (s,e) => {
@@ -172,7 +188,14 @@ export function JornadaTab({ draftUser, setDraftUser, readOnly }) {
   })), [setDraftUser]);
   const addPeriod = () => {
     if (!np.dataInicio || !np.dataFim) return;
-    setPeriods(prev => [...prev, { ...np, id: Date.now().toString() }]);
+    // Convert date strings to Date objects before saving
+    const period = {
+      ...np,
+      id: Date.now().toString(),
+      dataInicio: fromInputDate(np.dataInicio),
+      dataFim: fromInputDate(np.dataFim),
+    };
+    setPeriods(prev => [...prev, period]);
     setNp({ tipo:"Férias", dataInicio:"", dataFim:"" });
     setShowForm(false);
   };
@@ -232,6 +255,19 @@ export function JornadaTab({ draftUser, setDraftUser, readOnly }) {
         {periods.map((p, idx) => {
           const [border, text, bg] = (TIPO_CLR[p.tipo] || TIPO_CLR["Férias"]).map(v => `var(${v})`);
           const days = calcDays(p.dataInicio, p.dataFim);
+          // Format dates for display
+          const formatDisplayDate = (d) => {
+            if (!d) return "—";
+            if (typeof d === "string") {
+              // If it's already a string in YYYY-MM-DD format, convert to display format
+              const parts = d.split("-");
+              if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+              return d;
+            }
+            if (d?.toDate) return d.toDate().toLocaleDateString("pt-BR");
+            if (d instanceof Date) return d.toLocaleDateString("pt-BR");
+            return "—";
+          };
           return (
             <div key={p.id || idx} style={{
               display:"flex", alignItems:"center", gap:12, padding:"10px 14px",
@@ -239,7 +275,7 @@ export function JornadaTab({ draftUser, setDraftUser, readOnly }) {
             }}>
               <span style={{ fontSize:12, fontWeight:700, color: text, minWidth:80 }}>{p.tipo}</span>
               <span style={{ fontSize:12, color:"var(--text)", flex:1 }}>
-                {p.dataInicio} → {p.dataFim}
+                {formatDisplayDate(p.dataInicio)} → {formatDisplayDate(p.dataFim)}
               </span>
               <span style={{ fontSize:12, fontWeight:600, color: text }}>
                 {days} dia{days !== 1 ? "s" : ""}
