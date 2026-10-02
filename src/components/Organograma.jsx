@@ -166,30 +166,23 @@ const Organograma = () => {
             Organograma da <span className="organograma-title-accent">Operação AMS</span>
           </Text>
         </Box>
-        <Flex align="center" gap="2">
-          <Box className="organograma-hint">
-            <Text size="2" color="gray">
-              Liderança por squad. Clique em um card para expandir e ver o time completo.
-            </Text>
-          </Box>
-          <Flex gap="1" className="organograma-layout-toggle">
-            <button
-              type="button"
-              className={`toggle-btn ${layoutMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setLayoutMode('grid')}
-              title="Layout Grid"
-            >
-              <Grid3x3 size={18} />
-            </button>
-            <button
-              type="button"
-              className={`toggle-btn ${layoutMode === 'circular' ? 'active' : ''}`}
-              onClick={() => setLayoutMode('circular')}
-              title="Layout Circular"
-            >
-              <Circle size={18} />
-            </button>
-          </Flex>
+        <Flex gap="1" className="organograma-layout-toggle">
+          <button
+            type="button"
+            className={`toggle-btn ${layoutMode === 'grid' ? 'active' : ''}`}
+            onClick={() => setLayoutMode('grid')}
+            title="Layout Grid"
+          >
+            <Grid3x3 size={18} />
+          </button>
+          <button
+            type="button"
+            className={`toggle-btn ${layoutMode === 'circular' ? 'active' : ''}`}
+            onClick={() => setLayoutMode('circular')}
+            title="Layout Circular"
+          >
+            <Circle size={18} />
+          </button>
         </Flex>
       </Flex>
 
