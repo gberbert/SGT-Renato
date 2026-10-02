@@ -54,6 +54,8 @@ export const persistVal = (key, value) => {
     const d = new Date(value);
     return isNaN(d.getTime()) ? null : d;
   }
+  // For arrays, return as-is (important for journeyPeriods)
+  if (Array.isArray(value)) return value;
   return value ?? null;
 };
 export const calcDays = (s,e) => {
