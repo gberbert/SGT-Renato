@@ -126,6 +126,7 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
   const [saving, setSaving]         = useState(false);
   const [squads, setSquads]         = useState([]);
   const [userSquads, setUserSquads] = useState([]);
+  const [errorMsg, setErrorMsg]     = useState("");
 
   const canEdit = userHasFunctionPermission(currentUser, PermissionFunctionKeys.EDIT_TEAM_MEMBER);
 
@@ -139,28 +140,37 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
   useEffect(() => {
     const unsub = subscribeToProjectSquads('all', all => {
       setSquads(all);
-      if (user?.uid) setUserSquads(all.filter(s => (s.members||[]).includes(user.uid)));
+      if (user?.id) setUserSquads(all.filter(s => (s.members||[]).includes(user.id)));
     });
     return () => typeof unsub === "function" && unsub();
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const handleChange = (key, value) => {
     setDraftUser(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
-    if (!draftUser?.uid) return;
+    const userId = draftUser?.id;
+    if (!userId) {
+      setErrorMsg("Erro: Usuário não identificado");
+      return;
+    }
     setSaving(true);
+    setErrorMsg("");
     try {
       const payload = {};
       for (const [k, v] of Object.entries(draftUser)) {
         if (k === "uid" || k === "id") continue;
         payload[k] = persistVal(k, v);
       }
-      await updateUser(draftUser.uid, payload);
+      await updateUser(userId, payload);
       onOpenChange(false);
-    } catch (err) { console.error(err); }
-    finally { setSaving(false); }
+    } catch (err) {
+      console.error("Erro ao salvar usuário:", err);
+      setErrorMsg(`Erro ao salvar: ${err?.message || "Tente novamente"}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const readOnly = !canEdit;
@@ -182,7 +192,7 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
           padding:"20px 24px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)",
           background:"rgba(255,255,255,0.02)", flexShrink:0,
         }}>
-          <AvatarUploader draftUser={draftUser} setDraftUser={setDraftUser} userId={draftUser.uid} readOnly={readOnly}/>
+          <AvatarUploader draftUser={draftUser} setDraftUser={setDraftUser} userId={draftUser.id || draftUser.uid} readOnly={readOnly}/>
           <div style={{ flex:1, minWidth:0 }}>
             <Text size="5" weight="bold" style={{ display:"block", marginBottom:2 }}>
               {draftUser.displayName || "—"}
@@ -245,22 +255,31 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
         {/* Footer */}
         {!readOnly && (
           <div style={{
-            display:"flex", justifyContent:"flex-end", gap:10,
+            display:"flex", justifyContent:"space-between", alignItems:"center", gap:10,
             padding:"14px 24px", borderTop:"1px solid rgba(255,255,255,0.08)",
             background:"rgba(0,0,0,0.15)", flexShrink:0,
           }}>
-            <Dialog.Close asChild>
-              <button style={{ padding:"8px 20px", borderRadius:8, border:"1px solid rgba(255,255,255,0.15)", background:"transparent", color:"var(--text)", cursor:"pointer", fontSize:13 }}>
-                Cancelar
+            <div style={{ flex:1, minWidth:0 }}>
+              {errorMsg && (
+                <Text size="2" style={{ color:"var(--red-10)" }}>
+                  {errorMsg}
+                </Text>
+              )}
+            </div>
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
+              <Dialog.Close asChild>
+                <button style={{ padding:"8px 20px", borderRadius:8, border:"1px solid rgba(255,255,255,0.15)", background:"transparent", color:"var(--text)", cursor:"pointer", fontSize:13 }}>
+                  Cancelar
+                </button>
+              </Dialog.Close>
+              <button type="button" onClick={handleSave} disabled={saving} style={{
+                padding:"8px 24px", borderRadius:8, border:"none",
+                background:"var(--indigo-9)", color:"white", cursor:saving?"wait":"pointer",
+                fontSize:13, fontWeight:600, opacity:saving?0.7:1,
+              }}>
+                {saving ? "Salvando…" : "Salvar"}
               </button>
-            </Dialog.Close>
-            <button type="button" onClick={handleSave} disabled={saving} style={{
-              padding:"8px 24px", borderRadius:8, border:"none",
-              background:"var(--indigo-9)", color:"white", cursor:saving?"wait":"pointer",
-              fontSize:13, fontWeight:600, opacity:saving?0.7:1,
-            }}>
-              {saving ? "Salvando…" : "Salvar"}
-            </button>
+            </div>
           </div>
         )}
       </Dialog.Content>
