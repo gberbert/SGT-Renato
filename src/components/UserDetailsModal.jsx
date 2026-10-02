@@ -1,371 +1,269 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, Flex, Box, Avatar, Text, Badge, Card, Button, Select } from '@radix-ui/themes';
-import { Camera, Sun, Moon, Bell } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Dialog, Avatar, Text } from '@radix-ui/themes';
+import { Camera } from 'lucide-react';
 import { storage } from '../firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateUser } from '../services/settingsService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { userHasFunctionPermission } from '../services/permissionService';
 import { PermissionFunctionKeys } from '../services/permissionKeys';
 import { SELECT_OPTIONS_BY_KEY } from '../utils/userFieldOptions';
+import {
+  S, TABS, FIELDS,
+  isDateF, toInputDate, persistVal, maskPhone,
+  CustomSelect, HardSkillsInput, JornadaTab,
+} from './UserDetailsModalParts';
 
-const UserDetailsModal = ({ open, onOpenChange, user, theme, toggleTheme, notificationPermission, handleNotificationRequest, mode = "edit" }) => {
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [squads, setSquads] = useState([]);
-  const [localUser, setLocalUser] = useState(user);
-  const [draftUser, setDraftUser] = useState(user);
-  const [activeTab, setActiveTab] = useState("DADOS PESSOAIS");
+const isSelF = k => Object.prototype.hasOwnProperty.call(SELECT_OPTIONS_BY_KEY, k);
 
-  const [canSeeCsr, setCanSeeCsr] = useState(true);
-  const [canSeeRatecard, setCanSeeRatecard] = useState(true);
+/* ── FieldInput ── */
+function FieldInput({ fieldKey, label, value, onChange, readOnly }) {
+  const isDate = isDateF(fieldKey);
+  const isSel  = isSelF(fieldKey);
+  const isPhone = fieldKey === "contato";
+  const displayVal = isDate ? toInputDate(value) : (value ?? "");
 
-  useEffect(() => {
-    setLocalUser(user);
-    setDraftUser(user);
-  }, [user]);
+  if (readOnly) {
+    return (
+      <div>
+        <span style={S.lbl}>{label}</span>
+        <div style={S.inpR}>{isDate ? toInputDate(value) : (value || "—")}</div>
+      </div>
+    );
+  }
+  if (isSel) {
+    const opts = (SELECT_OPTIONS_BY_KEY[fieldKey] || []).map(o =>
+      typeof o === "string" ? { value:o, label:o } : o
+    );
+    return (
+      <div>
+        <span style={S.lbl}>{label}</span>
+        <CustomSelect value={value ?? ""} onChange={v => onChange(fieldKey, v)} options={opts}/>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <span style={S.lbl}>{label}</span>
+      <input
+        type={isDate ? "date" : "text"}
+        value={displayVal}
+        onChange={e => {
+          let v = e.target.value;
+          if (isPhone) v = maskPhone(v);
+          onChange(fieldKey, v);
+        }}
+        style={S.inp}
+      />
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (!open) return;
+/* ── FieldRow ── */
+function FieldRow({ rowDef, draftUser, onChange, readOnly }) {
+  if (Array.isArray(rowDef) && typeof rowDef[0] === "string") {
+    const [key, label] = rowDef;
+    return <FieldInput fieldKey={key} label={label} value={draftUser?.[key] ?? ""} onChange={onChange} readOnly={readOnly}/>;
+  }
+  const { row, cols } = rowDef;
+  return (
+    <div style={{ display:"grid", gridTemplateColumns: cols || `repeat(${row.length},1fr)`, gap:12 }}>
+      {row.map(([key, label]) => (
+        <FieldInput key={key} fieldKey={key} label={label} value={draftUser?.[key] ?? ""} onChange={onChange} readOnly={readOnly}/>
+      ))}
+    </div>
+  );
+}
 
-    const role = localUser?.role;
-    if (!role) {
-      setCanSeeCsr(false);
-      setCanSeeRatecard(false);
-      return;
-    }
+/* ── AvatarUploader ── */
+function AvatarUploader({ draftUser, setDraftUser, userId, readOnly }) {
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
 
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const [csrOk, rateOk] = await Promise.all([
-          userHasFunctionPermission(role, PermissionFunctionKeys.USER_CSR_VIEW),
-          userHasFunctionPermission(role, PermissionFunctionKeys.USER_RATECARD_VIEW),
-        ]);
-        if (cancelled) return;
-        setCanSeeCsr(!!csrOk);
-        setCanSeeRatecard(!!rateOk);
-      } catch (e) {
-        console.error(e);
-        if (cancelled) return;
-        setCanSeeCsr(false);
-        setCanSeeRatecard(false);
-      }
-    })();
-
-    const unsub = subscribeToProjectSquads('all', setSquads);
-    return () => {
-      cancelled = true;
-      if (typeof unsub === "function") unsub();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, localUser?.role]);
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !localUser) return;
+  const handleFile = async e => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    setUploading(true);
     try {
-      setIsUploadingPhoto(true);
-      const storageRef = ref(storage, `profiles/${localUser.id}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-
-      await updateUser(localUser.id, { photoURL: url });
-      setLocalUser(prev => ({ ...prev, photoURL: url }));
-    } catch (error) {
-      console.error(error);
-      alert('Erro ao fazer upload da foto.');
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
-
-  if (!localUser) return null;
-
-  const tabs = [
-    "DADOS PESSOAIS",
-    "CONTRATAÇÃO",
-    "RATECARD",
-    "SISTEMA",
-  ];
-
-  const fieldsByTab = {
-    "DADOS PESSOAIS": [
-      ["sapId", "SAP"],
-      ["status", "STATUS"],
-      ["displayName", "NOME"],
-      ["shortName", "NOME RESUMIDO"],
-      ["email", "EMAIL"],
-      ["cidade", "CIDADE"],
-      ["uf", "UF"],
-      ["dataNascimento", "NASCIMENTO"],
-    ],
-    "CONTRATAÇÃO": [
-      ["dataInicio", "INÍCIO NTT"],
-      ["contract", "CONTRATO"],
-      ["foundation", "FOUNDATION"],
-      ["perfilNTT", "CARGO"],
-      ["seniority", "SENIORIDADE"],
-      ["csr", "CSR"],
-    ],
-    "RATECARD": [
-      ["perfilRatecard", "PERFIL RATECARD"],
-      ["rcSeniority", "SENIORIDADE RATECARD"],
-      ["rc", "RATE CARD"],
-    ],
-    "SISTEMA": [
-      ["role", "PERFIL ACESSO"],
-    ],
-  };
-
-  const isDateField = (key) => key === "dataNascimento" || key === "dataInicio";
-  const isSelectField = (key) => Object.prototype.hasOwnProperty.call(SELECT_OPTIONS_BY_KEY, key);
-
-  const toInputDateValue = (value) => {
-    if (!value) return "";
-    try {
-      if (typeof value === "object" && typeof value.toDate === "function") {
-        const d = value.toDate();
-        return d.toISOString().slice(0, 10);
-      }
-      const d = value instanceof Date ? value : new Date(value);
-      if (!d || Number.isNaN(d.getTime())) return "";
-      return d.toISOString().slice(0, 10);
-    } catch {
-      return "";
-    }
-  };
-
-  const fromInputDateValue = (value) => {
-    if (!value) return null;
-    const d = new Date(`${value}T00:00:00.000Z`);
-    if (!d || Number.isNaN(d.getTime())) return null;
-    return d;
-  };
-
-  const toPersistValue = (key, value) => {
-    if (isDateField(key)) {
-      if (typeof value === "string") return fromInputDateValue(value);
-      if (!value) return null;
-      if (typeof value === "object" && typeof value.toDate === "function") return value.toDate();
-      if (value instanceof Date) return value;
-      const d = new Date(value);
-      return Number.isNaN(d.getTime()) ? null : d;
-    }
-    return value ?? null;
+      const r = storageRef(storage, `avatars/${userId}`);
+      await uploadBytes(r, file);
+      const url = await getDownloadURL(r);
+      setDraftUser(prev => ({ ...prev, photoURL: url }));
+    } catch (err) { console.error(err); }
+    finally { setUploading(false); }
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={(next) => { if (next === false) return; onOpenChange(next); }}>
-      <Dialog.Content
-        style={{ maxWidth: 520 }}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
-        <Dialog.Title>Detalhes do Membro</Dialog.Title>
-        <Flex gap="4" align="center" mb="5" mt="2">
-          <Box position="relative">
-            <Avatar size="6" src={localUser.photoURL} fallback={(localUser.displayName || localUser.shortName || localUser.name || localUser.email || 'U').charAt(0)} radius="full" />
-            <label style={{ position: 'absolute', bottom: -5, right: -5, background: 'var(--indigo-9)', color: 'white', borderRadius: '50%', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} title="Alterar foto">
-              {isUploadingPhoto ? <span style={{fontSize: '10px'}}>...</span> : <Camera size={14} />}
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} disabled={isUploadingPhoto} />
-            </label>
-          </Box>
-          <Box>
-            <Text as="div" size="4" weight="bold">{localUser.displayName || localUser.shortName || localUser.name || localUser.email}</Text>
-            <Text as="div" size="2" color="gray">{localUser.email}</Text>
-            <Badge color="indigo" mt="2">{localUser.role || 'Membro'}</Badge>
-          </Box>
-        </Flex>
+    <div style={{ position:"relative", width:80, height:80, flexShrink:0 }}>
+      <Avatar
+        src={draftUser?.photoURL}
+        fallback={draftUser?.displayName?.[0]?.toUpperCase() || "?"}
+        radius="full"
+        size="6"
+        style={{ width:80, height:80, border:"2px solid var(--indigo-6)" }}
+      />
+      {!readOnly && (
+        <>
+          <button type="button" onClick={() => fileRef.current?.click()} style={{
+            position:"absolute", bottom:0, right:0, width:26, height:26,
+            borderRadius:"50%", background:"var(--indigo-9)", border:"2px solid var(--panel-bg,#111)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            cursor:"pointer", color:"white",
+          }}>
+            {uploading ? "…" : <Camera size={13}/>}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
+        </>
+      )}
+    </div>
+  );
+}
 
-        <Text as="div" weight="bold" mb="2">Squads Atuais</Text>
-        <Flex direction="column" gap="2" mb="4">
-          {(() => {
-            const userSquads = squads.filter(s => {
-              const inUsers = s.users?.some(su => su.id === localUser.id);
-              const inMembers = s.members?.includes(localUser.id);
-              return inUsers || inMembers || localUser.squadId === s.id;
-            });
-            if (userSquads.length === 0) return <Text color="gray" size="2">Não pertence a nenhuma squad no momento.</Text>;
-            return userSquads.map(sq => {
-              const squadUserObj = sq.users?.find(su => su.id === localUser.id);
-              const specificRole = squadUserObj?.role || localUser.role || 'Membro';
-              return (
-                <Card key={sq.id} size="1" variant="surface">
-                  <Flex justify="between" align="center">
-                    <Text weight="bold" size="2">{sq.name}</Text>
-                    <Badge color="blue" variant="soft">{specificRole}</Badge>
-                  </Flex>
-                </Card>
-              );
-            });
-          })()}
-        </Flex>
+/* ── Main Modal ── */
+export default function UserDetailsModal({ open, onOpenChange, user, currentUser }) {
+  const [draftUser, setDraftUser]   = useState(null);
+  const [activeTab, setActiveTab]   = useState(TABS[0]);
+  const [saving, setSaving]         = useState(false);
+  const [squads, setSquads]         = useState([]);
+  const [userSquads, setUserSquads] = useState([]);
 
-        <Flex gap="2" mb="3" wrap="wrap">
-          {tabs.map((t) => {
-            const selected = activeTab === t;
-            return (
-              <Button
-                key={t}
-                type="button"
-                variant={selected ? "solid" : "soft"}
-                size="1"
-                onClick={() => setActiveTab(t)}
-                style={{ cursor: "pointer" }}
-              >
-                {t}
-              </Button>
-            );
-          })}
-        </Flex>
+  const canEdit = userHasFunctionPermission(currentUser, PermissionFunctionKeys.EDIT_TEAM_MEMBER);
 
-        <Box mb="4">
-          <Flex direction="column" gap="2">
-            {fieldsByTab[activeTab]
-              .filter(([key]) => {
-                if (key === "csr" && !canSeeCsr) return false;
-                if (key === "rc" && !canSeeRatecard) return false;
-                return true;
-              })
-              .map(([key, label]) => {
-                const v = draftUser?.[key];
-                const readOnly = mode === "view" || key === "role";
-                return (
-                  <Card key={key} size="1" variant="surface">
-                    <Flex direction="column" gap="1">
-                      <Text size="1" color="gray" style={{ textTransform: "uppercase" }}>
-                        {label}
-                      </Text>
+  useEffect(() => {
+    if (open && user) {
+      setDraftUser({ ...user });
+      setActiveTab(TABS[0]);
+    }
+  }, [open, user]);
 
-                      {isDateField(key) ? (
-                        <input
-                          type="date"
-                          value={toInputDateValue(v)}
-                          readOnly={readOnly}
-                          disabled={readOnly}
-                          onChange={(e) => {
-                            const next = e.target.value;
-                            setDraftUser((prev) => ({ ...prev, [key]: next }));
-                          }}
-                          style={{
-                            width: "100%",
-                            height: 34,
-                            borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid var(--glass-border)",
-                            color: "var(--text)",
-                            padding: "0 10px",
-                          }}
-                        />
-                      ) : isSelectField(key) ? (
-                        <Select.Root
-                          value={v || ""}
-                          onValueChange={(next) => setDraftUser((prev) => ({ ...prev, [key]: next }))}
-                          disabled={readOnly}
-                        >
-                          <Select.Trigger style={{ width: "100%" }} placeholder="Selecione..." />
-                          <Select.Content>
-                            {SELECT_OPTIONS_BY_KEY[key].map((opt) => (
-                              <Select.Item key={opt} value={opt}>
-                                {opt}
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Root>
-                      ) : (
-                        <input
-                          value={v ?? ""}
-                          readOnly={readOnly}
-                          disabled={readOnly}
-                          onChange={(e) => setDraftUser((prev) => ({ ...prev, [key]: e.target.value }))}
-                          style={{
-                            width: "100%",
-                            height: 34,
-                            borderRadius: 8,
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid var(--glass-border)",
-                            color: "var(--text)",
-                            padding: "0 10px",
-                          }}
-                        />
-                      )}
-                    </Flex>
-                  </Card>
-                );
-              })}
-          </Flex>
-        </Box>
+  useEffect(() => {
+    const unsub = subscribeToProjectSquads('all', all => {
+      setSquads(all);
+      if (user?.uid) setUserSquads(all.filter(s => (s.members||[]).includes(user.uid)));
+    });
+    return () => typeof unsub === "function" && unsub();
+  }, [user?.uid]);
 
-        {toggleTheme && (
-          <>
-            <Text as="div" weight="bold" mt="4" mb="2">Preferências</Text>
-            <Flex direction="column" gap="2">
-              {'Notification' in window && handleNotificationRequest && (
-                <Card size="1" variant="surface" style={{ cursor: 'pointer' }} onClick={handleNotificationRequest}>
-                  <Flex justify="between" align="center">
-                    <Text size="2">{notificationPermission === 'granted' ? 'Reconectar Notificações' : 'Ligar Notificações'}</Text>
-                    <Bell size={16} />
-                  </Flex>
-                </Card>
+  const handleChange = (key, value) => {
+    setDraftUser(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!draftUser?.uid) return;
+    setSaving(true);
+    try {
+      const payload = {};
+      for (const [k, v] of Object.entries(draftUser)) {
+        if (k === "uid" || k === "id") continue;
+        payload[k] = persistVal(k, v);
+      }
+      await updateUser(draftUser.uid, payload);
+      onOpenChange(false);
+    } catch (err) { console.error(err); }
+    finally { setSaving(false); }
+  };
+
+  const readOnly = !canEdit;
+  const fields   = FIELDS[activeTab] || [];
+
+  if (!draftUser) return null;
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content style={{
+        maxWidth:920, width:"96vw", maxHeight:"90vh",
+        background:"var(--panel-bg,#16162a)", borderRadius:16,
+        border:"1px solid rgba(255,255,255,0.08)",
+        padding:0, overflow:"hidden", display:"flex", flexDirection:"column",
+      }}>
+        {/* Header */}
+        <div style={{
+          display:"flex", alignItems:"center", gap:18,
+          padding:"20px 24px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)",
+          background:"rgba(255,255,255,0.02)", flexShrink:0,
+        }}>
+          <AvatarUploader draftUser={draftUser} setDraftUser={setDraftUser} userId={draftUser.uid} readOnly={readOnly}/>
+          <div style={{ flex:1, minWidth:0 }}>
+            <Text size="5" weight="bold" style={{ display:"block", marginBottom:2 }}>
+              {draftUser.displayName || "—"}
+            </Text>
+            <Text size="2" style={{ color:"var(--gray-9)" }}>{draftUser.email || ""}</Text>
+            {userSquads.length > 0 && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:6 }}>
+                {userSquads.map(s => (
+                  <span key={s.id} style={{
+                    fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:999,
+                    background:"var(--indigo-3)", border:"1px solid var(--indigo-6)", color:"var(--indigo-11)",
+                  }}>{s.name}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          <Dialog.Close asChild>
+            <button style={{ background:"none", border:"none", cursor:"pointer", color:"var(--gray-9)", fontSize:20, lineHeight:1, padding:4 }}>×</button>
+          </Dialog.Close>
+        </div>
+
+        {/* Tabs */}
+        <div style={{
+          display:"flex", gap:0, borderBottom:"1px solid rgba(255,255,255,0.08)",
+          overflowX:"auto", flexShrink:0, background:"rgba(0,0,0,0.15)",
+        }}>
+          {TABS.map(tab => (
+            <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{
+              padding:"10px 18px", fontSize:11, fontWeight:700, letterSpacing:"0.06em",
+              border:"none", borderBottom: activeTab===tab ? "2px solid var(--indigo-9)" : "2px solid transparent",
+              background:"transparent", color: activeTab===tab ? "var(--indigo-11)" : "var(--gray-9)",
+              cursor:"pointer", whiteSpace:"nowrap", transition:"color 0.15s",
+            }}>{tab}</button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div style={{ flex:1, overflowY:"auto", padding:"20px 24px" }}>
+          {activeTab === "CONTROLE DE JORNADA" ? (
+            <JornadaTab draftUser={draftUser} setDraftUser={setDraftUser} readOnly={readOnly}/>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {fields.map((fDef, i) => (
+                <FieldRow key={i} rowDef={fDef} draftUser={draftUser} onChange={handleChange} readOnly={readOnly}/>
+              ))}
+              {activeTab === "DADOS PESSOAIS" && (
+                <div>
+                  <span style={S.lbl}>HARD SKILLS</span>
+                  <HardSkillsInput
+                    value={draftUser.hardSkills || []}
+                    onChange={v => handleChange("hardSkills", v)}
+                    readOnly={readOnly}
+                  />
+                </div>
               )}
+            </div>
+          )}
+        </div>
 
-              <Card size="1" variant="surface">
-                <Flex justify="between" align="center">
-                  <Text size="2">Modo Noturno</Text>
-                  <Button variant="soft" size="1" onClick={toggleTheme} style={{ cursor: 'pointer', padding: '0 8px' }}>
-                    {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
-                  </Button>
-                </Flex>
-              </Card>
-            </Flex>
-          </>
+        {/* Footer */}
+        {!readOnly && (
+          <div style={{
+            display:"flex", justifyContent:"flex-end", gap:10,
+            padding:"14px 24px", borderTop:"1px solid rgba(255,255,255,0.08)",
+            background:"rgba(0,0,0,0.15)", flexShrink:0,
+          }}>
+            <Dialog.Close asChild>
+              <button style={{ padding:"8px 20px", borderRadius:8, border:"1px solid rgba(255,255,255,0.15)", background:"transparent", color:"var(--text)", cursor:"pointer", fontSize:13 }}>
+                Cancelar
+              </button>
+            </Dialog.Close>
+            <button type="button" onClick={handleSave} disabled={saving} style={{
+              padding:"8px 24px", borderRadius:8, border:"none",
+              background:"var(--indigo-9)", color:"white", cursor:saving?"wait":"pointer",
+              fontSize:13, fontWeight:600, opacity:saving?0.7:1,
+            }}>
+              {saving ? "Salvando…" : "Salvar"}
+            </button>
+          </div>
         )}
-
-        <Flex justify="end" mt="5" gap="2">
-          {mode !== "view" && (
-            <Button
-              variant="soft"
-              color="gray"
-              onClick={() => {
-                setDraftUser(localUser);
-              }}
-            >
-              Cancelar
-            </Button>
-          )}
-
-          {mode !== "view" && (
-            <Button
-              variant="solid"
-              onClick={async () => {
-                try {
-                  const payload = {};
-                  for (const tab of tabs) {
-                    for (const [key] of fieldsByTab[tab] || []) {
-                      payload[key] = toPersistValue(key, draftUser?.[key]);
-                    }
-                  }
-                  await updateUser(localUser.id, payload);
-                  setLocalUser((prev) => ({ ...prev, ...payload }));
-                  setDraftUser((prev) => ({ ...prev }));
-                } catch (err) {
-                  console.error(err);
-                }
-              }}
-            >
-              Salvar
-            </Button>
-          )}
-
-          <Button variant="soft" color="gray" onClick={() => onOpenChange(false)}>
-            Fechar
-          </Button>
-        </Flex>
       </Dialog.Content>
     </Dialog.Root>
   );
-};
-
-export default UserDetailsModal;
+}

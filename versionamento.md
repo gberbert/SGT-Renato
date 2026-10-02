@@ -1,5 +1,23 @@
 # Versionamento do Projeto
 
+## [0.1.316] - 2026-10-02
+- **UX (Planejamento de Ciclos — Layout):** Título e subtítulo da página repositionados — título "Planejamento de Ciclos" e descrição "Organize tickets em ciclos de entrega" movidos para o header acima da barra de ações. Botões (Visões Salvas, Exportar XLSX, Workflow, Novo Ciclo) reposicionados abaixo do título como segunda linha, mantendo alinhamento visual consistente. Layout responsivo e melhorada legibilidade da interface.
+
+## [0.1.315] - 2026-10-01
+- **Feature (Planejamento de Ciclos — Exportar PDF A4):** Novo botão "Exportar PDF" na tela de Planejamento de Ciclos, gerando retrato em formato A4 com contagem total de tickets por status (Em Homologação, Aprovação da Planejamento, Execução, Em homologação, Revisão de homologação, Aguardando Mudança) exibidos em grandes números no cabeçalho. Layout responsivo com paginação automática, respeitando a ordem de status conforme especificado no wireframe. Componente `CicloPdfExport.jsx` implementa toda a lógica: coleta de tickets do estado atual (ciclos selecionados ou backlog), agrupa por status, renderiza cards visuais com cores e ícones, e exporta via `html2pdf`. Incluído o import e integração no `PlanejamentoCiclo.jsx` com ícone `FileText` e tooltip descritivo.
+
+## [0.1.314] - 2026-10-01
+- **Feature (Configurações — Sistemas — Exportar XLSX):** Botão "Exportar XLSX" adicionado na tela de Sistemas em Configurações do Sistema. Exporta todos os sistemas exibidos (respeitando filtros ativos de nome e squad) com todos os campos do cadastro: Nome, Projeto, Grupo de Suporte, Squad, Descrição, Tags, Repositório, Documentação, Natureza da Iniciativa, Natureza da Operação e Data de Criação. Utiliza a biblioteca `xlsx` já presente no projeto para geração do arquivo `.xlsx`.
+
+## [0.1.313] - 2026-10-01
+- **Feature (Configurações — Sistemas — Exportar XLSX):** Botão "Exportar XLSX" adicionado na tela de Sistemas em Configurações do Sistema. Exporta todos os sistemas exibidos (respeitando filtros ativos de nome e squad) com todos os campos do cadastro: Nome, Projeto, Grupo de Suporte, Squad, Descrição, Tags, Repositório, Documentação, Natureza da Iniciativa, Natureza da Operação e Data de Criação.
+
+## [0.1.310] - 2026-10-01
+- **Deploy (Configurações — Sistemas — Exportar CSV):** Deploy de produção da versão 0.1.309 — botão "Exportar CSV" na tela de Sistemas em Configurações do Sistema.
+
+## [0.1.309] - 2026-10-01
+- **Feature (Configurações — Sistemas — Exportar CSV):** Adicionado botão "Exportar CSV" na tela de Sistemas em Configurações do Sistema. Exporta todos os sistemas exibidos (respeitando filtros ativos de nome e squad) com todos os campos do cadastro: Nome, Projeto, Grupo de Suporte, Squad, Descrição, Tags, Repositório, Documentação e Data de Criação.
+
 ## [0.1.308] - 2026-09-30
 - **Fix (Sync Jira — SGT_MANAGED_FIELDS):** Listas `SGT_MANAGED_FIELDS` em `operacaoFirestoreService.js` (client) e `functions/jiraGlobalSync.js` (Cloud Function) sincronizadas com os mesmos 23 campos protegidos (`estimativaMacro`, `impedimento`, `impedido`, `observacao`, `percentualConclusao`, `squad`, `squadPrincipal`, `dataFimTesteInterno`, `dataConclusao`, `cicloId`, `ticketsVinculados`, entre outros). Garante que o sync do Jira não sobrescreve dados gerenciados internamente pelo SGT em nenhum caminho de escrita.
 

@@ -6,8 +6,9 @@ import {
 import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
-import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock, Save, Trash2 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock, Save, Trash2, FileText } from 'lucide-react';
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx } from './PlanejamentoCicloHelpers';
+import { exportCicloPdf } from './CicloPdfExport';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 import {
@@ -16,7 +17,6 @@ import {
   deleteCicloView,
   deserializeFilters,
 } from '../services/cicloViewsService';
-
 const TICKETS_GLOBAL = 'tickets_global';
 
 const DATE_FIELDS_TO_LOG = new Set([
@@ -67,6 +67,65 @@ const WORKFLOW_STEPS = [
   { id: 19, status: 'Etapa de KT',                          fila: 'NTT Data',      escopo: 'Homologação' },
   { id: 20, status: 'Aguardando Mudança',                   fila: 'NTT Data',      escopo: 'Homologação' },
   { id: 21, status: 'Concluída',                            fila: 'CPFL',          escopo: 'Concluída' },
+];
+
+const WORKFLOW_STEPS_FAST = [
+  // Grupo 1: Atendimento
+  { id: 1,  status: 'Aguardando Atendimento',          fila: 'NTT Data' },
+  { id: 2,  status: 'Em Atendimento',                  fila: 'NTT Data' },
+  { id: 3,  status: 'Resolvido',                       fila: 'NTT Data' },
+  { id: 4,  status: 'Reaberto',                        fila: 'NTT Data' },
+  { id: 5,  status: 'Fechada',                         fila: 'NTT Data' },
+  { id: 6,  status: 'Canceled',                        fila: 'CPFL' },
+  { separator: true },
+  // Grupo 2: Aprovação
+  { id: 7,  status: 'Aprovação Demanda Fast',          fila: 'CPFL' },
+  { id: 8,  status: 'Aguardando Aprovação Gestor',     fila: 'CPFL' },
+  { id: 9,  status: 'Aguardando Aprovação Tecnica',    fila: 'CPFL' },
+  { id: 10, status: 'Aguardando Aprovação Adicional',  fila: 'CPFL' },
+  { id: 11, status: 'Aprovado',                        fila: 'CPFL' },
+  { id: 12, status: 'Reprovado',                       fila: 'CPFL' },
+  { separator: true },
+  // Grupo 3: Aguardando
+  { id: 13, status: 'Agendado',                        fila: 'NTT Data' },
+  { id: 14, status: 'Aguardando Compra',               fila: 'CPFL' },
+  { id: 15, status: 'Aguardando Validação',            fila: 'CPFL' },
+  { id: 16, status: 'Aguardando Problema',             fila: 'NTT Data' },
+  { id: 17, status: 'Aguardando Mudança',              fila: 'NTT Data' },
+  { id: 18, status: 'Aguardando Fornecedor',           fila: 'NTT Data' },
+  { id: 19, status: 'Aguardando Solicitante',          fila: 'CPFL' },
+];
+
+// Grupos do workflow de Problemas
+const WORKFLOW_STEPS_PROBLEMAS = [
+  { tipo: 'Problema', id: 1,  status: 'Aguardando RCA',                        fila: 'NTT Data' },
+  { tipo: 'Problema', id: 2,  status: 'Aguardando Aprovação Líder de Torre',   fila: 'CPFL' },
+  { tipo: 'Problema', id: 3,  status: 'Aguardando Aprovação Ger. Problema',    fila: 'CPFL' },
+  { tipo: 'Problema', id: 4,  status: 'Solução Rejeitada',                     fila: 'CPFL' },
+  { tipo: 'Problema', id: 5,  status: 'Aguardando Planejamento',               fila: 'NTT Data' },
+  { tipo: 'Problema', id: 6,  status: 'Aguardando Execução',                   fila: 'NTT Data' },
+  { tipo: 'Problema', id: 7,  status: 'Em Execução',                           fila: 'NTT Data' },
+  { tipo: 'Problema', id: 8,  status: 'Aguardando Demanda/Projeto',            fila: 'NTT Data' },
+  { tipo: 'Problema', id: 9,  status: 'Em Monitoramento',                      fila: 'CPFL' },
+  { tipo: 'Problema', id: 10, status: 'Fechado',                               fila: 'CPFL' },
+  { tipo: 'Problema', id: 11, status: 'Cancelado',                             fila: 'CPFL' },
+  { tipo: 'RCA',      id: 1,  status: 'RCA em Desenvolvimento',                fila: 'NTT Data' },
+  { tipo: 'RCA',      id: 2,  status: 'Aguardando Aprovação Técnica RCA',      fila: 'CPFL' },
+  { tipo: 'RCA',      id: 3,  status: 'Aguardando Aprovação Governança RCA',   fila: 'CPFL' },
+  { tipo: 'RCA',      id: 4,  status: 'Resolvido',                             fila: 'NTT Data' },
+  { tipo: 'RCA',      id: 5,  status: 'Fechado',                               fila: 'CPFL' },
+  { tipo: 'RCA',      id: 6,  status: 'Cancelado',                             fila: 'CPFL' },
+  { tipo: 'Planejamento', id: 1, status: 'Em Planejamento',                    fila: 'NTT Data' },
+  { tipo: 'Planejamento', id: 2, status: 'Aguardando Aprovação Técnica',       fila: 'CPFL' },
+  { tipo: 'Planejamento', id: 3, status: 'Fechado',                            fila: 'CPFL' },
+  { tipo: 'Planejamento', id: 4, status: 'Cancelado',                          fila: 'CPFL' },
+  { tipo: 'Execução', id: 1,  status: 'Em Execução',                           fila: 'NTT Data' },
+  { tipo: 'Execução', id: 2,  status: 'Aguardando Aprovação Técnica',          fila: 'CPFL' },
+  { tipo: 'Execução', id: 3,  status: 'Aguardando Aprovação Governança',       fila: 'CPFL' },
+  { tipo: 'Execução', id: 4,  status: 'Aguardando Demanda',                    fila: 'NTT Data' },
+  { tipo: 'Execução', id: 5,  status: 'Aguardando Mudança',                    fila: 'NTT Data' },
+  { tipo: 'Execução', id: 6,  status: 'Fechado',                               fila: 'CPFL' },
+  { tipo: 'Execução', id: 7,  status: 'Cancelado',                             fila: 'CPFL' },
 ];
 
 // Mapa de status por fila
@@ -123,6 +182,24 @@ function EscopoTag({ escopo }) {
 }
 
 function WorkflowModal({ onClose }) {
+  const [activeTab, setActiveTab] = useState('demandas');
+
+  const tabs = [
+    { key: 'demandas', label: 'DEMANDAS' },
+    { key: 'fast', label: 'DEMANDAS FAST' },
+    { key: 'problemas', label: 'PROBLEMAS' },
+  ];
+
+  // Group problemas by tipo
+  const problemasByTipo = useMemo(() => {
+    const groups = {};
+    WORKFLOW_STEPS_PROBLEMAS.forEach(step => {
+      if (!groups[step.tipo]) groups[step.tipo] = [];
+      groups[step.tipo].push(step);
+    });
+    return groups;
+  }, []);
+
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -136,54 +213,138 @@ function WorkflowModal({ onClose }) {
       <div style={{
         background: 'var(--color-panel-solid)',
         border: '1px solid var(--gray-5)',
-        borderRadius: 14, width: '100%', maxWidth: 780,
+        borderRadius: 14, width: '100%', maxWidth: 820,
         maxHeight: '90vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--gray-4)' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--gray-12)' }}>Workflow de Demandas</h3>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--gray-9)' }}>Ordem dos status, fila responsável e escopo em cada etapa</p>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--gray-12)' }}>Workflows</h3>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--gray-9)' }}>Status, fila responsável e escopo em cada etapa</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: 'var(--gray-9)', display: 'flex', alignItems: 'center' }}>
             <X size={14} />
           </button>
         </div>
 
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--gray-4)', padding: '0 20px' }}>
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '10px 16px', fontSize: 12, fontWeight: 700,
+                color: activeTab === tab.key ? 'var(--indigo-11)' : 'var(--gray-9)',
+                borderBottom: activeTab === tab.key ? '2px solid var(--indigo-9)' : '2px solid transparent',
+                marginBottom: -1,
+                transition: 'all 0.12s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Legenda */}
-        <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--gray-4)', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ padding: '8px 20px', borderBottom: '1px solid var(--gray-4)', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: 'var(--gray-9)', fontWeight: 600 }}>FILA:</span>
-          <FilaTag fila="CPFL Previsto" />
+          {activeTab === 'demandas' && <FilaTag fila="CPFL Prevista" />}
           <FilaTag fila="CPFL" />
           <FilaTag fila="NTT Data" />
         </div>
 
-        {/* Table */}
+        {/* Table content */}
         <div style={{ overflowY: 'auto', flex: 1 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'var(--gray-3)', position: 'sticky', top: 0, zIndex: 1 }}>
-                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'center', width: 40, borderBottom: '1px solid var(--gray-5)' }}>#</th>
-                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>STATUS</th>
-                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>FILA (RESPONSÁVEL)</th>
-                <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>ESCOPO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {WORKFLOW_STEPS.map((step, idx) => (
-                  <tr
-                  key={step.id}
-                  style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}
-                >
-                  <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
-                  <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
-                  <td style={{ padding: '4px 14px' }}><FilaTag fila={step.fila} /></td>
-                  <td style={{ padding: '4px 14px' }}><EscopoTag escopo={step.escopo} /></td>
+
+          {/* DEMANDAS tab */}
+          {activeTab === 'demandas' && (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--gray-3)', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'center', width: 40, borderBottom: '1px solid var(--gray-5)' }}>#</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>STATUS</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>FILA (RESPONSÁVEL)</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>ESCOPO</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {WORKFLOW_STEPS.map((step, idx) => (
+                  <tr key={step.id} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}>
+                    <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
+                    <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
+                    <td style={{ padding: '4px 14px' }}><FilaTag fila={step.fila} /></td>
+                    <td style={{ padding: '4px 14px' }}><EscopoTag escopo={step.escopo} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* DEMANDAS FAST tab */}
+          {activeTab === 'fast' && (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--gray-3)', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'center', width: 40, borderBottom: '1px solid var(--gray-5)' }}>#</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>STATUS</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>FILA (RESPONSÁVEL)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {WORKFLOW_STEPS_FAST.map((step, idx) => {
+                  if (step.separator) {
+                    return <tr key={`sep-${idx}`}><td colSpan={3} style={{ padding: '3px 0', borderBottom: '2px solid var(--gray-5)', background: 'transparent' }} /></tr>;
+                  }
+                  return (
+                    <tr key={step.id} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}>
+                      <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
+                      <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
+                      <td style={{ padding: '4px 14px' }}><FilaTag fila={step.fila} /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {/* PROBLEMAS tab */}
+          {activeTab === 'problemas' && (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--gray-3)', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', width: 120, borderBottom: '1px solid var(--gray-5)' }}>TIPO DE ITEM</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'center', width: 40, borderBottom: '1px solid var(--gray-5)' }}>#</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>STATUS</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>FILA (RESPONSÁVEL)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(problemasByTipo).map(([tipo, steps]) =>
+                  steps.map((step, idx) => (
+                    <tr key={`${tipo}-${step.id}`} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}>
+                      {idx === 0 && (
+                        <td rowSpan={steps.length} style={{
+                          padding: '6px 14px', fontSize: 11, fontWeight: 800,
+                          color: 'var(--gray-9)', verticalAlign: 'top',
+                          borderRight: '1px solid var(--gray-4)',
+                          background: 'var(--gray-2)',
+                          letterSpacing: '0.04em',
+                        }}>
+                          {tipo.toUpperCase()}
+                        </td>
+                      )}
+                      <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
+                      <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
+                      <td style={{ padding: '4px 14px' }}><FilaTag fila={step.fila} /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -209,6 +370,8 @@ export default function PlanejamentoCiclo() {
   const [respDevFilter, setRespDevFilter] = useState(new Set());
   const [respTesteFilter, setRespTesteFilter] = useState(new Set());
   const [sistemasFilter, setSistemasFilter] = useState(new Set());
+  const [naturezaIniciativaFilter, setNaturezaIniciativaFilter] = useState(new Set());
+  const [issuetypeFilter, setIssuetypeFilter] = useState(new Set());
   const [dateField, setDateField] = useState('none');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [showEstimativa, setShowEstimativa] = useState(
@@ -256,19 +419,21 @@ export default function PlanejamentoCiclo() {
     principalApplied.current = true;
     const f = deserializeFilters(principal.filters);
     if (!f) return;
-    setSearch(f.search);
-    setEscopoFilter(f.escopoFilter);
-    setSquadFilter(f.squadFilter);
-    setGrupoSolucionadorFilter(f.grupoSolucionadorFilter);
-    setFilaFilter(f.filaFilter);
-    setStatusFilter(f.statusFilter);
-    setPrioridadeFilter(f.prioridadeFilter);
-    setRespDevFilter(f.respDevFilter);
-    setRespTesteFilter(f.respTesteFilter);
-    setSistemasFilter(f.sistemasFilter);
-    setDateField(f.dateField);
-    setImpedimentoFilter(f.impedimentoFilter);
-    setShowEstimativa(f.showEstimativa);
+    setSearch(f.search ?? '');
+    setEscopoFilter(f.escopoFilter ?? new Set());
+    setSquadFilter(f.squadFilter ?? new Set());
+    setGrupoSolucionadorFilter(f.grupoSolucionadorFilter ?? new Set());
+    setFilaFilter(f.filaFilter ?? new Set());
+    setStatusFilter(f.statusFilter ?? new Set());
+    setPrioridadeFilter(f.prioridadeFilter ?? new Set());
+    setRespDevFilter(f.respDevFilter ?? new Set());
+    setRespTesteFilter(f.respTesteFilter ?? new Set());
+    setSistemasFilter(f.sistemasFilter ?? new Set());
+    setNaturezaIniciativaFilter(f.naturezaIniciativaFilter ?? new Set());
+    setIssuetypeFilter(f.issuetypeFilter ?? new Set());
+    setDateField(f.dateField ?? 'none');
+    setImpedimentoFilter(f.impedimentoFilter ?? false);
+    setShowEstimativa(f.showEstimativa ?? false);
   }, [savedViews]);
 
   useEffect(() => {
@@ -399,6 +564,24 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [enrichedTickets]);
 
+  const naturezaIniciativaOptions = useMemo(() => {
+    const s = new Set();
+    enrichedTickets.forEach(t => {
+      const v = t.naturezaIniciativa || t.naturezaOperacao;
+      if (v) s.add(v);
+    });
+    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [enrichedTickets]);
+
+  const issuetypeOptions = useMemo(() => {
+    const s = new Set();
+    enrichedTickets.forEach(t => {
+      const v = t.issueType || t.issuetype;
+      if (v) s.add(v);
+    });
+    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [enrichedTickets]);
+
   const handleFilaFilterChange = useCallback((newFilaSelection) => {
     setFilaFilter(newFilaSelection);
     const newStatusSelection = new Set();
@@ -434,6 +617,8 @@ export default function PlanejamentoCiclo() {
       const vals = Array.isArray(val) ? val : (typeof val === 'string' ? val.split(',').map(v => v.trim()).filter(Boolean) : []);
       if (!vals.some(v => sistemasFilter.has(v))) return false;
     }
+    if (naturezaIniciativaFilter.size > 0 && !naturezaIniciativaFilter.has(t.naturezaIniciativa || t.naturezaOperacao || '')) return false;
+    if (issuetypeFilter.size > 0 && !issuetypeFilter.has(t.issueType || t.issuetype || '')) return false;
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -443,7 +628,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, impedimentoFilter, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, impedimentoFilter, search]);
 
   const allCicloKeys = useMemo(() => {
     const s = new Set();
@@ -532,19 +717,21 @@ export default function PlanejamentoCiclo() {
   const applyView = useCallback((view) => {
     const f = deserializeFilters(view.filters);
     if (!f) return;
-    setSearch(f.search);
-    setEscopoFilter(f.escopoFilter);
-    setSquadFilter(f.squadFilter);
-    setGrupoSolucionadorFilter(f.grupoSolucionadorFilter);
-    setFilaFilter(f.filaFilter);
-    setStatusFilter(f.statusFilter);
-    setPrioridadeFilter(f.prioridadeFilter);
-    setRespDevFilter(f.respDevFilter);
-    setRespTesteFilter(f.respTesteFilter);
-    setSistemasFilter(f.sistemasFilter);
-    setDateField(f.dateField);
-    setImpedimentoFilter(f.impedimentoFilter);
-    setShowEstimativa(f.showEstimativa);
+    setSearch(f.search ?? '');
+    setEscopoFilter(f.escopoFilter ?? new Set());
+    setSquadFilter(f.squadFilter ?? new Set());
+    setGrupoSolucionadorFilter(f.grupoSolucionadorFilter ?? new Set());
+    setFilaFilter(f.filaFilter ?? new Set());
+    setStatusFilter(f.statusFilter ?? new Set());
+    setPrioridadeFilter(f.prioridadeFilter ?? new Set());
+    setRespDevFilter(f.respDevFilter ?? new Set());
+    setRespTesteFilter(f.respTesteFilter ?? new Set());
+    setSistemasFilter(f.sistemasFilter ?? new Set());
+    setNaturezaIniciativaFilter(f.naturezaIniciativaFilter ?? new Set());
+    setIssuetypeFilter(f.issuetypeFilter ?? new Set());
+    setDateField(f.dateField ?? 'none');
+    setImpedimentoFilter(f.impedimentoFilter ?? false);
+    setShowEstimativa(f.showEstimativa ?? false);
     setShowViewsPanel(false);
   }, []);
 
@@ -557,7 +744,8 @@ export default function PlanejamentoCiclo() {
         {
           search, escopoFilter, squadFilter, grupoSolucionadorFilter,
           filaFilter, statusFilter, prioridadeFilter, respDevFilter,
-          respTesteFilter, sistemasFilter, dateField, impedimentoFilter, showEstimativa,
+          respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
+          dateField, impedimentoFilter, showEstimativa,
         },
         newViewIsPrincipal,
       );
@@ -570,22 +758,20 @@ export default function PlanejamentoCiclo() {
     newViewName, newViewIsPrincipal,
     search, escopoFilter, squadFilter, grupoSolucionadorFilter,
     filaFilter, statusFilter, prioridadeFilter, respDevFilter,
-    respTesteFilter, sistemasFilter, dateField, impedimentoFilter, showEstimativa,
+    respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
+    dateField, impedimentoFilter, showEstimativa,
   ]);
 
-  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter]
+  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
 
       {/* ── Page header ─────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Planejamento de Ciclos</h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--gray-10)' }}>Organize tickets em ciclos de entrega</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ margin: '0 0 14px 0', fontSize: 22, fontWeight: 700 }}>Planejamento de Ciclos</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {lastSyncAt && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)' }}>
               <Clock size={13} color="#38bdf8" />
@@ -745,6 +931,30 @@ export default function PlanejamentoCiclo() {
             <Download size={15} /> Exportar XLSX
           </button>
           <button
+            title="Exportar retrato PDF A4 da lista de tickets com totais por status"
+            onClick={async () => {
+              await exportCicloPdf({
+                ciclos,
+                getCicloTickets,
+                filteredTickets,
+                backlogTickets,
+              });
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+              fontSize: 13, fontWeight: 600,
+              background: 'rgba(239,68,68,0.12)',
+              color: '#f87171',
+              border: '1px solid rgba(239,68,68,0.35)',
+              transition: 'background 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.22)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.6)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'; }}
+          >
+            <FileText size={15} /> Exportar PDF
+          </button>
+          <button
             onClick={() => setShowWorkflowModal(true)}
             title="Ver workflow de demandas"
             style={{
@@ -887,7 +1097,7 @@ export default function PlanejamentoCiclo() {
           )}
           {activeFilters > 0 && (
             <button
-              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
               style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
             >
               Limpar filtros
@@ -902,6 +1112,8 @@ export default function PlanejamentoCiclo() {
           <MultiSelectFilter options={statusOptions} selected={statusFilter} onChange={handleStatusFilterChange} placeholder="Todos os status" maxWidth={200} />
           <MultiSelectFilter options={prioridadeOptions} selected={prioridadeFilter} onChange={setPrioridadeFilter} placeholder="Todas as prioridades" maxWidth={180} />
           <MultiSelectFilter options={sistemasOptions} selected={sistemasFilter} onChange={setSistemasFilter} placeholder="Sistemas impactados" maxWidth={190} />
+          <MultiSelectFilter options={naturezaIniciativaOptions} selected={naturezaIniciativaFilter} onChange={setNaturezaIniciativaFilter} placeholder="Natureza Iniciativa" maxWidth={180} />
+          <MultiSelectFilter options={issuetypeOptions} selected={issuetypeFilter} onChange={setIssuetypeFilter} placeholder="Issue Type" maxWidth={160} />
           <label style={{
             display: 'flex', alignItems: 'center', gap: 5,
             fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',

@@ -179,3 +179,179 @@
   color: var(--text-main);
   line-height: 1.5;
 }
+
+/* Layout Toggle */
+.organograma-layout-toggle {
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.organograma-layout-toggle .toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.organograma-layout-toggle .toggle-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.organograma-layout-toggle .toggle-btn.active {
+  border-color: var(--org-accent);
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--org-accent);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+/* Circular Layout */
+.organograma-circular-container {
+  position: relative;
+  width: 100%;
+  min-height: 800px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.01);
+  padding: 40px;
+  overflow: visible;
+}
+
+.organograma-circular-svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 700px;
+  height: 700px;
+  pointer-events: none;
+}
+
+.organograma-circular-line {
+  stroke: rgba(56, 189, 248, 0.2);
+  stroke-width: 1;
+}
+
+.organograma-circular-point {
+  fill: rgba(56, 189, 248, 0.4);
+}
+
+.organograma-circular-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  text-align: center;
+  width: 140px;
+  z-index: 10;
+}
+
+.organograma-circular-card:hover {
+  transform: scale(1.1);
+  border-color: var(--org-accent);
+  box-shadow: 0 0 0 1px var(--org-accent), 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.organograma-circular-card .organograma-card-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 2px solid var(--org-accent);
+  box-shadow: 0 0 16px var(--org-accent-glow);
+  flex-shrink: 0;
+}
+
+.organograma-circular-card .organograma-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.organograma-circular-name {
+  color: var(--text-main);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.organograma-circular-squad {
+  color: var(--org-accent);
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+}
+
+.organograma-circular-card .organograma-card-badge {
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--org-accent);
+  color: var(--org-accent);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+/* Centro com logo do cliente */
+.organograma-circular-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 20;
+}
+
+.organograma-center-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 3px solid var(--org-accent);
+  box-shadow: 0 0 24px var(--org-accent-glow), inset 0 0 24px rgba(56, 189, 248, 0.1);
+  flex-shrink: 0;
+}
+
+.organograma-center-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+}
+
+.organograma-center-text {
+  color: var(--text-main);
+  text-align: center;
+  max-width: 140px;
+  letter-spacing: 0.02em;
+}

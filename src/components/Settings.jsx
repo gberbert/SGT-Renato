@@ -28,7 +28,7 @@ import {
   subscribeToAISettings,
   saveAISettings,
 } from '../services/settingsService';
-import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search, ShieldCheck } from 'lucide-react';
+import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search, ShieldCheck, Download } from 'lucide-react';
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
 import WorkflowStagesModal from './WorkflowStagesModal';
 import ImportDataExcel from './ImportDataExcel';
@@ -62,6 +62,7 @@ const Settings = ({ userRole = 'admin' }) => {
   const [squads, setSquads] = useState([]);
   const [systemNameFilter, setSystemNameFilter] = useState('');
   const [systemSquadFilter, setSystemSquadFilter] = useState('');
+  const [systemNaturezaFilter, setSystemNaturezaFilter] = useState('');
 
   const [components, setComponents] = useState([]);
   const [loadingComponents, setLoadingComponents] = useState(true);
@@ -392,6 +393,155 @@ const Settings = ({ userRole = 'admin' }) => {
     if (confirm("Deseja realmente excluir este sistema?")) await deleteSystem(id);
   };
 
+  const handleExportSystems = () => {
+    const filtered = systems.filter(sys => {
+      const matchName = systemNameFilter
+        ? (sys.name || '').toLowerCase().includes(systemNameFilter.toLowerCase())
+        : true;
+      const matchSquad = systemSquadFilter
+        ? systemSquadFilter === '__none__'
+          ? !sys.squadId
+          : sys.squadId === systemSquadFilter
+        : true;
+      const matchNatureza = systemNaturezaFilter
+        ? (sys.naturezaIniciativa || sys.naturezaOperacao || '') === systemNaturezaFilter
+        : true;
+      return matchName && matchSquad && matchNatureza;
+    });
+
+    if (filtered.length === 0) {
+      alert('Nenhum sistema para exportar.');
+      return;
+    }
+
+    import('xlsx').then(({ utils: XLSXUtils, writeFile }) => {
+      // Coleta TODOS os campos presentes nos sistemas, não apenas os padrão
+      const allFieldsSet = new Set();
+      filtered.forEach(sys => {
+        Object.keys(sys).forEach(key => {
+          allFieldsSet.add(key);
+        });
+      });
+
+      // Define ordem dos campos principais (mapeamento de campos internos para exibição)
+      const fieldOrder = {
+        'id': 'ID',
+        'name': 'Nome',
+        'projectId': 'ID do Projeto',
+        'grupoSuporte': 'Grupo de Suporte',
+        'squadId': 'ID da Squad',
+        'naturezaIniciativa': 'Natureza da Iniciativa',
+        'naturezaOperacao': 'Natureza da Operação',
+        'createdAt': 'Data de Criação',
+        'updatedAt': 'Data de Atualização',
+      };
+
+      // Campos principais que vão aparecer primeiro
+      const mainFieldsKeys = ['id', 'name', 'projectId', 'grupoSuporte', 'squadId', 'naturezaIniciativa', 'naturezaOperacao', 'createdAt', 'updatedAt'];
+      
+      // Campos adicionais (excluindo os principais)
+      const additionalFieldsKeys = Array.from(allFieldsSet)
+        .filter(key => !mainFieldsKeys.includes(key))
+        .sort();
+
+      const data = filtered.map(sys => {
+        const proj = projects.find(p => p.id === sys.projectId);
+        const squad = squads.find(s => s.id === sys.squadId);
+        
+        // Formata datas
+        const createdAtDate = sys.createdAt 
+          ? (typeof sys.createdAt.toDate === 'function' 
+              ? new Date(sys.createdAt.toDate()).toLocaleString('pt-BR')
+              : new Date(sys.createdAt).toLocaleString('pt-BR'))
+          : '';
+        const updatedAtDate = sys.updatedAt 
+          ? (typeof sys.updatedAt.toDate === 'function'
+              ? new Date(sys.updatedAt.toDate()).toLocaleString('pt-BR')
+              : new Date(sys.updatedAt).toLocaleString('pt-BR'))
+          : '';
+        
+        const row = {};
+
+        // Preenche campos principais
+        mainFieldsKeys.forEach(key => {
+          if (allFieldsSet.has(key)) {
+            const displayKey = fieldOrder[key] || key;
+            if (key === 'id') row[displayKey] = sys.id || '';
+            else if (key === 'name') row[displayKey] = sys.name || '';
+            else if (key === 'projectId') row[displayKey] = sys.projectId || '';
+            else if (key === 'grupoSuporte') row[displayKey] = sys.grupoSuporte || '';
+            else if (key === 'squadId') row[displayKey] = sys.squadId || '';
+            else if (key === 'naturezaIniciativa') row[displayKey] = sys.naturezaIniciativa || '';
+            else if (key === 'naturezaOperacao') row[displayKey] = sys.naturezaOperacao || '';
+            else if (key === 'createdAt') row[displayKey] = createdAtDate;
+            else if (key === 'updatedAt') row[displayKey] = updatedAtDate;
+          }
+        });
+
+        // Adiciona resolução de nomes para Projeto e Squad (colunas informativas)
+        row['Projeto'] = proj ? proj.name : '';
+        row['Squad'] = squad ? squad.name : '';
+
+        // Preenche campos adicionais dinamicamente
+        additionalFieldsKeys.forEach(field => {
+          const value = sys[field];
+          if (value === undefined || value === null) {
+            row[field] = '';
+          } else if (value instanceof Object && typeof value.toDate === 'function') {
+            row[field] = new Date(value.toDate()).toLocaleString('pt-BR');
+          } else if (Array.isArray(value)) {
+            row[field] = JSON.stringify(value);
+          } else if (typeof value === 'object') {
+            row[field] = JSON.stringify(value);
+          } else {
+            row[field] = String(value);
+          }
+        });
+
+        return row;
+      });
+
+      // Monta lista de headers na ordem correta
+      const finalHeaders = [];
+      mainFieldsKeys.forEach(key => {
+        if (allFieldsSet.has(key)) {
+          finalHeaders.push(fieldOrder[key] || key);
+        }
+      });
+      // Adiciona colunas informativas (Projeto e Squad)
+      finalHeaders.push('Projeto', 'Squad');
+      // Adiciona campos adicionais ao final
+      additionalFieldsKeys.forEach(field => {
+        finalHeaders.push(field);
+      });
+
+      const ws = XLSXUtils.json_to_sheet(data, { header: finalHeaders });
+
+      // Define largura das colunas automaticamente
+      ws['!cols'] = finalHeaders.map(h => {
+        if (h === 'Nome' || h === 'name') return { wch: 45 };
+        if (h === 'Projeto' || h === 'ID do Projeto') return { wch: 35 };
+        if (h === 'Grupo de Suporte' || h === 'grupoSuporte') return { wch: 28 };
+        if (h === 'Squad' || h === 'ID da Squad') return { wch: 25 };
+        if (h.includes('Data') || h.includes('data')) return { wch: 25 };
+        if (h.includes('ID') || h.includes('id')) return { wch: 26 };
+        return { wch: 20 };
+      });
+
+      const wb = XLSXUtils.book_new();
+      XLSXUtils.book_append_sheet(wb, ws, 'Sistemas');
+
+      const filename = `sistemas_export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      writeFile(wb, filename);
+      
+      // Feedback ao usuário
+      alert(`Exportação realizada com sucesso!\n${filtered.length} sistema(s) exportado(s) com ${finalHeaders.length} coluna(s).`);
+    }).catch(err => {
+      console.error('Erro ao exportar XLSX:', err);
+      alert('Erro ao exportar arquivo. Verifique o console.');
+    });
+  };
+
   const openNewComponentModal = () => {
     setComponentData({ name: '' });
     setIsComponentModalOpen(true);
@@ -719,7 +869,12 @@ const Settings = ({ userRole = 'admin' }) => {
             <Tabs.Content value="systems">
               <Flex justify="between" align="center" mb="4">
                 <Text as="h2" size="4" weight="bold">Sistemas</Text>
-                <Button size="2" onClick={openNewSystemModal}>Novo Sistema</Button>
+                <Flex gap="2">
+                  <Button size="2" variant="soft" color="gray" onClick={handleExportSystems} disabled={loadingSystems}>
+                    <Download size={14} /> Exportar XLSX
+                  </Button>
+                  <Button size="2" onClick={openNewSystemModal}>Novo Sistema</Button>
+                </Flex>
               </Flex>
 
               {/* Filtro por nome */}
@@ -740,6 +895,67 @@ const Settings = ({ userRole = 'admin' }) => {
                   </Button>
                 )}
               </Flex>
+
+              {/* Filtro por Natureza da Iniciativa — cards */}
+              {(() => {
+                const naturezaValues = Array.from(new Set(
+                  systems
+                    .map(s => s.naturezaIniciativa || s.naturezaOperacao)
+                    .filter(v => v)
+                )).sort();
+
+                return naturezaValues.length > 0 ? (
+                  <Box mb="4">
+                    <Text size="1" weight="bold" color="gray" mb="2" style={{ display: 'block', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                      Filtrar por Natureza da Iniciativa
+                    </Text>
+                    <Flex gap="2" wrap="wrap">
+                      {naturezaValues.map(natureza => {
+                        const isActive = systemNaturezaFilter === natureza;
+                        return (
+                          <button
+                            key={natureza}
+                            type="button"
+                            onClick={() => setSystemNaturezaFilter(isActive ? '' : natureza)}
+                            style={{
+                              padding: '4px 12px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              border: isActive ? '1.5px solid var(--accent-9)' : '1.5px solid var(--gray-6)',
+                              background: isActive ? 'var(--accent-3)' : 'var(--gray-2)',
+                              color: isActive ? 'var(--accent-11)' : 'var(--gray-11)',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {natureza}
+                          </button>
+                        );
+                      })}
+                      {systemNaturezaFilter && (
+                        <button
+                          type="button"
+                          onClick={() => setSystemNaturezaFilter('')}
+                          style={{
+                            padding: '4px 12px',
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            border: '1.5px solid var(--gray-5)',
+                            background: 'transparent',
+                            color: 'var(--gray-9)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          × Limpar natureza
+                        </button>
+                      )}
+                    </Flex>
+                  </Box>
+                ) : null;
+              })()}
 
               {/* Filtro por Squad — cards */}
               {squads.length > 0 && (
@@ -818,19 +1034,22 @@ const Settings = ({ userRole = 'admin' }) => {
               )}
 
               {loadingSystems ? <Loader2 className="spinner-icon" /> : (
-                <>
-                  {(() => {
-                    const filtered = systems.filter(sys => {
-                      const matchName = systemNameFilter
-                        ? (sys.name || '').toLowerCase().includes(systemNameFilter.toLowerCase())
-                        : true;
-                      const matchSquad = systemSquadFilter
-                        ? systemSquadFilter === '__none__'
-                          ? !sys.squadId
-                          : sys.squadId === systemSquadFilter
-                        : true;
-                      return matchName && matchSquad;
-                    });
+                  <>
+                    {(() => {
+                      const filtered = systems.filter(sys => {
+                        const matchName = systemNameFilter
+                          ? (sys.name || '').toLowerCase().includes(systemNameFilter.toLowerCase())
+                          : true;
+                        const matchSquad = systemSquadFilter
+                          ? systemSquadFilter === '__none__'
+                            ? !sys.squadId
+                            : sys.squadId === systemSquadFilter
+                          : true;
+                        const matchNatureza = systemNaturezaFilter
+                          ? (sys.naturezaIniciativa || sys.naturezaOperacao || '') === systemNaturezaFilter
+                          : true;
+                        return matchName && matchSquad && matchNatureza;
+                      });
                     return (
                       <>
                         <Text size="1" color="gray" mb="2" style={{ display: 'block' }}>

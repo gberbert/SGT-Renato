@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subscribeToUsers } from '../services/settingsService';
+import { subscribeToProjects } from '../services/projectService';
 import { Box, Flex, Text, Dialog } from '@radix-ui/themes';
-import { User, X } from 'lucide-react';
+import { User, X, Grid3x3, Circle } from 'lucide-react';
 import './Organograma.css';
 
 function getUserLabel(u) {
@@ -42,6 +43,9 @@ const Organograma = () => {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [selectedSquadId, setSelectedSquadId] = useState(null);
+  const [layoutMode, setLayoutMode] = useState('grid'); // 'grid' or 'circular'
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
   useEffect(() => {
     const q = query(collection(db, 'squads'), orderBy('createdAt', 'desc'));
@@ -63,6 +67,17 @@ const Organograma = () => {
     const unsub = subscribeToUsers((data) => {
       setUsers(data || []);
       setLoadingUsers(false);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeToProjects((data) => {
+      setProjects(data || []);
+      setLoadingProjects(false);
+    }, (err) => {
+      console.error(err);
+      setLoadingProjects(false);
     });
     return () => unsub();
   }, []);
@@ -127,7 +142,11 @@ const Organograma = () => {
       .sort((a, b) => b.members.length - a.members.length || a.role.localeCompare(b.role, 'pt-BR'));
   }, [selectedSquad]);
 
-  const isLoading = loadingSquads || loadingUsers;
+  const isLoading = loadingSquads || loadingUsers || loadingProjects;
+
+  const firstProject = useMemo(() => {
+    return projects.length > 0 ? projects[0] : null;
+  }, [projects]);
 
   if (isLoading) {
     return (
@@ -147,16 +166,36 @@ const Organograma = () => {
             Organograma da <span className="organograma-title-accent">Operação AMS</span>
           </Text>
         </Box>
-        <Box className="organograma-hint">
-          <Text size="2" color="gray">
-            Liderança por squad. Clique em um card para expandir e ver o time completo.
-          </Text>
-        </Box>
+        <Flex align="center" gap="2">
+          <Box className="organograma-hint">
+            <Text size="2" color="gray">
+              Liderança por squad. Clique em um card para expandir e ver o time completo.
+            </Text>
+          </Box>
+          <Flex gap="1" className="organograma-layout-toggle">
+            <button
+              type="button"
+              className={`toggle-btn ${layoutMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setLayoutMode('grid')}
+              title="Layout Grid"
+            >
+              <Grid3x3 size={18} />
+            </button>
+            <button
+              type="button"
+              className={`toggle-btn ${layoutMode === 'circular' ? 'active' : ''}`}
+              onClick={() => setLayoutMode('circular')}
+              title="Layout Circular"
+            >
+              <Circle size={18} />
+            </button>
+          </Flex>
+        </Flex>
       </Flex>
 
       {squadsSorted.length === 0 ? (
         <Text color="gray">Nenhuma squad cadastrada.</Text>
-      ) : (
+      ) : layoutMode === 'grid' ? (
         <Box className="organograma-grid">
           {squadsSorted.map((squad) => {
             const gp = squad.gpMember;
@@ -187,6 +226,97 @@ const Organograma = () => {
               </button>
             );
           })}
+        </Box>
+      ) : (
+        <Box className="organograma-circular-container">
+          <svg className="organograma-circular-svg" viewBox="0 0 1000 1000">
+            {/* Linhas conectando squads ao centro */}
+            {squadsSorted.map((squad, index) => {
+              const angle = (index / squadsSorted.length) * 360 * (Math.PI / 180);
+              const x1 = 500 + 350 * Math.cos(angle);
+              const y1 = 500 + 350 * Math.sin(angle);
+              return (
+                <line
+                  key={`line-${squad.id}`}
+                  x1="500"
+                  y1="500"
+                  x2={x1}
+                  y2={y1}
+                  className="organograma-circular-line"
+                />
+              );
+            })}
+
+            {/* Pontos de conexão */}
+            {squadsSorted.map((squad, index) => {
+              const angle = (index / squadsSorted.length) * 360 * (Math.PI / 180);
+              const x = 500 + 350 * Math.cos(angle);
+              const y = 500 + 350 * Math.sin(angle);
+              return (
+                <circle
+                  key={`point-${squad.id}`}
+                  cx={x}
+                  cy={y}
+                  r="4"
+                  className="organograma-circular-point"
+                />
+              );
+            })}
+          </svg>
+
+          {/* Squads posicionados em círculo */}
+          {squadsSorted.map((squad, index) => {
+            const gp = squad.gpMember;
+            const label = gp ? getUserLabel(gp.user) : squadDisplayName(squad);
+            const photoURL = gp?.user?.photoURL;
+            const angle = (index / squadsSorted.length) * 360 * (Math.PI / 180);
+            const radius = 350;
+            const x = 500 + radius * Math.cos(angle);
+            const y = 500 + radius * Math.sin(angle);
+
+            return (
+              <button
+                type="button"
+                key={squad.id}
+                className="organograma-circular-card"
+                style={{
+                  left: `${x / 10}%`,
+                  top: `${y / 10}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+                onClick={() => setSelectedSquadId(squad.id)}
+              >
+                <Box className="organograma-card-avatar">
+                  {photoURL ? (
+                    <img src={photoURL} alt={label} />
+                  ) : (
+                    <User size={28} />
+                  )}
+                </Box>
+                <Text as="div" weight="bold" size="2" className="organograma-circular-name">
+                  {gp ? getUserLabel(gp.user) : 'Sem GP definido'}
+                </Text>
+                <Text as="div" weight="bold" size="1" className="organograma-circular-squad">
+                  {squadDisplayName(squad)}
+                </Text>
+                <Box className="organograma-card-badge">{squadBadge(squad)}</Box>
+              </button>
+            );
+          })}
+
+          {/* Centro com logo do cliente */}
+          <Box className="organograma-circular-center">
+            <Box className="organograma-center-logo">
+              {firstProject?.clientLogo ? (
+                <img src={firstProject.clientLogo} alt="Logo do cliente" />
+              ) : (
+                <User size={48} />
+              )}
+            </Box>
+            <Text as="div" size="2" weight="bold" className="organograma-center-text">
+              {firstProject?.clientName || 'Operação AMS'}
+            </Text>
+          </Box>
         </Box>
       )}
 

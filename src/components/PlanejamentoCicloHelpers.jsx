@@ -371,15 +371,44 @@ function fmtDateShort(val) {
   return s;
 }
 
-export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true }) {
+export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true, allTickets = [], level = 0 }) {
   const [open, setOpen] = useState(false);
+  const [expandChildren, setExpandChildren] = useState(false);
   const em = ESCOPO_META[ticket.escopo] || { color: '#6b7280', short: (ticket.escopo || '?').slice(0, 4) };
   const sc = getStatusColor(ticket.status);
   const tkey = ticket.issueKey || ticket.id;
 
+  const childTickets = useMemo(() => {
+    if (!allTickets || allTickets.length === 0) return [];
+    return allTickets.filter(t => {
+      const parentKey = t.parentKey || t.parent?.key;
+      return parentKey === tkey;
+    });
+  }, [allTickets, tkey]);
+
+  const hasChildren = childTickets.length > 0;
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, background: 'var(--color-surface)', border: '1px solid var(--gray-4)', marginBottom: 3 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: em.color, color: '#fff', flexShrink: 0, minWidth: 34, textAlign: 'center' }}>{em.short}</span>
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', paddingLeft: `${14 + level * 20}px`, borderRadius: 6, background: level > 0 ? 'rgba(99,102,241,0.04)' : 'var(--color-surface)', border: '1px solid var(--gray-4)', marginBottom: 3 }}>
+        {hasChildren ? (
+          <button
+            onClick={() => setExpandChildren(!expandChildren)}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--indigo-9)', flexShrink: 0 }}
+            title={expandChildren ? 'Colapsar filhos' : 'Expandir filhos'}
+          >
+            {expandChildren ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+        ) : (
+          <div style={{ width: 14, flexShrink: 0 }} />
+        )}
+        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: em.color, color: '#fff', flexShrink: 0, minWidth: 34, textAlign: 'center' }}>{em.short}</span>
+        {ticket.issueType && (
+          <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 6px', borderRadius: 3, background: 'rgba(107,114,128,0.2)', color: 'var(--gray-11)', flexShrink: 0, whiteSpace: 'nowrap' }} title={`Tipo: ${ticket.issueType}`}>
+            {ticket.issueType}
+          </span>
+        )}
+        {level > 0 && <span style={{ fontSize: 9, color: 'var(--gray-8)', flexShrink: 0 }}>↳</span>}
       <button
         onClick={() => onTicketClick && onTicketClick(ticket)}
         title="Ver detalhes"
@@ -498,7 +527,28 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
           </div>
         )}
       </div>
-    </div>
+      </div>
+
+      {hasChildren && expandChildren && (
+        <div>
+          {childTickets.map(childTicket => (
+            <TicketRow
+              key={childTicket.issueKey || childTicket.id}
+              ticket={childTicket}
+              cicloId={cicloId}
+              ciclos={ciclos}
+              onMoveToCiclo={onMoveToCiclo}
+              onMoveToBacklog={onMoveToBacklog}
+              onTicketClick={onTicketClick}
+              dateField={dateField}
+              showEstimativa={showEstimativa}
+              allTickets={allTickets}
+              level={level + 1}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -601,8 +651,13 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
         <div style={{ border: '1px solid var(--gray-5)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '8px 10px', background: 'var(--color-background)' }}>
           {tickets.length === 0 ? (
             <div style={{ textAlign: 'center', color: 'var(--gray-9)', fontSize: 13, padding: '16px 0' }}>Nenhum ticket neste ciclo</div>
-          ) : (
-            tickets.map(t => (
+          ) : (() => {
+            const ticketKeySet = new Set(tickets.map(t => t.issueKey || t.id));
+            const rootTickets = tickets.filter(t => {
+              const parentKey = t.parentKey || t.parent?.key;
+              return !parentKey || !ticketKeySet.has(parentKey);
+            });
+            return rootTickets.map(t => (
               <TicketRow
                 key={t.issueKey || t.id}
                 ticket={t}
@@ -613,9 +668,11 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
                 onTicketClick={onTicketClick}
                 dateField={dateField}
                 showEstimativa={showEstimativa}
+                allTickets={tickets}
+                level={0}
               />
-            ))
-          )}
+            ));
+          })()}
         </div>
       )}
     </div>
