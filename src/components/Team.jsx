@@ -46,16 +46,23 @@ const clearStyle = {
   color: "var(--red-10)", fontSize: 11, cursor: "pointer",
 };
 
-function StatCard({ count, label, badgeText, color }) {
+function StatCard({ count, label, badgeText, color, onClick, active }) {
   const col = color || "indigo";
   return (
-    <div style={{
-      minWidth: 120,
-      background: `var(--${col}-2)`, border: `1px solid var(--${col}-6)`,
-      borderRadius: 10, padding: "10px 14px 8px",
-      display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2,
-    }}>
-      <span style={{ fontSize: 32, fontWeight: 900, lineHeight: 1, color: "var(--gray-12)" }}>{count}</span>
+    <div
+      onClick={onClick}
+      style={{
+        minWidth: 120,
+        background: active ? `var(--${col}-4)` : `var(--${col}-2)`,
+        border: active ? `2px solid var(--${col}-9)` : `1px solid var(--${col}-6)`,
+        borderRadius: 10, padding: active ? "9px 13px 7px" : "10px 14px 8px",
+        display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2,
+        cursor: onClick ? "pointer" : "default",
+        transition: "all 0.15s",
+        boxShadow: active ? `0 0 0 3px var(--${col}-4)` : "none",
+      }}
+    >
+      <span style={{ fontSize: 32, fontWeight: 900, lineHeight: 1, color: active ? `var(--${col}-11)` : "var(--gray-12)" }}>{count}</span>
       <span style={{ fontSize: 11, fontWeight: 500, color: "var(--gray-10)", lineHeight: 1.3, marginBottom: 4 }}>
         {label}
       </span>
@@ -208,16 +215,34 @@ export default function Team({ currentUser }) {
     return true;
   }), [userSearchTerm, usersSorted, selectedSquads, membership, selectedStatuses, selectedContracts, selectedFoundations]);
 
+  // Breakdown for stat cards: use all filters EXCEPT contract so cards always stay visible
+  const usersFilteredNoContract = useMemo(() => usersSorted.filter((u) => {
+    const term = userSearchTerm.trim().toLowerCase();
+    if (term) {
+      const label = getUserLabel(u).toLowerCase();
+      const id = (u?.id || "").toLowerCase();
+      if (!label.includes(term) && !id.includes(term)) return false;
+    }
+    if (selectedSquads.size > 0) {
+      const sq = membership.get(u.id) || new Set();
+      if (![...selectedSquads].some((sid) => sq.has(sid))) return false;
+    }
+    if (selectedStatuses.size > 0 && !selectedStatuses.has(u?.status || "")) return false;
+    if (selectedFoundations.size > 0 && !selectedFoundations.has(u?.foundation || "")) return false;
+    return true;
+  }), [userSearchTerm, usersSorted, selectedSquads, membership, selectedStatuses, selectedFoundations]);
+
   const contratoBreakdown = useMemo(() => {
     const map = {};
-    for (const u of usersFiltered) {
+    for (const u of usersFilteredNoContract) {
       const c = u?.contract || "—";
       map[c] = (map[c] || 0) + 1;
     }
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [usersFiltered]);
+  }, [usersFilteredNoContract]);
 
   const totalMembros = usersFiltered.length;
+  const totalMembrosNoContract = usersFilteredNoContract.length;
 
   if (loadingSquads || loadingUsers) {
     return (
@@ -249,7 +274,14 @@ export default function Team({ currentUser }) {
                   {totalMembros} membro{totalMembros !== 1 ? "s" : ""} exibido{totalMembros !== 1 ? "s" : ""}
                 </Text>
               </div>
-              <StatCard count={totalMembros} label="Total de Membros" badgeText="TODOS" color="indigo" />
+              <StatCard
+                count={selectedContracts.size === 0 ? totalMembrosNoContract : totalMembros}
+                label="Total de Membros"
+                badgeText="TODOS"
+                color="indigo"
+                active={selectedContracts.size === 0}
+                onClick={() => setSelectedContracts(new Set())}
+              />
               {contratoBreakdown.map(([contract, count]) => (
                 <StatCard
                   key={contract}
@@ -257,6 +289,8 @@ export default function Team({ currentUser }) {
                   label={contract === "—" ? "Sem contrato" : contract}
                   badgeText={contract === "—" ? "N/A" : contract.toUpperCase().slice(0, 14)}
                   color={contractColor(contract)}
+                  active={selectedContracts.has(contract)}
+                  onClick={() => makeToggle(setSelectedContracts)(contract)}
                 />
               ))}
             </div>
