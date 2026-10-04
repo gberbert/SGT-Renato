@@ -57,7 +57,7 @@ async function migrateSquadRoles() {
     ];
 
     const batch = writeBatch(db);
-    const rolesColl = collection(db, 'squadRoles');
+    const rolesColl = collection(db, 'squadroles');
 
     // Verificar se já existem papéis
     const existing = await getDocs(rolesColl);

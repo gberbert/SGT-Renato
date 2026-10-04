@@ -6,8 +6,8 @@ import { subscribeToUsers } from "../services/settingsService";
 import { Card, Flex, Text, TextField } from "@radix-ui/themes";
 import { Edit2, Eye, Filter, BarChart3 } from "lucide-react";
 import UserDetailsModal from "./UserDetailsModal";
-import TeamCapacityModal from "./TeamCapacityModal";
 import CalendarBase from "./CalendarBase";
+import TeamCapacityGrid from "./TeamCapacityGrid";
 import { STATUS_OPTIONS, CONTRATO_OPTIONS, FOUNDATION_OPTIONS } from "../utils/userFieldOptions";
 
 function safe(v) {
@@ -122,7 +122,6 @@ export default function Team({ currentUser }) {
   const [selectedFoundations, setSelectedFoundations] = useState(new Set());
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [capacityModalOpen, setCapacityModalOpen] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "squads"), orderBy("createdAt", "desc"));
@@ -147,6 +146,22 @@ export default function Team({ currentUser }) {
         if (!uid) continue;
         if (!map.has(uid)) map.set(uid, new Set());
         map.get(uid).add(squad.id);
+      }
+    }
+    return map;
+  }, [squads]);
+
+  // userId → [{ squadId, squadName, role }]
+  const membershipRoles = useMemo(() => {
+    const map = new Map();
+    for (const squad of squads || []) {
+      if (!squad?.id) continue;
+      for (const member of (Array.isArray(squad.users) ? squad.users : [])) {
+        const uid = typeof member === 'string' ? member : member?.id;
+        const role = typeof member === 'string' ? '' : (member?.role || '');
+        if (!uid) continue;
+        if (!map.has(uid)) map.set(uid, []);
+        map.get(uid).push({ squadId: squad.id, squadName: squad.name || squad.key || squad.sigla || squad.id, role });
       }
     }
     return map;
@@ -219,12 +234,6 @@ export default function Team({ currentUser }) {
         onOpenChange={setUserModalOpen}
         user={selectedUser}
         currentUser={currentUser}
-      />
-
-      <TeamCapacityModal
-        open={capacityModalOpen}
-        onOpenChange={setCapacityModalOpen}
-        users={usersFiltered}
       />
 
       <div className="view-content" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -430,21 +439,20 @@ export default function Team({ currentUser }) {
               <thead>
                 <tr>
                   <th style={TH}>Nome</th>
-                  <th style={TH}>Email</th>
-                  <th style={TH}>Cidade</th>
-                  <th style={{ ...TH, width: 48 }}>UF</th>
-                  <th style={TH}>Nascimento</th>
                   <th style={TH}>Status</th>
+                  <th style={TH}>Squad</th>
+                  <th style={TH}>Papel na Squad</th>
                   <th style={TH}>Contrato</th>
                   <th style={TH}>Foundation</th>
-                  <th style={TH}>Squads</th>
+                  <th style={TH}>Nascimento</th>
+                  <th style={TH}>Email</th>
                   <th style={{ ...TH, textAlign: "right" }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {usersFiltered.length === 0 && (
                   <tr>
-                    <td colSpan={10} style={{ ...TD, textAlign: "center", color: "var(--gray-8)", padding: "32px" }}>
+                    <td colSpan={9} style={{ ...TD, textAlign: "center", color: "var(--gray-8)", padding: "32px" }}>
                       Nenhum membro encontrado.
                     </td>
                   </tr>
@@ -459,27 +467,37 @@ export default function Team({ currentUser }) {
                       <td style={TD}>
                         <div style={{ fontWeight: 600, color: "var(--gray-12)" }}>{getUserLabel(u)}</div>
                       </td>
-                      {/* Email */}
-                      <td style={TD}>
-                        <span style={{ fontSize: 12, color: "var(--gray-10)" }}>{u?.email || "—"}</span>
-                      </td>
-                      {/* Cidade */}
-                      <td style={TD}>
-                        <span style={{ fontSize: 12, color: "var(--gray-11)" }}>{u?.cidade || "—"}</span>
-                      </td>
-                      {/* UF */}
-                      <td style={{ ...TD, textAlign: "center" }}>
-                        {u?.uf
-                          ? <span style={{ fontSize: 11, fontWeight: 700, color: "var(--gray-11)" }}>{u.uf}</span>
-                          : <span style={{ color: "var(--gray-7)" }}>—</span>}
-                      </td>
-                      {/* Nascimento */}
-                      <td style={TD}>
-                        <span style={{ fontSize: 12, color: "var(--gray-10)" }}>{formatDate(u?.dataNascimento)}</span>
-                      </td>
                       {/* Status */}
                       <td style={TD}>
                         <Badge label={u?.status || "—"} color={statusColor(u?.status)} />
+                      </td>
+                      {/* Squad */}
+                      <td style={TD}>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {userSquads.length === 0
+                            ? <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>
+                            : userSquads.map((sq) => (
+                              <Badge key={sq.id} label={squadBadge(sq)} color="cyan" />
+                            ))}
+                        </div>
+                      </td>
+                      {/* Papel na Squad */}
+                      <td style={TD}>
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {(membershipRoles.get(u.id) || []).length === 0
+                            ? <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>
+                            : (membershipRoles.get(u.id) || []).map((r, i) => (
+                              <span key={i} style={{
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                                padding: "2px 8px", borderRadius: 999, fontSize: 11,
+                                fontWeight: 600, whiteSpace: "nowrap",
+                                background: "var(--indigo-3)", border: "1px solid var(--indigo-7)", color: "var(--indigo-11)",
+                              }}>
+                                <span style={{ fontWeight: 700, color: "var(--cyan-11)" }}>{r.squadName}</span>
+                                {r.role ? <span style={{ color: "var(--gray-10)" }}>· {r.role}</span> : null}
+                              </span>
+                            ))}
+                        </div>
                       </td>
                       {/* Contrato */}
                       <td style={TD}>
@@ -489,15 +507,13 @@ export default function Team({ currentUser }) {
                       <td style={TD}>
                         <Badge label={u?.foundation || "—"} color="violet" />
                       </td>
-                      {/* Squads */}
+                      {/* Nascimento */}
                       <td style={TD}>
-                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                          {userSquads.length === 0
-                            ? <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>
-                            : userSquads.map((sq) => (
-                              <Badge key={sq.id} label={squadBadge(sq)} color="cyan" />
-                            ))}
-                        </div>
+                        <span style={{ fontSize: 12, color: "var(--gray-10)" }}>{formatDate(u?.dataNascimento)}</span>
+                      </td>
+                      {/* Email */}
+                      <td style={TD}>
+                        <span style={{ fontSize: 12, color: "var(--gray-10)" }}>{u?.email || "—"}</span>
                       </td>
                       {/* Ações */}
                       <td style={{ ...TD, textAlign: "right" }}>
@@ -525,41 +541,44 @@ export default function Team({ currentUser }) {
 
         {/* TEAM CAPACITY TAB */}
         {activeTab === "capacity" && (
-          <Card size="4" style={{ marginTop: 0 }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={TH}>Nome</th>
-                    <th style={TH}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usersFiltered.length === 0 && (
-                    <tr>
-                      <td colSpan={2} style={{ ...TD, textAlign: "center", color: "var(--gray-8)", padding: "32px" }}>
-                        Nenhum membro encontrado.
-                      </td>
-                    </tr>
-                  )}
-                  {usersFiltered.map((u) => (
-                    <tr key={u.id} style={{ cursor: "pointer" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                      {/* Nome */}
-                      <td style={TD}>
-                        <div style={{ fontWeight: 600, color: "var(--gray-12)" }}>{getUserLabel(u)}</div>
-                      </td>
-                      {/* Status */}
-                      <td style={TD}>
-                        <Badge label={u?.status || "—"} color={statusColor(u?.status)} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <TeamCapacityGrid
+            usersFiltered={usersFiltered.map((u) => {
+              // Enrich squadRoles: resolve squad name from squadById when missing,
+              // fall back to membership map (same source as TEAM tab) when no squadRoles
+              let roles = (u.squadRoles || []).filter((r) => r.squad || r.squadId);
+
+              // Patch missing squad names using squadById
+              roles = roles.map((r) => ({
+                ...r,
+                squad:
+                  r.squad ||
+                  squadById[r.squadId]?.name ||
+                  squadById[r.squadId]?.key ||
+                  squadById[r.squadId]?.sigla ||
+                  r.squadId ||
+                  "—",
+              }));
+
+              // If still empty, build from membership (same logic as TEAM tab)
+              if (roles.length === 0) {
+                const memberSquadIds = [...(membership.get(u.id) || [])];
+                roles = memberSquadIds.map((sid) => ({
+                  squadId: sid,
+                  squad:
+                    squadById[sid]?.name ||
+                    squadById[sid]?.key ||
+                    squadById[sid]?.sigla ||
+                    sid,
+                  squadRole: "—",
+                  squadRoleId: sid,
+                }));
+              }
+
+              return { ...u, squadRoles: roles };
+            })}
+            squadById={squadById}
+            membership={membership}
+          />
         )}
 
         {/* CALENDAR TAB */}

@@ -1000,7 +1000,7 @@ exports.seedSquadRoles = onCall({
 
         for (const role of SQUAD_ROLES) {
             const docId = role.name.toLowerCase().replace(/\s+/g, "_");
-            const ref = db.collection("squadRoles").doc(docId);
+            const ref = db.collection("squadroles").doc(docId);
             const existing = await ref.get();
 
             if (existing.exists) {

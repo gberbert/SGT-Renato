@@ -27,6 +27,9 @@ import {
   deleteAutomation,
   subscribeToAISettings,
   saveAISettings,
+  subscribeToSquadRoles,
+  saveSquadRole,
+  deleteSquadRole,
 } from '../services/settingsService';
 import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search, ShieldCheck, Download } from 'lucide-react';
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
@@ -42,7 +45,6 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { writeBatch, doc } from 'firebase/firestore';
 import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
-import { subscribeToSquadRoles, saveSquadRole, deleteSquadRole } from '../services/squadRolesService';
 
 const Settings = ({ userRole = 'admin' }) => {
   const [searchParams] = useSearchParams();

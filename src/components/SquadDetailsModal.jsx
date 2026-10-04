@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Button, Flex, Text, Box, Table, Checkbox, IconButton, Select, TextField } from '@radix-ui/themes';
-import { Loader2, Trash2, Box as BoxIcon } from 'lucide-react';
+import { Loader2, Trash2, Search } from 'lucide-react';
 import { updateSquad, deleteSquad } from '../services/squadService';
 import { subscribeToUsers, subscribeToSystems } from '../services/settingsService';
+import { subscribeToSquadRoles } from '../services/settingsService';
 import { SQUAD_ROLE_OPTIONS } from '../utils/userFieldOptions';
 
 const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
   const [users, setUsers] = useState([]);
   const [systems, setSystems] = useState([]);
+  const [squadRoles, setSquadRoles] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   
   const parseUsers = (uArray) => {
@@ -21,6 +23,8 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
   const [squadSystemIds, setSquadSystemIds] = useState(squad.systemIds || (squad.systemId ? [squad.systemId] : []));
   const [squadLeaderId, setSquadLeaderId] = useState(squad.leaderId || '');
   const [saving, setSaving] = useState(false);
+  const [systemSearch, setSystemSearch] = useState('');
+  const [memberSearch, setMemberSearch] = useState('');
 
   useEffect(() => {
     setSquadName(squad.name || '');
@@ -39,9 +43,13 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
     const unsubSystems = subscribeToSystems((data) => {
       setSystems(data);
     });
+    const unsubRoles = subscribeToSquadRoles((data) => {
+      setSquadRoles(data.sort((a, b) => (a.order || 0) - (b.order || 0)));
+    });
     return () => {
       unsubUsers();
       unsubSystems();
+      unsubRoles();
     };
   }, [isOpen]);
 
@@ -88,7 +96,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Content className="ticket-modal" maxWidth="600px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <Dialog.Content className="ticket-modal" maxWidth="920px" style={{ width: '92vw' }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <Flex justify="between" align="center" mb="4">
           <Dialog.Title style={{ marginBottom: 0 }}>Gestão da Squad</Dialog.Title>
           {userRole === 'admin' && (
@@ -138,11 +146,23 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
 
         <Flex gap="4" align="center" mb="4">
           <Box style={{ flex: 1 }}>
-            <Text weight="bold" size="2" mb="1" as="div">Sistemas Associados</Text>
+            <Flex justify="between" align="center" mb="1">
+              <Text weight="bold" size="2" as="div">Sistemas Associados</Text>
+              <Box style={{ position: 'relative', width: '200px' }}>
+                <Search size={13} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-9)', pointerEvents: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar sistema..."
+                  value={systemSearch}
+                  onChange={e => setSystemSearch(e.target.value)}
+                  style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '4px', paddingBottom: '4px', fontSize: '12px', border: '1px solid var(--gray-6)', borderRadius: '4px', background: 'var(--color-surface)', color: 'inherit', boxSizing: 'border-box' }}
+                />
+              </Box>
+            </Flex>
             <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid var(--gray-6)', padding: '8px', borderRadius: '4px' }}>
               {systems.length === 0 ? <Text size="1" color="gray">Nenhum sistema cadastrado.</Text> : (
                 <Flex direction="column" gap="2">
-                  {systems.map(sys => (
+                  {systems.filter(sys => !systemSearch || sys.name?.toLowerCase().includes(systemSearch.toLowerCase())).map(sys => (
                     <label key={sys.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input 
                         type="checkbox" 
@@ -166,9 +186,21 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
         </Flex>
 
         <Box mb="4">
-          <Text weight="bold" size="3" mb="2" as="div">Membros ({squadUsers.length})</Text>
+          <Flex justify="between" align="center" mb="2">
+            <Text weight="bold" size="3" as="div">Membros ({squadUsers.length})</Text>
+            <Box style={{ position: 'relative', width: '240px' }}>
+              <Search size={13} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-9)', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                placeholder="Buscar membro ou e-mail..."
+                value={memberSearch}
+                onChange={e => setMemberSearch(e.target.value)}
+                style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '5px', paddingBottom: '5px', fontSize: '13px', border: '1px solid var(--gray-6)', borderRadius: '4px', background: 'var(--color-surface)', color: 'inherit', boxSizing: 'border-box' }}
+              />
+            </Box>
+          </Flex>
           {loadingUsers ? <Loader2 className="spinner-icon" /> : (
-            <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-3)' }}>
+            <div style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-3)' }}>
               <Table.Root size="1">
                 <Table.Header>
                   <Table.Row>
@@ -179,7 +211,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {users.map(u => {
+                  {users.filter(u => !memberSearch || (u.displayName || u.shortName || '').toLowerCase().includes(memberSearch.toLowerCase()) || (u.email || '').toLowerCase().includes(memberSearch.toLowerCase())).map(u => {
                     const memberObj = squadUsers.find(su => su.id === u.id);
                     const isMember = !!memberObj;
                     return (
@@ -206,9 +238,15 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
                             >
                               <Select.Trigger style={{ width: '130px' }} />
                               <Select.Content>
-                                {SQUAD_ROLE_OPTIONS.map(role => (
-                                  <Select.Item key={role} value={role}>{role}</Select.Item>
-                                ))}
+                                {squadRoles.length > 0 ? (
+                                  squadRoles.map(role => (
+                                    <Select.Item key={role.id} value={role.name}>{role.name}</Select.Item>
+                                  ))
+                                ) : (
+                                  SQUAD_ROLE_OPTIONS.map(role => (
+                                    <Select.Item key={role} value={role}>{role}</Select.Item>
+                                  ))
+                                )}
                               </Select.Content>
                             </Select.Root>
                           ) : (

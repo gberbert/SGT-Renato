@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Flex, Text, Button, Card } from '@radix-ui/themes';
 import { X, Plus, Trash2, Edit2 } from 'lucide-react';
 import {
-  getSquadRoles,
-  createSquadRole,
-  updateSquadRole,
+  saveSquadRole,
   deleteSquadRole,
   subscribeToSquadRoles,
-} from '../services/squadRolesService';
+} from '../services/settingsService';
 
 const S = {
   inp: {
@@ -70,19 +68,12 @@ export default function SquadRolesManagerModal({ open, onOpenChange }) {
 
     setLoading(true);
     try {
-      if (editingId) {
-        await updateSquadRole(editingId, {
-          name: formData.name,
-          description: formData.description,
-          squadId: formData.squadId || null,
-        });
-      } else {
-        await createSquadRole({
-          name: formData.name,
-          description: formData.description,
-          squadId: formData.squadId || null,
-        });
-      }
+      await saveSquadRole({
+        id: editingId || undefined,
+        name: formData.name,
+        description: formData.description,
+        squadId: formData.squadId || null,
+      });
       setFormData({ name: '', description: '', squadId: '' });
       setEditingId(null);
     } catch (error) {

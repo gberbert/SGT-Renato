@@ -1,19 +1,19 @@
 /* eslint-disable no-console */
-import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
+import admin from "firebase-admin";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
 
-// Firebase config (same as src/firebase.js)
-const firebaseConfig = {
-  apiKey: "AIzaSyBfX9ytpF-hXsLjvu8RFWd4qUIyRC1FiRs",
-  authDomain: "sgt-renato.firebaseapp.com",
-  projectId: "sgt-renato",
-  storageBucket: "sgt-renato.firebasestorage.app",
-  messagingSenderId: "759301519468",
-  appId: "1:759301519468:web:7010dd7733a234387c4049"
-};
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SA_PATH = path.resolve(__dirname, "../Arquivos_Gerais/sgt-renato-firebase-adminsdk-fbsvc-2c3d1c9c2c.json");
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app, "default");
+const serviceAccount = JSON.parse(readFileSync(SA_PATH, "utf8"));
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  projectId: "sgt-renato"
+});
+
+const db = admin.firestore();
 
 const SQUAD_ROLES = [
   { name: "Arquiteto", description: "Responsável pela arquitetura e design de soluções", order: 1 },
@@ -28,8 +28,7 @@ async function seedSquadRoles() {
 
   try {
     // Check if roles already exist
-    const q = query(collection(db, "squadRoles"), orderBy("order", "asc"));
-    const snapshot = await getDocs(q);
+    const snapshot = await db.collection("squadroles").orderBy("order", "asc").get();
     
     if (snapshot.size > 0) {
       console.log(`[seed_squad_roles] Found ${snapshot.size} existing roles. Skipping seed.`);
@@ -46,13 +45,12 @@ async function seedSquadRoles() {
         name: role.name,
         description: role.description,
         order: role.order,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
       console.log(`[seed_squad_roles] Creating role: ${role.name}...`);
-      const ref = doc(db, "squadRoles", docId);
-      await setDoc(ref, roleDoc);
+      await db.collection("squadroles").doc(docId).set(roleDoc);
     }
 
     console.log("[seed_squad_roles] Successfully seeded all squad roles.");

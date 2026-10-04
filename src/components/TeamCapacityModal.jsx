@@ -473,6 +473,9 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
                   <thead>
                     <tr>
                       <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>Membro</th>
+                      <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>Status</th>
+                      <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>Squad</th>
+                      <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>Papel na Squad</th>
                       {allocationTypes.map((alloc) => (
                         <th key={alloc.key} style={{ padding: "8px", textAlign: "center", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>
                           {alloc.label}
@@ -483,7 +486,7 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
                   <tbody>
                     {users.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ padding: "16px", textAlign: "center", color: "var(--gray-9)" }}>
+                        <td colSpan={9} style={{ padding: "16px", textAlign: "center", color: "var(--gray-9)" }}>
                           Nenhum membro selecionado
                         </td>
                       </tr>
@@ -492,6 +495,15 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
                         <tr key={user.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                           <td style={{ padding: "8px", fontWeight: 500 }}>
                             {user.displayName || user.name || user.email}
+                          </td>
+                          <td style={{ padding: "8px", fontSize: 11, color: "var(--gray-11)" }}>
+                            {user.status || "—"}
+                          </td>
+                          <td style={{ padding: "8px", fontSize: 11, color: "var(--gray-11)" }}>
+                            {user.squad || "—"}
+                          </td>
+                          <td style={{ padding: "8px", fontSize: 11, color: "var(--gray-11)" }}>
+                            {user.squadRole || user.papelNaSquad || "—"}
                           </td>
                           {allocationTypes.map((alloc) => (
                             <td key={alloc.key} style={{ padding: "8px", textAlign: "center" }}>

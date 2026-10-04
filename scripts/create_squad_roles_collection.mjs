@@ -65,7 +65,7 @@ async function createSquadRolesCollection() {
 
   try {
     // Check if collection exists and has data
-    const snapshot = await db.collection("squadRoles").get();
+    const snapshot = await db.collection("squadroles").get();
     
     if (snapshot.size > 0) {
       console.log(`[create_squad_roles_collection] Found ${snapshot.size} existing roles. Skipping creation.`);
@@ -75,7 +75,7 @@ async function createSquadRolesCollection() {
       return;
     }
 
-    console.log("[create_squad_roles_collection] Creating squadRoles collection with default roles...");
+    console.log("[create_squad_roles_collection] Creating squadroles collection with default roles...");
 
     // Create each role
     for (const role of SQUAD_ROLES) {
@@ -89,7 +89,7 @@ async function createSquadRolesCollection() {
       };
 
       console.log(`[create_squad_roles_collection] Creating role: ${role.name}...`);
-      await db.collection("squadRoles").doc(role.id).set(roleDoc);
+      await db.collection("squadroles").doc(role.id).set(roleDoc);
     }
 
     console.log("[create_squad_roles_collection] Successfully created all squad roles.");

@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../firebase';
 
@@ -78,10 +78,54 @@ export const deleteWorkflow = async (workflowId) => {
 
 export const subscribeToUsers = (callback) => {
   const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snapshot) => {
-    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(users);
+  
+  // Subscribe to users
+  const unsubscribeUsers = onSnapshot(q, (userSnapshot) => {
+    const users = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Subscribe to squadroles to enrich user data
+    const squadRolesQ = query(collection(db, 'squadroles'));
+    const unsubscribeSquadRoles = onSnapshot(squadRolesQ, (rolesSnapshot) => {
+      const squadRolesMap = new Map();
+      const userSquadRolesMap = new Map(); // Para múltiplos papéis por usuário
+      
+      rolesSnapshot.docs.forEach(doc => {
+        const roleData = doc.data();
+        if (roleData.userId) {
+          const roleEntry = {
+            squadId: roleData.squadId,
+            squad: roleData.squad,
+            squadRole: roleData.role || roleData.roleName || roleData.papelNaSquad,
+            squadRoleId: doc.id
+          };
+          
+          // Manter a primeira entrada para compatibilidade (single role)
+          if (!squadRolesMap.has(roleData.userId)) {
+            squadRolesMap.set(roleData.userId, roleEntry);
+          }
+          
+          // Manter lista de todos os papéis do usuário
+          if (!userSquadRolesMap.has(roleData.userId)) {
+            userSquadRolesMap.set(roleData.userId, []);
+          }
+          userSquadRolesMap.get(roleData.userId).push(roleEntry);
+        }
+      });
+      
+      // Enrich users with squad role data
+      const enrichedUsers = users.map(user => ({
+        ...user,
+        ...(squadRolesMap.get(user.id) || {}),
+        squadRoles: userSquadRolesMap.get(user.id) || [] // Adicionar lista de todos os papéis
+      }));
+      
+      callback(enrichedUsers);
+    });
+    
+    return () => unsubscribeSquadRoles();
   });
+  
+  return unsubscribeUsers;
 };
 
 export const updateUserRole = async (userId, newRole) => {
@@ -290,9 +334,13 @@ export const saveAISettings = async (settingsData) => {
 
 // Squad Roles Management
 export const subscribeToSquadRoles = (callback) => {
-  const q = query(collection(db, 'squadRoles'), orderBy('order', 'asc'));
+  // orderBy('order') já exclui docs sem campo order; o filtro .name garante
+  // que docs de assignment (userId/squadId) não apareçam como definições.
+  const q = query(collection(db, 'squadroles'), orderBy('order', 'asc'));
   return onSnapshot(q, (snapshot) => {
-    const roles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const roles = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(r => r.name); // apenas docs de definição de papel
     callback(roles);
   });
 };
@@ -300,15 +348,29 @@ export const subscribeToSquadRoles = (callback) => {
 export const saveSquadRole = async (roleData) => {
   try {
     if (roleData.id) {
-      const docRef = doc(db, 'squadRoles', roleData.id);
-      await updateDoc(docRef, {
-        ...roleData,
+      const docRef = doc(db, 'squadroles', roleData.id);
+      const updatePayload = {
+        name: roleData.name,
+        description: roleData.description,
         updatedAt: serverTimestamp()
-      });
+      };
+      // Preserva order quando passado explicitamente (ex: reordenação)
+      if (roleData.order !== undefined) {
+        updatePayload.order = roleData.order;
+      }
+      await updateDoc(docRef, updatePayload);
     } else {
-      await addDoc(collection(db, 'squadRoles'), {
-        ...roleData,
-        createdAt: serverTimestamp()
+      // Calcular nextOrder contando apenas docs de definição (têm campo name)
+      const allSnap = await getDocs(collection(db, 'squadroles'));
+      const defCount = allSnap.docs.filter(d => d.data().name).length;
+      const nextOrder = defCount + 1;
+
+      await addDoc(collection(db, 'squadroles'), {
+        name: roleData.name,
+        description: roleData.description || '',
+        order: nextOrder,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
     }
   } catch (error) {
@@ -319,7 +381,7 @@ export const saveSquadRole = async (roleData) => {
 
 export const deleteSquadRole = async (roleId) => {
   try {
-    await deleteDoc(doc(db, 'squadRoles', roleId));
+    await deleteDoc(doc(db, 'squadroles', roleId));
   } catch (error) {
     console.error("Erro ao excluir papel de squad:", error);
     throw error;
