@@ -17,7 +17,7 @@ export const firebaseConfig = {
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 
-// Conectar ao banco Enterprise nomeado "default" (sem parênteses)
+// Conectar ao banco Enterprise nomeado "default" do projeto
 export const db = getFirestore(app, "default");
 export const auth = getAuth(app);
 export const storage = getStorage(app);
