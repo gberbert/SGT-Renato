@@ -179,13 +179,15 @@ export default function CalendarBase() {
             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
               <span style={{
                 fontSize: "10px",
-                color: "var(--gray-9)",
-                background: "var(--green-3)",
-                border: "1px solid var(--green-6)",
+                color: "var(--violet-11)",
+                background: "var(--violet-3)",
+                border: "1px solid var(--violet-8)",
                 borderRadius: "10px",
                 padding: "1px 8px",
-                fontWeight: "600",
-                letterSpacing: "0.02em",
+                fontWeight: "700",
+                letterSpacing: "0.04em",
+                boxShadow: "0 0 8px var(--violet-9), 0 0 2px var(--violet-10)",
+                textShadow: "0 0 6px var(--violet-10)",
               }}>
                 {workingDaysCount} dias úteis · {totalHours}h
               </span>
