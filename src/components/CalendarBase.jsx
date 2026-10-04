@@ -158,6 +158,25 @@ export default function CalendarBase() {
 
   const totalHours = workingDaysCount * 8;
 
+  // Color scheme per holiday tipo
+  const getTipoColors = (tipo) => {
+    const t = tipo?.toLowerCase();
+    if (t === "nacional") return { bg: "var(--red-3)", border: "var(--red-6)", text: "var(--red-11)", dot: "var(--red-9)", sel: "var(--red-9)" };
+    if (t === "estadual" || t === "municipal") return { bg: "var(--orange-3)", border: "var(--orange-6)", text: "var(--orange-11)", dot: "var(--orange-9)", sel: "var(--orange-9)" };
+    // Evento, Recesso, etc → blue
+    return { bg: "var(--blue-3)", border: "var(--blue-6)", text: "var(--blue-11)", dot: "var(--blue-9)", sel: "var(--blue-9)" };
+  };
+
+  // Dominant color for a day cell (pick the "most important" holiday type)
+  const getDayCellColors = (holidays) => {
+    if (!holidays.length) return null;
+    const nacional = holidays.find((h) => h.tipo?.toLowerCase() === "nacional");
+    if (nacional) return getTipoColors("nacional");
+    const estadual = holidays.find((h) => ["estadual", "municipal"].includes(h.tipo?.toLowerCase()));
+    if (estadual) return getTipoColors(estadual.tipo);
+    return getTipoColors(holidays[0].tipo); // evento/recesso → blue
+  };
+
   const selectedInfo = selectedDate ? getDayInfo(selectedDate.getDate()) : null;
 
   return (
@@ -220,8 +239,8 @@ export default function CalendarBase() {
             selectedDate?.getFullYear() === currentDate.getFullYear();
 
           const isHoliday = info.holidays.length > 0;
-          const hasNacional = info.holidays.some((h) => h.tipo?.toLowerCase() === "nacional");
           const isVacation = info.vacations.length > 0;
+          const dayCellColors = getDayCellColors(info.holidays);
 
           // Background & color logic
           let bg = "transparent";
@@ -233,12 +252,12 @@ export default function CalendarBase() {
             border = "2px solid var(--indigo-9)";
           }
 
-          if (isHoliday) {
-            bg = hasNacional ? "var(--red-3)" : "var(--orange-3)";
-            textColor = hasNacional ? "var(--red-11)" : "var(--orange-11)";
-            border = `1px solid ${hasNacional ? "var(--red-6)" : "var(--orange-6)"}`;
+          if (isHoliday && dayCellColors) {
+            bg = dayCellColors.bg;
+            textColor = dayCellColors.text;
+            border = `1px solid ${dayCellColors.border}`;
             fontWeight = "700";
-            if (isSelected) border = `2px solid ${hasNacional ? "var(--red-9)" : "var(--orange-9)"}`;
+            if (isSelected) border = `2px solid ${dayCellColors.sel}`;
           } else if (isVacation) {
             bg = "var(--blue-3)";
             textColor = "var(--blue-11)";
@@ -300,9 +319,7 @@ export default function CalendarBase() {
                     width: "4px",
                     height: "4px",
                     borderRadius: "50%",
-                    background: isHoliday
-                      ? hasNacional ? "var(--red-9)" : "var(--orange-9)"
-                      : "var(--blue-9)",
+                    background: isHoliday && dayCellColors ? dayCellColors.dot : "var(--blue-9)",
                   }}
                 />
               )}
@@ -336,17 +353,19 @@ export default function CalendarBase() {
 
           {selectedInfo.holidays.length > 0 && (
             <div style={{ marginBottom: "8px" }}>
-              {selectedInfo.holidays.map((h) => (
+              {selectedInfo.holidays.map((h) => {
+                const hColors = getTipoColors(h.tipo);
+                return (
                 <div
                   key={h.id}
                   style={{
                     padding: "6px 10px",
                     borderRadius: "6px",
                     marginBottom: "4px",
-                    background: h.tipo?.toLowerCase() === "nacional" ? "var(--red-3)" : "var(--orange-3)",
-                    border: `1px solid ${h.tipo?.toLowerCase() === "nacional" ? "var(--red-6)" : "var(--orange-6)"}`,
+                    background: hColors.bg,
+                    border: `1px solid ${hColors.border}`,
                     fontSize: "12px",
-                    color: h.tipo?.toLowerCase() === "nacional" ? "var(--red-11)" : "var(--orange-11)",
+                    color: hColors.text,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -359,7 +378,8 @@ export default function CalendarBase() {
                     </span>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
