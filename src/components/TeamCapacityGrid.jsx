@@ -1,525 +1,251 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Save, RotateCcw } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Save } from "lucide-react";
 import {
-  subscribeToCapacityConfig,
-  saveCapacityConfig,
-  DEFAULT_BASE_PARAMS,
+  subscribeToCapacityConfig, saveCapacityConfig,
+  DEFAULT_BASE_PARAMS, computeCapacity,
 } from "../services/teamCapacityService";
 
-function round1(n) {
-  return Math.round((Number(n) || 0) * 10) / 10;
-}
+/* ─── helpers ─────────────────────────────────────── */
+function r1(n) { return Math.round((Number(n) || 0) * 10) / 10; }
 
-function computeMemberCapacity(workingDays, params) {
-  const wd       = Number(workingDays)    || 0;
-  const alocacao = Number(params?.alocacao ?? 100);
-  const capacityBruto         = round1(wd * 8);
-  const capacityBrutoAlocacao = round1(capacityBruto * (alocacao / 100));
-  return { capacityBruto, capacityBrutoAlocacao };
-}
-
-/** Normalize any date value (Firestore Timestamp, {seconds}, Date, string) → JS Date */
-function toDateLocal(v) {
+function toDate(v) {
   if (!v) return null;
-  if (typeof v?.toDate === "function") return v.toDate();                   // Firestore Timestamp
-  if (typeof v === "object" && typeof v.seconds === "number")
-    return new Date(v.seconds * 1000);                                       // plain {seconds,nanoseconds}
+  if (typeof v?.toDate === "function") return v.toDate();
+  if (v?.seconds) return new Date(v.seconds * 1000);
   if (v instanceof Date) return v;
-  if (typeof v === "string")
-    return new Date(v.length === 10 ? v + "T00:00:00" : v);                 // "YYYY-MM-DD" → local midnight
+  if (typeof v === "string") return new Date(v.length === 10 ? v + "T00:00:00" : v);
   return null;
 }
 
-/**
- * Compute jornada hours for Ferias, Folga, Atestado, Hora Extra
- * overlapping with [periodStart, periodEnd] (inclusive, "YYYY-MM-DD").
- * Handles Firestore Timestamps, plain {seconds} objects, Date, and strings.
- */
-function computeJornadaHours(journeyPeriods, periodStart, periodEnd) {
-  const result = { ferias: 0, folga: 0, atestado: 0, horaExtra: 0 };
-  if (!Array.isArray(journeyPeriods) || !periodStart || !periodEnd) return result;
-  const psRaw = new Date(periodStart + "T00:00:00");
-  const peRaw = new Date(periodEnd   + "T00:00:00");
-  // Normalize period bounds to local midnight (avoid UTC shift)
-  const psD = new Date(psRaw.getFullYear(), psRaw.getMonth(), psRaw.getDate());
-  const peD = new Date(peRaw.getFullYear(), peRaw.getMonth(), peRaw.getDate());
-  for (const p of journeyPeriods) {
-    if (!p?.dataInicio || !p?.dataFim) continue;
-    const s = toDateLocal(p.dataInicio);
-    const e = toDateLocal(p.dataFim);
-    if (!s || !e || isNaN(s.getTime()) || isNaN(e.getTime())) continue;
-    // Normalize to local midnight for day-level comparison
-    const sD = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-    const eD = new Date(e.getFullYear(), e.getMonth(), e.getDate());
-    const overlapStart = sD < psD ? psD : sD;
-    const overlapEnd   = eD > peD ? peD : eD;
-    if (overlapEnd < overlapStart) continue;
-    const days = Math.round((overlapEnd - overlapStart) / 86400000) + 1;
-    const h    = round1(days * 8);
-    const tipo = p.tipo || "";
-    if (tipo === "Ferias" || tipo === "Férias") result.ferias    += h;
-    else if (tipo === "Folga")                  result.folga     += h;
-    else if (tipo === "Atestado")               result.atestado  += h;
-    else if (tipo === "Hora Extra")             result.horaExtra += h;
+function workingDaysBetweenDates(s, e) {
+  const sD = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  const eD = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+  if (eD < sD) return 0;
+  const totalDays = Math.round((eD - sD) / 86400000) + 1;
+  let count = 0;
+  const startDow = sD.getDay();
+  for (let i = 0; i < totalDays; i++) {
+    const dow = (startDow + i) % 7;
+    if (dow !== 0 && dow !== 6) count++;
   }
-  result.ferias    = round1(result.ferias);
-  result.folga     = round1(result.folga);
-  result.atestado  = round1(result.atestado);
-  result.horaExtra = round1(result.horaExtra);
-  return result;
+  return count;
 }
 
-function getUserLabel(u) {
-  return u?.displayName || u?.shortName || u?.name || u?.email || u?.id || "Sem nome";
+function computeJourneyBreakdown(journeyPeriods, periodStart, periodEnd) {
+  const ps = periodStart ? toDate(periodStart) : null;
+  const pe = periodEnd   ? toDate(periodEnd)   : null;
+  let ferias = 0, folga = 0, atestado = 0, horaExtra = 0;
+  for (const p of (journeyPeriods || [])) {
+    if (!p?.dataInicio || !p?.dataFim) continue;
+    const s = toDate(p.dataInicio);
+    const e = toDate(p.dataFim);
+    if (!s || !e) continue;
+    const start = ps ? new Date(Math.max(s.getTime(), ps.getTime())) : s;
+    const end   = pe ? new Date(Math.min(e.getTime(), pe.getTime())) : e;
+    if (start > end) continue;
+    const days  = workingDaysBetweenDates(start, end);
+    const hours = r1(days * 8);
+    const tipo = (p.tipo || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s/g, "");
+    if (tipo.includes("feria"))      ferias    = r1(ferias    + hours);
+    else if (tipo.includes("folga")) folga     = r1(folga     + hours);
+    else if (tipo.includes("atest")) atestado  = r1(atestado  + hours);
+    else if (tipo.includes("hora"))  horaExtra = r1(horaExtra + hours);
+  }
+  return { ferias, folga, atestado, horaExtra };
 }
 
-function NumInput({ value, onChange, highlight, min, max, step, title }) {
-  return (
-    <input
-      type="number"
-      min={min !== undefined ? min : 0}
-      max={max !== undefined ? max : 9999}
-      step={step !== undefined ? step : 0.5}
-      value={value}
-      title={title}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        width: 66,
-        padding: "3px 6px",
-        fontSize: 12,
-        borderRadius: 5,
-        border: highlight ? "1px solid var(--amber-7)" : "1px solid var(--gray-5)",
-        background: highlight ? "var(--amber-2)" : "var(--gray-2)",
-        color: "var(--gray-12)",
-        textAlign: "right",
-        fontWeight: highlight ? 700 : 400,
-        outline: "none",
-        boxSizing: "border-box",
-      }}
-    />
-  );
-}
+/* ─── styles ──────────────────────────────────────── */
+const B = { padding:"6px 10px", fontSize:10, fontWeight:700, letterSpacing:"0.06em",
+  color:"var(--gray-9)", borderBottom:"2px solid var(--gray-4)", whiteSpace:"nowrap",
+  background:"var(--gray-2)", position:"sticky", top:0, zIndex:2 };
+const THL = { ...B, textAlign:"left" };
+const THC = { ...B, textAlign:"center" };
+const THR = { ...B, textAlign:"right" };
+const D = { padding:"7px 10px", fontSize:12, borderBottom:"1px solid var(--gray-3)",
+  whiteSpace:"nowrap", verticalAlign:"middle" };
+const TDL = { ...D, textAlign:"left" };
+const TDC = { ...D, textAlign:"center" };
+const TDR = { ...D, textAlign:"right" };
+const F = { padding:"6px 10px", fontSize:12, fontWeight:700, background:"var(--gray-3)",
+  whiteSpace:"nowrap", verticalAlign:"middle", borderTop:"2px solid var(--gray-5)",
+  color:"var(--gray-11)" };
+const TFL = { ...F, textAlign:"left" };
+const TFR = { ...F, textAlign:"right" };
 
-function Badge({ value, color }) {
-  const c = color || "gray";
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "2px 8px",
-        borderRadius: 6,
-        fontSize: 12,
-        fontWeight: 700,
-        background: `var(--${c}-3)`,
-        border: `1px solid var(--${c}-6)`,
-        color: `var(--${c}-11)`,
-        minWidth: 48,
-        textAlign: "right",
-      }}
-    >
-      {value}
-    </span>
-  );
-}
-
-const TH = {
-  padding: "6px 10px",
-  textAlign: "right",
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.06em",
-  color: "var(--gray-9)",
-  borderBottom: "2px solid var(--gray-4)",
-  whiteSpace: "nowrap",
-  background: "var(--gray-2)",
-  position: "sticky",
-  top: 0,
-  zIndex: 2,
-};
-const TH_LEFT       = { ...TH, textAlign: "left" };
-const TD = {
-  padding: "7px 10px",
-  fontSize: 12,
-  borderBottom: "1px solid var(--gray-3)",
-  textAlign: "right",
-  whiteSpace: "nowrap",
-  verticalAlign: "middle",
-};
-const TD_LEFT       = { ...TD, textAlign: "left" };
-const TD_TOTAL      = { ...TD, fontWeight: 700, background: "var(--gray-2)", borderTop: "2px solid var(--gray-5)" };
-const TD_TOTAL_LEFT = { ...TD_TOTAL, textAlign: "left" };
-
-function Dash() {
-  return <span style={{ color: "var(--gray-6)", fontSize: 11 }}>{"—"}</span>;
-}
-
+/* ─── component ───────────────────────────────────── */
 export default function TeamCapacityGrid({
-  usersFiltered,
-  squadById,
-  membership,
-  workingDays,
-  baseParams,
-  periodStart,
-  periodEnd,
-  currentUser,
+  usersFiltered, workingDays, periodStart, periodEnd, squadById, membership,
 }) {
   const users = usersFiltered || [];
-  const sqMap = squadById    || {};
-  const wd    = Number(workingDays) || 22;
+  const [config,    setConfig] = useState(null);
+  const [overrides, setOvr]   = useState({});
+  const [dirty,     setDirty] = useState(false);
+  const [saving,    setSaving]= useState(false);
 
-  const base = useMemo(
-    () => ({ alocacao: 100, ...DEFAULT_BASE_PARAMS, ...(baseParams || {}) }),
-    [baseParams]
-  );
-
-  const [overrides, setOverrides] = useState({});
-  const [savedOv,   setSavedOv]   = useState({});
-  const [saving,    setSaving]    = useState(false);
-  const [savedAt,   setSavedAt]   = useState(null);
+  const pRef = useRef({ periodStart, periodEnd, workingDays });
+  useEffect(() => { pRef.current = { periodStart, periodEnd, workingDays }; });
 
   useEffect(() => {
     if (!periodStart || !periodEnd) return;
-    const unsub = subscribeToCapacityConfig(periodStart, periodEnd, (cfg) => {
-      const mo = cfg?.memberOverrides || {};
-      setSavedOv(mo);
-      setOverrides(mo);
+    return subscribeToCapacityConfig(periodStart, periodEnd, (cfg) => {
+      setConfig(cfg);
+      const ov = {};
+      for (const [uid, m] of Object.entries(cfg?.memberOverrides || {}))
+        if (m?.alocacao !== undefined) ov[uid] = { alocacao: m.alocacao };
+      setOvr(ov);
+      setDirty(false);
     });
-    return unsub;
   }, [periodStart, periodEnd]);
 
-  const hasChanges = useMemo(
-    () => JSON.stringify(overrides) !== JSON.stringify(savedOv),
-    [overrides, savedOv]
-  );
+  const defaultAloc = config?.baseParams?.alocacao ?? DEFAULT_BASE_PARAMS.alocacao ?? 100;
+  const sqMap = squadById || {};
 
-  const handleChange = (uid, field, raw) => {
-    const val = raw === "" ? "" : Number(raw);
-    setOverrides((prev) => ({
-      ...prev,
-      [uid]: { ...(prev[uid] || {}), [field]: val },
-    }));
-  };
+  const rows = useMemo(() => users.map((u) => {
+    const uid      = u.id || u.uid;
+    const ov       = overrides[uid] || {};
+    const alocacao = ov.alocacao !== undefined ? ov.alocacao : defaultAloc;
+    const wd       = Number(workingDays) || 0;
+    const capacityBruto = r1(wd * 8 * alocacao / 100);
+    const jb       = computeJourneyBreakdown(u.journeyPeriods, periodStart, periodEnd);
+    const capacityReal = r1(capacityBruto - jb.ferias - jb.folga - jb.atestado + jb.horaExtra);
+    const squads = membership
+      ? [...(membership.get(uid) || new Set())].map((sid) => ({
+          id: sid,
+          label: sqMap[sid]?.name || sqMap[sid]?.key || sqMap[sid]?.sigla || sid,
+        }))
+      : [];
+    const squadRole = u.squadRole || "";
+    return { user: u, uid, alocacao, hiAloc: ov.alocacao !== undefined,
+      capacityBruto, ...jb, capacityReal, squads, squadRole };
+  }), [users, overrides, defaultAloc, workingDays, sqMap, membership, periodStart, periodEnd]);
 
-  const handleReset = (uid) => {
-    setOverrides((prev) => {
-      const next = { ...prev };
-      delete next[uid];
-      return next;
-    });
-  };
+  const tot = useMemo(() => rows.reduce((a, r) => ({
+    bruto: r1(a.bruto + r.capacityBruto),
+    ferias: r1(a.ferias + r.ferias),
+    folga: r1(a.folga + r.folga),
+    atestado: r1(a.atestado + r.atestado),
+    horaExtra: r1(a.horaExtra + r.horaExtra),
+    real: r1(a.real + r.capacityReal),
+  }), { bruto:0, ferias:0, folga:0, atestado:0, horaExtra:0, real:0 }), [rows]);
 
-  const handleSave = async () => {
-    if (!periodStart || !periodEnd) return;
-    setSaving(true);
-    try {
-      await saveCapacityConfig({
-        periodStart,
-        periodEnd,
-        workingDays: wd,
-        baseParams: base,
-        memberOverrides: overrides,
-        updatedBy: currentUser?.uid || "unknown",
-      });
-      setSavedOv(overrides);
-      setSavedAt(new Date());
-    } catch (e) {
-      console.error("Erro ao salvar overrides:", e);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const rows = useMemo(() => {
-    return users.map((u) => {
-      const uid = u.id || u.uid;
-      const ov  = overrides[uid] || {};
-      const resolved = {
-        alocacao: ov.alocacao !== undefined ? ov.alocacao : base.alocacao,
-      };
-      const computed = computeMemberCapacity(wd, resolved);
-      const jornada  = computeJornadaHours(u.journeyPeriods, periodStart, periodEnd);
-      // CAP. REAL = bruto - ferias - folga - atestado + horaExtra (min 0)
-      const capacityReal = round1(
-        Math.max(
-          0,
-          computed.capacityBruto
-            - jornada.ferias
-            - jornada.folga
-            - jornada.atestado
-            + jornada.horaExtra
-        )
-      );
-      const squads = membership
-        ? [...(membership.get(uid) || new Set())].map((sid) => sqMap[sid]?.name || sid)
-        : [];
-      const isOverridden = !!overrides[uid] && Object.keys(overrides[uid]).length > 0;
-      return { user: u, uid, resolved, computed, jornada, capacityReal, squads, isOverridden };
-    });
-  }, [users, overrides, base, wd, membership, sqMap, periodStart, periodEnd]);
-
-  const totals = useMemo(
-    () =>
-      rows.reduce(
-        (acc, r) => {
-          acc.capacityBruto += r.computed.capacityBruto;
-          acc.ferias        += r.jornada.ferias;
-          acc.folga         += r.jornada.folga;
-          acc.atestado      += r.jornada.atestado;
-          acc.horaExtra     += r.jornada.horaExtra;
-          acc.capacityReal  += r.capacityReal;
-          return acc;
-        },
-        { capacityBruto: 0, ferias: 0, folga: 0, atestado: 0, horaExtra: 0, capacityReal: 0 }
-      ),
-    [rows]
-  );
-
-  if (!users.length) {
-    return (
-      <div style={{ padding: 24, color: "var(--gray-9)", fontSize: 13 }}>
-        Nenhum membro encontrado para o período selecionado.
-      </div>
-    );
+  function setAlocacao(uid, val) {
+    const v = Math.min(200, Math.max(0, Number(val) || 0));
+    setOvr((p) => ({ ...p, [uid]: { ...(p[uid] || {}), alocacao: v } }));
+    setDirty(true);
   }
 
-  const saveBtnActive = hasChanges && !saving && !!periodStart;
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const { periodStart: ps, periodEnd: pe, workingDays: wd } = pRef.current;
+      const mo = {};
+      for (const [uid, ov] of Object.entries(overrides))
+        if (ov.alocacao !== undefined) mo[uid] = { alocacao: ov.alocacao };
+      await saveCapacityConfig({
+        periodStart: ps, periodEnd: pe,
+        workingDays: Number(wd) || 0,
+        capacityBruto: r1((Number(wd) || 0) * 8),
+        baseParams: config?.baseParams || { alocacao: defaultAloc },
+        memberOverrides: mo, updatedBy: "",
+      });
+      setDirty(false);
+    } finally { setSaving(false); }
+  }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* toolbar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 8,
-        }}
-      >
-        <div style={{ fontSize: 12, color: "var(--gray-9)" }}>
-          <strong>{rows.length}</strong> membros &middot; <strong>{wd}</strong> dias úteis
-          {savedAt && (
-            <span style={{ marginLeft: 8, color: "var(--green-9)" }}>
-              {"\u2713"} Salvo às{" "}
-              {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
+    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+      {dirty && (
+        <div style={{ display:"flex", justifyContent:"flex-end" }}>
+          <button onClick={handleSave} disabled={saving} style={{
+            display:"flex", alignItems:"center", gap:6, padding:"6px 18px",
+            borderRadius:7, fontSize:13, fontWeight:700,
+            background:"var(--green-9)", color:"#fff", border:"none",
+            cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
+          }}>
+            <Save size={14} />
+            {saving ? "Salvando..." : "Salvar alterações"}
+          </button>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={!saveBtnActive}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 16px",
-            borderRadius: 7,
-            fontSize: 13,
-            fontWeight: 600,
-            background: saveBtnActive ? "var(--blue-9)" : "var(--gray-4)",
-            color: saveBtnActive ? "#fff" : "var(--gray-8)",
-            border: "none",
-            cursor: saveBtnActive ? "pointer" : "default",
-            transition: "background 0.2s",
-          }}
-        >
-          <Save size={14} />
-          {saving ? "Salvando..." : "Salvar Alterações"}
-        </button>
-      </div>
-
-      {/* legend */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: "var(--gray-9)" }}>
-        <span>
-          <span style={{ color: "var(--amber-9)", fontWeight: 700 }}>{"■"}</span>{" "}
-          Override individual ativo
-        </span>
-        <span>{"—"}</span>
-        <span>{"✏"} Alocação (%) editável por membro (padrão 100%)</span>
-        <span>{"—"}</span>
-        <span>Cap. Bruto = dias úteis × 8h</span>
-        <span>{"—"}</span>
-        <span>Cap. Real = Bruto − Férias − Folga − Atestado + Hora Extra</span>
-      </div>
-
-      {/* table */}
-      <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--gray-4)" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+      )}
+      <div style={{ overflowX:"auto", borderRadius:10, border:"1px solid var(--gray-4)" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
           <thead>
             <tr>
-              <th style={TH_LEFT}>MEMBRO</th>
-              <th style={TH_LEFT}>SQUAD</th>
-              <th
-                style={{ ...TH, color: "var(--amber-10)" }}
-                title="Percentual de alocação do membro no período"
-              >
-                {"✏"} ALOC. (%)
-              </th>
-              <th
-                style={{ ...TH, color: "var(--blue-10)" }}
-                title="Dias úteis × 8h"
-              >
-                CAP. BRUTO (h)
-              </th>
-              <th
-                style={{ ...TH, color: "var(--teal-10)" }}
-                title="Horas de férias no período (controle de jornada)"
-              >
-                FÉRIAS (h)
-              </th>
-              <th
-                style={{ ...TH, color: "var(--cyan-10)" }}
-                title="Horas de folga no período (controle de jornada)"
-              >
-                FOLGA (h)
-              </th>
-              <th
-                style={{ ...TH, color: "var(--orange-10)" }}
-                title="Horas de atestado no período (controle de jornada)"
-              >
-                ATESTADO (h)
-              </th>
-              <th
-                style={{ ...TH, color: "var(--purple-10)" }}
-                title="Horas extras no período (controle de jornada)"
-              >
-                HORA EXTRA (h)
-              </th>
-              <th
-                style={{ ...TH, color: "var(--green-10)" }}
-                title="Cap. Bruto − Férias − Folga − Atestado + Hora Extra"
-              >
-                CAP. REAL (h)
-              </th>
-              <th style={{ ...TH, textAlign: "center" }}>RESET</th>
+              <th style={THL}>MEMBRO</th>
+              <th style={THL}>SQUAD</th>
+              <th style={THL}>PAPEL NA SQUAD</th>
+              <th style={THC}>ALOCAÇÃO (%)</th>
+              <th style={THR}>CAP. BRUTO</th>
+              <th style={THR}>FÉRIAS (h)</th>
+              <th style={THR}>FOLGA (h)</th>
+              <th style={THR}>ATESTADO (h)</th>
+              <th style={THR}>H. EXTRA (h)</th>
+              <th style={THR}>CAP. REAL</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
-              const { user: u, uid, resolved, computed, jornada, capacityReal, squads, isOverridden } = r;
-              const rowBg = isOverridden ? "var(--amber-1)" : undefined;
+            {rows.length === 0 && (
+              <tr><td colSpan={10} style={{ ...TDC, padding:32, color:"var(--gray-8)" }}>
+                Nenhum membro encontrado.
+              </td></tr>
+            )}
+            {rows.map((r, i) => {
+              const name = r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid;
               return (
-                <tr key={uid} style={{ background: rowBg }}>
-                  {/* MEMBRO */}
-                  <td style={TD_LEFT}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {isOverridden && (
-                        <span style={{ color: "var(--amber-9)", fontSize: 10, fontWeight: 700 }}>{"■"}</span>
-                      )}
-                      <span style={{ fontWeight: 600, color: "var(--gray-12)" }}>
-                        {getUserLabel(u)}
-                      </span>
+                <tr key={r.uid} style={{ background: i%2===0 ? undefined : "var(--gray-1)" }}>
+                  <td style={TDL}><span style={{ fontWeight:600, color:"var(--gray-12)" }}>{name}</span></td>
+                  <td style={TDL}>
+                    <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                      {r.squads.length > 0
+                        ? r.squads.map((sq) => (
+                          <span key={sq.id} style={{ display:"inline-block", padding:"2px 8px", borderRadius:999,
+                            fontSize:11, fontWeight:700, background:"var(--cyan-3)",
+                            border:"1px solid var(--cyan-7)", color:"var(--cyan-11)", whiteSpace:"nowrap" }}>
+                            {sq.label.toUpperCase()}
+                          </span>))
+                        : <span style={{ color:"var(--gray-7)", fontSize:11 }}>—</span>}
                     </div>
                   </td>
-                  {/* SQUAD */}
-                  <td style={TD_LEFT}>
-                    <span style={{ fontSize: 11, color: "var(--gray-10)" }}>
-                      {squads.length ? squads.join(", ") : <Dash />}
-                    </span>
+                  <td style={TDL}>
+                    {r.squadRole
+                      ? <span style={{ fontSize:12, color:"var(--gray-11)" }}>{r.squadRole}</span>
+                      : <span style={{ color:"var(--gray-7)", fontSize:11 }}>—</span>}
                   </td>
-                  {/* ALOC. % */}
-                  <td style={TD}>
-                    <NumInput
-                      value={resolved.alocacao}
-                      onChange={(v) => handleChange(uid, "alocacao", v)}
-                      highlight={isOverridden}
-                      min={0}
-                      max={200}
-                      step={5}
-                      title="Alocação (%)"
-                    />
+                  <td style={TDC}>
+                    <input type="number" min={0} max={200} value={r.alocacao}
+                      onChange={(e) => setAlocacao(r.uid, e.target.value)}
+                      style={{ width:64, textAlign:"center", padding:"3px 6px", fontSize:12, borderRadius:5,
+                        border:`1px solid ${r.hiAloc ? "var(--blue-7)" : "var(--gray-5)"}`,
+                        background: r.hiAloc ? "var(--blue-2)" : "var(--gray-2)",
+                        color:"var(--gray-12)", outline:"none" }} />
                   </td>
-                  {/* CAP. BRUTO */}
-                  <td style={TD}>
-                    <Badge value={computed.capacityBruto + "h"} color="blue" />
-                  </td>
-                  {/* FÉRIAS */}
-                  <td style={TD}>
-                    {jornada.ferias > 0
-                      ? <Badge value={jornada.ferias + "h"} color="teal" />
-                      : <Dash />}
-                  </td>
-                  {/* FOLGA */}
-                  <td style={TD}>
-                    {jornada.folga > 0
-                      ? <Badge value={jornada.folga + "h"} color="cyan" />
-                      : <Dash />}
-                  </td>
-                  {/* ATESTADO */}
-                  <td style={TD}>
-                    {jornada.atestado > 0
-                      ? <Badge value={jornada.atestado + "h"} color="orange" />
-                      : <Dash />}
-                  </td>
-                  {/* HORA EXTRA */}
-                  <td style={TD}>
-                    {jornada.horaExtra > 0
-                      ? <Badge value={"+" + jornada.horaExtra + "h"} color="purple" />
-                      : <Dash />}
-                  </td>
-                  {/* CAP. REAL */}
-                  <td style={TD}>
-                    <Badge value={capacityReal + "h"} color="green" />
-                  </td>
-                  {/* RESET */}
-                  <td style={{ ...TD, textAlign: "center" }}>
-                    {isOverridden ? (
-                      <button
-                        onClick={() => handleReset(uid)}
-                        title="Remover override individual"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--gray-9)",
-                          padding: 4,
-                          borderRadius: 4,
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <RotateCcw size={14} />
-                      </button>
-                    ) : (
-                      <Dash />
-                    )}
-                  </td>
+                  <td style={TDR}><span style={{ fontWeight:600, color:"var(--gray-11)", fontVariantNumeric:"tabular-nums" }}>{r.capacityBruto}h</span></td>
+                  <td style={TDR}><span style={{ color: r.ferias>0 ? "var(--teal-11)" : "var(--gray-8)", fontVariantNumeric:"tabular-nums" }}>{r.ferias > 0 ? r.ferias+"h" : "—"}</span></td>
+                  <td style={TDR}><span style={{ color: r.folga>0 ? "var(--cyan-11)" : "var(--gray-8)", fontVariantNumeric:"tabular-nums" }}>{r.folga > 0 ? r.folga+"h" : "—"}</span></td>
+                  <td style={TDR}><span style={{ color: r.atestado>0 ? "var(--orange-11)" : "var(--gray-8)", fontVariantNumeric:"tabular-nums" }}>{r.atestado > 0 ? r.atestado+"h" : "—"}</span></td>
+                  <td style={TDR}><span style={{ color: r.horaExtra>0 ? "var(--purple-11)" : "var(--gray-8)", fontVariantNumeric:"tabular-nums" }}>{r.horaExtra > 0 ? "+"+r.horaExtra+"h" : "—"}</span></td>
+                  <td style={TDR}><span style={{ fontWeight:700, color:"var(--green-11)", fontVariantNumeric:"tabular-nums" }}>{r.capacityReal}h</span></td>
                 </tr>
               );
             })}
           </tbody>
-          <tfoot>
-            <tr>
-              <td style={TD_TOTAL_LEFT} colSpan={2}>
-                <strong>TOTAL ({rows.length} membros)</strong>
-              </td>
-              <td style={TD_TOTAL} title="Média de alocação">
-                {round1(
-                  rows.reduce((s, r) => s + r.resolved.alocacao, 0) / (rows.length || 1)
-                )}
-                {"%"}
-              </td>
-              <td style={{ ...TD_TOTAL, color: "var(--blue-11)" }}>
-                <strong>{round1(totals.capacityBruto)}h</strong>
-              </td>
-              <td style={{ ...TD_TOTAL, color: "var(--teal-11)" }}>
-                {totals.ferias > 0 ? <strong>{round1(totals.ferias)}h</strong> : <Dash />}
-              </td>
-              <td style={{ ...TD_TOTAL, color: "var(--cyan-11)" }}>
-                {totals.folga > 0 ? <strong>{round1(totals.folga)}h</strong> : <Dash />}
-              </td>
-              <td style={{ ...TD_TOTAL, color: "var(--orange-11)" }}>
-                {totals.atestado > 0 ? <strong>{round1(totals.atestado)}h</strong> : <Dash />}
-              </td>
-              <td style={{ ...TD_TOTAL, color: "var(--purple-11)" }}>
-                {totals.horaExtra > 0 ? <strong>+{round1(totals.horaExtra)}h</strong> : <Dash />}
-              </td>
-              <td style={{ ...TD_TOTAL, color: "var(--green-11)" }}>
-                <strong>{round1(totals.capacityReal)}h</strong>
-              </td>
-              <td style={TD_TOTAL} />
-            </tr>
-          </tfoot>
+          {rows.length > 0 && (
+            <tfoot>
+              <tr>
+                <td colSpan={4} style={{ ...TFL }}>TOTAL ({rows.length} membros)</td>
+                <td style={TFR}>{tot.bruto}h</td>
+                <td style={TFR}>{tot.ferias > 0 ? tot.ferias+"h" : "—"}</td>
+                <td style={TFR}>{tot.folga > 0 ? tot.folga+"h" : "—"}</td>
+                <td style={TFR}>{tot.atestado > 0 ? tot.atestado+"h" : "—"}</td>
+                <td style={TFR}>{tot.horaExtra > 0 ? "+"+tot.horaExtra+"h" : "—"}</td>
+                <td style={{ ...TFR, color:"var(--green-11)" }}>{tot.real}h</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>

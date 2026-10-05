@@ -8,6 +8,7 @@ import { Edit2, Eye, Filter, BarChart3, ChevronDown, CalendarDays, Settings2 } f
 import UserDetailsModal from "./UserDetailsModal";
 import CalendarBase from "./CalendarBase";
 import TeamCapacityGrid from "./TeamCapacityGrid";
+import JourneyControlGrid from "./JourneyControlGrid";
 import { STATUS_OPTIONS, CONTRATO_OPTIONS, FOUNDATION_OPTIONS } from "../utils/userFieldOptions";
 import { saveCapacityConfig, DEFAULT_BASE_PARAMS } from "../services/teamCapacityService";
 
@@ -528,6 +529,22 @@ export default function Team({ currentUser }) {
           >
             TEAM CAPACITY
           </button>
+          <button
+            onClick={() => setActiveTab("jornada")}
+            style={{
+              padding: "10px 16px", fontSize: "13px", fontWeight: "700",
+              letterSpacing: "0.04em", textTransform: "uppercase",
+              background: "transparent",
+              color: activeTab === "jornada" ? "var(--teal-11)" : "var(--gray-10)",
+              border: "none",
+              borderBottom: activeTab === "jornada" ? "2px solid var(--teal-11)" : "2px solid transparent",
+              cursor: "pointer", transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { if (activeTab !== "jornada") e.currentTarget.style.color = "var(--gray-11)"; }}
+            onMouseLeave={(e) => { if (activeTab !== "jornada") e.currentTarget.style.color = "var(--gray-10)"; }}
+          >
+            CONTROLE DE JORNADA
+          </button>
         </div>
 
         {/* ── TABLE (scrollable) ── */}
@@ -615,6 +632,17 @@ export default function Team({ currentUser }) {
             </table>
           </div>
         </Card>
+        )}
+
+        {/* CONTROLE DE JORNADA TAB */}
+        {activeTab === "jornada" && (
+          <div style={{ marginTop: 0 }}>
+            <JourneyControlGrid
+              usersFiltered={usersFiltered}
+              squadById={squadById}
+              membership={membership}
+            />
+          </div>
         )}
 
         {/* TEAM CAPACITY TAB */}

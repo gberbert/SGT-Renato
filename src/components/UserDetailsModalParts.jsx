@@ -103,6 +103,20 @@ export const calcDays = (s, e) => {
   if (!sd || !ed || isNaN(sd.getTime()) || isNaN(ed.getTime()) || ed < sd) return 0;
   return Math.ceil((ed - sd) / 86400000) + 1;
 };
+export const calcWorkingDays = (s, e) => {
+  const sd = toDateObj(s), ed = toDateObj(e);
+  if (!sd || !ed || isNaN(sd.getTime()) || isNaN(ed.getTime()) || ed < sd) return 0;
+  const sN = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate());
+  const eN = new Date(ed.getFullYear(), ed.getMonth(), ed.getDate());
+  const totalDays = Math.round((eN - sN) / 86400000) + 1;
+  let count = 0;
+  const startDow = sN.getDay();
+  for (let i = 0; i < totalDays; i++) {
+    const dow = (startDow + i) % 7;
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+};
 export const maskPhone = v => {
   if (!v) return v;
   const n = v.replace(/\D/g,"");
@@ -258,7 +272,7 @@ export function JornadaTab({ draftUser, setDraftUser, readOnly }) {
     return d.toLocaleDateString("pt-BR");
   };
 
-  const total = periods.reduce((a, p) => a + calcDays(p.dataInicio, p.dataFim), 0);
+  const total = periods.reduce((a, p) => a + calcWorkingDays(p.dataInicio, p.dataFim), 0);
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
@@ -268,7 +282,7 @@ export function JornadaTab({ draftUser, setDraftUser, readOnly }) {
           <CalendarDays size={16} style={{ color:"var(--indigo-9)" }}/>
           <Text size="2" weight="bold">Períodos de Jornada</Text>
           <span style={{ fontSize:13, fontWeight:700, padding:"3px 14px", borderRadius:999, background:"var(--indigo-3)", border:"1px solid var(--indigo-6)", color:"var(--indigo-11)" }}>
-            {total} dia{total !== 1 ? "s" : ""}
+            {total} dia{total !== 1 ? "s" : ""} útei{total !== 1 ? "s" : "l"}
           </span>
         </div>
         {!readOnly && (
@@ -316,7 +330,7 @@ export function JornadaTab({ draftUser, setDraftUser, readOnly }) {
       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
         {periods.map((p, idx) => {
           const [border, text, bg] = (TIPO_CLR[p.tipo] || TIPO_CLR["Férias"]).map(v => `var(${v})`);
-          const days = calcDays(p.dataInicio, p.dataFim);
+          const days = calcWorkingDays(p.dataInicio, p.dataFim);
           const isEditing = editIdx === idx;
 
           return (
@@ -333,7 +347,7 @@ export function JornadaTab({ draftUser, setDraftUser, readOnly }) {
                   {fmtDate(p.dataInicio)} → {fmtDate(p.dataFim)}
                 </span>
                 <span style={{ fontSize:12, fontWeight:600, color: text }}>
-                  {days} dia{days !== 1 ? "s" : ""}
+                  {days} d.u.
                 </span>
                 {!readOnly && (
                   <>
