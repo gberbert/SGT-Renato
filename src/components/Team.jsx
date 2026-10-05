@@ -4,7 +4,8 @@ import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { subscribeToUsers } from "../services/settingsService";
 import { Card, Flex, Text, TextField } from "@radix-ui/themes";
-import { Edit2, Eye, Filter, BarChart3, ChevronDown, CalendarDays, Settings2 } from "lucide-react";
+import { Edit2, Eye, Filter, BarChart3, ChevronDown, CalendarDays, Settings2, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import UserDetailsModal from "./UserDetailsModal";
 import CalendarBase from "./CalendarBase";
 import TeamCapacityGrid from "./TeamCapacityGrid";
@@ -294,6 +295,43 @@ export default function Team({ currentUser }) {
   const totalMembros = usersFiltered.length;
   const totalMembrosNoContract = usersFilteredNoContract.length;
 
+  const exportTeamToXlsx = () => {
+    const rows = users.map((u) => {
+      const userSquadsList = membershipRoles.get(u.id) || [];
+      const squadsStr = userSquadsList.map((r) => r.squadName).join("; ");
+      const rolesStr = userSquadsList.map((r) => r.role || "—").join("; ");
+      return {
+        "Nome": getUserLabel(u),
+        "Email": u?.email || "",
+        "Status": u?.status || "",
+        "Contrato": u?.contract || "",
+        "Foundation": u?.foundation || "",
+        "Squad(s)": squadsStr,
+        "Papel na Squad": rolesStr,
+        "Nascimento": formatDate(u?.dataNascimento),
+        "Telefone": u?.phone || u?.telefone || "",
+        "Cargo": u?.cargo || u?.role || "",
+        "Área": u?.area || "",
+        "Chapter": u?.chapter || "",
+        "Localidade": u?.localidade || u?.location || "",
+        "ID": u?.id || "",
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Team");
+
+    // Auto-fit column widths
+    const colWidths = Object.keys(rows[0] || {}).map((key) => ({
+      wch: Math.max(key.length, ...rows.map((r) => String(r[key] || "").length), 10),
+    }));
+    ws["!cols"] = colWidths;
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `team_export_${dateStr}.xlsx`);
+  };
+
   const handleSaveCapacityConfig = async () => {
     setConfigSaving(true);
     try {
@@ -550,6 +588,24 @@ export default function Team({ currentUser }) {
         {/* ── TABLE (scrollable) ── */}
         {activeTab === "team" && (
         <Card size="4" style={{ marginTop: 0 }}>
+          <Flex justify="end" mb="3">
+            <button
+              type="button"
+              onClick={exportTeamToXlsx}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                border: "1px solid var(--green-7)", background: "var(--green-3)",
+                color: "var(--green-11)", cursor: "pointer", letterSpacing: "0.04em",
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "var(--green-4)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "var(--green-3)"; }}
+            >
+              <Download size={14} />
+              Exportar Excel
+            </button>
+          </Flex>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
