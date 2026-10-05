@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Save } from "lucide-react";
+import { Save, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import {
   subscribeToCapacityConfig, saveCapacityConfig,
   DEFAULT_BASE_PARAMS, computeCapacity,
@@ -138,6 +139,63 @@ export default function TeamCapacityGrid({
     setDirty(true);
   }
 
+  function exportCapacityToXlsx() {
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    // ── Sheet 1: projected data ──────────────────────
+    const dataRows = rows.map((r) => ({
+      "Membro": r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid,
+      "Squad(s)": r.squads.map((sq) => sq.label).join("; ") || "—",
+      "Papel na Squad": r.sqRoles.map((sr) => `${sr.squadName}${sr.role ? ` · ${sr.role}` : ""}`).join("; ") || "—",
+      "Alocação (%)": r.alocacao,
+      "Cap. Bruto (h)": r.capacityBruto,
+      "Férias (h)": r.ferias || 0,
+      "Folga (h)": r.folga || 0,
+      "Atestado (h)": r.atestado || 0,
+      "H. Extra (h)": r.horaExtra || 0,
+      "Cap. Real (h)": r.capacityReal,
+    }));
+
+    // totals row
+    dataRows.push({
+      "Membro": `TOTAL (${rows.length} membros)`,
+      "Squad(s)": "",
+      "Papel na Squad": "",
+      "Alocação (%)": "",
+      "Cap. Bruto (h)": tot.bruto,
+      "Férias (h)": tot.ferias,
+      "Folga (h)": tot.folga,
+      "Atestado (h)": tot.atestado,
+      "H. Extra (h)": tot.horaExtra,
+      "Cap. Real (h)": tot.real,
+    });
+
+    const ws = XLSX.utils.json_to_sheet(dataRows);
+
+    // auto-fit column widths
+    const colKeys = Object.keys(dataRows[0] || {});
+    ws["!cols"] = colKeys.map((k) => ({
+      wch: Math.max(k.length, ...dataRows.map((r) => String(r[k] ?? "").length), 8),
+    }));
+
+    // ── Sheet 2: config summary ──────────────────────
+    const cfgRows = [
+      { "Parâmetro": "Início do Período", "Valor": periodStart || "" },
+      { "Parâmetro": "Fim do Período",    "Valor": periodEnd   || "" },
+      { "Parâmetro": "Dias Úteis",        "Valor": workingDays ?? "" },
+      { "Parâmetro": "Alocação Padrão (%)", "Valor": defaultAloc },
+      { "Parâmetro": "Exportado em",      "Valor": new Date().toLocaleString("pt-BR") },
+    ];
+    const ws2 = XLSX.utils.json_to_sheet(cfgRows);
+    ws2["!cols"] = [{ wch: 24 }, { wch: 20 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws,  "Team Capacity");
+    XLSX.utils.book_append_sheet(wb, ws2, "Configuração");
+
+    XLSX.writeFile(wb, `team_capacity_${dateStr}.xlsx`);
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -158,8 +216,24 @@ export default function TeamCapacityGrid({
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-      {dirty && (
-        <div style={{ display:"flex", justifyContent:"flex-end" }}>
+      <div style={{ display:"flex", justifyContent:"flex-end", gap:8 }}>
+        <button
+          type="button"
+          onClick={exportCapacityToXlsx}
+          style={{
+            display:"inline-flex", alignItems:"center", gap:6,
+            padding:"6px 14px", borderRadius:7, fontSize:12, fontWeight:700,
+            border:"1px solid var(--green-7)", background:"var(--green-3)",
+            color:"var(--green-11)", cursor:"pointer", letterSpacing:"0.04em",
+            transition:"all 0.15s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--green-4)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--green-3)"; }}
+        >
+          <Download size={14} />
+          Exportar Excel
+        </button>
+        {dirty && (
           <button onClick={handleSave} disabled={saving} style={{
             display:"flex", alignItems:"center", gap:6, padding:"6px 18px",
             borderRadius:7, fontSize:13, fontWeight:700,
@@ -169,8 +243,8 @@ export default function TeamCapacityGrid({
             <Save size={14} />
             {saving ? "Salvando..." : "Salvar alterações"}
           </button>
-        </div>
-      )}
+        )}
+      </div>
       <div style={{ overflowX:"auto", borderRadius:10, border:"1px solid var(--gray-4)" }}>
         <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
           <thead>
