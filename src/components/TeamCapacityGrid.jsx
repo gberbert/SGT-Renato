@@ -338,6 +338,8 @@ export default function TeamCapacityGrid({
         <span>{"✏"} Alocação (%) editável por membro (padrão 100%)</span>
         <span>{"—"}</span>
         <span>Cap. Bruto = dias úteis × 8h</span>
+        <span>{"—"}</span>
+        <span>Cap. Real = Bruto − Férias − Folga − Atestado + Hora Extra</span>
       </div>
 
       {/* table */}
@@ -358,6 +360,36 @@ export default function TeamCapacityGrid({
                 title="Dias úteis × 8h"
               >
                 CAP. BRUTO (h)
+              </th>
+              <th
+                style={{ ...TH, color: "var(--teal-10)" }}
+                title="Horas de férias no período (controle de jornada)"
+              >
+                FÉRIAS (h)
+              </th>
+              <th
+                style={{ ...TH, color: "var(--cyan-10)" }}
+                title="Horas de folga no período (controle de jornada)"
+              >
+                FOLGA (h)
+              </th>
+              <th
+                style={{ ...TH, color: "var(--orange-10)" }}
+                title="Horas de atestado no período (controle de jornada)"
+              >
+                ATESTADO (h)
+              </th>
+              <th
+                style={{ ...TH, color: "var(--purple-10)" }}
+                title="Horas extras no período (controle de jornada)"
+              >
+                HORA EXTRA (h)
+              </th>
+              <th
+                style={{ ...TH, color: "var(--green-10)" }}
+                title="Cap. Bruto − Férias − Folga − Atestado + Hora Extra"
+              >
+                CAP. REAL (h)
               </th>
               <th style={{ ...TH, textAlign: "center" }}>RESET</th>
             </tr>
@@ -401,6 +433,34 @@ export default function TeamCapacityGrid({
                   <td style={TD}>
                     <Badge value={computed.capacityBruto + "h"} color="blue" />
                   </td>
+                  {/* FÉRIAS */}
+                  <td style={TD}>
+                    {jornada.ferias > 0
+                      ? <Badge value={jornada.ferias + "h"} color="teal" />
+                      : <Dash />}
+                  </td>
+                  {/* FOLGA */}
+                  <td style={TD}>
+                    {jornada.folga > 0
+                      ? <Badge value={jornada.folga + "h"} color="cyan" />
+                      : <Dash />}
+                  </td>
+                  {/* ATESTADO */}
+                  <td style={TD}>
+                    {jornada.atestado > 0
+                      ? <Badge value={jornada.atestado + "h"} color="orange" />
+                      : <Dash />}
+                  </td>
+                  {/* HORA EXTRA */}
+                  <td style={TD}>
+                    {jornada.horaExtra > 0
+                      ? <Badge value={"+" + jornada.horaExtra + "h"} color="purple" />
+                      : <Dash />}
+                  </td>
+                  {/* CAP. REAL */}
+                  <td style={TD}>
+                    <Badge value={capacityReal + "h"} color="green" />
+                  </td>
                   {/* RESET */}
                   <td style={{ ...TD, textAlign: "center" }}>
                     {isOverridden ? (
@@ -441,6 +501,21 @@ export default function TeamCapacityGrid({
               </td>
               <td style={{ ...TD_TOTAL, color: "var(--blue-11)" }}>
                 <strong>{round1(totals.capacityBruto)}h</strong>
+              </td>
+              <td style={{ ...TD_TOTAL, color: "var(--teal-11)" }}>
+                {totals.ferias > 0 ? <strong>{round1(totals.ferias)}h</strong> : <Dash />}
+              </td>
+              <td style={{ ...TD_TOTAL, color: "var(--cyan-11)" }}>
+                {totals.folga > 0 ? <strong>{round1(totals.folga)}h</strong> : <Dash />}
+              </td>
+              <td style={{ ...TD_TOTAL, color: "var(--orange-11)" }}>
+                {totals.atestado > 0 ? <strong>{round1(totals.atestado)}h</strong> : <Dash />}
+              </td>
+              <td style={{ ...TD_TOTAL, color: "var(--purple-11)" }}>
+                {totals.horaExtra > 0 ? <strong>+{round1(totals.horaExtra)}h</strong> : <Dash />}
+              </td>
+              <td style={{ ...TD_TOTAL, color: "var(--green-11)" }}>
+                <strong>{round1(totals.capacityReal)}h</strong>
               </td>
               <td style={TD_TOTAL} />
             </tr>
