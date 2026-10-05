@@ -833,6 +833,7 @@ export default function Team({ currentUser }) {
                 usersFiltered={usersFiltered}
                 squadById={squadById}
                 membership={membership}
+                membershipRoles={membershipRoles}
                 workingDays={configWorkingDays}
                 baseParams={configBaseParams}
                 periodStart={configPeriodStart}

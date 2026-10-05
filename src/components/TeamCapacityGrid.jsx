@@ -78,7 +78,7 @@ const TFR = { ...F, textAlign:"right" };
 
 /* ─── component ───────────────────────────────────── */
 export default function TeamCapacityGrid({
-  usersFiltered, workingDays, periodStart, periodEnd, squadById, membership,
+  usersFiltered, workingDays, periodStart, periodEnd, squadById, membership, membershipRoles,
 }) {
   const users = usersFiltered || [];
   const [config,    setConfig] = useState(null);
@@ -118,10 +118,10 @@ export default function TeamCapacityGrid({
           label: sqMap[sid]?.name || sqMap[sid]?.key || sqMap[sid]?.sigla || sid,
         }))
       : [];
-    const squadRole = u.squadRole || "";
+    const sqRoles = membershipRoles ? (membershipRoles.get(uid) || []) : [];
     return { user: u, uid, alocacao, hiAloc: ov.alocacao !== undefined,
-      capacityBruto, ...jb, capacityReal, squads, squadRole };
-  }), [users, overrides, defaultAloc, workingDays, sqMap, membership, periodStart, periodEnd]);
+      capacityBruto, ...jb, capacityReal, squads, sqRoles };
+  }), [users, overrides, defaultAloc, workingDays, sqMap, membership, membershipRoles, periodStart, periodEnd]);
 
   const tot = useMemo(() => rows.reduce((a, r) => ({
     bruto: r1(a.bruto + r.capacityBruto),
@@ -211,8 +211,20 @@ export default function TeamCapacityGrid({
                     </div>
                   </td>
                   <td style={TDL}>
-                    {r.squadRole
-                      ? <span style={{ fontSize:12, color:"var(--gray-11)" }}>{r.squadRole}</span>
+                    {r.sqRoles && r.sqRoles.length > 0
+                      ? <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                          {r.sqRoles.map((sr, i) => (
+                            <span key={i} style={{
+                              display:"inline-flex", alignItems:"center", gap:4,
+                              padding:"2px 8px", borderRadius:999, fontSize:11,
+                              fontWeight:600, whiteSpace:"nowrap",
+                              background:"var(--indigo-3)", border:"1px solid var(--indigo-7)", color:"var(--indigo-11)",
+                            }}>
+                              <span style={{ fontWeight:700, color:"var(--cyan-11)" }}>{sr.squadName}</span>
+                              {sr.role ? <span style={{ color:"var(--gray-10)" }}>· {sr.role}</span> : null}
+                            </span>
+                          ))}
+                        </div>
                       : <span style={{ color:"var(--gray-7)", fontSize:11 }}>—</span>}
                   </td>
                   <td style={TDC}>
