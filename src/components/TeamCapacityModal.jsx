@@ -325,13 +325,6 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
     return result;
   }, []);
 
-  const allocationTypes = [
-    { key: "planejamento", label: "PLANEJAMENTO (h)" },
-    { key: "dailys", label: "DAILYS (h)" },
-    { key: "susten", label: "SUSTEN (%)" },
-    { key: "apoio", label: "APOIO (%)" },
-    { key: "catalogo", label: "CATALOGO(%)" },
-  ];
 
   const tabButtonStyle = (isActive) => ({
     padding: "8px 16px",
@@ -341,18 +334,6 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
     border: "1px solid var(--gray-6)",
     background: isActive ? "var(--indigo-9)" : "transparent",
     color: isActive ? "white" : "var(--gray-11)",
-    cursor: "pointer",
-    transition: "all 0.15s",
-  });
-
-  const allocationButtonStyle = (isActive) => ({
-    padding: "6px 14px",
-    borderRadius: 6,
-    fontSize: 12,
-    fontWeight: 600,
-    border: isActive ? "1px solid var(--blue-7)" : "1px solid var(--gray-6)",
-    background: isActive ? "var(--blue-3)" : "transparent",
-    color: isActive ? "var(--blue-11)" : "var(--gray-11)",
     cursor: "pointer",
     transition: "all 0.15s",
   });
@@ -433,15 +414,6 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
               ))}
             </Flex>
 
-            {/* Allocation Type Buttons */}
-            <Flex gap="2" mb="4" wrap="wrap">
-              {allocationTypes.map((alloc) => (
-                <button key={alloc.key} style={allocationButtonStyle(false)}>
-                  {alloc.label}
-                </button>
-              ))}
-            </Flex>
-
             {/* Month selector and table */}
             <Card size="2" style={{ marginTop: 12 }}>
               <Flex gap="2" mb="3" wrap="wrap">
@@ -476,17 +448,14 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
                       <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>Status</th>
                       <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>Squad</th>
                       <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>Papel na Squad</th>
-                      {allocationTypes.map((alloc) => (
-                        <th key={alloc.key} style={{ padding: "8px", textAlign: "center", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>
-                          {alloc.label}
-                        </th>
-                      ))}
+                      <th style={{ padding: "8px", textAlign: "center", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>ALOCAÇÃO (%)</th>
+                      <th style={{ padding: "8px", textAlign: "center", borderBottom: "1px solid var(--gray-5)", fontWeight: 700 }}>CAP. BRUTO (h)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.length === 0 ? (
                       <tr>
-                        <td colSpan={9} style={{ padding: "16px", textAlign: "center", color: "var(--gray-9)" }}>
+                        <td colSpan={6} style={{ padding: "16px", textAlign: "center", color: "var(--gray-9)" }}>
                           Nenhum membro selecionado
                         </td>
                       </tr>
@@ -505,26 +474,27 @@ export default function TeamCapacityModal({ open, onOpenChange, users = [] }) {
                           <td style={{ padding: "8px", fontSize: 11, color: "var(--gray-11)" }}>
                             {user.squadRole || user.papelNaSquad || "—"}
                           </td>
-                          {allocationTypes.map((alloc) => (
-                            <td key={alloc.key} style={{ padding: "8px", textAlign: "center" }}>
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                placeholder="—"
-                                style={{
-                                  width: 50,
-                                  padding: "4px",
-                                  borderRadius: 4,
-                                  border: "1px solid var(--gray-5)",
-                                  background: "var(--gray-1)",
-                                  color: "var(--gray-12)",
-                                  textAlign: "center",
-                                  fontSize: 11,
-                                }}
-                              />
-                            </td>
-                          ))}
+                          <td style={{ padding: "8px", textAlign: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              max="200"
+                              defaultValue={100}
+                              style={{
+                                width: 60,
+                                padding: "4px",
+                                borderRadius: 4,
+                                border: "1px solid var(--gray-5)",
+                                background: "var(--gray-1)",
+                                color: "var(--gray-12)",
+                                textAlign: "center",
+                                fontSize: 11,
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: "8px", textAlign: "center", fontWeight: 600, color: "var(--gray-11)", fontVariantNumeric: "tabular-nums" }}>
+                            —
+                          </td>
                         </tr>
                       ))
                     )}
