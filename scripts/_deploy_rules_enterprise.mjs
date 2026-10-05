@@ -81,19 +81,19 @@ async function main() {
   console.log('  GET status:', getRes.status);
 
   if (getRes.status === 200) {
-    // Release exists → PATCH it
+    // Release exists → PATCH it (body: { release: { name, rulesetName } } — no updateMask)
     console.log('  Release exists, updating via PATCH...');
     const patchRes = await apiRequest(
       'PATCH',
-      `/v1/${RELEASE_NAME}?updateMask=rulesetName`,
-      { name: RELEASE_NAME, rulesetName }
+      `/v1/${RELEASE_NAME}`,
+      { release: { name: RELEASE_NAME, rulesetName } }
     );
     if (patchRes.status === 200) {
       const rel = JSON.parse(patchRes.body);
       console.log('✅ Release updated successfully!');
-      console.log('  release name :', rel.name);
-      console.log('  ruleset      :', rel.rulesetName);
-      console.log('  updateTime   :', rel.updateTime);
+      console.log('  release name :', rel.name || rel.release?.name);
+      console.log('  ruleset      :', rel.rulesetName || rel.release?.rulesetName);
+      console.log('  updateTime   :', rel.updateTime || rel.release?.updateTime);
       return;
     }
     console.error('PATCH failed:', patchRes.status, patchRes.body);
@@ -105,7 +105,7 @@ async function main() {
   const createRelRes = await apiRequest(
     'POST',
     `/v1/projects/${PROJECT}/releases`,
-    { name: RELEASE_NAME, rulesetName }
+    { name: RELEASE_NAME, ruleset_name: rulesetName }
   );
 
   if (createRelRes.status === 200) {

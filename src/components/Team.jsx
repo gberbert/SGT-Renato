@@ -4,11 +4,12 @@ import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { subscribeToUsers } from "../services/settingsService";
 import { Card, Flex, Text, TextField } from "@radix-ui/themes";
-import { Edit2, Eye, Filter, BarChart3 } from "lucide-react";
+import { Edit2, Eye, Filter, BarChart3, ChevronDown, CalendarDays, Settings2 } from "lucide-react";
 import UserDetailsModal from "./UserDetailsModal";
 import CalendarBase from "./CalendarBase";
 import TeamCapacityGrid from "./TeamCapacityGrid";
 import { STATUS_OPTIONS, CONTRATO_OPTIONS, FOUNDATION_OPTIONS } from "../utils/userFieldOptions";
+import { saveCapacityConfig, DEFAULT_BASE_PARAMS } from "../services/teamCapacityService";
 
 function safe(v) {
   if (v === null || v === undefined) return "";
@@ -129,6 +130,23 @@ export default function Team({ currentUser }) {
   const [selectedFoundations, setSelectedFoundations] = useState(new Set());
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+  const [calendarCollapsed, setCalendarCollapsed] = useState(false);
+  const [configPanelOpen, setConfigPanelOpen] = useState(false);
+  const [configSaving, setConfigSaving] = useState(false);
+  const [configPeriodStart, setConfigPeriodStart] = useState(() => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-01`;
+  });
+  const [configPeriodEnd, setConfigPeriodEnd] = useState(() => {
+    const t = new Date();
+    const last = new Date(t.getFullYear(), t.getMonth() + 1, 0);
+    return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
+  });
+  const [configWorkingDays, setConfigWorkingDays] = useState(22);
+  const [configBaseParams, setConfigBaseParams] = useState({ ...DEFAULT_BASE_PARAMS });
+  const [calendarRangeSelected, setCalendarRangeSelected] = useState(false);
+  const [holydays, setHolydays] = useState([]);
 
   useEffect(() => {
     const q = query(collection(db, "squads"), orderBy("createdAt", "desc"));
@@ -143,6 +161,37 @@ export default function Team({ currentUser }) {
     const unsub = subscribeToUsers((data) => { setUsers(data || []); setLoadingUsers(false); });
     return () => unsub();
   }, []);
+
+  // Subscribe to holidays (same source as CalendarBase) for working-days recalc
+  useEffect(() => {
+    const unsub = onSnapshot(
+      query(collection(db, "holydays")),
+      (snap) => {
+        setHolydays(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+      () => {}
+    );
+    return () => unsub();
+  }, []);
+
+  /** Count working days between two "YYYY-MM-DD" strings using loaded holiday data. */
+  const recalcWorkingDays = () => {
+    if (!configPeriodStart || !configPeriodEnd) return;
+    const holidaySet = new Set(holydays.map((h) => h.data).filter(Boolean));
+    const start = new Date(configPeriodStart + "T00:00:00");
+    const end   = new Date(configPeriodEnd   + "T00:00:00");
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return;
+    let count = 0;
+    const cur = new Date(start);
+    while (cur <= end) {
+      const dow = cur.getDay();
+      const ds  = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`;
+      if (dow !== 0 && dow !== 6 && !holidaySet.has(ds)) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    setCalendarRangeSelected(true);
+    setConfigWorkingDays(count);
+  };
 
   const membership = useMemo(() => {
     const map = new Map();
@@ -244,6 +293,26 @@ export default function Team({ currentUser }) {
   const totalMembros = usersFiltered.length;
   const totalMembrosNoContract = usersFilteredNoContract.length;
 
+  const handleSaveCapacityConfig = async () => {
+    setConfigSaving(true);
+    try {
+      await saveCapacityConfig({
+        periodStart: configPeriodStart,
+        periodEnd: configPeriodEnd,
+        workingDays: Number(configWorkingDays),
+        capacityBruto: Number(configWorkingDays) * 8,
+        baseParams: {
+          alocacao: Number(configBaseParams.alocacao),
+        },
+        updatedBy: currentUser?.uid || "",
+      });
+    } catch (err) {
+      console.error("Erro ao salvar configuração de capacity:", err);
+    } finally {
+      setConfigSaving(false);
+    }
+  };
+
   if (loadingSquads || loadingUsers) {
     return (
       <div className="team-page">
@@ -296,7 +365,7 @@ export default function Team({ currentUser }) {
             </div>
           </div>
 
-          {/* Search + filters + TEAM CAPACITY button */}
+          {/* Search + filters */}
           <Card size="2" style={{ borderBottom: "none", boxShadow: "none" }}>
             <Flex mb="3" align="center" gap="3" wrap="wrap">
               <TextField.Root
@@ -305,6 +374,31 @@ export default function Team({ currentUser }) {
                 onChange={(e) => setUserSearchTerm(e.target.value)}
                 style={{ flexGrow: 1, minWidth: 260 }}
               />
+
+              {/* Collapse/expand toggle */}
+              <button
+                type="button"
+                onClick={() => setFiltersCollapsed((v) => !v)}
+                title={filtersCollapsed ? "Expandir filtros" : "Recolher filtros"}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+                  border: filtersCollapsed ? "1px solid var(--indigo-7)" : "1px solid var(--gray-6)",
+                  background: filtersCollapsed ? "var(--indigo-3)" : "var(--gray-2)",
+                  color: filtersCollapsed ? "var(--indigo-11)" : "var(--gray-10)",
+                  cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s",
+                }}
+              >
+                <ChevronDown
+                  size={14}
+                  style={{
+                    transform: filtersCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                    transition: "transform 0.2s",
+                  }}
+                />
+                {filtersCollapsed ? "Filtros" : "Recolher"}
+              </button>
+
               {(userSearchTerm || selectedStatuses.size > 0 || selectedSquads.size > 0 || selectedContracts.size > 0 || selectedFoundations.size > 0) && (
                 <button
                   type="button"
@@ -326,6 +420,15 @@ export default function Team({ currentUser }) {
                 </button>
               )}
             </Flex>
+
+            {/* Collapsible filter rows */}
+            <div style={{
+              overflow: "hidden",
+              maxHeight: filtersCollapsed ? "0" : "200px",
+              opacity: filtersCollapsed ? 0 : 1,
+              transition: "max-height 0.25s ease, opacity 0.2s ease",
+              pointerEvents: filtersCollapsed ? "none" : undefined,
+            }}>
 
             {/* Row 1: STATUS | SQUAD */}
             <Flex mb="2" align="center" gap="3" wrap="wrap">
@@ -386,6 +489,8 @@ export default function Team({ currentUser }) {
                 <button type="button" onClick={() => setSelectedFoundations(new Set())} style={clearStyle}>✕</button>
               )}
             </Flex>
+
+            </div>{/* end collapsible */}
           </Card>
         </div>
 
@@ -394,74 +499,34 @@ export default function Team({ currentUser }) {
           <button
             onClick={() => setActiveTab("team")}
             style={{
-              padding: "10px 16px",
-              fontSize: "13px",
-              fontWeight: "700",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
+              padding: "10px 16px", fontSize: "13px", fontWeight: "700",
+              letterSpacing: "0.04em", textTransform: "uppercase",
               background: "transparent",
               color: activeTab === "team" ? "var(--indigo-11)" : "var(--gray-10)",
               border: "none",
               borderBottom: activeTab === "team" ? "2px solid var(--indigo-11)" : "2px solid transparent",
-              cursor: "pointer",
-              transition: "all 0.15s",
+              cursor: "pointer", transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => {
-              if (activeTab !== "team") e.currentTarget.style.color = "var(--gray-11)";
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== "team") e.currentTarget.style.color = "var(--gray-10)";
-            }}
+            onMouseEnter={(e) => { if (activeTab !== "team") e.currentTarget.style.color = "var(--gray-11)"; }}
+            onMouseLeave={(e) => { if (activeTab !== "team") e.currentTarget.style.color = "var(--gray-10)"; }}
           >
             TEAM
           </button>
           <button
             onClick={() => setActiveTab("capacity")}
             style={{
-              padding: "10px 16px",
-              fontSize: "13px",
-              fontWeight: "700",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
+              padding: "10px 16px", fontSize: "13px", fontWeight: "700",
+              letterSpacing: "0.04em", textTransform: "uppercase",
               background: "transparent",
               color: activeTab === "capacity" ? "var(--indigo-11)" : "var(--gray-10)",
               border: "none",
               borderBottom: activeTab === "capacity" ? "2px solid var(--indigo-11)" : "2px solid transparent",
-              cursor: "pointer",
-              transition: "all 0.15s",
+              cursor: "pointer", transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => {
-              if (activeTab !== "capacity") e.currentTarget.style.color = "var(--gray-11)";
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== "capacity") e.currentTarget.style.color = "var(--gray-10)";
-            }}
+            onMouseEnter={(e) => { if (activeTab !== "capacity") e.currentTarget.style.color = "var(--gray-11)"; }}
+            onMouseLeave={(e) => { if (activeTab !== "capacity") e.currentTarget.style.color = "var(--gray-10)"; }}
           >
             TEAM CAPACITY
-          </button>
-          <button
-            onClick={() => setActiveTab("calendar")}
-            style={{
-              padding: "10px 16px",
-              fontSize: "13px",
-              fontWeight: "700",
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              background: "transparent",
-              color: activeTab === "calendar" ? "var(--indigo-11)" : "var(--gray-10)",
-              border: "none",
-              borderBottom: activeTab === "calendar" ? "2px solid var(--indigo-11)" : "2px solid transparent",
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              if (activeTab !== "calendar") e.currentTarget.style.color = "var(--gray-11)";
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== "calendar") e.currentTarget.style.color = "var(--gray-10)";
-            }}
-          >
-            CALENDARIO BASE
           </button>
         </div>
 
@@ -497,25 +562,17 @@ export default function Team({ currentUser }) {
                     <tr key={u.id} style={{ cursor: "pointer" }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                      {/* Nome */}
                       <td style={TD}>
                         <div style={{ fontWeight: 600, color: "var(--gray-12)" }}>{getUserLabel(u)}</div>
                       </td>
-                      {/* Status */}
-                      <td style={TD}>
-                        <Badge label={u?.status || "—"} color={statusColor(u?.status)} />
-                      </td>
-                      {/* Squad */}
+                      <td style={TD}><Badge label={u?.status || "—"} color={statusColor(u?.status)} /></td>
                       <td style={TD}>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                           {userSquads.length === 0
                             ? <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>
-                            : userSquads.map((sq) => (
-                              <Badge key={sq.id} label={squadBadge(sq)} color="cyan" />
-                            ))}
+                            : userSquads.map((sq) => <Badge key={sq.id} label={squadBadge(sq)} color="cyan" />)}
                         </div>
                       </td>
-                      {/* Papel na Squad */}
                       <td style={TD}>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                           {(membershipRoles.get(u.id) || []).length === 0
@@ -533,23 +590,10 @@ export default function Team({ currentUser }) {
                             ))}
                         </div>
                       </td>
-                      {/* Contrato */}
-                      <td style={TD}>
-                        <Badge label={u?.contract || "—"} color={contractColor(u?.contract)} />
-                      </td>
-                      {/* Foundation */}
-                      <td style={TD}>
-                        <Badge label={u?.foundation || "—"} color="violet" />
-                      </td>
-                      {/* Nascimento */}
-                      <td style={TD}>
-                        <span style={{ fontSize: 12, color: "var(--gray-10)" }}>{formatDate(u?.dataNascimento)}</span>
-                      </td>
-                      {/* Email */}
-                      <td style={TD}>
-                        <span style={{ fontSize: 12, color: "var(--gray-10)" }}>{u?.email || "—"}</span>
-                      </td>
-                      {/* Ações */}
+                      <td style={TD}><Badge label={u?.contract || "—"} color={contractColor(u?.contract)} /></td>
+                      <td style={TD}><Badge label={u?.foundation || "—"} color="violet" /></td>
+                      <td style={TD}><span style={{ fontSize: 12, color: "var(--gray-10)" }}>{formatDate(u?.dataNascimento)}</span></td>
+                      <td style={TD}><span style={{ fontSize: 12, color: "var(--gray-10)" }}>{u?.email || "—"}</span></td>
                       <td style={{ ...TD, textAlign: "right" }}>
                         <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                           <button type="button" title="Visualizar"
@@ -575,59 +619,202 @@ export default function Team({ currentUser }) {
 
         {/* TEAM CAPACITY TAB */}
         {activeTab === "capacity" && (
-          <TeamCapacityGrid
-            usersFiltered={usersFiltered.map((u) => {
-              // Enrich squadRoles: resolve squad name from squadById when missing,
-              // fall back to membership map (same source as TEAM tab) when no squadRoles
-              let roles = (u.squadRoles || []).filter((r) => r.squad || r.squadId);
+          <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
 
-              // Patch missing squad names using squadById
-              roles = roles.map((r) => ({
-                ...r,
-                squad:
-                  r.squad ||
-                  squadById[r.squadId]?.name ||
-                  squadById[r.squadId]?.key ||
-                  squadById[r.squadId]?.sigla ||
-                  r.squadId ||
-                  "—",
-              }));
+            {/* Left column: calendar toggle + config toggle */}
+            <div style={{
+              flexShrink: 0,
+              width: (!calendarCollapsed || configPanelOpen) ? 320 : 36,
+              minWidth: 36,
+              transition: "width 0.3s ease",
+              display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 0,
+              overflow: "hidden",
+            }}>
 
-              // If still empty, build from membership (same logic as TEAM tab)
-              if (roles.length === 0) {
-                const memberSquadIds = [...(membership.get(u.id) || [])];
-                roles = memberSquadIds.map((sid) => ({
-                  squadId: sid,
-                  squad:
-                    squadById[sid]?.name ||
-                    squadById[sid]?.key ||
-                    squadById[sid]?.sigla ||
-                    sid,
-                  squadRole: "—",
-                  squadRoleId: sid,
-                }));
-              }
+              {/* Calendar toggle button */}
+              <button
+                type="button"
+                onClick={() => setCalendarCollapsed((v) => !v)}
+                title={calendarCollapsed ? "Expandir calendário" : "Recolher calendário"}
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 32, height: 32, borderRadius: "8px 8px 0 0",
+                  border: "1px solid var(--gray-5)",
+                  borderBottom: calendarCollapsed ? "1px solid var(--gray-5)" : "1px solid transparent",
+                  background: calendarCollapsed ? "var(--gray-2)" : "var(--indigo-3)",
+                  color: calendarCollapsed ? "var(--gray-10)" : "var(--indigo-11)",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                <CalendarDays size={15} />
+              </button>
 
-              return { ...u, squadRoles: roles };
-            })}
-            squadById={squadById}
-            membership={membership}
-          />
-        )}
-
-        {/* CALENDAR TAB */}
-        {activeTab === "calendar" && (
-          <div style={{ marginTop: 0 }}>
-            <div style={{ display: "flex", gap: "24px" }}>
-              <div style={{ maxWidth: "320px" }}>
-                <CalendarBase />
+              {/* Calendar panel */}
+              <div style={{
+                overflow: "hidden",
+                width: "100%",
+                maxHeight: calendarCollapsed ? "0" : "800px",
+                opacity: calendarCollapsed ? 0 : 1,
+                transition: "max-height 0.3s ease, opacity 0.2s ease",
+                pointerEvents: calendarCollapsed ? "none" : undefined,
+                border: calendarCollapsed ? "none" : "1px solid var(--gray-5)",
+                borderTop: "none",
+                borderRadius: "0 8px 8px 8px",
+                background: "var(--gray-1)",
+              }}>
+                <CalendarBase
+                  rangeMode={true}
+                  onRangeChange={({ start, end, workingDays }) => {
+                    const fmt = (d) =>
+                      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                    setCalendarRangeSelected(true);
+                    setConfigPeriodStart(fmt(start));
+                    setConfigPeriodEnd(fmt(end));
+                    setConfigWorkingDays(workingDays);
+                  }}
+                  onWorkingDaysChange={({ workingDays, periodStart, periodEnd }) => {
+                    if (!calendarRangeSelected) {
+                      setConfigWorkingDays(workingDays);
+                      setConfigPeriodStart(periodStart);
+                      setConfigPeriodEnd(periodEnd);
+                    }
+                  }}
+                />
               </div>
-              <div style={{ flex: 1, minHeight: "400px", padding: "20px", background: "rgba(255,255,255,0.02)", borderRadius: "8px", border: "1px solid var(--gray-6)" }}>
-                <p style={{ color: "var(--gray-9)" }}>Selecione um dia no calendário para visualizar detalhes...</p>
+
+              {/* Spacer */}
+              <div style={{ height: 8 }} />
+
+              {/* Config toggle button */}
+              <button
+                type="button"
+                onClick={() => setConfigPanelOpen((v) => !v)}
+                title={configPanelOpen ? "Fechar configurações de capacity" : "Configurações de Team Capacity"}
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 32, height: 32,
+                  borderRadius: configPanelOpen ? "8px 8px 0 0" : "8px",
+                  border: "1px solid var(--gray-5)",
+                  borderBottom: configPanelOpen ? "1px solid transparent" : "1px solid var(--gray-5)",
+                  background: configPanelOpen ? "var(--amber-3)" : "var(--gray-2)",
+                  color: configPanelOpen ? "var(--amber-11)" : "var(--gray-10)",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+              >
+                <Settings2 size={15} />
+              </button>
+
+              {/* Config panel */}
+              <div style={{
+                overflow: "hidden",
+                width: "100%",
+                maxHeight: configPanelOpen ? "700px" : "0",
+                opacity: configPanelOpen ? 1 : 0,
+                transition: "max-height 0.3s ease, opacity 0.2s ease",
+                pointerEvents: configPanelOpen ? undefined : "none",
+                border: configPanelOpen ? "1px solid var(--gray-5)" : "none",
+                borderTop: "none",
+                borderRadius: "0 8px 8px 8px",
+                background: "var(--gray-1)",
+              }}>
+                <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "var(--gray-9)", textTransform: "uppercase" }}>
+                    Configuração de Team Capacity
+                  </div>
+
+                  {/* Period */}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-10)", display: "block", marginBottom: 4 }}>Início do Período</label>
+                      <input type="date" value={configPeriodStart} onChange={(e) => setConfigPeriodStart(e.target.value)}
+                        style={{ width: "100%", padding: "5px 8px", fontSize: 12, borderRadius: 6, border: "1px solid var(--gray-5)", background: "var(--gray-2)", color: "var(--gray-12)", boxSizing: "border-box" }} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-10)", display: "block", marginBottom: 4 }}>Fim do Período</label>
+                      <input type="date" value={configPeriodEnd} onChange={(e) => setConfigPeriodEnd(e.target.value)}
+                        style={{ width: "100%", padding: "5px 8px", fontSize: 12, borderRadius: 6, border: "1px solid var(--gray-5)", background: "var(--gray-2)", color: "var(--gray-12)", boxSizing: "border-box" }} />
+                    </div>
+                  </div>
+
+                  {/* Working Days */}
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-10)", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      Dias Úteis no Período
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "var(--violet-11)", background: "var(--violet-3)", border: "1px solid var(--violet-7)", borderRadius: 999, padding: "1px 7px", letterSpacing: "0.03em" }}>
+                        ↑ calendário
+                      </span>
+                    </label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <input
+                        type="number" min={1} max={31}
+                        value={configWorkingDays}
+                        onChange={(e) => setConfigWorkingDays(e.target.value)}
+                        style={{ flex: 1, padding: "5px 8px", fontSize: 12, borderRadius: 6, border: "1px solid var(--violet-7)", background: "var(--violet-2)", color: "var(--gray-12)", boxSizing: "border-box", fontWeight: 700 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={recalcWorkingDays}
+                        title="Recalcular dias úteis com base nas datas e feriados configurados"
+                        style={{
+                          flexShrink: 0, padding: "5px 10px", borderRadius: 6,
+                          border: "1px solid var(--violet-7)", background: "var(--violet-9)",
+                          color: "white", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                          letterSpacing: "0.04em", whiteSpace: "nowrap",
+                        }}
+                      >
+                        Calcular
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ height: 1, background: "var(--gray-4)", margin: "2px 0" }} />
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", color: "var(--gray-9)", textTransform: "uppercase" }}>
+                    Parâmetros Base
+                  </div>
+
+                  {/* Alocação */}
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-10)", display: "block", marginBottom: 4 }}>Alocação padrão (%)</label>
+                    <input type="number" min={0} max={100} step={1}
+                      value={configBaseParams.alocacao}
+                      onChange={(e) => setConfigBaseParams((p) => ({ ...p, alocacao: e.target.value }))}
+                      style={{ width: "100%", padding: "5px 8px", fontSize: 12, borderRadius: 6, border: "1px solid var(--gray-5)", background: "var(--gray-2)", color: "var(--gray-12)", boxSizing: "border-box" }} />
+                  </div>
+
+                  {/* Save button */}
+                  <button
+                    type="button"
+                    onClick={handleSaveCapacityConfig}
+                    disabled={configSaving}
+                    style={{
+                      marginTop: 4, padding: "8px 0", borderRadius: 8, width: "100%",
+                      border: "none", background: "var(--indigo-9)", color: "white",
+                      fontSize: 13, fontWeight: 700, cursor: configSaving ? "not-allowed" : "pointer",
+                      opacity: configSaving ? 0.7 : 1, letterSpacing: "0.04em",
+                    }}
+                  >
+                    {configSaving ? "Salvando..." : "Salvar Configuração"}
+                  </button>
+                </div>
               </div>
+            </div>
+
+            {/* Right column: TeamCapacityGrid */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <TeamCapacityGrid
+                usersFiltered={usersFiltered}
+                squadById={squadById}
+                membership={membership}
+                workingDays={configWorkingDays}
+                baseParams={configBaseParams}
+                periodStart={configPeriodStart}
+                periodEnd={configPeriodEnd}
+                currentUser={currentUser}
+              />
             </div>
           </div>
         )}
+
       </div>
     </>
   );

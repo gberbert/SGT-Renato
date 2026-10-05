@@ -36,6 +36,7 @@ import {
   Plus,
   Download,
   Search,
+  ChevronDown,
 } from "lucide-react";
 import { Button, Flex, Select, Text, Table, Badge, Dialog, Grid, TextField, ScrollArea, Card } from "@radix-ui/themes";
 import HelpFlow from "./HelpFlow";
@@ -80,7 +81,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
   const activeTicketRef = useRef(null);
 
   const [useSwimlanes, setUseSwimlanes] = useState(false);
-  const [viewMode, setViewMode] = useState("list"); // 'kanban' | 'list'
+  const [viewMode, setViewMode] = useState("list");
   const [projects, setProjects] = useState([]);
   const [workflows, setWorkflows] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(() => localStorage.getItem("lastSelectedProjectId") || "all");
@@ -110,6 +111,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
   const [cargaFullProgress, setCargaFullProgress] = useState({ current: 0, total: 0, text: "" });
 
   const [isHelpFlowOpen, setIsHelpFlowOpen] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
   useEffect(() => {
     let ticketsLoaded = false;
@@ -391,7 +393,6 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
     filteredTickets = filteredTickets.filter((t) => t.assignee === userName || myAllocations.includes(t.id));
   }
 
-  // Filtrar pelo quadro atual (Demandas vs Atividades)
   filteredTickets = filteredTickets.filter((t) => (t.board || "demandas") === board);
 
   filteredTickets = filteredTickets.filter((t) => {
@@ -546,8 +547,49 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
   return (
     <>
       <div className="kanban-wrapper" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        <div className="kanban-header">
-          <Flex align="center" gap="2" className="kanban-filters">
+        <div className="kanban-header" style={{ flexWrap: "wrap", gap: filtersCollapsed ? "0" : undefined }}>
+          {/* Collapse toggle */}
+          <button
+            onClick={() => setFiltersCollapsed((v) => !v)}
+            title={filtersCollapsed ? "Expandir filtros" : "Recolher filtros"}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              border: "1px solid var(--gray-5)",
+              background: filtersCollapsed ? "var(--indigo-3)" : "var(--gray-2)",
+              color: filtersCollapsed ? "var(--indigo-11)" : "var(--gray-10)",
+              cursor: "pointer",
+              fontSize: "11px",
+              fontWeight: "600",
+              flexShrink: 0,
+              transition: "all 0.15s",
+            }}
+          >
+            <ChevronDown
+              size={14}
+              style={{
+                transform: filtersCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+              }}
+            />
+            {filtersCollapsed ? "Filtros" : "Recolher"}
+          </button>
+
+          <Flex
+            align="center"
+            gap="2"
+            className="kanban-filters"
+            style={{
+              overflow: "hidden",
+              maxHeight: filtersCollapsed ? "0" : "100px",
+              opacity: filtersCollapsed ? 0 : 1,
+              transition: "max-height 0.25s ease, opacity 0.2s ease",
+              pointerEvents: filtersCollapsed ? "none" : undefined,
+            }}
+          >
             <Select.Root value={selectedProjectId} onValueChange={setSelectedProjectId}>
               <Select.Trigger className="kanban-select" style={{ minWidth: "140px" }} />
               <Select.Content>
@@ -595,58 +637,42 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
                 <Dialog.Title>Filtros Avançados</Dialog.Title>
                 <Grid columns="2" gap="3" mt="3">
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Responsável
-                    </Text>
+                    <Text size="2" weight="bold">Responsável</Text>
                     <Select.Root
                       value={advancedFilters.assignee || "all"}
-                      onValueChange={(val) =>
-                        setAdvancedFilters((prev) => ({ ...prev, assignee: val === "all" ? "" : val }))
-                      }
+                      onValueChange={(val) => setAdvancedFilters((prev) => ({ ...prev, assignee: val === "all" ? "" : val }))}
                     >
                       <Select.Trigger />
                       <Select.Content>
                         <Select.Item value="all">Todos</Select.Item>
                         {assignees.map((a) => (
-                          <Select.Item key={a} value={a}>
-                            {a}
-                          </Select.Item>
+                          <Select.Item key={a} value={a}>{a}</Select.Item>
                         ))}
                       </Select.Content>
                     </Select.Root>
                   </Flex>
 
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Sistema
-                    </Text>
+                    <Text size="2" weight="bold">Sistema</Text>
                     <Select.Root
                       value={advancedFilters.system || "all"}
-                      onValueChange={(val) =>
-                        setAdvancedFilters((prev) => ({ ...prev, system: val === "all" ? "" : val }))
-                      }
+                      onValueChange={(val) => setAdvancedFilters((prev) => ({ ...prev, system: val === "all" ? "" : val }))}
                     >
                       <Select.Trigger />
                       <Select.Content>
                         <Select.Item value="all">Todos</Select.Item>
                         {systems.map((s) => (
-                          <Select.Item key={s.id} value={s.name}>
-                            {s.name}
-                          </Select.Item>
+                          <Select.Item key={s.id} value={s.name}>{s.name}</Select.Item>
                         ))}
                       </Select.Content>
                     </Select.Root>
                   </Flex>
 
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Prioridade
-                    </Text>
+                    <Text size="2" weight="bold">Prioridade</Text>
                     <Select.Root
                       value={advancedFilters.priority || "all"}
-                      onValueChange={(val) =>
-                        setAdvancedFilters((prev) => ({ ...prev, priority: val === "all" ? "" : val }))
-                      }
+                      onValueChange={(val) => setAdvancedFilters((prev) => ({ ...prev, priority: val === "all" ? "" : val }))}
                     >
                       <Select.Trigger />
                       <Select.Content>
@@ -660,75 +686,55 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
                   </Flex>
 
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Tipo
-                    </Text>
+                    <Text size="2" weight="bold">Tipo</Text>
                     <Select.Root
                       value={advancedFilters.type || "all"}
-                      onValueChange={(val) =>
-                        setAdvancedFilters((prev) => ({ ...prev, type: val === "all" ? "" : val }))
-                      }
+                      onValueChange={(val) => setAdvancedFilters((prev) => ({ ...prev, type: val === "all" ? "" : val }))}
                     >
                       <Select.Trigger />
                       <Select.Content>
                         <Select.Item value="all">Todos</Select.Item>
                         {uniqueTypes.map((t) => (
-                          <Select.Item key={t} value={t}>
-                            {t}
-                          </Select.Item>
+                          <Select.Item key={t} value={t}>{t}</Select.Item>
                         ))}
                       </Select.Content>
                     </Select.Root>
                   </Flex>
 
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Status SGT (Coluna)
-                    </Text>
+                    <Text size="2" weight="bold">Status SGT (Coluna)</Text>
                     <Select.Root
                       value={advancedFilters.status || "all"}
-                      onValueChange={(val) =>
-                        setAdvancedFilters((prev) => ({ ...prev, status: val === "all" ? "" : val }))
-                      }
+                      onValueChange={(val) => setAdvancedFilters((prev) => ({ ...prev, status: val === "all" ? "" : val }))}
                     >
                       <Select.Trigger />
                       <Select.Content>
                         <Select.Item value="all">Todos</Select.Item>
                         {columns.map((col) => (
-                          <Select.Item key={col.id} value={col.statusId}>
-                            {col.title}
-                          </Select.Item>
+                          <Select.Item key={col.id} value={col.statusId}>{col.title}</Select.Item>
                         ))}
                       </Select.Content>
                     </Select.Root>
                   </Flex>
 
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Status Jira
-                    </Text>
+                    <Text size="2" weight="bold">Status Jira</Text>
                     <Select.Root
                       value={advancedFilters.jiraStatus || "all"}
-                      onValueChange={(val) =>
-                        setAdvancedFilters((prev) => ({ ...prev, jiraStatus: val === "all" ? "" : val }))
-                      }
+                      onValueChange={(val) => setAdvancedFilters((prev) => ({ ...prev, jiraStatus: val === "all" ? "" : val }))}
                     >
                       <Select.Trigger />
                       <Select.Content>
                         <Select.Item value="all">Todos</Select.Item>
                         {uniqueJiraStatuses.map((js) => (
-                          <Select.Item key={js} value={js}>
-                            {js}
-                          </Select.Item>
+                          <Select.Item key={js} value={js}>{js}</Select.Item>
                         ))}
                       </Select.Content>
                     </Select.Root>
                   </Flex>
 
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Data Criação (De)
-                    </Text>
+                    <Text size="2" weight="bold">Data Criação (De)</Text>
                     <TextField.Root
                       type="date"
                       value={advancedFilters.dateStart}
@@ -737,9 +743,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
                   </Flex>
 
                   <Flex direction="column" gap="1">
-                    <Text size="2" weight="bold">
-                      Data Criação (Até)
-                    </Text>
+                    <Text size="2" weight="bold">Data Criação (Até)</Text>
                     <TextField.Root
                       type="date"
                       value={advancedFilters.dateEnd}
@@ -753,17 +757,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
                     variant="soft"
                     color="gray"
                     onClick={() => {
-                      setAdvancedFilters({
-                        system: "",
-                        priority: "",
-                        type: "",
-                        assignee: "",
-                        status: "",
-                        sprint: "",
-                        dateStart: "",
-                        dateEnd: "",
-                        jiraStatus: "",
-                      });
+                      setAdvancedFilters({ system: "", priority: "", type: "", assignee: "", status: "", sprint: "", dateStart: "", dateEnd: "", jiraStatus: "" });
                       setQuickSearch("");
                     }}
                   >
@@ -810,9 +804,7 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
             {board === "demandas" && (
               <Button variant="soft" color="indigo" onClick={() => setIsHelpFlowOpen(true)} className="kanban-btn">
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                  <Text as="span" style={{ fontWeight: 700 }}>
-                    Workflow Demandas
-                  </Text>
+                  <Text as="span" style={{ fontWeight: 700 }}>Workflow Demandas</Text>
                 </span>
               </Button>
             )}
@@ -848,81 +840,55 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
                             <Table.ColumnHeaderCell>Criação</Table.ColumnHeaderCell>
                             <Table.ColumnHeaderCell>Análise T-Shirt</Table.ColumnHeaderCell>
                             <Table.ColumnHeaderCell>T-Shirt Enviada</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Aprovação (Atend.)</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Planejamento SLA</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Planejamento Enviado</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Deadline Aprovação</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Aprovação (EF/SR)</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Início Demanda</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Entrega Planejada</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Data Entrega</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Ap. Homologação</Table.ColumnHeaderCell>
                           </Table.Row>
                         </Table.Header>
-
                         <Table.Body>
                           {colTickets.map((t) => {
-                            const fDate = (isoString) => {
-                              if (!isoString) return "-";
-                              const [y, m, d] = isoString.split("T")[0].split("-");
-                              return `${d}/${m}/${y}`;
-                            };
-
+                            const priorityColors = { low: "blue", medium: "orange", high: "red", critical: "crimson" };
+                            const priorityLabels = { low: "Baixa", medium: "Média", high: "Alta", critical: "Crítica" };
                             return (
                               <Table.Row
                                 key={t.id}
-                                align="center"
                                 style={{ cursor: "pointer" }}
-                                onClick={() => onCardClick(t)}
+                                onClick={() => onCardClick && onCardClick(t)}
                               >
                                 <Table.Cell>
-                                  <Text weight="bold" color="indigo">{t.code}</Text>
+                                  <Text size="2" weight="bold" color="indigo">{t.code}</Text>
                                 </Table.Cell>
-                                <Table.Cell>{t.title}</Table.Cell>
+                                <Table.Cell style={{ maxWidth: "300px", whiteSpace: "normal" }}>
+                                  <Text size="2">{t.title}</Text>
+                                </Table.Cell>
                                 <Table.Cell>
-                                  {t.associatedSystems && t.associatedSystems.length > 0 ? (
-                                    t.associatedSystems.length === 1 ? (
-                                      <Badge
-                                        color="blue"
-                                        variant="soft"
-                                        style={{ maxWidth: "150px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-                                      >
-                                        {t.associatedSystems[0].system}
-                                      </Badge>
-                                    ) : (
-                                      <Button
-                                        size="1"
-                                        variant="soft"
-                                        color="blue"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSystemsModalData(t.associatedSystems);
-                                        }}
-                                      >
-                                        Ver Sistemas ({t.associatedSystems.length})
-                                      </Button>
-                                    )
-                                  ) : (
-                                    "-"
-                                  )}
+                                  <Text size="2">{t.associatedSystems?.map((s) => s.system).join(", ") || "-"}</Text>
                                 </Table.Cell>
-                                <Table.Cell>{t.squadName ? <Badge color="purple" variant="soft">{t.squadName}</Badge> : "-"}</Table.Cell>
-                                <Table.Cell>{t.assignee || "Sem responsável"}</Table.Cell>
-                                <Table.Cell style={{ textTransform: "capitalize" }}>{t.priority || "-"}</Table.Cell>
-                                <Table.Cell>{t.type || "-"}</Table.Cell>
-                                <Table.Cell>{t.jiraStatus ? <Badge color="cyan" variant="soft" size="1">{t.jiraStatus}</Badge> : "-"}</Table.Cell>
-                                <Table.Cell>{t.createdAt ? new Date(t.createdAt.toDate()).toLocaleDateString() : "-"}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.dataAnaliseTshirt)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.tshirtEnviada)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.aprovacao1)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.planejamentoSLA)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.planejamentoEnviado)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.deadlineAprovacao)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.aprovacao2)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.inicioDemanda)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.dataEntregaPlanejada)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.dataEntrega)}</Table.Cell>
-                                <Table.Cell>{fDate(t.jiraDatesFlow?.aprovacaoHomologacao)}</Table.Cell>
+                                <Table.Cell>
+                                  <Text size="2">{t.squadName || "-"}</Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text size="2">{t.assignee || "-"}</Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  {t.priority ? (
+                                    <Badge color={priorityColors[t.priority] || "gray"} radius="full">
+                                      {priorityLabels[t.priority] || t.priority}
+                                    </Badge>
+                                  ) : "-"}
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text size="2">{t.type || "-"}</Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text size="2">{t.jiraStatus || "-"}</Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text size="2">{t.createdAt ? t.createdAt.toDate().toLocaleDateString("pt-BR") : "-"}</Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text size="2">{t.tshirtAnalysis || "-"}</Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Text size="2">{t.tshirtSent ? "Sim" : "Não"}</Text>
+                                </Table.Cell>
                               </Table.Row>
                             );
                           })}
@@ -932,102 +898,60 @@ const KanbanBoard = ({ onCardClick, userRole, board = "demandas", setIsModalOpen
                   </Card>
                 );
               })}
-
-              {filteredTickets.length === 0 && (
-                <Flex justify="center" align="center" style={{ padding: "40px", background: "var(--surface)", borderRadius: "8px" }}>
-                  <Text color="gray">Nenhuma demanda encontrada.</Text>
-                </Flex>
-              )}
             </div>
           ) : (
-            <div className="kanban-board" style={{ display: "flex", flexDirection: "column", gap: "32px", paddingBottom: "32px" }}>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={pointerWithin}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-              >
+            <DndContext
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="kanban-board">
                 {assignees.map((assignee) => (
-                  <div key={assignee || "all"} className="swimlane-container" style={{ minWidth: "max-content" }}>
-                    {useSwimlanes && (
-                      <div style={{ padding: "8px 16px", background: "var(--surface)", borderRadius: "8px", marginBottom: "16px", fontWeight: "bold" }}>
-                        Responsável: <span style={{ color: "var(--primary)" }}>{assignee}</span>
+                  <React.Fragment key={assignee || "all"}>
+                    {useSwimlanes && assignee && (
+                      <div className="swimlane-header">
+                        <Text weight="bold" size="3">{assignee}</Text>
                       </div>
                     )}
+                    {columns.map((col) => {
+                      const colId = useSwimlanes && assignee ? `${col.statusId}___${assignee}` : col.statusId;
+                      const colTickets = filteredTickets.filter(
+                        (t) =>
+                          t.columnId === col.statusId &&
+                          (board === "atividades" || !t.parentId) &&
+                          (!useSwimlanes || (t.assignee || "Sem responsável") === assignee)
+                      );
 
-                    <Flex gap="4">
-                      {columns.map((col) => {
-                        const filteredTicketsForCol = filteredTickets.filter((t) => {
-                          if (t.columnId !== col.statusId || (board === "demandas" && t.parentId)) return false;
-                          if (useSwimlanes) {
-                            const tAssignee = t.assignee || "Sem responsável";
-                            return tAssignee === assignee;
-                          }
-                          return true;
-                        });
-
-                        const colId = useSwimlanes ? `${col.statusId}___${assignee}` : col.statusId;
-
-                        return (
-                          <KanbanColumn
-                            key={colId}
-                            column={{ ...col, id: colId }}
-                            tickets={filteredTicketsForCol}
-                            allTickets={filteredTickets}
-                            onCardClick={onCardClick}
-                          />
-                        );
-                      })}
-                    </Flex>
-                  </div>
+                      return (
+                        <KanbanColumn
+                          key={colId}
+                          column={{ ...col, id: colId, statusId: col.statusId }}
+                          tickets={colTickets}
+                          onCardClick={onCardClick}
+                          board={board}
+                          allTickets={filteredTickets}
+                        />
+                      );
+                    })}
+                  </React.Fragment>
                 ))}
+              </div>
 
-                <DragOverlay dropAnimation={dropAnimation}>
-                  {activeTicket ? <KanbanCard ticket={activeTicket} isOverlay={true} /> : null}
-                </DragOverlay>
-              </DndContext>
-            </div>
+              <DragOverlay dropAnimation={dropAnimation}>
+                {activeTicket ? (
+                  <KanbanCard ticket={activeTicket} isOverlay board={board} />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           )}
         </div>
       </div>
 
-      <Dialog.Root open={isHelpFlowOpen} onOpenChange={setIsHelpFlowOpen}>
-        <Dialog.Content style={{ maxWidth: "1100px", width: "95vw", maxHeight: "90vh", overflow: "auto" }}>
-          <Dialog.Title>Workflow de Status — Demandas</Dialog.Title>
-          <Dialog.Description size="2" mb="4" color="gray">
-            Fluxo de vida de uma Demanda no SGT.
-          </Dialog.Description>
-          <div>
-            <HelpFlow />
-          </div>
-          <Flex justify="end" mt="4">
-            <Dialog.Close>
-              <Button variant="soft" color="gray">
-                Fechar
-              </Button>
-            </Dialog.Close>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
-
-      <Dialog.Root open={!!systemsModalData} onOpenChange={(open) => !open && setSystemsModalData(null)}>
-        <Dialog.Content maxWidth="400px">
-          <Dialog.Title>Sistemas Associados</Dialog.Title>
-          <Flex direction="column" gap="2" mt="2">
-            {systemsModalData?.map((s, i) => (
-              <Badge key={i} color="blue" variant="soft" size="2" style={{ padding: "8px", justifyContent: "flex-start" }}>
-                {s.system}
-              </Badge>
-            ))}
-          </Flex>
-          <Flex justify="end" mt="4">
-            <Button variant="soft" color="gray" onClick={() => setSystemsModalData(null)}>
-              Fechar
-            </Button>
-          </Flex>
-        </Dialog.Content>
-      </Dialog.Root>
+      {board === "demandas" && (
+        <HelpFlow isOpen={isHelpFlowOpen} onClose={() => setIsHelpFlowOpen(false)} />
+      )}
     </>
   );
 };

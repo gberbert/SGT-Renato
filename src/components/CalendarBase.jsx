@@ -4,61 +4,63 @@ import { db } from "../firebase";
 import { Card, Text } from "@radix-ui/themes";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default function CalendarBase() {
+const DAYS_OF_WEEK = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function formatDateStr(year, month, day) {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+function isWeekend(year, month, day) {
+  return [0, 6].includes(new Date(year, month, day).getDay());
+}
+function getDaysInMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+function getFirstDayOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+}
+function dateToNum(d) {
+  if (!d) return null;
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+export default function CalendarBase({ rangeMode = false, onRangeChange, onWorkingDaysChange }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [vacations, setVacations] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [rangeA, setRangeA] = useState(null);
+  const [rangeB, setRangeB] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formType, setFormType] = useState("vacation");
   const [formTitle, setFormTitle] = useState("");
   const [nationalHolidays, setNationalHolidays] = useState([]);
+  const [vacations, setVacations] = useState([]);
   const [loadingHolidays, setLoadingHolidays] = useState(true);
 
-  // Load feriados from 'holydays' collection
   useEffect(() => {
-    const q = query(collection(db, "holydays"));
     const unsub = onSnapshot(
-      q,
+      query(collection(db, "holydays")),
       (snap) => {
-        const docs = snap.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            data: data.data,  // "YYYY-MM-DD"
-            nome: data.nome,
-            tipo: data.tipo,  // "Nacional" | "Estadual" | "Municipal"
-          };
-        });
-        console.log("holydays carregados:", docs.length);
-        setNationalHolidays(docs);
+        setNationalHolidays(snap.docs.map((d) => { const x = d.data(); return { id: d.id, data: x.data, nome: x.nome, tipo: x.tipo }; }));
         setLoadingHolidays(false);
       },
-      (err) => {
-        console.error("Erro ao carregar holydays:", err);
-        setLoadingHolidays(false);
-      }
+      () => setLoadingHolidays(false)
     );
     return () => unsub();
   }, []);
 
-  // Load vacations
   useEffect(() => {
-    const q = query(collection(db, "vacations"));
     const unsub = onSnapshot(
-      q,
+      query(collection(db, "vacations")),
       (snap) => setVacations(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      (err) => console.debug("vacations:", err.code)
+      () => {}
     );
     return () => unsub();
   }, []);
 
-  // O(1) lookup maps
   const holidaysByDate = useMemo(() => {
     const map = {};
     for (const h of nationalHolidays) {
       if (!h.data) continue;
-      if (!map[h.data]) map[h.data] = [];
-      map[h.data].push(h);
+      (map[h.data] = map[h.data] || []).push(h);
     }
     return map;
   }, [nationalHolidays]);
@@ -67,407 +69,266 @@ export default function CalendarBase() {
     const map = {};
     for (const v of vacations) {
       if (!v.date) continue;
-      if (!map[v.date]) map[v.date] = [];
-      map[v.date].push(v);
+      (map[v.date] = map[v.date] || []).push(v);
     }
     return map;
   }, [vacations]);
 
-  // Helpers
-  const getDaysInMonth = (date) =>
-    new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const isHoliday = (ds) => !!(holidaysByDate[ds]?.length);
 
-  const getFirstDayOfMonth = (date) =>
-    new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-
-  const formatDate = (year, month, day) =>
-    `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
-  const isWeekend = (year, month, day) => {
-    const dow = new Date(year, month, day).getDay();
-    return dow === 0 || dow === 6;
+  const countWorkingDays = (start, end) => {
+    if (!start || !end) return 0;
+    const s = start <= end ? new Date(start) : new Date(end);
+    const e = start <= end ? new Date(end) : new Date(start);
+    s.setHours(0, 0, 0, 0); e.setHours(0, 0, 0, 0);
+    let count = 0;
+    const cur = new Date(s);
+    while (cur <= e) {
+      const ds = formatDateStr(cur.getFullYear(), cur.getMonth(), cur.getDate());
+      if (!isWeekend(cur.getFullYear(), cur.getMonth(), cur.getDate()) && !isHoliday(ds)) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
   };
 
-  const getDayInfo = (day) => {
-    const y = currentDate.getFullYear();
-    const m = currentDate.getMonth();
-    const dateStr = formatDate(y, m, day);
-    return {
-      dateStr,
-      holidays: holidaysByDate[dateStr] || [],
-      vacations: vacationsByDate[dateStr] || [],
-      weekend: isWeekend(y, m, day),
-    };
+  const handleDayClick = (day) => {
+    const clicked = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    if (!rangeMode) { setSelectedDate(clicked); setShowAddForm(false); return; }
+    if (!rangeA || (rangeA && rangeB)) { setRangeA(clicked); setRangeB(null); }
+    else {
+      const start = rangeA <= clicked ? rangeA : clicked;
+      const end = rangeA <= clicked ? clicked : rangeA;
+      setRangeA(start); setRangeB(end);
+      if (onRangeChange) {
+        const wd = countWorkingDays(start, end);
+        onRangeChange({ start, end, workingDays: wd, capacityBruto: wd * 8 });
+      }
+    }
   };
 
   const handleAddEntry = async () => {
-    if (!selectedDate || !formTitle.trim()) {
-      alert("Preencha todos os campos");
-      return;
-    }
-    const dateStr = formatDate(
-      selectedDate.getFullYear(),
-      selectedDate.getMonth(),
-      selectedDate.getDate()
-    );
+    if (!selectedDate || !formTitle.trim()) { alert("Preencha todos os campos"); return; }
+    const ds = formatDateStr(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     try {
-      await addDoc(collection(db, "holydays"), {
-        data: dateStr,       // campo padrão da coleção
-        nome: formTitle,
-        tipo: formType,      // "Nacional" | "Estadual" | "Municipal" | "Evento"
-        pais: "BR",
-        criadoManualmente: true,
-      });
-      setFormTitle("");
-      setShowAddForm(false);
-    } catch (err) {
-      console.error("Erro ao salvar em holydays:", err);
-      alert("Erro ao salvar: " + (err.message || err.code));
-    }
+      await addDoc(collection(db, "holydays"), { data: ds, nome: formTitle, tipo: formType, pais: "BR", criadoManualmente: true });
+      setFormTitle(""); setShowAddForm(false);
+    } catch (err) { alert("Erro: " + (err.message || err.code)); }
   };
 
-  const prevMonth = () =>
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  const nextMonth = () =>
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
+  const y = currentDate.getFullYear();
+  const mo = currentDate.getMonth();
   const daysInMonth = getDaysInMonth(currentDate);
   const firstDay = getFirstDayOfMonth(currentDate);
-  const monthYear = currentDate
-    .toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-    .toUpperCase();
+  const monthYear = currentDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
 
   const calendarDays = [];
   for (let i = 0; i < firstDay; i++) calendarDays.push(null);
   for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
 
-  // Count working days (not weekend, not holiday) for the current month
   const workingDaysCount = useMemo(() => {
-    let count = 0;
-    const y = currentDate.getFullYear();
-    const m = currentDate.getMonth();
-    const total = getDaysInMonth(currentDate);
-    for (let d = 1; d <= total; d++) {
-      const dateStr = formatDate(y, m, d);
-      const weekend = isWeekend(y, m, d);
-      const holiday = !!(holidaysByDate[dateStr]?.length);
-      if (!weekend && !holiday) count++;
+    let c = 0;
+    for (let d = 1; d <= getDaysInMonth(currentDate); d++) {
+      const ds = formatDateStr(y, mo, d);
+      if (!isWeekend(y, mo, d) && !isHoliday(ds)) c++;
     }
-    return count;
+    return c;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate, holidaysByDate]);
 
-  const totalHours = workingDaysCount * 8;
+  useEffect(() => {
+    if (onWorkingDaysChange) {
+      const start = `${y}-${String(mo + 1).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, mo + 1, 0).getDate();
+      const end = `${y}-${String(mo + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      onWorkingDaysChange({ workingDays: workingDaysCount, periodStart: start, periodEnd: end });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workingDaysCount, y, mo]);
 
-  // Color scheme per holiday tipo
-  const getTipoColors = (tipo) => {
-    const t = tipo?.toLowerCase();
-    if (t === "nacional") return { bg: "var(--red-3)", border: "var(--red-6)", text: "var(--red-11)", dot: "var(--red-9)", sel: "var(--red-9)" };
-    if (t === "estadual" || t === "municipal") return { bg: "var(--orange-3)", border: "var(--orange-6)", text: "var(--orange-11)", dot: "var(--orange-9)", sel: "var(--orange-9)" };
-    // Evento, Recesso, etc → blue
-    return { bg: "var(--blue-3)", border: "var(--blue-6)", text: "var(--blue-11)", dot: "var(--blue-9)", sel: "var(--blue-9)" };
+  const rangeWorkingDays = useMemo(() => {
+    if (!rangeA || !rangeB) return null;
+    return countWorkingDays(rangeA, rangeB);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeA, rangeB, holidaysByDate]);
+
+  const fmtDate = (d) => d ? d.toLocaleDateString("pt-BR") : "—";
+
+  const getTipoColor = (tipo) => {
+    const t = (tipo || "").toLowerCase();
+    if (t === "nacional") return ["var(--red-3)", "var(--red-6)", "var(--red-11)"];
+    if (t === "estadual" || t === "municipal") return ["var(--orange-3)", "var(--orange-6)", "var(--orange-11)"];
+    return ["var(--blue-3)", "var(--blue-6)", "var(--blue-11)"];
   };
 
-  // Dominant color for a day cell (pick the "most important" holiday type)
-  const getDayCellColors = (holidays) => {
-    if (!holidays.length) return null;
-    const nacional = holidays.find((h) => h.tipo?.toLowerCase() === "nacional");
-    if (nacional) return getTipoColors("nacional");
-    const estadual = holidays.find((h) => ["estadual", "municipal"].includes(h.tipo?.toLowerCase()));
-    if (estadual) return getTipoColors(estadual.tipo);
-    return getTipoColors(holidays[0].tipo); // evento/recesso → blue
-  };
-
-  const selectedInfo = selectedDate ? getDayInfo(selectedDate.getDate()) : null;
+  const selectedInfo = selectedDate
+    ? { ds: formatDateStr(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()) }
+    : null;
 
   return (
-    <Card style={{ padding: "16px", minWidth: "300px" }}>
+    <Card style={{ padding: 16, minWidth: 300 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        <button onClick={prevMonth} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--gray-10)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <button onClick={prevMonth} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--gray-10)" }}>
           <ChevronLeft size={18} />
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <Text weight="bold" style={{ fontSize: "13px", letterSpacing: "0.04em" }}>
-            {monthYear}
-          </Text>
-          {loadingHolidays ? (
-            <Text size="1" style={{ display: "block", color: "var(--gray-8)", fontSize: "9px" }}>
-              carregando feriados…
-            </Text>
-          ) : (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
-              <span style={{
-                fontSize: "10px",
-                color: "var(--violet-11)",
-                background: "var(--violet-3)",
-                border: "1px solid var(--violet-8)",
-                borderRadius: "10px",
-                padding: "1px 8px",
-                fontWeight: "700",
-                letterSpacing: "0.04em",
-                boxShadow: "0 0 8px var(--violet-9), 0 0 2px var(--violet-10)",
-                textShadow: "0 0 6px var(--violet-10)",
-              }}>
-                {workingDaysCount} dias úteis · {totalHours}h
-              </span>
-            </div>
-          )}
+          <Text weight="bold" style={{ fontSize: 13, letterSpacing: "0.04em" }}>{monthYear}</Text>
+          <div style={{ marginTop: 3 }}>
+            {loadingHolidays
+              ? <span style={{ fontSize: 9, color: "var(--gray-8)" }}>carregando…</span>
+              : <span style={{ fontSize: 10, color: "var(--violet-11)", background: "var(--violet-3)", border: "1px solid var(--violet-8)", borderRadius: 10, padding: "1px 8px", fontWeight: 700, letterSpacing: "0.04em" }}>
+                  {workingDaysCount} dias úteis · {workingDaysCount * 8}h
+                </span>
+            }
+          </div>
         </div>
-        <button onClick={nextMonth} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "var(--gray-10)" }}>
+        <button onClick={nextMonth} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--gray-10)" }}>
           <ChevronRight size={18} />
         </button>
       </div>
 
+      {/* Range hint */}
+      {rangeMode && (
+        <div style={{ marginBottom: 8, padding: "5px 10px", borderRadius: 6, background: "var(--indigo-2)", border: "1px solid var(--indigo-5)", fontSize: 11, color: "var(--indigo-11)", textAlign: "center" }}>
+          {!rangeA ? "Clique no dia inicial do período"
+            : !rangeB ? `Início: ${fmtDate(rangeA)} — clique no dia final`
+            : `📅 ${fmtDate(rangeA)} → ${fmtDate(rangeB)} · ${rangeWorkingDays} dias úteis · ${(rangeWorkingDays || 0) * 8}h`}
+        </div>
+      )}
+
       {/* Weekday headers */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", marginBottom: "8px" }}>
-        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: "10px", fontWeight: "700", color: "var(--gray-9)", padding: "4px 2px", letterSpacing: "0.04em" }}>
-            {d}
-          </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 8 }}>
+        {DAYS_OF_WEEK.map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "var(--gray-8)", padding: "4px 0" }}>{d}</div>
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "2px", marginBottom: "16px" }}>
+      {/* Days grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
         {calendarDays.map((day, idx) => {
-          if (day === null) return <div key={`empty-${idx}`} style={{ aspectRatio: "1" }} />;
+          if (!day) return <div key={"e" + idx} />;
+          const ds = formatDateStr(y, mo, day);
+          const holidays = holidaysByDate[ds] || [];
+          const vacList = vacationsByDate[ds] || [];
+          const weekend = isWeekend(y, mo, day);
+          const inRange = rangeMode && (() => {
+            if (!rangeA || !rangeB) return false;
+            const n = dateToNum(new Date(y, mo, day));
+            const a = dateToNum(rangeA), b = dateToNum(rangeB);
+            return n >= Math.min(a, b) && n <= Math.max(a, b);
+          })();
+          const edge = rangeMode && (() => {
+            const n = dateToNum(new Date(y, mo, day));
+            return n === dateToNum(rangeA) || (rangeB && n === dateToNum(rangeB));
+          })();
+          const isSelected = !rangeMode && selectedDate
+            && selectedDate.getFullYear() === y && selectedDate.getMonth() === mo && selectedDate.getDate() === day;
 
-          const info = getDayInfo(day);
-          const isSelected =
-            selectedDate?.getDate() === day &&
-            selectedDate?.getMonth() === currentDate.getMonth() &&
-            selectedDate?.getFullYear() === currentDate.getFullYear();
+          // Pick colors
+          const nacional = holidays.find((h) => h.tipo?.toLowerCase() === "nacional");
+          const est = holidays.find((h) => ["estadual", "municipal"].includes(h.tipo?.toLowerCase()));
+          const topHol = nacional || est || holidays[0];
+          const [holBg, holBorder] = topHol ? getTipoColor(topHol.tipo) : ["", ""];
 
-          const isHoliday = info.holidays.length > 0;
-          const isVacation = info.vacations.length > 0;
-          const dayCellColors = getDayCellColors(info.holidays);
+          let cellBg = topHol ? holBg : "transparent";
+          let cellBorder = topHol ? `1px solid ${holBorder}` : "1px solid transparent";
+          let cellColor = weekend ? "var(--gray-6)" : "var(--gray-11)";
+          if (inRange) { cellBg = "var(--indigo-3)"; cellBorder = "1px solid var(--indigo-5)"; cellColor = "var(--indigo-12)"; }
+          if (edge) { cellBg = "var(--indigo-9)"; cellBorder = "1px solid var(--indigo-10)"; cellColor = "white"; }
+          if (isSelected) { cellBg = "var(--violet-9)"; cellBorder = "1px solid var(--violet-10)"; cellColor = "white"; }
 
-          // Background & color logic
-          let bg = "transparent";
-          let textColor = info.weekend ? "var(--gray-8)" : "var(--gray-11)";
-          let border = "1px solid transparent";
-          let fontWeight = "normal";
-
-          if (isSelected) {
-            border = "2px solid var(--indigo-9)";
-          }
-
-          if (isHoliday && dayCellColors) {
-            bg = dayCellColors.bg;
-            textColor = dayCellColors.text;
-            border = `1px solid ${dayCellColors.border}`;
-            fontWeight = "700";
-            if (isSelected) border = `2px solid ${dayCellColors.sel}`;
-          } else if (isVacation) {
-            bg = "var(--blue-3)";
-            textColor = "var(--blue-11)";
-            border = "1px solid var(--blue-6)";
-            if (isSelected) border = "2px solid var(--blue-9)";
-          }
-
-          // Tooltip: show holiday names
-          const tooltipLines = info.holidays.map((h) => `${h.nome}${h.tipo ? ` (${h.tipo})` : ""}`);
-          if (isVacation) info.vacations.forEach((v) => tooltipLines.push(v.title));
-          const tooltip = tooltipLines.join("\n");
+          const hasVac = vacList.length > 0;
 
           return (
             <div
-              key={day}
-              title={tooltip}
-              onClick={() => {
-                setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
-                setShowAddForm(false);
-              }}
+              key={ds}
+              onClick={() => handleDayClick(day)}
+              title={holidays.map((h) => h.nome).concat(vacList.map((v) => v.title || "Férias")).join(", ") || undefined}
               style={{
-                aspectRatio: "1",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "6px",
-                background: bg,
-                color: textColor,
-                border,
-                fontWeight,
-                fontSize: "12px",
-                cursor: "pointer",
-                position: "relative",
-                transition: "all 0.1s ease",
-                userSelect: "none",
+                position: "relative", textAlign: "center", padding: "6px 2px",
+                borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: edge || isSelected ? 700 : 500,
+                background: cellBg, border: cellBorder, color: cellColor,
+                transition: "all 0.1s",
               }}
             >
               {day}
-              {/* 8h label on working days */}
-              {!info.weekend && !isHoliday && (
-                <span style={{
-                  fontSize: "8px",
-                  lineHeight: "1",
-                  color: "var(--gray-7)",
-                  fontWeight: "500",
-                  marginTop: "1px",
-                  letterSpacing: "0.02em",
-                }}>
-                  8h
-                </span>
+              {hasVac && (
+                <span style={{ position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "var(--teal-9)" }} />
               )}
-              {/* Dot indicator */}
-              {(isHoliday || isVacation) && (
-                <span
-                  style={{
-                    position: "absolute",
-                    bottom: "2px",
-                    width: "4px",
-                    height: "4px",
-                    borderRadius: "50%",
-                    background: isHoliday && dayCellColors ? dayCellColors.dot : "var(--blue-9)",
-                  }}
-                />
+              {holidays.length > 0 && !edge && !isSelected && (
+                <span style={{ position: "absolute", top: 2, right: 2, width: 4, height: 4, borderRadius: "50%", background: holBorder }} />
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Legend */}
-      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "var(--gray-10)" }}>
-          <span style={{ width: "10px", height: "10px", borderRadius: "3px", background: "var(--red-3)", border: "1px solid var(--red-6)", display: "inline-block" }} />
-          Feriado Nacional
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "var(--gray-10)" }}>
-          <span style={{ width: "10px", height: "10px", borderRadius: "3px", background: "var(--orange-3)", border: "1px solid var(--orange-6)", display: "inline-block" }} />
-          Feriado Estadual/Municipal
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "var(--gray-10)" }}>
-          <span style={{ width: "10px", height: "10px", borderRadius: "3px", background: "var(--blue-3)", border: "1px solid var(--blue-6)", display: "inline-block" }} />
-          Férias/Evento
-        </div>
-      </div>
-
-      {/* Selected date detail */}
-      {selectedDate && selectedInfo && (
-        <div style={{ borderTop: "1px solid var(--gray-5)", paddingTop: "12px" }}>
-          <Text weight="bold" size="2" style={{ display: "block", marginBottom: "8px" }}>
-            {selectedDate.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </Text>
-
-          {selectedInfo.holidays.length > 0 && (
-            <div style={{ marginBottom: "8px" }}>
-              {selectedInfo.holidays.map((h) => {
-                const hColors = getTipoColors(h.tipo);
+      {/* Selected day info (single mode) */}
+      {!rangeMode && selectedDate && (
+        <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 8, background: "var(--gray-2)", border: "1px solid var(--gray-4)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-11)" }}>
+              {selectedDate.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+            </span>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "1px solid var(--indigo-7)", background: "var(--indigo-3)", color: "var(--indigo-11)", cursor: "pointer", fontWeight: 600 }}
+            >
+              {showAddForm ? "Cancelar" : "+ Feriado"}
+            </button>
+          </div>
+          {selectedInfo && (holidaysByDate[selectedInfo.ds] || []).length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              {(holidaysByDate[selectedInfo.ds] || []).map((h, i) => {
+                const [bg, border, col] = getTipoColor(h.tipo);
                 return (
-                <div
-                  key={h.id}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: "6px",
-                    marginBottom: "4px",
-                    background: hColors.bg,
-                    border: `1px solid ${hColors.border}`,
-                    fontSize: "12px",
-                    color: hColors.text,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span>🎉 {h.nome}</span>
-                  {h.tipo && (
-                    <span style={{ fontSize: "10px", opacity: 0.8, marginLeft: "8px" }}>
-                      {h.tipo}
-                    </span>
-                  )}
-                </div>
+                  <span key={i} style={{ display: "inline-block", marginRight: 4, padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: bg, border: `1px solid ${border}`, color: col }}>
+                    {h.nome}
+                  </span>
                 );
               })}
             </div>
           )}
-
-          {selectedInfo.vacations.length > 0 && (
-            <div style={{ marginBottom: "8px" }}>
-              {selectedInfo.vacations.map((v) => (
-                <div
-                  key={v.id}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: "6px",
-                    marginBottom: "4px",
-                    background: "var(--blue-3)",
-                    border: "1px solid var(--blue-6)",
-                    fontSize: "12px",
-                    color: "var(--blue-11)",
-                  }}
-                >
-                  ✈️ {v.title}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {selectedInfo.holidays.length === 0 && selectedInfo.vacations.length === 0 && (
-            <Text size="2" style={{ color: "var(--gray-9)", fontStyle: "italic" }}>
-              Nenhum evento neste dia.
-            </Text>
-          )}
-
-          {/* Add event button */}
-          {!showAddForm && (
-            <button
-              onClick={() => setShowAddForm(true)}
-              style={{
-                marginTop: "8px",
-                padding: "6px 12px",
-                borderRadius: "6px",
-                border: "1px solid var(--gray-6)",
-                background: "var(--gray-3)",
-                color: "var(--gray-11)",
-                cursor: "pointer",
-                fontSize: "12px",
-                width: "100%",
-              }}
-            >
-              + Adicionar Evento
-            </button>
-          )}
-
           {showAddForm && (
-            <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
-              <select
-                value={formType}
-                onChange={(e) => setFormType(e.target.value)}
-                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--gray-6)", background: "var(--gray-2)", color: "var(--gray-11)", fontSize: "12px" }}
-              >
-                <option value="Nacional">Feriado Nacional</option>
-                <option value="Estadual">Feriado Estadual</option>
-                <option value="Municipal">Feriado Municipal</option>
-                <option value="Evento">Evento</option>
-                <option value="Recesso">Recesso</option>
+            <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <select value={formType} onChange={(e) => setFormType(e.target.value)}
+                style={{ fontSize: 11, padding: "3px 6px", borderRadius: 4, border: "1px solid var(--gray-5)", background: "var(--gray-1)", color: "var(--gray-12)", flex: "0 0 auto" }}>
+                <option value="nacional">Nacional</option>
+                <option value="estadual">Estadual</option>
+                <option value="municipal">Municipal</option>
+                <option value="corporativo">Corporativo</option>
               </select>
               <input
-                type="text"
-                placeholder="Descrição"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--gray-6)", background: "var(--gray-2)", color: "var(--gray-11)", fontSize: "12px" }}
+                value={formTitle} onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="Nome do feriado"
+                style={{ flex: 1, fontSize: 11, padding: "3px 8px", borderRadius: 4, border: "1px solid var(--gray-5)", background: "var(--gray-1)", color: "var(--gray-12)", minWidth: 120 }}
               />
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={handleAddEntry}
-                  style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "none", background: "var(--indigo-9)", color: "white", cursor: "pointer", fontSize: "12px" }}
-                >
-                  Salvar
-                </button>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "1px solid var(--gray-6)", background: "var(--gray-3)", color: "var(--gray-11)", cursor: "pointer", fontSize: "12px" }}
-                >
-                  Cancelar
-                </button>
-              </div>
+              <button onClick={handleAddEntry}
+                style={{ fontSize: 11, padding: "3px 10px", borderRadius: 4, border: "1px solid var(--green-7)", background: "var(--green-9)", color: "white", cursor: "pointer", fontWeight: 600 }}>
+                Salvar
+              </button>
             </div>
           )}
         </div>
       )}
+
+      {/* Legend */}
+      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {[
+          { label: "Nacional", bg: "var(--red-3)", border: "var(--red-6)", color: "var(--red-11)" },
+          { label: "Estadual/Municipal", bg: "var(--orange-3)", border: "var(--orange-6)", color: "var(--orange-11)" },
+          { label: "Corporativo", bg: "var(--blue-3)", border: "var(--blue-6)", color: "var(--blue-11)" },
+          { label: "Férias", bg: "var(--teal-3)", border: "var(--teal-6)", color: "var(--teal-11)" },
+        ].map((item) => (
+          <span key={item.label} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: item.color }}>
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: item.bg, border: `1px solid ${item.border}` }} />
+            {item.label}
+          </span>
+        ))}
+      </div>
     </Card>
   );
 }

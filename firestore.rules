@@ -207,6 +207,11 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    match /team_capacity/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // Catch-all: deny by default
     match /{document=**} {
       allow read, write: if false;
