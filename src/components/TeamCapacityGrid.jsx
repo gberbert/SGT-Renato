@@ -145,6 +145,7 @@ export default function TeamCapacityGrid({
     // ── Sheet 1: projected data ──────────────────────
     const dataRows = rows.map((r) => ({
       "Membro": r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid,
+      "SAP": r.user?.sap || "",
       "Squad(s)": r.squads.map((sq) => sq.label).join("; ") || "—",
       "Papel na Squad": r.sqRoles.map((sr) => `${sr.squadName}${sr.role ? ` · ${sr.role}` : ""}`).join("; ") || "—",
       "Alocação (%)": r.alocacao,
@@ -159,6 +160,7 @@ export default function TeamCapacityGrid({
     // totals row
     dataRows.push({
       "Membro": `TOTAL (${rows.length} membros)`,
+      "SAP": "",
       "Squad(s)": "",
       "Papel na Squad": "",
       "Alocação (%)": "",
