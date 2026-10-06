@@ -157,6 +157,7 @@ export default function TeamCapacityGrid({
     const dataRows = rows.map((r) => ({
       "Membro":          r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid,
       "SAP":             r.user?.sapId || "",
+      "Contratação":     r.user?.contract || "—",
       "Squad(s)":        r.squads.map((sq) => sq.label).join("; ") || "—",
       "Papel na Squad":  r.sqRoles.map((sr) => `${sr.squadName}${sr.role ? ` · ${sr.role}` : ""}`).join("; ") || "—",
       "Alocação (%)":    r.alocacao,
@@ -170,6 +171,7 @@ export default function TeamCapacityGrid({
     dataRows.push({
       "Membro":          `TOTAL (${rows.length} membros)`,
       "SAP":             "",
+      "Contratação":     "",
       "Squad(s)":        "",
       "Papel na Squad":  "",
       "Alocação (%)":    "",
@@ -208,6 +210,7 @@ export default function TeamCapacityGrid({
       const rowData = {
         "Membro":         r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid,
         "SAP":            r.user?.sapId || "",
+        "Contratação":    r.user?.contract || "—",
         "Squad(s)":       r.squads.map((sq) => sq.label).join("; ") || "—",
         "Papel na Squad": r.sqRoles.map((sr) => `${sr.squadName}${sr.role ? ` · ${sr.role}` : ""}`).join("; ") || "—",
       };
@@ -225,7 +228,7 @@ export default function TeamCapacityGrid({
     });
 
     // totals row for projection
-    const projTotal = { "Membro": `TOTAL (${rows.length} membros)`, "SAP": "", "Squad(s)": "", "Papel na Squad": "" };
+    const projTotal = { "Membro": `TOTAL (${rows.length} membros)`, "SAP": "", "Contratação": "", "Squad(s)": "", "Papel na Squad": "" };
     months.forEach(({ label }) => {
       projTotal[label] = r1(projRows.reduce((acc, row) => acc + (Number(row[label]) || 0), 0));
     });
