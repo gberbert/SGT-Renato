@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Save, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
-  subscribeToCapacityConfig, saveCapacityConfig,
+  subscribeToCapacityConfig, saveCapacityConfig, loadCapacityConfig,
   DEFAULT_BASE_PARAMS, computeCapacity,
 } from "../services/teamCapacityService";
 
@@ -57,6 +57,17 @@ function computeJourneyBreakdown(journeyPeriods, periodStart, periodEnd) {
     else if (tipo.includes("hora"))  horaExtra = r1(horaExtra + hours);
   }
   return { ferias, folga, atestado, horaExtra };
+}
+
+/* count Mon–Fri days in a given year/month (0-based month) */
+function countWeekdays(year, month) {
+  const last = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= last; d++) {
+    const dow = new Date(year, month, d).getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
 }
 
 /* ─── styles ──────────────────────────────────────── */
@@ -139,62 +150,96 @@ export default function TeamCapacityGrid({
     setDirty(true);
   }
 
-  function exportCapacityToXlsx() {
+  async function exportCapacityToXlsx() {
     const dateStr = new Date().toISOString().slice(0, 10);
 
-    // ── Sheet 1: projected data ──────────────────────
+    // ── Sheet 1: retrato do mês selecionado ─────────────────────────────────
     const dataRows = rows.map((r) => ({
-      "Membro": r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid,
-      "SAP": r.user?.sapId || "",
-      "Squad(s)": r.squads.map((sq) => sq.label).join("; ") || "—",
-      "Papel na Squad": r.sqRoles.map((sr) => `${sr.squadName}${sr.role ? ` · ${sr.role}` : ""}`).join("; ") || "—",
-      "Alocação (%)": r.alocacao,
-      "Cap. Bruto (h)": r.capacityBruto,
-      "Férias (h)": r.ferias || 0,
-      "Folga (h)": r.folga || 0,
-      "Atestado (h)": r.atestado || 0,
-      "H. Extra (h)": r.horaExtra || 0,
-      "Cap. Real (h)": r.capacityReal,
+      "Membro":          r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid,
+      "SAP":             r.user?.sapId || "",
+      "Squad(s)":        r.squads.map((sq) => sq.label).join("; ") || "—",
+      "Papel na Squad":  r.sqRoles.map((sr) => `${sr.squadName}${sr.role ? ` · ${sr.role}` : ""}`).join("; ") || "—",
+      "Alocação (%)":    r.alocacao,
+      "Cap. Bruto (h)":  r.capacityBruto,
+      "Férias (h)":      r.ferias || 0,
+      "Folga (h)":       r.folga || 0,
+      "Atestado (h)":    r.atestado || 0,
+      "H. Extra (h)":    r.horaExtra || 0,
+      "Cap. Real (h)":   r.capacityReal,
+    }));
+    dataRows.push({
+      "Membro":          `TOTAL (${rows.length} membros)`,
+      "SAP":             "",
+      "Squad(s)":        "",
+      "Papel na Squad":  "",
+      "Alocação (%)":    "",
+      "Cap. Bruto (h)":  tot.bruto,
+      "Férias (h)":      tot.ferias,
+      "Folga (h)":       tot.folga,
+      "Atestado (h)":    tot.atestado,
+      "H. Extra (h)":    tot.horaExtra,
+      "Cap. Real (h)":   tot.real,
+    });
+    const ws1 = XLSX.utils.json_to_sheet(dataRows);
+    const cols1 = Object.keys(dataRows[0] || {});
+    ws1["!cols"] = cols1.map((k) => ({
+      wch: Math.max(k.length, ...dataRows.map((row) => String(row[k] ?? "").length), 8),
     }));
 
-    // totals row
-    dataRows.push({
-      "Membro": `TOTAL (${rows.length} membros)`,
-      "SAP": "",
-      "Squad(s)": "",
-      "Papel na Squad": "",
-      "Alocação (%)": "",
-      "Cap. Bruto (h)": tot.bruto,
-      "Férias (h)": tot.ferias,
-      "Folga (h)": tot.folga,
-      "Atestado (h)": tot.atestado,
-      "H. Extra (h)": tot.horaExtra,
-      "Cap. Real (h)": tot.real,
+    // ── Sheet 2: projeção Cap. Real — 6 meses a partir do mês atual ─────────
+    const today  = new Date();
+    const months = [];
+    for (let i = 0; i < 6; i++) {
+      const d   = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const y   = d.getFullYear();
+      const mo  = d.getMonth();
+      const pad = (n) => String(n).padStart(2, "0");
+      const ps  = `${y}-${pad(mo + 1)}-01`;
+      const pe  = `${y}-${pad(mo + 1)}-${pad(new Date(y, mo + 1, 0).getDate())}`;
+      const raw = d.toLocaleString("pt-BR", { month: "short", year: "numeric" });
+      const label = raw.replace(".", "").replace(/^\w/, (c) => c.toUpperCase());
+      months.push({ ps, pe, label, y, mo });
+    }
+
+    // fetch configs for all 6 months in parallel
+    const configs = await Promise.all(months.map(({ ps, pe }) => loadCapacityConfig(ps, pe)));
+
+    const projRows = rows.map((r) => {
+      const rowData = {
+        "Membro":         r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid,
+        "SAP":            r.user?.sapId || "",
+        "Squad(s)":       r.squads.map((sq) => sq.label).join("; ") || "—",
+        "Papel na Squad": r.sqRoles.map((sr) => `${sr.squadName}${sr.role ? ` · ${sr.role}` : ""}`).join("; ") || "—",
+      };
+      months.forEach(({ ps, pe, label, y, mo }, i) => {
+        const cfg      = configs[i];
+        const defAloc  = cfg?.baseParams?.alocacao ?? DEFAULT_BASE_PARAMS.alocacao ?? 100;
+        const alocacao = cfg?.memberOverrides?.[r.uid]?.alocacao ?? defAloc;
+        const wd       = cfg?.workingDays ?? countWeekdays(y, mo);
+        const capBruto = r1(wd * 8 * alocacao / 100);
+        const jb       = computeJourneyBreakdown(r.user.journeyPeriods, ps, pe);
+        const capReal  = r1(capBruto - jb.ferias - jb.folga - jb.atestado + jb.horaExtra);
+        rowData[label] = capReal;
+      });
+      return rowData;
     });
 
-    const ws = XLSX.utils.json_to_sheet(dataRows);
+    // totals row for projection
+    const projTotal = { "Membro": `TOTAL (${rows.length} membros)`, "SAP": "", "Squad(s)": "", "Papel na Squad": "" };
+    months.forEach(({ label }) => {
+      projTotal[label] = r1(projRows.reduce((acc, row) => acc + (Number(row[label]) || 0), 0));
+    });
+    projRows.push(projTotal);
 
-    // auto-fit column widths
-    const colKeys = Object.keys(dataRows[0] || {});
-    ws["!cols"] = colKeys.map((k) => ({
-      wch: Math.max(k.length, ...dataRows.map((r) => String(r[k] ?? "").length), 8),
+    const ws2 = XLSX.utils.json_to_sheet(projRows);
+    const cols2 = Object.keys(projRows[0] || {});
+    ws2["!cols"] = cols2.map((k) => ({
+      wch: Math.max(k.length, ...projRows.map((row) => String(row[k] ?? "").length), 8),
     }));
 
-    // ── Sheet 2: config summary ──────────────────────
-    const cfgRows = [
-      { "Parâmetro": "Início do Período", "Valor": periodStart || "" },
-      { "Parâmetro": "Fim do Período",    "Valor": periodEnd   || "" },
-      { "Parâmetro": "Dias Úteis",        "Valor": workingDays ?? "" },
-      { "Parâmetro": "Alocação Padrão (%)", "Valor": defaultAloc },
-      { "Parâmetro": "Exportado em",      "Valor": new Date().toLocaleString("pt-BR") },
-    ];
-    const ws2 = XLSX.utils.json_to_sheet(cfgRows);
-    ws2["!cols"] = [{ wch: 24 }, { wch: 20 }];
-
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws,  "Team Capacity");
-    XLSX.utils.book_append_sheet(wb, ws2, "Configuração");
-
+    XLSX.utils.book_append_sheet(wb, ws1, "Retrato do Mês");
+    XLSX.utils.book_append_sheet(wb, ws2, "Projeção 6 Meses");
     XLSX.writeFile(wb, `team_capacity_${dateStr}.xlsx`);
   }
 
@@ -289,8 +334,8 @@ export default function TeamCapacityGrid({
                   <td style={TDL}>
                     {r.sqRoles && r.sqRoles.length > 0
                       ? <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                          {r.sqRoles.map((sr, i) => (
-                            <span key={i} style={{
+                          {r.sqRoles.map((sr, idx) => (
+                            <span key={idx} style={{
                               display:"inline-flex", alignItems:"center", gap:4,
                               padding:"2px 8px", borderRadius:999, fontSize:11,
                               fontWeight:600, whiteSpace:"nowrap",
