@@ -721,6 +721,7 @@ const data = d.data();
     estimativaHoras: data.estimativaHoras ?? null,
     dataFimPlanejado: data.dataFimPlanejado || null,
     demandaFast: data.demandaFast || null,
+    demandaVulnerabilidade: data.demandaVulnerabilidade || null,
     issueLinksDetailed: Array.isArray(data.issueLinksDetailed) ? data.issueLinksDetailed : [],
     prioridadeInterna: data.prioridadeInterna ?? null,
     impedimento: data.impedimento === true,
@@ -784,6 +785,7 @@ export async function updateTicketRadarFields(issueKey, patch) {
   if ('ciclo' in patch) payload.ciclo = patch.ciclo || null;
   if ('responsavelDesenvolvimento' in patch) payload.responsavelDesenvolvimento = patch.responsavelDesenvolvimento || null;
   if ('responsavelTesteInterno' in patch) payload.responsavelTesteInterno = patch.responsavelTesteInterno || null;
+  if ('demandaVulnerabilidade' in patch) payload.demandaVulnerabilidade = patch.demandaVulnerabilidade || null;
 
   const SGT_DATE_FIELDS = [
     'dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa',
