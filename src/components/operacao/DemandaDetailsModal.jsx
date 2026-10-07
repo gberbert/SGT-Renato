@@ -803,7 +803,18 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
               {/* Row 2c: PLANEJAMENTO HORAS DEMANDA FAST + DEMANDA VULNERABILIDADE */}
               <div className="dmd-row">
                 <ReadField label="PLAN. HORAS DEMANDA FAST" value={ticket.planejamentoHorasDemandaFast} />
-                <ReadField label="DEMANDA VULNERABILIDADE" value={ticket.demandaVulnerabilidade} />
+                {isEdit ? (
+                  <EditSelect
+                    label="DEMANDA VULNERABILIDADE"
+                    fieldKey="demandaVulnerabilidade"
+                    options={[{ value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }]}
+                    value={ticket.demandaVulnerabilidade || ''}
+                    onSave={save}
+                    placeholder="—"
+                  />
+                ) : (
+                  <ReadField label="DEMANDA VULNERABILIDADE" value={ticket.demandaVulnerabilidade} />
+                )}
               </div>
 
               {/* Row 3: SISTEMAS IMPACTADOS — tags (somente leitura) */}
