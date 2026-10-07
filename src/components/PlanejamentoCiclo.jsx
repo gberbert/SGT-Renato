@@ -4,7 +4,7 @@ import {
   doc, updateDoc, arrayUnion, addDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { fetchTicketsForRoadmap } from '../services/operacaoRadarService';
+import { fetchTicketsForRoadmap, PRIORIDADE_INTERNA_OPTIONS } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
 import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock, Save, Trash2, FileText } from 'lucide-react';
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx } from './PlanejamentoCicloHelpers';
@@ -374,6 +374,7 @@ export default function PlanejamentoCiclo() {
   const [issuetypeFilter, setIssuetypeFilter] = useState(new Set());
   const [dateField, setDateField] = useState('none');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
+  const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [showEstimativa, setShowEstimativa] = useState(
     () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
@@ -433,6 +434,7 @@ export default function PlanejamentoCiclo() {
     setIssuetypeFilter(f.issuetypeFilter ?? new Set());
     setDateField(f.dateField ?? 'none');
     setImpedimentoFilter(f.impedimentoFilter ?? false);
+    setDemandaVulnerabFilter(f.demandaVulnerabFilter ?? false);
     setShowEstimativa(f.showEstimativa ?? false);
   }, [savedViews]);
 
@@ -526,11 +528,10 @@ export default function PlanejamentoCiclo() {
     return squads.map(s => s.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [squads]);
 
-  const prioridadeOptions = useMemo(() => {
-    const s = new Set();
-    enrichedTickets.forEach(t => { if (t.prioridadeInterna != null) s.add(String(t.prioridadeInterna)); });
-    return [...s].sort((a, b) => Number(a) - Number(b));
-  }, [enrichedTickets]);
+  const prioridadeOptions = useMemo(
+    () => PRIORIDADE_INTERNA_OPTIONS.map(p => p.value),
+    []
+  );
 
   const respDevOptions = useMemo(() => {
     const s = new Set();
@@ -620,6 +621,7 @@ export default function PlanejamentoCiclo() {
     if (naturezaIniciativaFilter.size > 0 && !naturezaIniciativaFilter.has(t.naturezaIniciativa || t.naturezaOperacao || '')) return false;
     if (issuetypeFilter.size > 0 && !issuetypeFilter.has(t.issueType || t.issuetype || '')) return false;
     if (impedimentoFilter && t.impedimento !== true) return false;
+    if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -628,7 +630,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, impedimentoFilter, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, impedimentoFilter, demandaVulnerabFilter, search]);
 
   const allCicloKeys = useMemo(() => {
     const s = new Set();
@@ -731,6 +733,7 @@ export default function PlanejamentoCiclo() {
     setIssuetypeFilter(f.issuetypeFilter ?? new Set());
     setDateField(f.dateField ?? 'none');
     setImpedimentoFilter(f.impedimentoFilter ?? false);
+    setDemandaVulnerabFilter(f.demandaVulnerabFilter ?? false);
     setShowEstimativa(f.showEstimativa ?? false);
     setShowViewsPanel(false);
   }, []);
@@ -745,7 +748,7 @@ export default function PlanejamentoCiclo() {
           search, escopoFilter, squadFilter, grupoSolucionadorFilter,
           filaFilter, statusFilter, prioridadeFilter, respDevFilter,
           respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
-          dateField, impedimentoFilter, showEstimativa,
+          dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
         },
         newViewIsPrincipal,
       );
@@ -759,11 +762,11 @@ export default function PlanejamentoCiclo() {
     search, escopoFilter, squadFilter, grupoSolucionadorFilter,
     filaFilter, statusFilter, prioridadeFilter, respDevFilter,
     respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
-    dateField, impedimentoFilter, showEstimativa,
+    dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
   ]);
 
   const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter]
-    .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0);
+    .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0) + (demandaVulnerabFilter ? 1 : 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
@@ -1097,7 +1100,7 @@ export default function PlanejamentoCiclo() {
           )}
           {activeFilters > 0 && (
             <button
-              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setImpedimentoFilter(false); setSearch(''); }}
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
               style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
             >
               Limpar filtros
@@ -1125,6 +1128,18 @@ export default function PlanejamentoCiclo() {
           }}>
             <input type="checkbox" checked={impedimentoFilter} onChange={e => setImpedimentoFilter(e.target.checked)} style={{ accentColor: '#eab308', width: 12, height: 12 }} />
             🚧 Impedidos
+          </label>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontSize: 12, color: demandaVulnerabFilter ? '#f87171' : 'var(--gray-10)',
+            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+            padding: '3px 8px',
+            border: `1px solid ${demandaVulnerabFilter ? 'rgba(239,68,68,0.6)' : 'var(--gray-5)'}`,
+            borderRadius: 6,
+            background: demandaVulnerabFilter ? 'rgba(239,68,68,0.1)' : 'var(--gray-3)',
+          }}>
+            <input type="checkbox" checked={demandaVulnerabFilter} onChange={e => setDemandaVulnerabFilter(e.target.checked)} style={{ accentColor: '#ef4444', width: 12, height: 12 }} />
+            🔒 Vulnerabilidade
           </label>
         </div>
 
