@@ -379,6 +379,9 @@ export default function PlanejamentoCiclo() {
     () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
 
+  const [filtersCollapsed, setFiltersCollapsed] = useState(
+    () => localStorage.getItem('ciclo_filtersCollapsed') === 'true'
+  );
   const [activeTab, setActiveTab] = useState('ciclos'); // 'ciclos' | 'workflow'
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
   const [showNewCiclo, setShowNewCiclo] = useState(false);
@@ -1043,7 +1046,36 @@ export default function PlanejamentoCiclo() {
         borderRadius: 10, marginBottom: 18,
       }}>
 
+        {/* Filter header toggle */}
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 14px',
+            borderBottom: filtersCollapsed ? 'none' : '1px solid var(--gray-5)',
+            cursor: 'pointer', userSelect: 'none',
+            borderRadius: filtersCollapsed ? 10 : '10px 10px 0 0',
+          }}
+          onClick={() => {
+            const next = !filtersCollapsed;
+            setFiltersCollapsed(next);
+            localStorage.setItem('ciclo_filtersCollapsed', String(next));
+          }}
+        >
+          <Filter size={13} color="var(--gray-9)" />
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-10)', letterSpacing: '0.05em' }}>FILTROS</span>
+          {activeFilters > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: 'var(--indigo-9)', color: '#fff' }}>
+              {activeFilters} ativo{activeFilters !== 1 ? 's' : ''}
+            </span>
+          )}
+          <span style={{ marginLeft: 'auto', color: 'var(--gray-9)', display: 'flex' }}>
+            {filtersCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+          </span>
+        </div>
+
         {/* Row 1: squad tags + escopo tags */}
+        {!filtersCollapsed && (
+        <>
         <div style={{
           display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8,
           padding: '10px 14px',
@@ -1120,7 +1152,11 @@ export default function PlanejamentoCiclo() {
           <MultiSelectFilter options={issuetypeOptions} selected={issuetypeFilter} onChange={setIssuetypeFilter} placeholder="Issue Type" maxWidth={160} />
         </div>
 
+        </>
+        )}
+
         {/* Row 3: grouped boxes */}
+        {!filtersCollapsed && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'stretch', padding: '10px 14px' }}>
 
           {/* Box: Responsáveis */}
@@ -1196,6 +1232,7 @@ export default function PlanejamentoCiclo() {
             </label>
           </div>
         </div>
+        )}
       </div>
 
       {/* ── Tab switcher ────────────────────────────────────────────── */}
