@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress, Separator } from '@radix-ui/themes';
-import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Settings, Info, Clock } from 'lucide-react';
+import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock } from 'lucide-react';
+import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import { auth } from '../firebase';
 import { useOperacaoRadar } from '../contexts/OperacaoRadarContext';
 import {
@@ -196,6 +197,9 @@ const RoadmapGeral = () => {
   const [editingPriorityValue, setEditingPriorityValue] = useState(null);
   // Controla re-carga automática após carregar uma visão
   const [pendingAutoReload, setPendingAutoReload] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(
+    () => localStorage.getItem('roadmap_filtersCollapsed') === 'true'
+  );
 
   const uid = auth.currentUser?.uid || null;
 
@@ -736,278 +740,21 @@ const RoadmapGeral = () => {
         </Flex>
       )}
 
-      <Box className="roadmap-geral-toolbar" mb="4">
-        {/* Linha 1: todos os botões/ações alinhados horizontalmente */}
-        <Flex align="center" justify="between" gap="3" wrap="wrap">
-          <Flex align="center" gap="3" wrap="nowrap">
-            {/* Filtros de exibicao */}
-            <Popover.Root>
-              <Popover.Trigger>
-                <Button variant="surface" color={filterActive || scopeActive ? 'amber' : 'gray'}>
-                  <Filter size={16} /> Filtros{filterActive || scopeActive ? ' •' : ''}
-                </Button>
-              </Popover.Trigger>
-            <Popover.Content width="340px" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
-              <Flex direction="column" gap="3">
-                <Text weight="bold" size="3">Filtros</Text>
-
-                {/* Filtro por Ticket ID — multiselect com tags */}
-                <Box>
-                  <Text as="div" size="1" weight="bold" mb="1">Tickets (ID)</Text>
-                  <Text size="1" color="gray" mb="2" as="div">Digite IDs separados por vírgula ou Enter.</Text>
-                  <Flex gap="1" wrap="wrap" mb="2">
-                    {[...(filters.tickets || [])].map((key) => (
-                      <Badge key={key} color="indigo" variant="soft" style={{ cursor: 'pointer', userSelect: 'none' }}
-                        onClick={() => setFilters((prev) => {
-                          const next = new Set(prev.tickets);
-                          next.delete(key);
-                          return { ...prev, tickets: next };
-                        })}
-                      >
-                        {key} ×
-                      </Badge>
-                    ))}
-                  </Flex>
-                  <TextField.Root
-                    placeholder="Ex: DEMANDA-123, DEMANDA-456"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        const val = e.target.value.replace(/,/g, ' ').trim().toUpperCase();
-                        if (val) {
-                          const keys = val.split(/[\s,]+/).filter(Boolean);
-                          setFilters((prev) => {
-                            const next = new Set(prev.tickets);
-                            keys.forEach((k) => next.add(k));
-                            return { ...prev, tickets: next };
-                          });
-                          e.target.value = '';
-                        }
-                      }
-                    }}
-                    onBlur={(e) => {
-                      const val = e.target.value.trim().toUpperCase();
-                      if (val) {
-                        const keys = val.split(/[\s,]+/).filter(Boolean);
-                        setFilters((prev) => {
-                          const next = new Set(prev.tickets);
-                          keys.forEach((k) => next.add(k));
-                          return { ...prev, tickets: next };
-                        });
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                  {filters.tickets?.size > 0 && (
-                    <Button size="1" variant="ghost" color="gray" mt="1"
-                      onClick={() => setFilters((prev) => ({ ...prev, tickets: new Set() }))}>
-                      Limpar tickets
-                    </Button>
-                  )}
-                </Box>
-
-                <Box>
-                  <Text as="div" size="1" weight="bold" mb="1">Escopo</Text>
-                  <Flex direction="column" gap="1" style={{ maxHeight: 120, overflowY: 'auto' }}>
-                    {escopoOptions.map((esc) => (
-                      <label key={esc.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input type="checkbox" checked={filters.escopos.has(esc.key)} onChange={() => toggleInSet('escopos', esc.key)} />
-                        <Text size="2">{esc.label}</Text>
-                      </label>
-                    ))}
-                  </Flex>
-                </Box>
-                <Box>
-                  <Text as="div" size="1" weight="bold" mb="1">Squad</Text>
-                  <Flex direction="column" gap="1" style={{ maxHeight: 120, overflowY: 'auto' }}>
-                    {(filterOptions.squads || []).map((s) => (
-                      <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input type="checkbox" checked={filters.squads.has(s.id)} onChange={() => toggleInSet('squads', s.id)} />
-                        <Text size="2">{s.sigla ? `${s.sigla} - ${s.nome}` : s.nome}</Text>
-                      </label>
-                    ))}
-                  </Flex>
-                </Box>
-                <Box>
-                  <Text as="div" size="1" weight="bold" mb="1">Grupo de Atendimento</Text>
-                  <Flex direction="column" gap="1" style={{ maxHeight: 120, overflowY: 'auto' }}>
-                    {(filterOptions.grupos || []).map((g) => (
-                      <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input type="checkbox" checked={filters.grupos.has(g.nome)} onChange={() => toggleInSet('grupos', g.nome)} />
-                        <Text size="2">{g.nome}</Text>
-                      </label>
-                    ))}
-                  </Flex>
-                </Box>
-                <Box>
-                  <Text as="div" size="1" weight="bold" mb="1">Status</Text>
-                  <Flex direction="column" gap="1" style={{ maxHeight: 120, overflowY: 'auto' }}>
-                    {(filterOptions.statuses || []).map((s) => (
-                      <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input type="checkbox" checked={filters.statuses.has(s.nome)} onChange={() => toggleInSet('statuses', s.nome)} />
-                        <Text size="2">{s.nome}</Text>
-                      </label>
-                    ))}
-                  </Flex>
-                </Box>
-
-                <Box>
-                  <Flex align="center" justify="between" mb="1">
-                    <Text as="div" size="1" weight="bold">Prioridade Interna</Text>
-                    {filters.prioridades?.size > 0 && (
-                      <Button size="1" variant="ghost" color="gray" onClick={() => setFilters((p) => ({ ...p, prioridades: new Set() }))}>Limpar</Button>
-                    )}
-                  </Flex>
-                  <Flex direction="column" gap="1">
-                    {PRIORIDADE_INTERNA_OPTIONS.map((p) => (
-                      <label key={p.value} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input
-                          type="checkbox"
-                          checked={filters.prioridades?.has(p.value) || false}
-                          onChange={() => setFilters((prev) => {
-                            const next = new Set(prev.prioridades);
-                            if (next.has(p.value)) next.delete(p.value); else next.add(p.value);
-                            return { ...prev, prioridades: next };
-                          })}
-                        />
-                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, borderRadius: '50%', background: p.color, color: '#fff', fontSize: 8, fontWeight: 800 }}>{p.label}</span>
-                        <Text size="2">{p.description}</Text>
-                      </label>
-                    ))}
-                  </Flex>
-                </Box>
-
-                <Separator size="4" />
-
-                {/* Periodo da Timeline */}
-                <Box>
-                  <Flex align="center" justify="between" mb="1">
-                    <Text as="div" size="2" weight="bold">Periodo da Timeline</Text>
-                    {(scopeConfig.dateRangeStart || scopeConfig.dateRangeEnd) && (
-                      <Button size="1" variant="ghost" color="gray" onClick={() => setScopeConfig((p) => ({ ...p, dateRangeStart: '', dateRangeEnd: '' }))}>Limpar</Button>
-                    )}
-                  </Flex>
-                  <Text size="1" color="gray" mb="2" as="div">Filtra tickets cujas barras se sobrepoem ao intervalo (usa os campos de data configurados no icone de engrenagem).</Text>
-                  <Flex direction="column" gap="2">
-                    <Box>
-                      <Text as="div" size="1" weight="bold" mb="1">Data de Inicio</Text>
-                      <input type="date" value={scopeConfig.dateRangeStart} onChange={(e) => setScopeConfig((p) => ({ ...p, dateRangeStart: e.target.value }))} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--gray-6)', background: 'var(--gray-2)', color: 'var(--gray-12)', fontSize: 13 }} />
-                    </Box>
-                    <Box>
-                      <Text as="div" size="1" weight="bold" mb="1">Data de Fim</Text>
-                      <input type="date" value={scopeConfig.dateRangeEnd} onChange={(e) => setScopeConfig((p) => ({ ...p, dateRangeEnd: e.target.value }))} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--gray-6)', background: 'var(--gray-2)', color: 'var(--gray-12)', fontSize: 13 }} />
-                    </Box>
-                  </Flex>
-                </Box>
-
-                <Separator size="4" />
-
-                {/* Campos de Data das Barras */}
-                <Box>
-                  <Text as="div" size="2" weight="bold" mb="1">Barras — Campo Início / Fim</Text>
-                  <Text size="1" color="gray" mb="2" as="div">Define o intervalo plotado para cada ticket na timeline.</Text>
-                  <Flex direction="column" gap="2">
-                    <Box>
-                      <Text as="div" size="1" weight="bold" mb="1">Campo de Início</Text>
-                      <Select.Root value={dateConfig.startField} onValueChange={(v) => setDateConfig((p) => ({ ...p, startField: v }))}>
-                        <Select.Trigger style={{ width: '100%' }} />
-                        <Select.Content>
-                          {START_FIELD_OPTIONS.map((opt) => (
-                            <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Root>
-                    </Box>
-                    <Box>
-                      <Text as="div" size="1" weight="bold" mb="1">Campo de Fim</Text>
-                      <Select.Root value={dateConfig.endField} onValueChange={(v) => setDateConfig((p) => ({ ...p, endField: v }))}>
-                        <Select.Trigger style={{ width: '100%' }} />
-                        <Select.Content>
-                          {END_FIELD_OPTIONS.map((opt) => (
-                            <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
-                          ))}
-                        </Select.Content>
-                      </Select.Root>
-                    </Box>
-                  </Flex>
-                </Box>
-
-                <Separator size="4" />
-
-                {/* Marcos visíveis (A-F) */}
-                <Box>
-                  <Flex align="center" justify="between" mb="1">
-                    <Text as="div" size="2" weight="bold">Marcos Visíveis (A–F)</Text>
-                    {scopeConfig.visibleMilestones?.length > 0 && (
-                      <Button size="1" variant="ghost" color="gray" onClick={() => setScopeConfig((p) => ({ ...p, visibleMilestones: [] }))}>Todos</Button>
-                    )}
-                  </Flex>
-                  <Flex direction="column" gap="1">
-                    {MILESTONE_FIELDS.map((mf) => (
-                      <label key={mf.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <input
-                          type="checkbox"
-                          checked={!scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key)}
-                          onChange={() => setScopeConfig((prev) => {
-                            const current = prev.visibleMilestones?.length ? prev.visibleMilestones : MILESTONE_FIELDS.map((f) => f.key);
-                            const next = current.includes(mf.key) ? current.filter((k) => k !== mf.key) : [...current, mf.key];
-                            return { ...prev, visibleMilestones: next.length === MILESTONE_FIELDS.length ? [] : next };
-                          })}
-                        />
-                        <Box style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0, background: mf.highlight?.background || '#fff', border: `1.5px solid rgba(15,15,15,0.5)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: mf.highlight?.color || '#000' }}>{mf.letter}</Box>
-                        <Text size="2">{mf.label}</Text>
-                      </label>
-                    ))}
-                  </Flex>
-                </Box>
-
-                <Separator size="4" />
-
-                {/* Escopo de carga */}
-                <Box>
-                  <Flex align="center" justify="between" mb="1">
-                    <Text as="div" size="2" weight="bold">Escopo de Carga</Text>
-                    {scopeConfig.escopos.length > 0 && (
-                      <Button size="1" variant="ghost" color="gray" onClick={() => setScopeConfig((p) => ({ ...p, escopos: [] }))}>Todos</Button>
-                    )}
-                  </Flex>
-                  <Text size="1" color="gray" mb="2" as="div">Quais escopos buscar ao clicar em Carregar. Vazio = todos.</Text>
-                  <Flex direction="column" gap="1">
-                    {ESCOPO_RADAR_ORDER.map((esc) => (
-                      <label key={esc.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <input type="checkbox" checked={scopeConfig.escopos.includes(esc.key)} onChange={() => setScopeConfig((prev) => { const next = prev.escopos.includes(esc.key) ? prev.escopos.filter((k) => k !== esc.key) : [...prev.escopos, esc.key]; return { ...prev, escopos: next }; })} />
-                        <Box style={{ width: 10, height: 10, borderRadius: 3, background: esc.color, flexShrink: 0 }} />
-                        <Text size="2">{esc.label}</Text>
-                      </label>
-                    ))}
-                  </Flex>
-                </Box>
-
-                {(filterActive || scopeActive) && (
-                  <Button variant="soft" color="gray" size="1" onClick={() => { clearFilters(); setScopeConfig(createDefaultScopeConfig()); }}>
-                    Limpar todos os filtros
-                  </Button>
-                )}
-              </Flex>
-            </Popover.Content>
-          </Popover.Root>
-
-            <Flex align="center" gap="2">
-              <Layers size={16} color="var(--text-muted)" />
-              <Text size="1" color="gray" style={{ letterSpacing: '0.05em' }}>AGRUPAR POR</Text>
-              <Select.Root value={groupBy} onValueChange={setGroupBy}>
-                <Select.Trigger style={{ minWidth: 170 }} />
-                <Select.Content>
-                  {GROUP_BY_OPTIONS.map((opt) => (
-                    <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </Flex>
-          </Flex>
-
-          <Flex align="center" gap="2">
-          {/* Visoes Salvas */}
+      {/* ── Linha de controles ────────────────────────────────── */}
+      <Flex align="center" justify="between" gap="3" wrap="wrap" mb="3">
+        <Flex align="center" gap="2">
+          <Layers size={16} color="var(--gray-9)" />
+          <Text size="1" color="gray" style={{ letterSpacing: '0.05em' }}>AGRUPAR POR</Text>
+          <Select.Root value={groupBy} onValueChange={setGroupBy}>
+            <Select.Trigger style={{ minWidth: 140 }} />
+            <Select.Content>
+              {GROUP_BY_OPTIONS.map((opt) => (
+                <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+        <Flex align="center" gap="2">
           <Popover.Root>
             <Popover.Trigger>
               <Button variant="outline"><Save size={16} /> Visoes Salvas ({savedViews.length})</Button>
@@ -1026,19 +773,14 @@ const RoadmapGeral = () => {
               </label>
               <Text weight="bold" mb="2" as="div">Carregar visao</Text>
               <Flex direction="column" gap="2">
-                {savedViewsLoading ? (
-                  <Loader2 size={16} className="spinner-icon" />
-                ) : savedViews.length === 0 ? (
+                {savedViewsLoading ? <Loader2 size={16} className="spinner-icon" /> : savedViews.length === 0 ? (
                   <Text size="1" color="gray">Nenhuma visao salva.</Text>
                 ) : (
                   [...savedViews].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)).map((view) => (
                     <Flex key={view.id} justify="between" align="center" style={{ background: view.isPrimary ? 'rgba(56,189,248,0.08)' : 'var(--gray-3)', border: view.isPrimary ? '1px solid rgba(56,189,248,0.35)' : '1px solid transparent', padding: 8, borderRadius: 6 }}>
                       <Flex align="center" gap="2" style={{ flex: 1 }}>
                         <input type="checkbox" checked={!!view.isPrimary} title="Definir como visao principal" onChange={() => handleTogglePrimaryView(view.id)} />
-                        <Text size="2" style={{ cursor: 'pointer' }} onClick={() => handleLoadView(view)}>
-                          {view.name}
-                          {view.isPrimary && <Badge color="sky" variant="soft" ml="2" size="1">principal</Badge>}
-                        </Text>
+                        <Text size="2" style={{ cursor: 'pointer' }} onClick={() => handleLoadView(view)}>{view.name}{view.isPrimary && <Badge color="sky" variant="soft" ml="2" size="1">principal</Badge>}</Text>
                       </Flex>
                       <Trash2 size={14} style={{ cursor: 'pointer', color: 'var(--red-9)' }} onClick={() => handleDeleteView(view.id)} />
                     </Flex>
@@ -1047,43 +789,137 @@ const RoadmapGeral = () => {
               </Flex>
             </Popover.Content>
           </Popover.Root>
-          </Flex>
+        </Flex>
+      </Flex>
+
+      {/* ── Barra de filtros colapsável (estilo PlanejamentoCiclo) ── */}
+      <Box style={{ background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 10, marginBottom: 18 }}>
+
+        {/* Header toggle */}
+        <Flex
+          align="center" gap="8" style={{ padding: '8px 14px', borderBottom: filtersCollapsed ? 'none' : '1px solid var(--gray-5)', cursor: 'pointer', userSelect: 'none', borderRadius: filtersCollapsed ? 10 : '10px 10px 0 0' }}
+          onClick={() => { const n = !filtersCollapsed; setFiltersCollapsed(n); localStorage.setItem('roadmap_filtersCollapsed', String(n)); }}
+        >
+          <Filter size={13} color="var(--gray-9)" />
+          <Text size="2" weight="bold" color="gray" style={{ letterSpacing: '0.05em', flex: 1 }}>FILTROS</Text>
+          {(filterActive || scopeActive) && (
+            <Badge size="1" color="indigo">{[filters.escopos, filters.squads, filters.grupos, filters.statuses, filters.prioridades, filters.tickets].filter(s => s.size > 0).length + (scopeActive ? 1 : 0)} ativo{[filters.escopos, filters.squads, filters.grupos, filters.statuses, filters.prioridades, filters.tickets].filter(s => s.size > 0).length + (scopeActive ? 1 : 0) !== 1 ? 's' : ''}</Badge>
+          )}
+          <span style={{ color: 'var(--gray-9)', display: 'flex' }}>{filtersCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}</span>
         </Flex>
 
-        {/* Linha 2: Legendas de filtros ativos (aparece somente quando há filtros) */}
-        {(filterActive || scopeActive) && (
-          <Flex align="center" gap="2" wrap="wrap" mt="2" pt="2" style={{ borderTop: '1px solid var(--glass-border)' }}>
-            {filters.tickets?.size > 0 && (
-              <Badge color="indigo" variant="soft">Tickets: {[...filters.tickets].join(', ')}</Badge>
-            )}
-            {filters.escopos.size > 0 && (
-              <Badge color="indigo" variant="soft">Escopo: {[...filters.escopos].join(', ')}</Badge>
-            )}
-            {filters.squads.size > 0 && (
-              <Badge color="indigo" variant="soft">
-                Squad: {[...filters.squads].map((id) => { const s = (filterOptions.squads || []).find((sq) => sq.id === id); return s ? s.sigla || s.nome : id; }).join(', ')}
-              </Badge>
-            )}
-            {filters.grupos.size > 0 && (
-              <Badge color="indigo" variant="soft">Grupo: {[...filters.grupos].join(', ')}</Badge>
-            )}
-            {filters.prioridades?.size > 0 && (
-              <Badge color="indigo" variant="soft">
-                Prioridade: {[...filters.prioridades].sort().map((v) => { const p = PRIORIDADE_INTERNA_OPTIONS.find((o) => o.value === v); return p ? p.label : v; }).join(', ')}
-              </Badge>
-            )}
-            {filters.statuses.size > 0 && (
-              <Badge color="indigo" variant="soft">Status: {[...filters.statuses].join(', ')}</Badge>
-            )}
-            {scopeActive && (
-              <Badge color="amber" variant="soft">
-                {scopeConfig.escopos.length > 0 ? `Escopo: ${scopeConfig.escopos.join(', ')}` : ''}
-                {scopeConfig.dateRangeStart || scopeConfig.dateRangeEnd ? ` Período: ${scopeConfig.dateRangeStart || '∞'} → ${scopeConfig.dateRangeEnd || '∞'}` : ''}
-              </Badge>
-            )}
+        {!filtersCollapsed && (
+        <>
+        {/* Row 1: Squad tags + Escopo tags */}
+        <Flex wrap="wrap" align="center" gap="8" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
+          <Flex align="center" gap="5" style={{ flexShrink: 0, marginRight: 4 }}>
+            <Filter size={13} />
+            <Text size="2" weight="bold" color="gray">SQUAD</Text>
           </Flex>
+          {squads.slice().sort((a,b) => (a.name||'').localeCompare(b.name||'')).map(sq => {
+            const active = filters.squads.has(sq.id);
+            return (
+              <button key={sq.id} type="button"
+                onClick={() => { const next = new Set(filters.squads); active ? next.delete(sq.id) : next.add(sq.id); setFilters(p => ({ ...p, squads: next })); }}
+                style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, cursor: 'pointer', userSelect: 'none', border: active ? '1px solid rgba(99,102,241,0.7)' : '1px solid var(--gray-5)', background: active ? 'rgba(99,102,241,0.2)' : 'var(--gray-3)', color: active ? '#a5b4fc' : 'var(--gray-10)', transition: 'all 0.12s' }}
+              >{sq.sigla || sq.name || sq.nome}</button>
+            );
+          })}
+          <span style={{ width: 1, height: 20, background: 'var(--gray-5)', flexShrink: 0, margin: '0 4px' }} />
+          <Text size="2" weight="bold" color="gray" style={{ flexShrink: 0 }}>ESCOPO</Text>
+          {ESCOPO_RADAR_ORDER.map(esc => {
+            const active = filters.escopos.has(esc.key);
+            return (
+              <button key={esc.key} type="button"
+                onClick={() => { const next = new Set(filters.escopos); active ? next.delete(esc.key) : next.add(esc.key); setFilters(p => ({ ...p, escopos: next })); }}
+                style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10, cursor: 'pointer', userSelect: 'none', border: active ? '1px solid rgba(52,211,153,0.7)' : '1px solid var(--gray-5)', background: active ? 'rgba(52,211,153,0.15)' : 'var(--gray-3)', color: active ? '#6ee7b7' : 'var(--gray-10)', transition: 'all 0.12s' }}
+              >{esc.label}</button>
+            );
+          })}
+          {(filterActive || scopeActive) && (
+            <button onClick={() => { clearFilters(); setScopeConfig(createDefaultScopeConfig()); }} style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}>Limpar filtros</button>
+          )}
+        </Flex>
+
+        {/* Row 2: MultiSelect dropdowns */}
+        <Flex wrap="wrap" gap="8" align="center" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
+          <MultiSelectFilter options={(filterOptions.statuses || []).map(s => s.nome)} selected={filters.statuses} onChange={s => setFilters(p => ({ ...p, statuses: s }))} placeholder="Todos os status" maxWidth={200} />
+          <MultiSelectFilter options={(filterOptions.grupos || []).map(g => g.nome)} selected={filters.grupos} onChange={g => setFilters(p => ({ ...p, grupos: g }))} placeholder="Grupo atendimento" maxWidth={200} />
+          <MultiSelectFilter options={PRIORIDADE_INTERNA_OPTIONS.map(p => p.value)} selected={filters.prioridades} onChange={p => setFilters(prev => ({ ...prev, prioridades: p }))} placeholder="Todas as prioridades" maxWidth={180} />
+        </Flex>
+
+        {/* Row 3: EXIBIÇÃO (barras, marcos, período, escopo carga) */}
+        <Flex wrap="wrap" gap="10" align="stretch" style={{ padding: '10px 14px' }}>
+
+          {/* Box: Barras */}
+          <Flex wrap="nowrap" gap="8" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
+            <Text size="1" weight="bold" color="gray" style={{ letterSpacing: '0.06em', flexShrink: 0, marginRight: 4 }}>BARRAS</Text>
+            <Box>
+              <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>Início</Text>
+              <select value={dateConfig.startField} onChange={e => setDateConfig(p => ({ ...p, startField: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 160 }}>
+                {START_FIELD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </Box>
+            <Box>
+              <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>Fim</Text>
+              <select value={dateConfig.endField} onChange={e => setDateConfig(p => ({ ...p, endField: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 160 }}>
+                {END_FIELD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </Box>
+          </Flex>
+
+          {/* Box: Marcos A-F */}
+          <Flex wrap="nowrap" gap="8" align="flex-start" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
+            <Text size="1" weight="bold" color="gray" style={{ letterSpacing: '0.06em', flexShrink: 0, marginRight: 4, marginTop: 2 }}>MARCOS</Text>
+            <Flex direction="column" gap="1">
+              {MILESTONE_FIELDS.map(mf => (
+                <label key={mf.key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input type="checkbox"
+                    checked={!scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key)}
+                    onChange={() => setScopeConfig(prev => {
+                      const cur = prev.visibleMilestones?.length ? prev.visibleMilestones : MILESTONE_FIELDS.map(f => f.key);
+                      const nxt = cur.includes(mf.key) ? cur.filter(k => k !== mf.key) : [...cur, mf.key];
+                      return { ...prev, visibleMilestones: nxt.length === MILESTONE_FIELDS.length ? [] : nxt };
+                    })}
+                    style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12, flexShrink: 0 }}
+                  />
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0, background: mf.highlight?.background || '#fff', border: '1.5px solid rgba(15,15,15,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: mf.highlight?.color || '#000' }}>{mf.letter}</div>
+                  <span style={{ fontSize: 11, color: 'var(--gray-11)' }}>{mf.label}</span>
+                </label>
+              ))}
+            </Flex>
+          </Flex>
+
+          {/* Box: Periodo + Escopo de carga */}
+          <Flex direction="column" gap="8" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flex: '1 1 auto', minWidth: 200 }}>
+            <Text size="1" weight="bold" color="gray" style={{ letterSpacing: '0.06em' }}>PERIODO / ESCOPO</Text>
+            <Flex gap="8" wrap="wrap" align="center">
+              <Box>
+                <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>De</Text>
+                <input type="date" value={scopeConfig.dateRangeStart} onChange={e => setScopeConfig(p => ({ ...p, dateRangeStart: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)' }} />
+              </Box>
+              <Box>
+                <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>Ate</Text>
+                <input type="date" value={scopeConfig.dateRangeEnd} onChange={e => setScopeConfig(p => ({ ...p, dateRangeEnd: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)' }} />
+              </Box>
+            </Flex>
+            <Flex gap="6" wrap="wrap" align="center">
+              <Text size="1" color="gray" style={{ flexShrink: 0 }}>Escopo carga:</Text>
+              {ESCOPO_RADAR_ORDER.map(esc => (
+                <label key={esc.key} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={scopeConfig.escopos.includes(esc.key)} onChange={() => setScopeConfig(prev => { const nxt = prev.escopos.includes(esc.key) ? prev.escopos.filter(k => k !== esc.key) : [...prev.escopos, esc.key]; return { ...prev, escopos: nxt }; })} style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12, flexShrink: 0 }} />
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: esc.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, color: 'var(--gray-11)' }}>{esc.label}</span>
+                </label>
+              ))}
+            </Flex>
+          </Flex>
+
+        </Flex>
+        </>
         )}
       </Box>
+
 
       {/* Timeline */}
       {columns.length === 0 ? (
