@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { Box, Flex, Text } from '@radix-ui/themes';
 import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
+import { getStatusColor } from '../PlanejamentoCicloHelpers';
 
 const PRIORIDADE_OPTIONS = [
   { value: '', label: '—' },
@@ -156,17 +157,20 @@ export default function OperacaoDemandaModal({ ticket, onClose, onSave, readOnly
                   {stripNumericPrefix(ticket.grupoSuporte)}
                 </span>
               )}
-              {ticket.status && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', padding: '3px 12px',
-                  borderRadius: 999, background: 'rgba(56,189,248,0.15)',
-                  border: '1px solid rgba(56,189,248,0.4)',
-                  fontSize: 12, fontWeight: 700, color: '#38bdf8',
-                  letterSpacing: '0.06em', textTransform: 'uppercase',
-                }}>
-                  {ticket.status}
-                </span>
-              )}
+              {ticket.status && (() => {
+                const sc = getStatusColor(ticket.status);
+                return (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', padding: '3px 12px',
+                    borderRadius: 999, background: sc + '22',
+                    border: `1px solid ${sc}55`,
+                    fontSize: 12, fontWeight: 700, color: sc,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                  }}>
+                    {ticket.status}
+                  </span>
+                );
+              })()}
             </Flex>
           </Flex>
           <button
@@ -272,12 +276,9 @@ export default function OperacaoDemandaModal({ ticket, onClose, onSave, readOnly
                 ) : readOnly ? (
                   <Text size="2" style={{ color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>Nenhum sistema impactado</Text>
                 ) : null}
-                {/* Edit input (only when not readOnly) */}
-                {!readOnly && (
-                  <input
-                    {...textInput('sistemasImpactados')}
-                    placeholder="Ex: Canal Mobile, Site CPFL, App GED"
-                  />
+                {/* Sincronizado do Jira — não editável via UI */}
+                {!form.sistemasImpactados && !readOnly && (
+                  <Text size="2" style={{ color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>Sincronizado via carga Jira (customfield_10325)</Text>
                 )}
               </Field>
 
@@ -353,4 +354,51 @@ export default function OperacaoDemandaModal({ ticket, onClose, onSave, readOnly
                 <Box style={{ flex: 1 }} />
               </Flex>
 
-              {/*
+              {/* Section 3 */}
+              <Flex gap="4" mb="3">
+                <DateField label="Data Início Atendimento" fieldKey="dataInicioAtendimento" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+                <Box style={{ flex: 1 }} />
+              </Flex>
+
+              {/* Section 4 */}
+              <Flex gap="4" mb="3">
+                <DateField label="Data Aprovação QA Plan." fieldKey="dataAprovacaoQa" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+                <Box style={{ flex: 1 }} />
+              </Flex>
+
+              {/* Section 5 */}
+              <Flex gap="4" mb="3">
+                <DateField label="Data Início Homolog. Plan." fieldKey="dataInicioHmlPlan" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+                <DateField label="Data Fim Desenvolvimento" fieldKey="dataFimDesenvolvimento" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+              </Flex>
+
+              {/* Section 6 */}
+              <Flex gap="4" mb="3">
+                <DateField label="Data Fim Homolog. Plan." fieldKey="dataFimHmlPlan" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+                <DateField label="Data Fim Teste Interno" fieldKey="dataFimTesteInterno" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+              </Flex>
+
+              {/* Section 7 */}
+              <Flex gap="4" mb="3">
+                <DateField label="Data Entrega Produção Prev." fieldKey="dataEntregaProducaoPrevista" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+                <DateField label="Data Fim Teste QA" fieldKey="dataFimTesteQa" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+              </Flex>
+
+              {/* Section 8 */}
+              <Flex gap="4" mb="3">
+                <Box style={{ flex: 1 }} />
+                <DateField label="Data Fim Homologação" fieldKey="dataFimHomologacao" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+              </Flex>
+
+              {/* Section 9 */}
+              <Flex gap="4" mb="3">
+                <Box style={{ flex: 1 }} />
+                <DateField label="Data Conclusão" fieldKey="dataConclusao" form={form} set={set} onSave={save} readOnly={readOnly} style={{ flex: 1 }} />
+              </Flex>
+            </Box>
+          )}
+        </Box>
+      </Box>
+    </div>
+  );
+}

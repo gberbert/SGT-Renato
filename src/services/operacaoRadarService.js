@@ -757,7 +757,7 @@ export async function updateTicketRadarFields(issueKey, patch) {
   if ('observacaoAdicional' in patch) payload.observacaoAdicional = patch.observacaoAdicional || '';
   if ('observacao' in patch) payload.observacao = patch.observacao || '';
   if ('naturezaOperacao' in patch) payload.naturezaOperacao = patch.naturezaOperacao || '';
-  if ('sistemasImpactados' in patch) payload.sistemasImpactados = patch.sistemasImpactados || '';
+  // sistemasImpactados → sincronizado do Jira, não editável via UI
   if ('summary' in patch) payload.summary = patch.summary || '';
   if ('estimativaMacro' in patch) {
     const numeric = patch.estimativaMacro === '' || patch.estimativaMacro == null

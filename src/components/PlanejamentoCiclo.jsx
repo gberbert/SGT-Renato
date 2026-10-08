@@ -7,7 +7,7 @@ import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap, PRIORIDADE_INTERNA_OPTIONS } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
 import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock, Save, Trash2, FileText } from 'lucide-react';
-import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx } from './PlanejamentoCicloHelpers';
+import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx, WorkflowTab } from './PlanejamentoCicloHelpers';
 import { exportCicloPdf } from './CicloPdfExport';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
@@ -379,6 +379,7 @@ export default function PlanejamentoCiclo() {
     () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
 
+  const [activeTab, setActiveTab] = useState('ciclos'); // 'ciclos' | 'workflow'
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
   const [showNewCiclo, setShowNewCiclo] = useState(false);
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
@@ -1117,30 +1118,6 @@ export default function PlanejamentoCiclo() {
           <MultiSelectFilter options={sistemasOptions} selected={sistemasFilter} onChange={setSistemasFilter} placeholder="Sistemas impactados" maxWidth={190} />
           <MultiSelectFilter options={naturezaIniciativaOptions} selected={naturezaIniciativaFilter} onChange={setNaturezaIniciativaFilter} placeholder="Natureza Iniciativa" maxWidth={180} />
           <MultiSelectFilter options={issuetypeOptions} selected={issuetypeFilter} onChange={setIssuetypeFilter} placeholder="Issue Type" maxWidth={160} />
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',
-            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
-            padding: '3px 8px',
-            border: `1px solid ${impedimentoFilter ? '#ca8a04' : 'var(--gray-5)'}`,
-            borderRadius: 6,
-            background: impedimentoFilter ? 'rgba(251,191,36,0.1)' : 'var(--gray-3)',
-          }}>
-            <input type="checkbox" checked={impedimentoFilter} onChange={e => setImpedimentoFilter(e.target.checked)} style={{ accentColor: '#eab308', width: 12, height: 12 }} />
-            🚧 Impedidos
-          </label>
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 12, color: demandaVulnerabFilter ? '#f87171' : 'var(--gray-10)',
-            cursor: 'pointer', userSelect: 'none', flexShrink: 0,
-            padding: '3px 8px',
-            border: `1px solid ${demandaVulnerabFilter ? 'rgba(239,68,68,0.6)' : 'var(--gray-5)'}`,
-            borderRadius: 6,
-            background: demandaVulnerabFilter ? 'rgba(239,68,68,0.1)' : 'var(--gray-3)',
-          }}>
-            <input type="checkbox" checked={demandaVulnerabFilter} onChange={e => setDemandaVulnerabFilter(e.target.checked)} style={{ accentColor: '#ef4444', width: 12, height: 12 }} />
-            🔒 Vulnerabilidade
-          </label>
         </div>
 
         {/* Row 3: grouped boxes */}
@@ -1156,6 +1133,34 @@ export default function PlanejamentoCiclo() {
             <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 4 }}>RESPONSÁVEIS</span>
             <MultiSelectFilter options={respDevOptions} selected={respDevFilter} onChange={setRespDevFilter} placeholder="Resp. Desenvolvimento" maxWidth={210} />
             <MultiSelectFilter options={respTesteOptions} selected={respTesteFilter} onChange={setRespTesteFilter} placeholder="Resp. Teste Interno" maxWidth={200} />
+
+            {/* Divider */}
+            <span style={{ width: 1, height: 20, background: 'var(--gray-5)', flexShrink: 0, margin: '0 4px' }} />
+
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 12, color: impedimentoFilter ? '#fbbf24' : 'var(--gray-10)',
+              cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+              padding: '3px 8px',
+              border: `1px solid ${impedimentoFilter ? '#ca8a04' : 'var(--gray-5)'}`,
+              borderRadius: 6,
+              background: impedimentoFilter ? 'rgba(251,191,36,0.1)' : 'transparent',
+            }}>
+              <input type="checkbox" checked={impedimentoFilter} onChange={e => setImpedimentoFilter(e.target.checked)} style={{ accentColor: '#eab308', width: 12, height: 12 }} />
+              🚧 Impedidos
+            </label>
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontSize: 12, color: demandaVulnerabFilter ? '#f87171' : 'var(--gray-10)',
+              cursor: 'pointer', userSelect: 'none', flexShrink: 0,
+              padding: '3px 8px',
+              border: `1px solid ${demandaVulnerabFilter ? 'rgba(239,68,68,0.6)' : 'var(--gray-5)'}`,
+              borderRadius: 6,
+              background: demandaVulnerabFilter ? 'rgba(239,68,68,0.1)' : 'transparent',
+            }}>
+              <input type="checkbox" checked={demandaVulnerabFilter} onChange={e => setDemandaVulnerabFilter(e.target.checked)} style={{ accentColor: '#ef4444', width: 12, height: 12 }} />
+              🔒 Vulnerabilidade
+            </label>
           </div>
 
           {/* Box: Exibição */}
@@ -1193,13 +1198,47 @@ export default function PlanejamentoCiclo() {
         </div>
       </div>
 
+      {/* ── Tab switcher ────────────────────────────────────────────── */}
+      {!loading && (
+        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--gray-4)', marginBottom: 18 }}>
+          {[{ key: 'ciclos', label: 'CICLOS' }, { key: 'workflow', label: 'WORKFLOW' }].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '9px 20px', fontSize: 13, fontWeight: 700,
+                color: activeTab === tab.key ? 'var(--indigo-11)' : 'var(--gray-9)',
+                borderBottom: activeTab === tab.key ? '2px solid var(--indigo-9)' : '2px solid transparent',
+                marginBottom: -2,
+                transition: 'all 0.12s',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Loading ──────────────────────────────────────────────────── */}
       {loading && (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--gray-10)' }}>Carregando tickets…</div>
       )}
 
+      {/* ── Workflow tab ─────────────────────────────────────────────── */}
+      {!loading && activeTab === 'workflow' && (
+        <WorkflowTab
+          filteredTickets={filteredTickets}
+          escopoFilter={escopoFilter}
+          onTicketClick={setSelectedTicket}
+          dateField={dateField}
+          showEstimativa={showEstimativa}
+        />
+      )}
+
       {/* ── Ciclo sections ───────────────────────────────────────────── */}
-      {!loading && ciclos.map(ciclo => (
+      {!loading && activeTab === 'ciclos' && ciclos.map(ciclo => (
         <CicloSection
           key={ciclo.id}
           ciclo={ciclo}
@@ -1214,7 +1253,7 @@ export default function PlanejamentoCiclo() {
       ))}
 
       {/* ── Backlog section ──────────────────────────────────────────── */}
-      {!loading && (
+      {!loading && activeTab === 'ciclos' && (
         <div style={{ marginBottom: 14 }}>
           <div
             style={{

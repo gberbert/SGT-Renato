@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar, Search, AlertCircle, Link2, Flame } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar, Search, AlertCircle, Link2, Flame, ArrowUp, Minus, ArrowDown } from 'lucide-react';
 import { updateCiclo, deleteCiclo } from '../services/cicloService';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
@@ -178,13 +178,43 @@ export function MultiSelectFilter({ options, selected, onChange, placeholder = '
 
 export function getStatusColor(s) {
   if (!s) return '#6b7280';
-  const l = String(s).toLowerCase();
-  if (l.includes('conclu') || l.includes('done') || l.includes('resolvid')) return '#22c55e';
-  if (l.includes('andament') || l.includes('progress') || l.includes('execu')) return '#3b82f6';
-  if (l.includes('block') || l.includes('impedi')) return '#ef4444';
-  if (l.includes('analis') || l.includes('review')) return '#8b5cf6';
+  const l = String(s).toLowerCase().trim();
+  // Concluída → verde neon
+  if (l === 'concluída' || l === 'concluida' || l === 'done' || l.includes('resolvid') || l === 'fechado' || l === 'fechada') return '#4ade80';
+  if (l.includes('conclu')) return '#4ade80';
+  // Em Execução / Execução → azul neon
+  if (l === 'em execução' || l === 'em execucao' || l === 'execução' || l === 'execucao' || l === 'em atendimento' || l === 'em andamento') return '#38bdf8';
+  if (l.includes('execu') || l.includes('andament') || l.includes('progress')) return '#38bdf8';
+  // Homologação / Revisão de Homologação → laranja neon
+  if (l.includes('homolog') || l.includes('revisão de homolog') || l.includes('revisao de homolog')) return '#fb923c';
+  // Revisão de Requisitos → cinza
+  if (l.includes('revisão de requisito') || l.includes('revisao de requisito')) return '#9ca3af';
+  // Análise e T-Shirt → amarelo neon
+  if (l.includes('t-shirt') || l.includes('t shirt') || l.includes('tshirt')) return '#facc15';
+  // Planejamento → lilás neon
+  if (l === 'planejamento' || l === 'em planejamento' || l === 'aprovação de planejamento' || l === 'aprovacao de planejamento' || l === 'aguardando planejamento') return '#c084fc';
+  if (l.includes('planejament')) return '#c084fc';
+  // Aguardando Mudança → azul água neon
+  if (l.includes('aguardando mudança') || l.includes('aguardando mudanca') || l.includes('aguard') && l.includes('mudan')) return '#22d3ee';
+  // Aguardando específicos → cinza
+  if (l.includes('aguardando demanda') || l.includes('aguardando profissional') || l.includes('aguardando solicitante')) return '#9ca3af';
+  // Outros aguardando → amber
   if (l.includes('aguard') || l.includes('pendente')) return '#f59e0b';
+  // Impedido/bloqueado → vermelho
+  if (l.includes('block') || l.includes('impedi')) return '#ef4444';
+  // Análise/revisão → violeta
+  if (l.includes('analis') || l.includes('review') || l.includes('revisão') || l.includes('revisao')) return '#a78bfa';
   return '#6b7280';
+}
+
+function getPriorityMeta(prioridadeInterna) {
+  const p = String(prioridadeInterna || '').toLowerCase().trim();
+  if (p === 'crise' || p === 'crítica' || p === 'critica') return { label: 'Crise', color: '#fca5a5', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', iconType: 'flame' };
+  if (p === 'alto' || p === 'alta') return { label: 'Alto', color: '#fdba74', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.35)', iconType: 'up' };
+  if (p === 'medio' || p === 'médio' || p === 'media' || p === 'média') return { label: 'Médio', color: '#fde68a', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.35)', iconType: 'minus' };
+  if (p === 'baixo' || p === 'baixa') return { label: 'Baixo', color: '#93c5fd', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)', iconType: 'down' };
+  if (p === 'muito baixo') return { label: 'M.Baixo', color: '#c7d2fe', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.25)', iconType: 'down' };
+  return null;
 }
 
 export const DATE_FIELD_OPTIONS = [
@@ -417,11 +447,16 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
         {tkey}
       </button>
       <span style={{ flex: 1, fontSize: 13, color: 'var(--gray-12)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ticket.summary}>{ticket.summary || '(sem titulo)'}</span>
-      {String(ticket.prioridadeInterna || '').toLowerCase() === 'crise' && (
-        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: 'rgba(239,68,68,0.12)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.35)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }} title="Prioridade: Crise">
-          <Flame size={12} />
-        </span>
-      )}
+      {(() => {
+        const pm = getPriorityMeta(ticket.prioridadeInterna);
+        if (!pm) return null;
+        const Icon = pm.iconType === 'flame' ? Flame : pm.iconType === 'up' ? ArrowUp : pm.iconType === 'minus' ? Minus : ArrowDown;
+        return (
+          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: pm.bg, color: pm.color, border: `1px solid ${pm.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }} title={`Prioridade: ${ticket.prioridadeInterna}`}>
+            <Icon size={11} />{pm.label}
+          </span>
+        );
+      })()}
       {ticket.impedimento && (
         <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.4)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }} title="Ticket impedido">
           <AlertCircle size={13} />
@@ -554,6 +589,212 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
         </div>
       )}
     </>
+  );
+}
+
+// ── Workflow status order per escopo ─────────────────────────────────────────
+const WORKFLOW_STATUS_ORDER_DEMANDA = [
+  'Aguardando Aprovação Gestor Imediato',
+  'Escrita de Requerimento',
+  'Validação Comitê',
+  'Aguardando Solicitante',
+  'Detalhamento de Requisitos',
+  'Aguardando Profissional de TI',
+  'Aguardando Demanda/Projeto',
+  'Revisão de Requisitos de Projeto',
+  'Análise e T-Shirt',
+  'Aguardando Análise Técnica',
+  'Aguardando Aprovação T-Shirt',
+  'Planejamento',
+  'Aprovação de Planejamento',
+  'Aguardando Planejamento',
+  'Em Execução',
+  'Em Teste',
+  'Em homologação',
+  'Revisão de homologação',
+  'Etapa de KT',
+  'Aguardando Mudança',
+  'Concluída',
+];
+const WORKFLOW_STATUS_ORDER_FAST = [
+  'Aguardando Atendimento',
+  'Em Atendimento',
+  'Resolvido',
+  'Reaberto',
+  'Fechada',
+  'Canceled',
+  'Aprovação Demanda Fast',
+  'Aguardando Aprovação Gestor',
+  'Aguardando Aprovação Tecnica',
+  'Aguardando Aprovação Adicional',
+  'Aprovado',
+  'Reprovado',
+  'Agendado',
+  'Aguardando Compra',
+  'Aguardando Validação',
+  'Aguardando Problema',
+  'Aguardando Mudança',
+  'Aguardando Fornecedor',
+  'Aguardando Solicitante',
+];
+const WORKFLOW_STATUS_ORDER_PROBLEMAS = [
+  'Aguardando RCA',
+  'Aguardando Aprovação Líder de Torre',
+  'Aguardando Aprovação Ger. Problema',
+  'Solução Rejeitada',
+  'Aguardando Planejamento',
+  'Aguardando Execução',
+  'Em Execução',
+  'Aguardando Demanda/Projeto',
+  'Em Monitoramento',
+  'Fechado',
+  'Cancelado',
+  'RCA em Desenvolvimento',
+  'Aguardando Aprovação Técnica RCA',
+  'Aguardando Aprovação Governança RCA',
+  'Resolvido',
+  'Em Planejamento',
+  'Aguardando Aprovação Técnica',
+  'Aguardando Aprovação Governança',
+  'Aguardando Demanda',
+];
+
+function getWorkflowStatusOrder(escopos) {
+  // Build a merged ordered list based on selected escopos
+  const seen = new Set();
+  const order = [];
+  const addList = (list) => { list.forEach(s => { if (!seen.has(s)) { seen.add(s); order.push(s); } }); };
+  if (!escopos || escopos.size === 0) return [];
+  if (escopos.has('DEMANDA')) addList(WORKFLOW_STATUS_ORDER_DEMANDA);
+  if (escopos.has('DEMANDA FAST')) addList(WORKFLOW_STATUS_ORDER_FAST);
+  if (escopos.has('PROBLEMAS')) addList(WORKFLOW_STATUS_ORDER_PROBLEMAS);
+  return order;
+}
+
+/**
+ * WorkflowStatusSection — mirrors CicloSection but groups by a status value
+ */
+export function WorkflowStatusSection({ statusName, tickets, onTicketClick, dateField, showEstimativa = true, allTickets = [] }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const sc = getStatusColor(statusName);
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '9px 13px', background: 'var(--gray-3)',
+          borderRadius: collapsed ? 8 : '8px 8px 0 0',
+          border: '1px solid var(--gray-5)',
+          borderBottom: collapsed ? '1px solid var(--gray-5)' : 'none',
+          cursor: 'pointer', userSelect: 'none',
+        }}
+        onClick={() => setCollapsed(v => !v)}
+      >
+        <span style={{ color: 'var(--gray-9)', display: 'flex' }}>
+          {collapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+        </span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-12)' }}>{statusName}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 12, background: sc + '22', color: sc, border: `1px solid ${sc}55`, flexShrink: 0 }}>
+          {tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'}
+        </span>
+        {showEstimativa && (() => {
+          const total = tickets.reduce((acc, t) => acc + (Number(t.estimativaInterna) || 0), 0);
+          if (!total) return null;
+          return (
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)', marginLeft: 2 }}>
+              ⏱ {total}h
+            </span>
+          );
+        })()}
+      </div>
+      {!collapsed && (
+        <div style={{ border: '1px solid var(--gray-5)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '8px 10px', background: 'var(--color-background)' }}>
+          {(() => {
+            const ticketKeySet = new Set(tickets.map(t => t.issueKey || t.id));
+            const rootTickets = tickets.filter(t => {
+              const parentKey = t.parentKey || t.parent?.key;
+              return !parentKey || !ticketKeySet.has(parentKey);
+            });
+            return rootTickets.map(t => (
+              <TicketRow
+                key={t.issueKey || t.id}
+                ticket={t}
+                cicloId={null}
+                ciclos={[]}
+                onMoveToCiclo={() => {}}
+                onMoveToBacklog={() => {}}
+                onTicketClick={onTicketClick}
+                dateField={dateField}
+                showEstimativa={showEstimativa}
+                allTickets={tickets}
+                level={0}
+              />
+            ));
+          })()}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * WorkflowTab — renders all filteredTickets grouped by status following workflow order.
+ * When no escopo is selected, shows a single BACKLOG group.
+ */
+export function WorkflowTab({ filteredTickets, escopoFilter, onTicketClick, dateField, showEstimativa = true }) {
+  const hasEscopoFilter = escopoFilter && escopoFilter.size > 0;
+
+  const groups = useMemo(() => {
+    if (!hasEscopoFilter) {
+      return [{ statusName: 'BACKLOG', tickets: filteredTickets }];
+    }
+    const order = getWorkflowStatusOrder(escopoFilter);
+    const orderIndex = {};
+    order.forEach((s, i) => { orderIndex[s] = i; });
+
+    // Group tickets by status
+    const map = new Map();
+    filteredTickets.forEach(t => {
+      const s = t.status || '(sem status)';
+      if (!map.has(s)) map.set(s, []);
+      map.get(s).push(t);
+    });
+
+    // Sort groups: known statuses first (by workflow order), unknown after
+    const entries = [...map.entries()];
+    entries.sort(([a], [b]) => {
+      const ia = orderIndex[a] ?? order.length;
+      const ib = orderIndex[b] ?? order.length;
+      if (ia !== ib) return ia - ib;
+      return a.localeCompare(b, 'pt-BR');
+    });
+
+    return entries.map(([statusName, tickets]) => ({ statusName, tickets }));
+  }, [filteredTickets, escopoFilter, hasEscopoFilter]);
+
+  if (filteredTickets.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', color: 'var(--gray-9)', fontSize: 13, padding: '40px 0' }}>
+        Nenhum ticket encontrado com os filtros aplicados
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {groups.map(g => (
+        <WorkflowStatusSection
+          key={g.statusName}
+          statusName={g.statusName}
+          tickets={g.tickets}
+          onTicketClick={onTicketClick}
+          dateField={dateField}
+          showEstimativa={showEstimativa}
+          allTickets={filteredTickets}
+        />
+      ))}
+    </div>
   );
 }
 

@@ -429,6 +429,7 @@ const KNOWN_DATE_FIELD_IDS = {
   demanda_vulnerabilidade: "customfield_19626",
   responsavel_execucao: "customfield_10608",
   severidade: "customfield_10882",
+  sistemas_impactados: "customfield_10325",
 };
 
 async function resolveTicketFieldIds() {
@@ -552,6 +553,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     demandaVulnerabilidade: extracted.demanda_vulnerabilidade || null,
     responsavelExecucao: extracted.responsavel_execucao || null,
     severidade: extracted.severidade || null,
+    sistemasImpactados: extracted.sistemas_impactados || null,
     issueLinksDetailed: extractIssueLinksDetailed(issue),
     labels,
     components,

@@ -2161,6 +2161,8 @@ const OperacaoHome = ({ userRole }) => {
                           <col className="col-imp" />
                           <col className="col-estim" />
                           <col className="col-estim" />
+                          <col style={{ width: 90 }} />
+                          <col style={{ width: 90 }} />
                           <col className="col-date" />
                           <col className="col-date" />
                           <col className="col-date" />
@@ -2178,6 +2180,8 @@ const OperacaoHome = ({ userRole }) => {
                             <th>IMPEDIMENTO</th>
                             <th>EST. MACRO</th>
                             <th>EST. TOTAL</th>
+                            <th>% DEV</th>
+                            <th>% TESTE INT</th>
                             <th>DESENVOLVIMENTO</th>
                             <th>TESTE INTERNO</th>
                             <th>PRODUÇÃO</th>
@@ -2302,7 +2306,33 @@ const OperacaoHome = ({ userRole }) => {
                               <td style={{ textAlign: 'right', paddingRight: 8 }}>
                                 {ticket.estimativaTotal != null && ticket.estimativaTotal !== '' ? Number(ticket.estimativaTotal).toLocaleString('pt-BR') : '—'}
                               </td>
-                                              <td style={(() => {
+                              <td style={{ padding: '4px 6px' }}>
+                                {ticket.percentualConclusao != null && ticket.percentualConclusao !== '' ? (() => {
+                                  const pct = Math.min(100, Math.max(0, Number(ticket.percentualConclusao)));
+                                  return (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <div style={{ width: 44, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', flexShrink: 0 }}>
+                                        <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: pct >= 100 ? '#4ade80' : pct >= 75 ? '#22d3ee' : pct >= 40 ? '#fbbf24' : '#f87171' }} />
+                                      </div>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-11)', whiteSpace: 'nowrap' }}>{pct}%</span>
+                                    </div>
+                                  );
+                                })() : '—'}
+                              </td>
+                              <td style={{ padding: '4px 6px' }}>
+                                {ticket.percentualConclusaoTesteInterno != null && ticket.percentualConclusaoTesteInterno !== '' ? (() => {
+                                  const pct = Math.min(100, Math.max(0, Number(ticket.percentualConclusaoTesteInterno)));
+                                  return (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <div style={{ width: 44, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', flexShrink: 0 }}>
+                                        <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, background: pct >= 100 ? '#4ade80' : pct >= 75 ? '#22d3ee' : pct >= 40 ? '#fbbf24' : '#f87171' }} />
+                                      </div>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-11)', whiteSpace: 'nowrap' }}>{pct}%</span>
+                                    </div>
+                                  );
+                                })() : '—'}
+                              </td>
+                              <td style={(() => {
                                 if (TERMINAL_STATUSES.has(String(ticket.status || '').trim())) return {};
                                 const v = ticket.dataFimDesenvolvimento ? String(ticket.dataFimDesenvolvimento).slice(0,10) : null;
                                 if (!v) return {};

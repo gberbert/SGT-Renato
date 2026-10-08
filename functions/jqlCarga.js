@@ -86,6 +86,11 @@ const TICKET_FIELD_DEFINITIONS = {
     "severidade",
     "Severidade[Dropdown]",
   ],
+  sistemas_impactados: [
+    "Sistemas Impactados",
+    "sistemas impactados",
+    "Sistemas Impactados[Select List (multiple choices)]",
+  ],
 };
 
 const ESCOPO_SEED = [

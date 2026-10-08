@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Flex, Text, Card, Badge, Callout, Table, Grid, Button, Dialog, TextArea, Progress, ScrollArea } from '@radix-ui/themes';
-import { Settings, FileText, Info, Link2, Database, Copy, Pencil, Check, Loader2, RotateCcw, Lock, Play, Search, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Box, Flex, Text, Card, Badge, Callout, Table, Grid, Button, Dialog, TextArea, Progress } from '@radix-ui/themes';
+import { Settings, FileText, Info, Database, Copy, Pencil, Check, Loader2, RotateCcw, Lock, Play, Search, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
 import { getOperacaoJqlConfig } from '../../utils/jqlCargaClient';
@@ -10,6 +10,7 @@ import { logSyncAction } from '../../services/auditService';
 import { formatCallableError } from '../../utils/callableError';
 import { useOperacaoRadar } from '../../contexts/OperacaoRadarContext';
 import { getSyncState, subscribeSyncState, startSyncLoading, setSyncRun, finishSyncLoading } from '../../services/operacaoSyncStore';
+import CargaFieldCatalogPanel from './CargaFieldCatalog';
 
 const JQL_EDIT_PERMISSION_MAP = {
   problemas: 'JQL_EDIT_PROBLEMAS',
@@ -117,14 +118,10 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
   }, [userRole]);
 
   const config = useMemo(() => {
-    // Batches estáticas (do arquivo txt) mescladas com overrides do Firestore
     const mergedBatches = staticConfig.batches.map((b) => {
       const ov = overrides[b.escopoId];
       return ov != null && ov !== '' ? { ...b, jql: ov, isOverridden: true } : b;
     });
-
-    // Entradas extras inseridas diretamente no Firestore (sem batch estática correspondente)
-    // Comparação case-insensitive para evitar duplicatas (ex: "DEMANDA" vs "demanda")
     const existingIds = new Set(staticConfig.batches.map((b) => b.escopoId.toLowerCase()));
     const extraBatches = Object.entries(overrides)
       .filter(([id, jql]) => !existingIds.has(id.toLowerCase()) && jql != null && jql !== '')
@@ -136,11 +133,7 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
         isOverridden: true,
         isExtraOnly: true,
       }));
-
-    return {
-      ...staticConfig,
-      batches: [...mergedBatches, ...extraBatches],
-    };
+    return { ...staticConfig, batches: [...mergedBatches, ...extraBatches] };
   }, [staticConfig, overrides]);
 
   const canEdit = (b) => { if (isAdmin) return true; const pk = JQL_EDIT_PERMISSION_MAP[b.escopoId]; return pk ? allowedFunctions.includes(pk) : false; };
@@ -226,8 +219,6 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
           <Dialog.Description size="2" color="gray" mb="4">
             Prévia dos tickets identificados por escopo via JQLs do Firestore. Os campos existentes em <code>tickets_global</code> serão preservados (merge).
           </Dialog.Description>
-
-          {/* Preview loading */}
           {previewLoading && (
             <Flex align="center" gap="3" p="4" style={{ background: 'rgba(0,0,0,0.1)', borderRadius: 8 }}>
               <Loader2 size={20} color="var(--blue-9)" style={{ animation: 'cfg-spin 1s linear infinite' }} />
@@ -237,16 +228,12 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
               </Flex>
             </Flex>
           )}
-
-          {/* Preview error */}
           {previewError && !previewLoading && (
             <Callout.Root color="red" mb="3">
               <Callout.Icon><AlertTriangle size={16} /></Callout.Icon>
               <Callout.Text>{previewError}</Callout.Text>
             </Callout.Root>
           )}
-
-          {/* Preview table */}
           {preview && !previewLoading && !isRunning && !isSuccess && (
             <Box mb="3">
               <Flex align="center" justify="between" mb="2">
@@ -271,21 +258,15 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
               </Table.Root>
             </Box>
           )}
-
-          {/* Progress panel (running or done) */}
           {(isRunning || isSuccess || syncRun?.status === 'error') && (
             <ProgressPanel syncRun={syncRun} syncLoading={syncLoading} />
           )}
-
-          {/* Sync error */}
           {syncError && (
             <Callout.Root color="red" mt="3">
               <Callout.Icon><AlertTriangle size={16} /></Callout.Icon>
               <Callout.Text>{syncError}</Callout.Text>
             </Callout.Root>
           )}
-
-          {/* Actions */}
           <Flex justify="end" gap="2" mt="4">
             {isRunning ? (
               <Button color="red" variant="soft" onClick={handleCancel}>Cancelar carga</Button>
@@ -312,7 +293,10 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
 
       {/* ── Loading overrides ── */}
       {overridesLoading && (
-        <Flex align="center" gap="2" mb="3"><Loader2 size={16} style={{ animation: 'cfg-spin 1s linear infinite' }} /><Text size="2" color="gray">Carregando configurações…</Text></Flex>
+        <Flex align="center" gap="2" mb="3">
+          <Loader2 size={16} style={{ animation: 'cfg-spin 1s linear infinite' }} />
+          <Text size="2" color="gray">Carregando configurações…</Text>
+        </Flex>
       )}
 
       {/* ── JQL Batches ── */}
@@ -347,7 +331,7 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
         ))}
       </Flex>
 
-      {/* ── Field Definitions ── */}
+      {/* ── Field Definitions (mapeamento customfield) ── */}
       {fieldRows.length > 0 && (
         <Card mb="4">
           <Flex align="center" gap="2" mb="3">
@@ -372,6 +356,9 @@ export default function OperacaoConfig({ userRole, embedded = false }) {
           </Table.Root>
         </Card>
       )}
+
+      {/* ── Campos da Carga ── */}
+      <CargaFieldCatalogPanel />
 
       {/* ── Edit JQL Dialog ── */}
       <Dialog.Root open={!!editingBatch} onOpenChange={(o) => { if (!o) setEditingBatch(null); }}>

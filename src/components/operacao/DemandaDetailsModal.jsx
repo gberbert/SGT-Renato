@@ -4,6 +4,7 @@ import { collection, getDocs, query, orderBy, onSnapshot } from 'firebase/firest
 import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
 import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
+import { getStatusColor } from '../PlanejamentoCicloHelpers';
 
 function useSystems() {
   const [systems, setSystems] = useState([]);
@@ -586,8 +587,9 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
     return ticket.priority || '—';
   })();
 
-  const squadLabel = stripNumericPrefix(ticket.grupoSuporte) || ticket.squad || '—';
+  const squadLabel = stripNumericPrefix(ticket.grupoSolucionador || ticket.grupoSuporte) || ticket.squad || '—';
   const statusLabel = ticket.status || '—';
+  const statusColor = getStatusColor(ticket.status);
 
   return (
     <div className="dmd-overlay">
@@ -631,7 +633,14 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
               );
             })()}
             <span className="dmd-badge dmd-badge--squad">{squadLabel}</span>
-            <span className="dmd-badge dmd-badge--status">{statusLabel}</span>
+            <span
+              className="dmd-badge"
+              style={{
+                background: statusColor + '22',
+                color: statusColor,
+                border: `1px solid ${statusColor}55`,
+              }}
+            >{statusLabel}</span>
             {/* Squad tags derivadas dos sistemas impactados — clicáveis em modo edição */}
             {(() => {
               if (!ticket.sistemasImpactados || !systems.length || !squads.length) return null;
@@ -765,12 +774,17 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 <ReadField label="SEVERIDADE" value={ticket.severidade} />
               </div>
 
-              {/* Row 2b: % CONCLUSÃO + CICLO */}
+              {/* Row 2b: % CONCLUSÃO + % CONCLUSÃO TESTE INTERNO + CICLO */}
               <div className="dmd-row">
                 {isEdit ? (
                   <EditPercent label="% CONCLUSÃO" fieldKey="percentualConclusao" value={ticket.percentualConclusao} onSave={save} />
                 ) : (
                   <ReadPercent label="% CONCLUSÃO" value={ticket.percentualConclusao} />
+                )}
+                {isEdit ? (
+                  <EditPercent label="% CONCLUSÃO TESTE INTERNO" fieldKey="percentualConclusaoTesteInterno" value={ticket.percentualConclusaoTesteInterno} onSave={save} />
+                ) : (
+                  <ReadPercent label="% CONCLUSÃO TESTE INTERNO" value={ticket.percentualConclusaoTesteInterno} />
                 )}
                 <div className="dmd-field">
                   <FieldLabel>CICLO</FieldLabel>
