@@ -735,6 +735,7 @@ const data = d.data();
     naturezaOperacao: data.naturezaOperacao || data.naturezaIniciativa || '',
     observacao: data.observacao || '',
     percentualConclusao: data.percentualConclusao ?? null,
+    percentualConclusaoTesteInterno: data.percentualConclusaoTesteInterno ?? null,
     ticketsVinculados: data.ticketsVinculados || '',
     motivoImpedimento: data.motivoImpedimento || '',
     fila: data.fila || '',
