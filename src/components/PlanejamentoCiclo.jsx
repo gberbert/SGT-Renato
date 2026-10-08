@@ -375,6 +375,8 @@ export default function PlanejamentoCiclo() {
   const [dateField, setDateField] = useState('none');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
+  const [pctConclusaoFilter, setPctConclusaoFilter] = useState(new Set());
+  const [pctTesteInternoFilter, setPctTesteInternoFilter] = useState(new Set());
   const [showEstimativa, setShowEstimativa] = useState(
     () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
@@ -439,6 +441,8 @@ export default function PlanejamentoCiclo() {
     setDateField(f.dateField ?? 'none');
     setImpedimentoFilter(f.impedimentoFilter ?? false);
     setDemandaVulnerabFilter(f.demandaVulnerabFilter ?? false);
+    setPctConclusaoFilter(f.pctConclusaoFilter ?? new Set());
+    setPctTesteInternoFilter(f.pctTesteInternoFilter ?? new Set());
     setShowEstimativa(f.showEstimativa ?? false);
   }, [savedViews]);
 
@@ -587,6 +591,22 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [enrichedTickets]);
 
+  const pctConclusaoOptions = useMemo(() => {
+    const s = new Set();
+    enrichedTickets.forEach(t => {
+      if (t.percentualConclusao != null && t.percentualConclusao !== '') s.add(String(t.percentualConclusao));
+    });
+    return [...s].sort((a, b) => Number(a) - Number(b)).map(v => `${v}%`);
+  }, [enrichedTickets]);
+
+  const pctTesteInternoOptions = useMemo(() => {
+    const s = new Set();
+    enrichedTickets.forEach(t => {
+      if (t.percentualConclusaoTesteInterno != null && t.percentualConclusaoTesteInterno !== '') s.add(String(t.percentualConclusaoTesteInterno));
+    });
+    return [...s].sort((a, b) => Number(a) - Number(b)).map(v => `${v}%`);
+  }, [enrichedTickets]);
+
   const handleFilaFilterChange = useCallback((newFilaSelection) => {
     setFilaFilter(newFilaSelection);
     const newStatusSelection = new Set();
@@ -624,6 +644,8 @@ export default function PlanejamentoCiclo() {
     }
     if (naturezaIniciativaFilter.size > 0 && !naturezaIniciativaFilter.has(t.naturezaIniciativa || t.naturezaOperacao || '')) return false;
     if (issuetypeFilter.size > 0 && !issuetypeFilter.has(t.issueType || t.issuetype || '')) return false;
+    if (pctConclusaoFilter.size > 0 && !pctConclusaoFilter.has(`${t.percentualConclusao ?? ''}%`)) return false;
+    if (pctTesteInternoFilter.size > 0 && !pctTesteInternoFilter.has(`${t.percentualConclusaoTesteInterno ?? ''}%`)) return false;
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
     if (search) {
@@ -769,7 +791,7 @@ export default function PlanejamentoCiclo() {
     dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
   ]);
 
-  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter]
+  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0) + (demandaVulnerabFilter ? 1 : 0);
 
   return (
@@ -1133,7 +1155,7 @@ export default function PlanejamentoCiclo() {
           )}
           {activeFilters > 0 && (
             <button
-              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setPctConclusaoFilter(new Set()); setPctTesteInternoFilter(new Set()); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
               style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
             >
               Limpar filtros
@@ -1150,6 +1172,8 @@ export default function PlanejamentoCiclo() {
           <MultiSelectFilter options={sistemasOptions} selected={sistemasFilter} onChange={setSistemasFilter} placeholder="Sistemas impactados" maxWidth={190} />
           <MultiSelectFilter options={naturezaIniciativaOptions} selected={naturezaIniciativaFilter} onChange={setNaturezaIniciativaFilter} placeholder="Natureza Iniciativa" maxWidth={180} />
           <MultiSelectFilter options={issuetypeOptions} selected={issuetypeFilter} onChange={setIssuetypeFilter} placeholder="Issue Type" maxWidth={160} />
+          <MultiSelectFilter options={pctConclusaoOptions} selected={pctConclusaoFilter} onChange={setPctConclusaoFilter} placeholder="% Conclusão" maxWidth={140} />
+          <MultiSelectFilter options={pctTesteInternoOptions} selected={pctTesteInternoFilter} onChange={setPctTesteInternoFilter} placeholder="% Conclusão Teste" maxWidth={160} />
         </div>
 
         </>
