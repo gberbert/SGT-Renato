@@ -62,11 +62,18 @@ const DATE_FIELD_OPTIONS = [
   { value: 'updatedAt', label: 'Data de Atualizacao (UPDATE_AT)' },
 ];
 
-const START_FIELD_OPTIONS = DATE_FIELD_OPTIONS;
-const END_FIELD_OPTIONS = DATE_FIELD_OPTIONS;
+const START_FIELD_OPTIONS = [
+  { value: 'createdAt',              label: 'A — Data Criação (Jira)' },
+  { value: 'dataFimDesenvolvimento', label: 'B — Fim Desenvolvimento' },
+  { value: 'dataFimTesteInterno',    label: 'C — Fim Teste Interno' },
+  { value: 'dataFimTesteQa',         label: 'D — Fim Teste QA' },
+  { value: 'dataFimHomologacao',     label: 'E — Fim Homologação' },
+  { value: 'dataConclusao',          label: 'F — Data Conclusão' },
+];
+const END_FIELD_OPTIONS = START_FIELD_OPTIONS;
 
 function createDefaultDateConfig() {
-  return { startField: 'createdAt', endField: 'resolvedAt' };
+  return { startField: 'createdAt', endField: 'dataConclusao' };
 }
 
 function createDefaultScopeConfig() {
@@ -118,22 +125,24 @@ function barColorForTicket(ticket) {
 
 const ROADMAP_CACHE_PREFIX = 'roadmap_geral_v2_';
 
-/** Datas de planejamento: circulos pretos com letra identificadora na linha de cada ticket */
+/** Marcos internos dos tickets (A-F) — datas SGT internas */
 const MILESTONE_FIELDS = [
-  { key: 'dataAprovacaoEfsr',              label: 'Aprovacao EF/SR',               letter: '' },
-  { key: 'dataInicioAtendimentoPlanejada', label: 'Inicio Atendimento Planejado',   letter: 'A' },
-  { key: 'dataInicioAtendimento',          label: 'Inicio Atendimento',             letter: 'B' },
-  { key: 'dataAprovacaoQaPlanejada',       label: 'Aprovacao QA Planejada',         letter: 'C' },
-  { key: 'dataInicioHomologacaoPlanejada', label: 'Inicio Homologacao Planejada',   letter: 'D' },
-  { key: 'dataFimHomologacaoPlanejada',    label: 'Fim Homologacao Planejada',      letter: 'E' },
-  { key: 'dataEntregaProducaoPrevista',    label: 'Entrega em Producao Prevista',   letter: 'F', highlight: { background: '#39ff14', borderColor: 'rgba(15,15,15,0.88)', color: '#064e1a' } },
-  { key: 'dataInicioHomologacaoEfetiva',   label: 'Inicio Homologacao Efetiva',     letter: 'G' },
-  { key: 'dataFimHomologacaoEfetiva',      label: 'Fim Homologacao Efetiva',        letter: 'H' },
-  { key: 'dataFimDesenvolvimento',         label: 'Fim Desenvolvimento',            letter: 'D2', highlight: { background: '#818cf8', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
-  { key: 'dataFimTesteInterno',            label: 'Fim Teste Interno',              letter: 'TI', highlight: { background: '#f59e0b', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
-  { key: 'dataFimTesteQa',                label: 'Fim Teste (QA)',                 letter: 'QA', highlight: { background: '#06b6d4', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
-  { key: 'dataFimHomologacao',             label: 'Fim Homologacao (Efetiva)',      letter: 'HE', highlight: { background: '#f97316', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
-  { key: 'dataConclusao',                  label: 'Data Conclusao / Producao',      letter: 'P',  highlight: { background: '#22c55e', borderColor: 'rgba(15,15,15,0.88)', color: '#fff' } },
+  { key: 'createdAt',              label: 'Data Criação (Jira)',  letter: 'A', highlight: { background: '#94a3b8', borderColor: 'rgba(15,15,15,0.5)', color: '#fff' } },
+  { key: 'dataFimDesenvolvimento', label: 'Fim Desenvolvimento',  letter: 'B', highlight: { background: '#818cf8', borderColor: 'rgba(15,15,15,0.5)', color: '#fff' } },
+  { key: 'dataFimTesteInterno',    label: 'Fim Teste Interno',    letter: 'C', highlight: { background: '#f59e0b', borderColor: 'rgba(15,15,15,0.5)', color: '#fff' } },
+  { key: 'dataFimTesteQa',         label: 'Fim Teste (QA)',       letter: 'D', highlight: { background: '#06b6d4', borderColor: 'rgba(15,15,15,0.5)', color: '#fff' } },
+  { key: 'dataFimHomologacao',     label: 'Fim Homologação',      letter: 'E', highlight: { background: '#f97316', borderColor: 'rgba(15,15,15,0.5)', color: '#fff' } },
+  { key: 'dataConclusao',          label: 'Data Conclusão',       letter: 'F', highlight: { background: '#22c55e', borderColor: 'rgba(15,15,15,0.5)', color: '#fff' } },
+];
+
+/** Opções de data para as barras (limitado aos 6 marcos A-F) */
+const BAR_DATE_OPTIONS = [
+  { value: 'createdAt',              label: 'A — Data Criação (Jira)' },
+  { value: 'dataFimDesenvolvimento', label: 'B — Fim Desenvolvimento' },
+  { value: 'dataFimTesteInterno',    label: 'C — Fim Teste Interno' },
+  { value: 'dataFimTesteQa',         label: 'D — Fim Teste QA' },
+  { value: 'dataFimHomologacao',     label: 'E — Fim Homologação' },
+  { value: 'dataConclusao',          label: 'F — Data Conclusão' },
 ];
 
 /**
@@ -888,6 +897,89 @@ const RoadmapGeral = () => {
                       <Text as="div" size="1" weight="bold" mb="1">Data de Fim</Text>
                       <input type="date" value={scopeConfig.dateRangeEnd} onChange={(e) => setScopeConfig((p) => ({ ...p, dateRangeEnd: e.target.value }))} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--gray-6)', background: 'var(--gray-2)', color: 'var(--gray-12)', fontSize: 13 }} />
                     </Box>
+                  </Flex>
+                </Box>
+
+                <Separator size="4" />
+
+                {/* Campos de Data das Barras */}
+                <Box>
+                  <Text as="div" size="2" weight="bold" mb="1">Barras — Campo Início / Fim</Text>
+                  <Text size="1" color="gray" mb="2" as="div">Define o intervalo plotado para cada ticket na timeline.</Text>
+                  <Flex direction="column" gap="2">
+                    <Box>
+                      <Text as="div" size="1" weight="bold" mb="1">Campo de Início</Text>
+                      <Select.Root value={dateConfig.startField} onValueChange={(v) => setDateConfig((p) => ({ ...p, startField: v }))}>
+                        <Select.Trigger style={{ width: '100%' }} />
+                        <Select.Content>
+                          {START_FIELD_OPTIONS.map((opt) => (
+                            <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Root>
+                    </Box>
+                    <Box>
+                      <Text as="div" size="1" weight="bold" mb="1">Campo de Fim</Text>
+                      <Select.Root value={dateConfig.endField} onValueChange={(v) => setDateConfig((p) => ({ ...p, endField: v }))}>
+                        <Select.Trigger style={{ width: '100%' }} />
+                        <Select.Content>
+                          {END_FIELD_OPTIONS.map((opt) => (
+                            <Select.Item key={opt.value} value={opt.value}>{opt.label}</Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Root>
+                    </Box>
+                  </Flex>
+                </Box>
+
+                <Separator size="4" />
+
+                {/* Marcos visíveis (A-F) */}
+                <Box>
+                  <Flex align="center" justify="between" mb="1">
+                    <Text as="div" size="2" weight="bold">Marcos Visíveis (A–F)</Text>
+                    {scopeConfig.visibleMilestones?.length > 0 && (
+                      <Button size="1" variant="ghost" color="gray" onClick={() => setScopeConfig((p) => ({ ...p, visibleMilestones: [] }))}>Todos</Button>
+                    )}
+                  </Flex>
+                  <Flex direction="column" gap="1">
+                    {MILESTONE_FIELDS.map((mf) => (
+                      <label key={mf.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          checked={!scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key)}
+                          onChange={() => setScopeConfig((prev) => {
+                            const current = prev.visibleMilestones?.length ? prev.visibleMilestones : MILESTONE_FIELDS.map((f) => f.key);
+                            const next = current.includes(mf.key) ? current.filter((k) => k !== mf.key) : [...current, mf.key];
+                            return { ...prev, visibleMilestones: next.length === MILESTONE_FIELDS.length ? [] : next };
+                          })}
+                        />
+                        <Box style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0, background: mf.highlight?.background || '#fff', border: `1.5px solid rgba(15,15,15,0.5)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: mf.highlight?.color || '#000' }}>{mf.letter}</Box>
+                        <Text size="2">{mf.label}</Text>
+                      </label>
+                    ))}
+                  </Flex>
+                </Box>
+
+                <Separator size="4" />
+
+                {/* Escopo de carga */}
+                <Box>
+                  <Flex align="center" justify="between" mb="1">
+                    <Text as="div" size="2" weight="bold">Escopo de Carga</Text>
+                    {scopeConfig.escopos.length > 0 && (
+                      <Button size="1" variant="ghost" color="gray" onClick={() => setScopeConfig((p) => ({ ...p, escopos: [] }))}>Todos</Button>
+                    )}
+                  </Flex>
+                  <Text size="1" color="gray" mb="2" as="div">Quais escopos buscar ao clicar em Carregar. Vazio = todos.</Text>
+                  <Flex direction="column" gap="1">
+                    {ESCOPO_RADAR_ORDER.map((esc) => (
+                      <label key={esc.key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="checkbox" checked={scopeConfig.escopos.includes(esc.key)} onChange={() => setScopeConfig((prev) => { const next = prev.escopos.includes(esc.key) ? prev.escopos.filter((k) => k !== esc.key) : [...prev.escopos, esc.key]; return { ...prev, escopos: next }; })} />
+                        <Box style={{ width: 10, height: 10, borderRadius: 3, background: esc.color, flexShrink: 0 }} />
+                        <Text size="2">{esc.label}</Text>
+                      </label>
+                    ))}
                   </Flex>
                 </Box>
 
