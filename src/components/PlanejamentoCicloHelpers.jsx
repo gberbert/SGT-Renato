@@ -274,25 +274,35 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       return orderA - orderB;
     });
 
-    // Preparar dados para exportação — todos os campos da Collection
+    // Preparar dados para exportação — TODOS os campos da collection tickets_global
+    const fmtD = v => v ? formatDateForExport(v) : '';
     const data = sortedTickets.map(t => ({
-      // Identificação
+      // ── Identificação ──────────────────────────────────────────
       'Issue_Key': t.issueKey || t.id || '',
       'JIRA_ID': t.jiraId || '',
+      'URL Jira': t.issueUrl || '',
       'Resumo': t.summary || '',
       'ISSUE_TYPE': t.issueType || '',
       'ESCOPO': t.escopo || '',
+      'Sync Batch': t.syncBatch || '',
       'PROJECT_KEY': t.projectKey || '',
       'PROJECT_NAME': t.projectName || '',
+      'Parent Key': t.parentKey || '',
+      'Epic Key': t.epicKey || '',
+      'Work Items Vinculados': Array.isArray(t.linkedWorkItems) ? t.linkedWorkItems.join(', ') : (t.linkedWorkItems || ''),
 
-      // Status / Fluxo
+      // ── Status / Fluxo ─────────────────────────────────────────
       'Status': t.status || '',
       'Status Category': t.statusCategory || '',
+      'Status Category Key': t.statusCategoryKey || '',
       'Resolução': t.resolution || '',
       '% Conclusão': t.percentualConclusao != null ? t.percentualConclusao : '',
+      '% Conclusão Teste Interno': t.percentualConclusaoTesteInterno != null ? t.percentualConclusaoTesteInterno : '',
+      'Aging (dias)': t.agingDays != null ? t.agingDays : '',
 
-      // Responsáveis
+      // ── Responsáveis ───────────────────────────────────────────
       'Squad': t._resolvedSquad || t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '',
+      'Squad Principal': t.squadPrincipal || '',
       'Grupo Suporte': t.grupoSuporte || '',
       'Grupo Solucionador': t.grupoSolucionador || '',
       'Fila': t.fila || '',
@@ -306,57 +316,111 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       'Resp. Atual': t.responsavelAtual || '',
       'Resp. Execução': t.responsavelExecucao || '',
 
-      // Classificação
-      'Prioridade': t.prioridadeInterna || t.priority || '',
+      // ── Classificação ──────────────────────────────────────────
+      'Prioridade Interna': t.prioridadeInterna || '',
+      'Prioridade Jira': t.priority || '',
       'Natureza da Iniciativa': t.naturezaIniciativa || t.naturezaOperacao || '',
       'Torre de Atuação': t.torreAtuacao || '',
       'Empresa': t.empresa || '',
+      'Fornecedor': t.fornecedor || '',
+      'Fornecedor TI': t.fornecedorTi || '',
+      'Fornecedores (dropdown)': t.fornecedoresDropdown || '',
       'Sistemas Impactados': t.sistemasImpactados || '',
       'Ambiente': t.environment || '',
+      'Labels': Array.isArray(t.labels) ? t.labels.join(', ') : (t.labels || ''),
+      'Componentes': Array.isArray(t.components) ? t.components.join(', ') : (t.components || ''),
+      'Demanda Fast': t.demandaFast || '',
+      'Demanda Vulnerabilidade': t.demandaVulnerabilidade || '',
+      'Severidade': t.severidade || '',
+      'Qtd. Reaberturas': t.reopenCount != null ? t.reopenCount : '',
+      'Qtd. Comentários': t.commentCount != null ? t.commentCount : '',
+      'Qtd. Subtarefas': t.subtaskCount != null ? t.subtaskCount : '',
 
-      // Estimativas
-      'Estimativa Macro': t.estimativaMacro || '',
-      'Estimativa Interna (h)': t.estimativaInterna || '',
-      'Estimativa Total': t.estimativaTotal || '',
+      // ── Estimativas ────────────────────────────────────────────
+      'Estimativa Macro': t.estimativaMacro != null ? t.estimativaMacro : '',
+      'Estimativa Macro Jira': t.estimativaMacroJira != null ? t.estimativaMacroJira : '',
+      'Estimativa Interna (h)': t.estimativaInterna != null ? t.estimativaInterna : '',
+      'Estimativa Total': t.estimativaTotal != null ? t.estimativaTotal : '',
+      'Estimativa Horas (Jira)': t.estimativaHoras != null ? t.estimativaHoras : '',
+      'Plan. Horas Demanda Fast': t.planejamentoHorasDemandaFast != null ? t.planejamentoHorasDemandaFast : '',
 
-      // Impedimento / Observações
+      // ── Impedimento / Observações ──────────────────────────────
       'Impedido': t.impedimento ? 'Sim' : 'Não',
-      'Motivo Impedimento / Observação': t.motivoImpedimento || '',
+      'Observação Adicional': t.observacaoAdicional || '',
       'Observação': t.observacao || '',
+      'Motivo Impedimento': t.motivoImpedimento || '',
       'Tickets Vinculados': t.ticketsVinculados || '',
+      'Data Previsão': fmtD(t.dataPrevisao),
 
-      // Datas
-      'Data Criação': t.dataCriacao ? formatDateForExport(t.dataCriacao) : '',
-      'Data Atualização': t.dataAtualizacao ? formatDateForExport(t.dataAtualizacao) : '',
-      'Data Fim Desenvolvimento': t.dataFimDesenvolvimento ? formatDateForExport(t.dataFimDesenvolvimento) : '',
-      'Data Fim Teste Interno': t.dataFimTesteInterno ? formatDateForExport(t.dataFimTesteInterno) : '',
-      'Data Fim Teste QA': t.dataFimTesteQa ? formatDateForExport(t.dataFimTesteQa) : '',
-      'Data Fim Homologação': t.dataFimHomologacao ? formatDateForExport(t.dataFimHomologacao) : '',
-      'Data Conclusão (CPFL)': t.dataConclusao ? formatDateForExport(t.dataConclusao) : '',
+      // ── Datas Jira ─────────────────────────────────────────────
+      'Data Criação': fmtD(t.createdAt),
+      'Data Atualização': fmtD(t.updatedAt),
+      'Data Resolução': fmtD(t.resolvedAt),
+      'Due Date': fmtD(t.dueDate),
+      'Data Aprovação EF/SR': fmtD(t.dataAprovacaoEfsr),
+      'Data Início Atend. Plan.': fmtD(t.dataInicioAtendimentoPlanejada),
+      'Data Início Atendimento': fmtD(t.dataInicioAtendimento),
+      'Data Aprovação QA Plan.': fmtD(t.dataAprovacaoQaPlanejada),
+      'Data Início Homolog. Plan.': fmtD(t.dataInicioHomologacaoPlanejada),
+      'Data Início Homolog. Efetiva': fmtD(t.dataInicioHomologacaoEfetiva),
+      'Data Fim Homolog. Plan.': fmtD(t.dataFimHomologacaoPlanejada),
+      'Data Fim Homolog. Efetiva': fmtD(t.dataFimHomologacaoEfetiva),
+      'Data Entrega Produção Prev.': fmtD(t.dataEntregaProducaoPrevista),
+      'Data Fim Planejado': fmtD(t.dataFimPlanejado),
 
-      // Ciclo / Planejamento
+      // ── Datas SGT Interno ──────────────────────────────────────
+      'Data Fim Desenvolvimento': fmtD(t.dataFimDesenvolvimento),
+      'Data Fim Teste Interno': fmtD(t.dataFimTesteInterno),
+      'Data Fim Teste QA': fmtD(t.dataFimTesteQa),
+      'Data Fim Homologação': fmtD(t.dataFimHomologacao),
+      'Data Conclusão (CPFL)': fmtD(t.dataConclusao),
+
+      // ── Ciclos ─────────────────────────────────────────────────
+      'Ciclos': Array.isArray(t.ciclos)
+        ? t.ciclos.map(c => (typeof c === 'string' ? c : c?.nome || '')).filter(Boolean).join(', ')
+        : (t.cicloId || ''),
       'Ciclo ID': t.cicloId || '',
-      'URL Jira': t.issueUrl || '',
-      'Sync Batch': t.syncBatch || '',
     }));
 
     const HEADERS = [
-      // ── Colunas prioritárias (exibidas primeiro) ───────────────
-      'Issue_Key', 'Resumo', 'Status', 'Estimativa Macro',
+      // ── Prioridades / visibilidade imediata ────────────────────
+      'Issue_Key', 'Resumo', 'Status', 'Prioridade Interna',
       'Sistemas Impactados', 'Squad', 'Impedido', 'Observação',
-      'Data Fim Teste Interno', '% Conclusão',
-      // ── Demais campos ──────────────────────────────────────────
+      'Data Fim Teste Interno', '% Conclusão', 'Aging (dias)',
+      // ── Identificação ──────────────────────────────────────────
       'JIRA_ID', 'ISSUE_TYPE', 'ESCOPO', 'PROJECT_KEY', 'PROJECT_NAME',
-      'Status Category', 'Resolução',
-      'Grupo Suporte', 'Grupo Solucionador', 'Fila',
+      'Parent Key', 'Epic Key', 'Work Items Vinculados', 'URL Jira', 'Sync Batch',
+      // ── Status ─────────────────────────────────────────────────
+      'Status Category', 'Status Category Key', 'Resolução',
+      '% Conclusão Teste Interno',
+      // ── Responsáveis ───────────────────────────────────────────
+      'Squad Principal', 'Grupo Suporte', 'Grupo Solucionador', 'Fila',
       'Assignee', 'Assignee Email', 'Reporter', 'Reporter Email', 'Criado Por',
       'Resp. Desenvolvimento', 'Resp. Teste Interno', 'Resp. Atual', 'Resp. Execução',
-      'Prioridade', 'Natureza da Iniciativa', 'Torre de Atuação', 'Empresa', 'Ambiente',
+      // ── Classificação ──────────────────────────────────────────
+      'Prioridade Jira', 'Natureza da Iniciativa', 'Torre de Atuação',
+      'Empresa', 'Fornecedor', 'Fornecedor TI', 'Fornecedores (dropdown)',
+      'Ambiente', 'Labels', 'Componentes',
+      'Demanda Fast', 'Demanda Vulnerabilidade', 'Severidade',
+      'Qtd. Reaberturas', 'Qtd. Comentários', 'Qtd. Subtarefas',
+      // ── Estimativas ────────────────────────────────────────────
+      'Estimativa Macro', 'Estimativa Macro Jira',
       'Estimativa Interna (h)', 'Estimativa Total',
-      'Motivo Impedimento / Observação', 'Tickets Vinculados',
-      'Data Criação', 'Data Atualização', 'Data Fim Desenvolvimento',
-      'Data Fim Teste QA', 'Data Fim Homologação', 'Data Conclusão (CPFL)',
-      'Ciclo ID', 'URL Jira', 'Sync Batch',
+      'Estimativa Horas (Jira)', 'Plan. Horas Demanda Fast',
+      // ── Impedimento / Observações ──────────────────────────────
+      'Motivo Impedimento', 'Observação Adicional', 'Tickets Vinculados',
+      'Data Previsão',
+      // ── Datas Jira ─────────────────────────────────────────────
+      'Data Criação', 'Data Atualização', 'Data Resolução', 'Due Date',
+      'Data Aprovação EF/SR', 'Data Início Atend. Plan.', 'Data Início Atendimento',
+      'Data Aprovação QA Plan.', 'Data Início Homolog. Plan.', 'Data Início Homolog. Efetiva',
+      'Data Fim Homolog. Plan.', 'Data Fim Homolog. Efetiva', 'Data Entrega Produção Prev.',
+      'Data Fim Planejado',
+      // ── Datas SGT Interno ──────────────────────────────────────
+      'Data Fim Desenvolvimento', 'Data Fim Teste QA',
+      'Data Fim Homologação', 'Data Conclusão (CPFL)',
+      // ── Ciclos ─────────────────────────────────────────────────
+      'Ciclos', 'Ciclo ID',
     ];
 
     // Criar worksheet
