@@ -644,8 +644,14 @@ export default function PlanejamentoCiclo() {
     }
     if (naturezaIniciativaFilter.size > 0 && !naturezaIniciativaFilter.has(t.naturezaIniciativa || t.naturezaOperacao || '')) return false;
     if (issuetypeFilter.size > 0 && !issuetypeFilter.has(t.issueType || t.issuetype || '')) return false;
-    if (pctConclusaoFilter.size > 0 && !pctConclusaoFilter.has(`${t.percentualConclusao ?? ''}%`)) return false;
-    if (pctTesteInternoFilter.size > 0 && !pctTesteInternoFilter.has(`${t.percentualConclusaoTesteInterno ?? ''}%`)) return false;
+    if (pctConclusaoFilter.size > 0) {
+      const v = t.percentualConclusao != null ? `${t.percentualConclusao}%` : '%';
+      if (!pctConclusaoFilter.has(v)) return false;
+    }
+    if (pctTesteInternoFilter.size > 0) {
+      const v = t.percentualConclusaoTesteInterno != null ? `${t.percentualConclusaoTesteInterno}%` : '%';
+      if (!pctTesteInternoFilter.has(v)) return false;
+    }
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
     if (search) {
@@ -656,7 +662,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, impedimentoFilter, demandaVulnerabFilter, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, impedimentoFilter, demandaVulnerabFilter, search]);
 
   const allCicloKeys = useMemo(() => {
     const s = new Set();
