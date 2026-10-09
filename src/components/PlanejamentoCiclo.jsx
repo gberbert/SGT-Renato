@@ -377,6 +377,8 @@ export default function PlanejamentoCiclo() {
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [pctConclusaoFilter, setPctConclusaoFilter] = useState(new Set());
   const [pctTesteInternoFilter, setPctTesteInternoFilter] = useState(new Set());
+  const [createdAtFrom, setCreatedAtFrom] = useState('');
+  const [createdAtTo, setCreatedAtTo] = useState('');
   const [showEstimativa, setShowEstimativa] = useState(
     () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
@@ -443,6 +445,8 @@ export default function PlanejamentoCiclo() {
     setDemandaVulnerabFilter(f.demandaVulnerabFilter ?? false);
     setPctConclusaoFilter(f.pctConclusaoFilter ?? new Set());
     setPctTesteInternoFilter(f.pctTesteInternoFilter ?? new Set());
+    setCreatedAtFrom(f.createdAtFrom ?? '');
+    setCreatedAtTo(f.createdAtTo ?? '');
     setShowEstimativa(f.showEstimativa ?? false);
   }, [savedViews]);
 
@@ -652,6 +656,18 @@ export default function PlanejamentoCiclo() {
       const v = t.percentualConclusaoTesteInterno != null ? `${t.percentualConclusaoTesteInterno}%` : '%';
       if (!pctTesteInternoFilter.has(v)) return false;
     }
+    if (createdAtFrom || createdAtTo) {
+      const ts = t.createdAt ? new Date(t.createdAt).getTime() : null;
+      if (!ts || isNaN(ts)) return false;
+      if (createdAtFrom) {
+        const from = new Date(createdAtFrom + 'T00:00:00').getTime();
+        if (!isNaN(from) && ts < from) return false;
+      }
+      if (createdAtTo) {
+        const to = new Date(createdAtTo + 'T23:59:59.999').getTime();
+        if (!isNaN(to) && ts > to) return false;
+      }
+    }
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
     if (search) {
@@ -662,7 +678,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, impedimentoFilter, demandaVulnerabFilter, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, createdAtFrom, createdAtTo, impedimentoFilter, demandaVulnerabFilter, search]);
 
   const allCicloKeys = useMemo(() => {
     const s = new Set();
@@ -798,7 +814,7 @@ export default function PlanejamentoCiclo() {
   ]);
 
   const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter]
-    .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0) + (demandaVulnerabFilter ? 1 : 0);
+    .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0) + (demandaVulnerabFilter ? 1 : 0) + (createdAtFrom || createdAtTo ? 1 : 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
@@ -1161,7 +1177,7 @@ export default function PlanejamentoCiclo() {
           )}
           {activeFilters > 0 && (
             <button
-              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setPctConclusaoFilter(new Set()); setPctTesteInternoFilter(new Set()); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setPctConclusaoFilter(new Set()); setPctTesteInternoFilter(new Set()); setCreatedAtFrom(''); setCreatedAtTo(''); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
               style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
             >
               Limpar filtros
@@ -1180,6 +1196,18 @@ export default function PlanejamentoCiclo() {
           <MultiSelectFilter options={issuetypeOptions} selected={issuetypeFilter} onChange={setIssuetypeFilter} placeholder="Issue Type" maxWidth={160} />
           <MultiSelectFilter options={pctConclusaoOptions} selected={pctConclusaoFilter} onChange={setPctConclusaoFilter} placeholder="% Conclusão" maxWidth={140} />
           <MultiSelectFilter options={pctTesteInternoOptions} selected={pctTesteInternoFilter} onChange={setPctTesteInternoFilter} placeholder="% Conclusão Teste" maxWidth={160} />
+          {/* Data de Criação — range */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <span style={{ fontSize: 11, color: 'var(--gray-10)', whiteSpace: 'nowrap' }}>Criado:</span>
+            <input type="date" value={createdAtFrom} onChange={e => setCreatedAtFrom(e.target.value)}
+              style={{ fontSize: 11, background: 'var(--gray-2)', border: `1px solid ${createdAtFrom ? 'var(--indigo-7)' : 'var(--gray-5)'}`, borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 130 }} />
+            <span style={{ fontSize: 11, color: 'var(--gray-9)' }}>→</span>
+            <input type="date" value={createdAtTo} onChange={e => setCreatedAtTo(e.target.value)}
+              style={{ fontSize: 11, background: 'var(--gray-2)', border: `1px solid ${createdAtTo ? 'var(--indigo-7)' : 'var(--gray-5)'}`, borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 130 }} />
+            {(createdAtFrom || createdAtTo) && (
+              <button onClick={() => { setCreatedAtFrom(''); setCreatedAtTo(''); }} style={{ fontSize: 10, padding: '2px 6px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 4, cursor: 'pointer', color: 'var(--gray-9)' }}>✕</button>
+            )}
+          </div>
         </div>
 
         </>
