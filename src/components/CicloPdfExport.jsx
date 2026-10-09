@@ -246,18 +246,52 @@ function CicloPdfSection({ ciclo, tickets, isBacklog }) {
   );
 }
 
+// Ordem do workflow — determina a sequência dos status cards no cabeçalho
+const WORKFLOW_ORDER = [
+  'Aguardando Aprovação Gestor Imediato',
+  'Escrita de Requerimento',
+  'Validação Comitê',
+  'Aguardando Solicitante',
+  'Detalhamento de Requisitos',
+  'Aguardando Profissional de TI',
+  'Aguardando Demanda/Projeto',
+  'Revisão de Requisitos de Projeto',
+  'Análise e T-Shirt',
+  'Aguardando Análise Técnica',
+  'Aguardando Aprovação T-Shirt',
+  'Planejamento',
+  'Aprovação de Planejamento',
+  'Aguardando Planejamento',
+  'Em Execução',
+  'Em Teste',
+  'Em homologação',
+  'Revisão de homologação',
+  'Etapa de KT',
+  'Aguardando Mudança',
+  'Concluída',
+];
+
 // ══════════════════════════════════════════════════════════════════════════
 // PdfContent — raiz do documento capturado pelo html2canvas
 // ══════════════════════════════════════════════════════════════════════════
 function PdfContent({ ciclos, getCicloTickets, filteredTickets, backlogTickets, exportedAt }) {
-  // Status cards dinâmicos — todos os status presentes nos tickets filtrados
+  // Status cards dinâmicos — ordenados conforme WORKFLOW_ORDER
   const statusCounts = {};
   filteredTickets.forEach(t => {
     if (t.status) statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
   });
+
+  // Ordena pelos status do workflow; status desconhecidos ficam no final
   const statusCards = Object.entries(statusCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10); // max 10 cards para caber na largura
+    .sort((a, b) => {
+      const ia = WORKFLOW_ORDER.indexOf(a[0]);
+      const ib = WORKFLOW_ORDER.indexOf(b[0]);
+      if (ia === -1 && ib === -1) return b[1] - a[1]; // ambos desconhecidos: por contagem
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    })
+    .slice(0, 10);
 
   return (
     <div style={{ width: 794, background: '#111827', color: '#f9fafb', fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif", fontSize: 11 }}>
