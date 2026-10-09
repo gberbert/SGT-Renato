@@ -1,7 +1,6 @@
 /**
  * CicloPdfExport.jsx
  * Gera PDF A4 retrato do Planejamento de Ciclos.
- * Uso: import { exportCicloPdf } from './CicloPdfExport';
  */
 
 import React from 'react';
@@ -9,17 +8,15 @@ import ReactDOM from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-// ── Status cards do cabeçalho (ordem do wireframe / WORKFLOW_STEPS) ─────────
-const PDF_STATUS_CARDS = [
-  { status: 'Análise e T-Shirt',            label: 'Análise e T-Shirt',      fila: 'NTT Data'      },
-  { status: 'Planejamento',                 label: 'Planejamento',            fila: 'NTT Data'      },
-  { status: 'Aprovação de Planejamento',    label: 'Aprovação Planejamento',  fila: 'CPFL'          },
-  { status: 'Em Execução',                  label: 'Em Execução',             fila: 'NTT Data'      },
-  { status: 'Em Teste',                     label: 'Em Teste',                fila: 'CPFL'          },
-  { status: 'Em homologação',               label: 'Em homologação',          fila: 'CPFL'          },
-  { status: 'Revisão de homologação',       label: 'Revisão de Homologação',  fila: 'NTT Data'      },
-  { status: 'Aguardando Mudança',           label: 'Aguardando Mudança',      fila: 'NTT Data'      },
-];
+// ── Prioridade helper ──────────────────────────────────────────────────────
+const PRIO_MAP = {
+  'Crise':       { color: '#ef4444', arrow: '⬆⬆', bg: 'rgba(239,68,68,0.18)',    border: 'rgba(239,68,68,0.6)'   },
+  'Alto':        { color: '#f97316', arrow: '↑',   bg: 'rgba(249,115,22,0.18)',  border: 'rgba(249,115,22,0.6)'  },
+  'Medio':       { color: '#eab308', arrow: '—',   bg: 'rgba(234,179,8,0.18)',   border: 'rgba(234,179,8,0.6)'   },
+  'Médio':       { color: '#eab308', arrow: '—',   bg: 'rgba(234,179,8,0.18)',   border: 'rgba(234,179,8,0.6)'   },
+  'Baixo':       { color: '#3b82f6', arrow: '↓',   bg: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.6)'  },
+  'Muito baixo': { color: '#93c5fd', arrow: '⬇⬇',  bg: 'rgba(147,197,253,0.18)', border: 'rgba(147,197,253,0.5)' },
+};
 
 // ── helpers de estilo ─────────────────────────────────────────────────────
 function filaStyle(fila) {
@@ -32,28 +29,28 @@ function filaStyle(fila) {
 
 function statusBadgeStyle(status) {
   const s = (status || '').toLowerCase();
-  if (s === 'em execução' || s.startsWith('em execu'))
-    return { background: '#052e16', color: '#4ade80', border: '1px solid #166534' };
+  if (s.includes('conclu') || s.includes('done') || s.includes('resolv') || s.includes('fechad'))
+    return { background: '#064e3b', color: '#6ee7b7', border: '1px solid #059669' };
   if (s.includes('execu'))
-    return { background: '#064e3b', color: '#34d399', border: '1px solid #059669' };
-  if (s.includes('homolog'))
+    return { background: '#052e16', color: '#4ade80', border: '1px solid #166534' };
+  if (s.includes('em homolog'))
     return { background: '#1e3a5f', color: '#60a5fa', border: '1px solid #2563eb' };
-  if (s.includes('revis'))
+  if (s.includes('revis') && s.includes('homolog'))
     return { background: '#1e1b4b', color: '#a5b4fc', border: '1px solid #6366f1' };
-  if (s.includes('teste'))
+  if (s.includes('teste') || s.includes('em teste'))
     return { background: '#374151', color: '#d1d5db', border: '1px solid #6b7280' };
   if (s.includes('planejamento') || s.includes('aprovação') || s.includes('aprovacao'))
     return { background: '#1e3a5f', color: '#93c5fd', border: '1px solid #3b82f6' };
-  if (s.includes('conclu'))
-    return { background: '#064e3b', color: '#6ee7b7', border: '1px solid #059669' };
   if (s.includes('aguardando'))
     return { background: '#27272a', color: '#a1a1aa', border: '1px solid #52525b' };
   if (s.includes('análise') || s.includes('analise') || s.includes('t-shirt'))
     return { background: '#0c2a47', color: '#38bdf8', border: '1px solid #0284c7' };
+  if (s.includes('cancel'))
+    return { background: '#3f0000', color: '#fca5a5', border: '1px solid #7f1d1d' };
   return { background: '#27272a', color: '#d1d5db', border: '1px solid #52525b' };
 }
 
-function escopoBadgeStyle(squad) {
+function squadBadgeStyle(squad) {
   const palette = ['#38bdf8','#818cf8','#34d399','#fb923c','#f472b6','#a78bfa','#fbbf24','#94a3b8'];
   if (!squad) return { background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.4)' };
   const idx = [...squad].reduce((acc, c) => acc + c.charCodeAt(0), 0) % palette.length;
@@ -75,101 +72,129 @@ function typeBadgeStyle(code) {
   return { background: '#0c2a47', color: '#38bdf8', border: '1px solid #0284c7' };
 }
 
+function resolveSquadLabel(ticket) {
+  if (ticket.squadPrincipal) return ticket.squadPrincipal;
+  if (ticket._resolvedSquad) return ticket._resolvedSquad;
+  const g = ticket.grupoSuporte || '';
+  if (g) return g.replace(/^\d+\s*-\s*/, '').trim().slice(0, 15);
+  return ticket.escopo || '';
+}
+
 // ══════════════════════════════════════════════════════════════════════════
-// TicketPdfRow
+// TicketPdfRow — linha de um ticket com todas as tags
 // ══════════════════════════════════════════════════════════════════════════
 function TicketPdfRow({ ticket, idx }) {
   const bg = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.025)';
-  const rawPct = ticket.progressoDesenvolvimento ?? ticket.progressPercent ?? ticket.progress ?? 0;
-  const pct = Math.round(typeof rawPct === 'string' ? parseFloat(rawPct) : rawPct);
-  const pctColor = progressColor(pct);
-  const squad = ticket.squad || ticket.escopo || ticket.squadLabel || '';
+
+  // % Conclusão
+  const rawPct = ticket.percentualConclusao ?? ticket.progressoDesenvolvimento ?? ticket.progress ?? null;
+  const pct = rawPct != null ? Math.round(typeof rawPct === 'string' ? parseFloat(rawPct) || 0 : Number(rawPct) || 0) : null;
+  const pctColor = pct != null ? progressColor(pct) : '#6b7280';
+
+  // Squad
+  const squad = resolveSquadLabel(ticket);
+  const shortSquad = squad.length > 11 ? squad.slice(0, 11) + '…' : squad;
+
+  // Issue key / type
   const keyStr = ticket.issueKey || ticket.key || ticket.id || '';
   const projectCode = keyStr.replace(/-\d+$/, '').slice(0, 4);
   const issueType = ticket.issuetype?.name || ticket.tipo || ticket.issueType || 'Solicitação';
-  const shortType = issueType.length > 11 ? issueType.slice(0, 11) + '…' : issueType;
+  const shortType = issueType.length > 10 ? issueType.slice(0, 10) + '…' : issueType;
+
+  // Status
   const status = ticket.status || '';
+  const shortStatus = status.length > 15 ? status.slice(0, 14) + '…' : status;
+
+  // Title
   const title = ticket.summary || ticket.titulo || ticket.title || '';
-  const shortTitle = title.length > 65 ? title.slice(0, 65) + '…' : title;
+  const shortTitle = title.length > 55 ? title.slice(0, 55) + '…' : title;
+
+  // Prioridade
+  const prio = ticket.prioridadeInterna || ticket.priority || null;
+  const prioMeta = prio ? (PRIO_MAP[prio] || null) : null;
+
+  // Flags
+  const impedido = ticket.impedimento === true;
+  const vuln = ticket.demandaVulnerabilidade === 'Sim';
+
+  const tagStyle = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+    whiteSpace: 'nowrap', flexShrink: 0,
+  };
 
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 5,
-      padding: '3px 4px',
-      background: bg,
+      display: 'flex', alignItems: 'center', gap: 4,
+      padding: '3px 4px', background: bg,
       borderBottom: '1px solid rgba(255,255,255,0.03)',
-      minHeight: 26,
+      minHeight: 24,
     }}>
       {/* Project type badge */}
-      <div style={{
-        minWidth: 32, maxWidth: 32,
-        fontSize: 8, fontWeight: 800,
-        padding: '2px 3px', borderRadius: 3,
-        textAlign: 'center', letterSpacing: '0.02em',
-        ...typeBadgeStyle(projectCode),
-      }}>
+      <div style={{ minWidth: 30, maxWidth: 30, fontSize: 8, fontWeight: 800, padding: '2px 2px', borderRadius: 3, textAlign: 'center', ...typeBadgeStyle(projectCode) }}>
         {projectCode || 'DEM'}
       </div>
 
       {/* Issue type */}
-      <div style={{
-        minWidth: 54, maxWidth: 54,
-        fontSize: 8, color: '#6b7280',
-        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-      }}>
+      <div style={{ minWidth: 50, maxWidth: 50, fontSize: 8, color: '#6b7280', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
         {shortType}
       </div>
 
       {/* Issue key */}
-      <div style={{
-        minWidth: 82, maxWidth: 82,
-        fontSize: 9, fontWeight: 700, color: '#60a5fa',
-        overflow: 'hidden', whiteSpace: 'nowrap',
-      }}>
+      <div style={{ minWidth: 80, maxWidth: 80, fontSize: 9, fontWeight: 700, color: '#60a5fa', overflow: 'hidden', whiteSpace: 'nowrap' }}>
         {keyStr}
       </div>
 
       {/* Title */}
-      <div style={{
-        flex: 1, fontSize: 10, color: '#d1d5db',
-        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-      }}>
+      <div style={{ flex: 1, fontSize: 9.5, color: '#d1d5db', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
         {shortTitle}
       </div>
 
-      {/* Progress */}
-      <div style={{ minWidth: 40, maxWidth: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        <div style={{ fontSize: 9, fontWeight: 700, color: pctColor }}>{pct}%</div>
-        <div style={{ width: 36, height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: pctColor, borderRadius: 2 }} />
+      {/* Prioridade */}
+      {prioMeta ? (
+        <div style={{ ...tagStyle, background: prioMeta.bg, color: prioMeta.color, border: `1px solid ${prioMeta.border}`, minWidth: 46 }}>
+          {prioMeta.arrow} {prio}
         </div>
+      ) : (
+        <div style={{ minWidth: 46 }} />
+      )}
+
+      {/* Impedimento */}
+      {impedido ? (
+        <div style={{ ...tagStyle, background: 'rgba(234,179,8,0.18)', color: '#fbbf24', border: '1px solid rgba(234,179,8,0.5)', minWidth: 16 }}>
+          🚧
+        </div>
+      ) : (
+        <div style={{ minWidth: 16 }} />
+      )}
+
+      {/* Vulnerabilidade */}
+      {vuln ? (
+        <div style={{ ...tagStyle, background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)', minWidth: 16 }}>
+          🔒
+        </div>
+      ) : (
+        <div style={{ minWidth: 16 }} />
+      )}
+
+      {/* % Conclusão */}
+      <div style={{ ...tagStyle, background: pct != null ? `${pctColor}22` : '#27272a', color: pct != null ? pctColor : '#6b7280', border: `1px solid ${pct != null ? pctColor + '55' : '#52525b'}`, minWidth: 34 }}>
+        {pct != null ? `${pct}%` : '—'}
       </div>
 
       {/* Status */}
-      <div style={{
-        minWidth: 92, maxWidth: 92,
-        fontSize: 8, fontWeight: 600,
-        padding: '2px 5px', borderRadius: 4,
-        textAlign: 'center',
-        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-        ...statusBadgeStyle(status),
-      }}>
-        {status.length > 17 ? status.slice(0, 16) + '…' : status}
+      <div style={{ ...tagStyle, minWidth: 86, maxWidth: 86, ...statusBadgeStyle(status) }}>
+        {shortStatus}
       </div>
 
-      {/* Squad/Escopo */}
-      <div style={{
-        minWidth: 70, maxWidth: 70,
-        fontSize: 8, fontWeight: 700,
-        padding: '2px 5px', borderRadius: 4,
-        textAlign: 'center',
-        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-        ...escopoBadgeStyle(squad),
-      }}>
-        {squad.length > 11 ? squad.slice(0, 11) + '…' : squad}
-      </div>
+      {/* Squad */}
+      {squad ? (
+        <div style={{ ...tagStyle, minWidth: 60, maxWidth: 60, ...squadBadgeStyle(squad) }}>
+          {shortSquad}
+        </div>
+      ) : (
+        <div style={{ minWidth: 60 }} />
+      )}
     </div>
   );
 }
@@ -191,7 +216,7 @@ function CicloPdfSection({ ciclo, tickets, isBacklog }) {
     <div>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        padding: '6px 20px',
+        padding: '5px 20px',
         background: isBacklog ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.03)',
         borderTop: '1px solid rgba(255,255,255,0.07)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -201,26 +226,16 @@ function CicloPdfSection({ ciclo, tickets, isBacklog }) {
           <span style={{ fontSize: 9, color: '#6b7280' }}>{ciclo.dataInicio} — {ciclo.dataFim}</span>
         )}
         {statusLabel && !isBacklog && (
-          <span style={{
-            fontSize: 8, fontWeight: 700,
-            padding: '1px 7px', borderRadius: 8,
-            background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}55`,
-          }}>
+          <span style={{ fontSize: 8, fontWeight: 700, padding: '1px 7px', borderRadius: 8, background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}55` }}>
             {statusLabel}
           </span>
         )}
         {isBacklog && (
-          <span style={{
-            fontSize: 8, fontWeight: 700,
-            padding: '1px 7px', borderRadius: 8,
-            background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.4)',
-          }}>
+          <span style={{ fontSize: 8, fontWeight: 700, padding: '1px 7px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.4)' }}>
             Backlog
           </span>
         )}
-        <span style={{ fontSize: 9, color: '#6b7280' }}>
-          ({tickets.length} ticket{tickets.length !== 1 ? 's' : ''})
-        </span>
+        <span style={{ fontSize: 9, color: '#6b7280' }}>({tickets.length} ticket{tickets.length !== 1 ? 's' : ''})</span>
       </div>
       <div style={{ padding: '2px 8px 4px' }}>
         {tickets.map((ticket, i) => (
@@ -232,34 +247,25 @@ function CicloPdfSection({ ciclo, tickets, isBacklog }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// PdfContent – raiz do documento que será capturado pelo html2canvas
+// PdfContent — raiz do documento capturado pelo html2canvas
 // ══════════════════════════════════════════════════════════════════════════
 function PdfContent({ ciclos, getCicloTickets, filteredTickets, backlogTickets, exportedAt }) {
+  // Status cards dinâmicos — todos os status presentes nos tickets filtrados
   const statusCounts = {};
   filteredTickets.forEach(t => {
-    const s = t.status;
-    if (s) statusCounts[s] = (statusCounts[s] || 0) + 1;
+    if (t.status) statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
   });
+  const statusCards = Object.entries(statusCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10); // max 10 cards para caber na largura
 
   return (
-    <div style={{
-      width: 794,
-      background: '#111827',
-      color: '#f9fafb',
-      fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
-      fontSize: 11,
-    }}>
-      {/* ── CABEÇALHO ─────────────────────────────────────────────────── */}
-      <div style={{
-        padding: '14px 20px 12px',
-        borderBottom: '2px solid rgba(255,255,255,0.08)',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1a2035 100%)',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+    <div style={{ width: 794, background: '#111827', color: '#f9fafb', fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif", fontSize: 11 }}>
+      {/* ── CABEÇALHO ─────────────────────────────────────────────── */}
+      <div style={{ padding: '14px 20px 12px', borderBottom: '2px solid rgba(255,255,255,0.08)', background: 'linear-gradient(135deg, #0f172a 0%, #1a2035 100%)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#f9fafb', letterSpacing: '-0.02em' }}>
-              Planejamento de Ciclos
-            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#f9fafb', letterSpacing: '-0.02em' }}>Planejamento de Ciclos</div>
             <div style={{ fontSize: 10, color: '#6b7280', marginTop: 3 }}>
               Exportado em {exportedAt} · {filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''} exibidos
             </div>
@@ -269,49 +275,34 @@ function PdfContent({ ciclos, getCicloTickets, filteredTickets, backlogTickets, 
           </div>
         </div>
 
-        {/* ── CARDS DE STATUS (números grandes) ── */}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
-          {PDF_STATUS_CARDS.map(card => {
-            const count = statusCounts[card.status] || 0;
-            const isNTT = card.fila === 'NTT Data';
-            const borderColor = isNTT ? 'rgba(56,189,248,0.65)' : card.fila === 'CPFL Prevista' ? 'rgba(251,191,36,0.5)' : 'rgba(249,115,22,0.65)';
-            const bg = isNTT ? 'rgba(56,189,248,0.07)' : card.fila === 'CPFL Prevista' ? 'rgba(251,191,36,0.07)' : 'rgba(249,115,22,0.07)';
-            return (
-              <div key={card.status} style={{
-                flex: 1,
-                minWidth: 0,
-                background: bg,
-                border: `1px solid ${borderColor}`,
-                borderRadius: 6,
-                padding: '6px 4px 5px',
-                textAlign: 'center',
-              }}>
-                <div style={{
-                  fontSize: count > 99 ? 20 : count > 9 ? 24 : 28,
-                  fontWeight: 900, lineHeight: 1, color: '#f9fafb', marginBottom: 3,
+        {/* ── CARDS DE STATUS DINÂMICOS ── */}
+        {statusCards.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
+            {statusCards.map(([status, count]) => {
+              const st = statusBadgeStyle(status);
+              return (
+                <div key={status} style={{
+                  flex: 1, minWidth: 0,
+                  background: st.background,
+                  border: st.border,
+                  borderRadius: 6,
+                  padding: '6px 4px 5px',
+                  textAlign: 'center',
                 }}>
-                  {count}
+                  <div style={{ fontSize: count > 99 ? 20 : count > 9 ? 24 : 28, fontWeight: 900, lineHeight: 1, color: st.color, marginBottom: 3 }}>
+                    {count}
+                  </div>
+                  <div style={{ fontSize: 7, fontWeight: 600, color: st.color, lineHeight: 1.25, minHeight: 18 }}>
+                    {status.length > 18 ? status.slice(0, 17) + '…' : status}
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: 7.5, fontWeight: 600, color: '#9ca3af',
-                  lineHeight: 1.25, marginBottom: 4, minHeight: 19,
-                }}>
-                  {card.label}
-                </div>
-                <div style={{
-                  fontSize: 6.5, fontWeight: 700,
-                  padding: '1px 3px', borderRadius: 3, display: 'inline-block',
-                  ...filaStyle(card.fila),
-                }}>
-                  {card.fila}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* ── CICLOS + TICKETS ────────────────────────────────────────── */}
+      {/* ── CICLOS + TICKETS ─────────────────────────────────────── */}
       <div>
         {ciclos.map(ciclo => {
           const tickets = getCicloTickets(ciclo);
@@ -319,11 +310,7 @@ function PdfContent({ ciclos, getCicloTickets, filteredTickets, backlogTickets, 
           return <CicloPdfSection key={ciclo.id} ciclo={ciclo} tickets={tickets} isBacklog={false} />;
         })}
         {backlogTickets.length > 0 && (
-          <CicloPdfSection
-            ciclo={{ nome: 'Backlog', ticketKeys: [] }}
-            tickets={backlogTickets}
-            isBacklog={true}
-          />
+          <CicloPdfSection ciclo={{ nome: 'Backlog', ticketKeys: [] }} tickets={backlogTickets} isBacklog={true} />
         )}
       </div>
     </div>
@@ -331,7 +318,7 @@ function PdfContent({ ciclos, getCicloTickets, filteredTickets, backlogTickets, 
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// exportCicloPdf – função principal exportada
+// exportCicloPdf — função principal exportada
 // ══════════════════════════════════════════════════════════════════════════
 export async function exportCicloPdf({ ciclos, getCicloTickets, filteredTickets, backlogTickets }) {
   const exportedAt = new Date().toLocaleString('pt-BR', {
@@ -339,20 +326,10 @@ export async function exportCicloPdf({ ciclos, getCicloTickets, filteredTickets,
     hour: '2-digit', minute: '2-digit',
   });
 
-  // 1. Container off-screen
   const container = document.createElement('div');
-  container.style.cssText = [
-    'position:fixed',
-    'left:-9999px',
-    'top:0',
-    'width:794px',
-    'background:#111827',
-    'z-index:-9999',
-    'pointer-events:none',
-  ].join(';');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#111827;z-index:-9999;pointer-events:none;';
   document.body.appendChild(container);
 
-  // 2. Renderiza o conteúdo React
   const root = ReactDOM.createRoot(container);
   root.render(
     <PdfContent
@@ -364,52 +341,35 @@ export async function exportCicloPdf({ ciclos, getCicloTickets, filteredTickets,
     />
   );
 
-  // 3. Aguarda render completo
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 700));
 
   try {
-    // 4. Captura com html2canvas (scale 2 para boa resolução)
     const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#111827',
-      logging: false,
-      width: 794,
+      scale: 2, useCORS: true, backgroundColor: '#111827', logging: false, width: 794,
     });
 
-    // 5. Cria PDF A4 retrato (mm)
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const A4_W = 210;  // mm
-    const A4_H = 297;  // mm
+    const A4_W = 210;
+    const A4_H = 297;
+    const pageHeightPx = (A4_H / A4_W) * canvas.width;
 
-    const imgW = A4_W;
-    const imgH = (canvas.height / canvas.width) * imgW;
-
-    // 6. Divide em páginas se necessário
     let yOffset = 0;
-    const pageHeightPx = (A4_H / A4_W) * canvas.width; // altura de uma página em px do canvas
-
     let page = 0;
     while (yOffset < canvas.height) {
       if (page > 0) pdf.addPage();
-
       const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
-
       const pageCanvas = document.createElement('canvas');
       pageCanvas.width = canvas.width;
       pageCanvas.height = sliceH;
       const ctx = pageCanvas.getContext('2d');
       ctx.drawImage(canvas, 0, -yOffset);
-
       const imgData = pageCanvas.toDataURL('image/png');
       const sliceMmH = (sliceH / canvas.width) * A4_W;
       pdf.addImage(imgData, 'PNG', 0, 0, A4_W, sliceMmH);
-
       yOffset += sliceH;
       page++;
     }
 
-    // 7. Download
     const dateStr = new Date().toISOString().slice(0, 10);
     pdf.save(`planejamento-ciclos-${dateStr}.pdf`);
   } finally {
