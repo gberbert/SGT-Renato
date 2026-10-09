@@ -7,6 +7,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { getStatusColor } from './PlanejamentoCicloHelpers';
 
 // ── Prioridade helper ──────────────────────────────────────────────────────
 const PRIO_MAP = {
@@ -27,27 +28,14 @@ function filaStyle(fila) {
   return { background: 'rgba(249,115,22,0.2)', color: '#fb923c', border: '1px solid rgba(249,115,22,0.5)' };
 }
 
+// Deriva o estilo do badge a partir da cor neon do getStatusColor (mesma lógica da UI)
 function statusBadgeStyle(status) {
-  const s = (status || '').toLowerCase();
-  if (s.includes('conclu') || s.includes('done') || s.includes('resolv') || s.includes('fechad'))
-    return { background: '#064e3b', color: '#6ee7b7', border: '1px solid #059669' };
-  if (s.includes('execu'))
-    return { background: '#052e16', color: '#4ade80', border: '1px solid #166534' };
-  if (s.includes('em homolog'))
-    return { background: '#1e3a5f', color: '#60a5fa', border: '1px solid #2563eb' };
-  if (s.includes('revis') && s.includes('homolog'))
-    return { background: '#1e1b4b', color: '#a5b4fc', border: '1px solid #6366f1' };
-  if (s.includes('teste') || s.includes('em teste'))
-    return { background: '#374151', color: '#d1d5db', border: '1px solid #6b7280' };
-  if (s.includes('planejamento') || s.includes('aprovação') || s.includes('aprovacao'))
-    return { background: '#1e3a5f', color: '#93c5fd', border: '1px solid #3b82f6' };
-  if (s.includes('aguardando'))
-    return { background: '#27272a', color: '#a1a1aa', border: '1px solid #52525b' };
-  if (s.includes('análise') || s.includes('analise') || s.includes('t-shirt'))
-    return { background: '#0c2a47', color: '#38bdf8', border: '1px solid #0284c7' };
-  if (s.includes('cancel'))
-    return { background: '#3f0000', color: '#fca5a5', border: '1px solid #7f1d1d' };
-  return { background: '#27272a', color: '#d1d5db', border: '1px solid #52525b' };
+  const color = getStatusColor(status);
+  return {
+    background: `${color}1a`,
+    color,
+    border: `1px solid ${color}55`,
+  };
 }
 
 function squadBadgeStyle(squad) {
