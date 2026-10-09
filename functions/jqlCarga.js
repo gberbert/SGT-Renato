@@ -91,6 +91,16 @@ const TICKET_FIELD_DEFINITIONS = {
     "sistemas impactados",
     "Sistemas Impactados[Select List (multiple choices)]",
   ],
+  estimativa_macro: [
+    "Estimativa Macro",
+    "estimativa macro",
+    "Estimativa Macro[Number]",
+  ],
+  estimativa_total: [
+    "Estimativa Total",
+    "estimativa total",
+    "Estimativa Total[Number]",
+  ],
 };
 
 const ESCOPO_SEED = [

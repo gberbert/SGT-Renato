@@ -734,6 +734,7 @@ const data = d.data();
     responsavelTesteInterno: data.responsavelTesteInterno || null,
     naturezaOperacao: data.naturezaOperacao || data.naturezaIniciativa || '',
     observacao: data.observacao || '',
+    description: data.description || '',
     percentualConclusao: data.percentualConclusao ?? null,
     percentualConclusaoTesteInterno: data.percentualConclusaoTesteInterno ?? null,
     ticketsVinculados: data.ticketsVinculados || '',
