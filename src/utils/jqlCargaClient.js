@@ -23,7 +23,7 @@ export const TICKET_FIELD_DEFINITIONS = {
     'Torre de Atuação',
   ],
   fornecedores_dropdown: ['Fornecedores', 'fornecedores'],
-  severidade: ['Severidade', 'severidade', 'Severidade[Dropdown]'],
+  severidade: ['Severidade', 'severidade', 'Severidade[Dropdown]', 'Severity', 'Severity[Dropdown]'],
 };
 
 export const ESCOPO_SEED = [

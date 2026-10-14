@@ -745,12 +745,20 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
         <div className="dmd-modal-body">
           {activeTab === 'geral' ? (
             <div className="dmd-tab-content">
-              {/* Row 1: ISSUE_KEY + SUMMARY (sempre somente-leitura) */}
+              {/* Row 1: ISSUE_KEY + DATA CRIAÇÃO + SUMMARY (sempre somente-leitura) */}
               <div className="dmd-row">
                 <div className="dmd-field">
                   <FieldLabel>ISSUE_KEY</FieldLabel>
                   <div className="dmd-field-value dmd-field-value--key">{ticket.issueKey}</div>
                 </div>
+                <ReadField
+                  label="DATA CRIAÇÃO"
+                  value={fmtDate(
+                    ticket.createdAt?.toDate
+                      ? ticket.createdAt.toDate().toISOString()
+                      : ticket.createdAt
+                  )}
+                />
                 <ReadField label="SUMMARY" value={ticket.summary} wide />
               </div>
 

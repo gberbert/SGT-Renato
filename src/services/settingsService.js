@@ -388,6 +388,52 @@ export const deleteSquadRole = async (roleId) => {
   }
 };
 
+// Grupos de Atendimento
+export const subscribeToGruposAtendimento = (callback) => {
+  const q = query(collection(db, 'grupo_atendimento'), orderBy('nome', 'asc'));
+  return onSnapshot(q, (snapshot) => {
+    const grupos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(grupos);
+  });
+};
+
+export const saveGrupoAtendimento = async (grupoData) => {
+  try {
+    const payload = {
+      nome: grupoData.nome,
+      origem: grupoData.origem || 'manual',
+      squadId: grupoData.squadId || '',
+      updatedAt: serverTimestamp(),
+    };
+    if (grupoData.id) {
+      await updateDoc(doc(db, 'grupo_atendimento', grupoData.id), payload);
+    } else {
+      // Gera ID slugificado a partir do nome, ou usa addDoc se não conseguir slug
+      const slug = (grupoData.nome || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      if (slug) {
+        await setDoc(doc(db, 'grupo_atendimento', slug), payload);
+      } else {
+        await addDoc(collection(db, 'grupo_atendimento'), payload);
+      }
+    }
+  } catch (error) {
+    console.error("Erro ao salvar grupo de atendimento:", error);
+    throw error;
+  }
+};
+
+export const deleteGrupoAtendimento = async (grupoId) => {
+  try {
+    await deleteDoc(doc(db, 'grupo_atendimento', grupoId));
+  } catch (error) {
+    console.error("Erro ao excluir grupo de atendimento:", error);
+    throw error;
+  }
+};
+
 // Seed Squad Roles from Cloud Function
 export const seedSquadRoles = async () => {
   try {

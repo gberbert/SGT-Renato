@@ -431,6 +431,7 @@ const KNOWN_DATE_FIELD_IDS = {
   demanda_vulnerabilidade: "customfield_19626",
   responsavel_execucao: "customfield_10608",
   severidade: "customfield_10882",
+  severidade_en: "customfield_10047",
   sistemas_impactados: "customfield_10325",
 };
 
@@ -557,7 +558,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     planejamentoHorasDemandaFast: extracted.planejamento_horas_demanda_fast != null ? Number(extracted.planejamento_horas_demanda_fast) : null,
     demandaVulnerabilidade: extracted.demanda_vulnerabilidade || null,
     responsavelExecucao: extracted.responsavel_execucao || null,
-    severidade: extracted.severidade || null,
+    severidade: extracted.severidade || extractFieldValue(fields["customfield_10047"]) || null,
     sistemasImpactados: extracted.sistemas_impactados || null,
     issueLinksDetailed: extractIssueLinksDetailed(issue),
     labels,

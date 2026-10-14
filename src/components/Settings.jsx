@@ -30,6 +30,9 @@ import {
   subscribeToSquadRoles,
   saveSquadRole,
   deleteSquadRole,
+  subscribeToGruposAtendimento,
+  saveGrupoAtendimento,
+  deleteGrupoAtendimento,
 } from '../services/settingsService';
 import { Loader2, Trash2, Settings2, Database, Edit2, Zap, Shield, Key, Search, ShieldCheck, Download } from 'lucide-react';
 import { Users, LayoutGrid, CheckSquare, Layers, Plus, Briefcase, Bot, Brain } from 'lucide-react';
@@ -67,6 +70,10 @@ const Settings = ({ userRole = 'admin' }) => {
   const [systemNameFilter, setSystemNameFilter] = useState('');
   const [systemSquadFilter, setSystemSquadFilter] = useState('');
   const [systemNaturezaFilter, setSystemNaturezaFilter] = useState('');
+
+  const [gruposAtendimento, setGruposAtendimento] = useState([]);
+  const [loadingGrupos, setLoadingGrupos] = useState(true);
+  const [grupoNameFilter, setGrupoNameFilter] = useState('');
 
   const [components, setComponents] = useState([]);
   const [loadingComponents, setLoadingComponents] = useState(true);
@@ -109,6 +116,11 @@ const Settings = ({ userRole = 'admin' }) => {
   const [isSystemModalOpen, setIsSystemModalOpen] = useState(false);
   const [systemData, setSystemData] = useState({ name: '' });
   const [savingSystem, setSavingSystem] = useState(false);
+
+  // Grupo Atendimento Modal State
+  const [isGrupoModalOpen, setIsGrupoModalOpen] = useState(false);
+  const [grupoData, setGrupoData] = useState({ id: '', nome: '', squadId: '' });
+  const [savingGrupo, setSavingGrupo] = useState(false);
 
   // Component Modal State
   const [isComponentModalOpen, setIsComponentModalOpen] = useState(false);
@@ -163,6 +175,10 @@ const Settings = ({ userRole = 'admin' }) => {
     const unsubscribeSystems = subscribeToSystems((data) => {
       setSystems(data);
       setLoadingSystems(false);
+    });
+    const unsubscribeGrupos = subscribeToGruposAtendimento((data) => {
+      setGruposAtendimento(data);
+      setLoadingGrupos(false);
     });
     const unsubscribeSquads = subscribeToProjectSquads('all', (data) => {
       setSquads(data);
@@ -220,6 +236,7 @@ const Settings = ({ userRole = 'admin' }) => {
       unsubscribeWorkflows();
       unsubscribeUsers();
       unsubscribeSystems();
+      unsubscribeGrupos();
       unsubscribeSquads();
       unsubscribeComponents();
       unsubscribeCustomFields();
@@ -399,6 +416,36 @@ const Settings = ({ userRole = 'admin' }) => {
       } catch (error) {
         alert("Erro ao enviar e-mail: " + error.message);
       }
+    }
+  };
+
+  const openNewGrupoModal = () => {
+    setGrupoData({ id: '', nome: '', squadId: '' });
+    setIsGrupoModalOpen(true);
+  };
+
+  const openEditGrupoModal = (grupo) => {
+    setGrupoData({ id: grupo.id, nome: grupo.nome || '', squadId: grupo.squadId || '' });
+    setIsGrupoModalOpen(true);
+  };
+
+  const handleSaveGrupo = async (e) => {
+    e.preventDefault();
+    if (!grupoData.nome.trim()) return;
+    setSavingGrupo(true);
+    try {
+      await saveGrupoAtendimento(grupoData);
+      setIsGrupoModalOpen(false);
+    } catch (err) {
+      alert("Erro ao salvar grupo de atendimento.");
+    } finally {
+      setSavingGrupo(false);
+    }
+  };
+
+  const handleDeleteGrupo = async (id) => {
+    if (confirm("Deseja realmente excluir este grupo de atendimento?")) {
+      await deleteGrupoAtendimento(id);
     }
   };
 
@@ -781,6 +828,7 @@ const Settings = ({ userRole = 'admin' }) => {
             <Tabs.List style={{ flexWrap: 'wrap' }}>
               <Tabs.Trigger value="users">Usuários</Tabs.Trigger>
               <Tabs.Trigger value="systems">Sistemas</Tabs.Trigger>
+              <Tabs.Trigger value="gruposAtendimento">Grupos de Atendimento</Tabs.Trigger>
               <Tabs.Trigger value="components">Componentes (Tags)</Tabs.Trigger>
               <Tabs.Trigger value="squadRoles"><Briefcase size={14} style={{ display: 'inline', marginRight: 4 }}/> Papéis de Squad</Tabs.Trigger>
               <Tabs.Trigger value="ticketTypes">Tipos de Ticket</Tabs.Trigger>
@@ -803,6 +851,7 @@ const Settings = ({ userRole = 'admin' }) => {
               <Select.Content>
                 <Select.Item value="users">Usuários</Select.Item>
                 <Select.Item value="systems">Sistemas</Select.Item>
+                <Select.Item value="gruposAtendimento">Grupos de Atendimento</Select.Item>
                 <Select.Item value="components">Componentes (Tags)</Select.Item>
                 <Select.Item value="squadRoles">Papéis de Squad</Select.Item>
                 <Select.Item value="ticketTypes">Tipos de Ticket</Select.Item>
@@ -1157,6 +1206,107 @@ const Settings = ({ userRole = 'admin' }) => {
                   })()}
                 </>
               )}
+            </Tabs.Content>
+
+            {/* GRUPOS DE ATENDIMENTO TAB */}
+            <Tabs.Content value="gruposAtendimento">
+              <Flex justify="between" align="center" mb="4">
+                <Box>
+                  <Text as="h2" size="4" weight="bold">Grupos de Atendimento</Text>
+                  <Text color="gray" as="p">Gerencie os grupos solucionadores sincronizados do Jira ou criados manualmente.</Text>
+                </Box>
+                <Button size="2" onClick={openNewGrupoModal}>Novo Grupo</Button>
+              </Flex>
+
+              <Flex mb="3" align="center" gap="3">
+                <TextField.Root
+                  placeholder="Filtrar por nome do grupo..."
+                  value={grupoNameFilter}
+                  onChange={(e) => setGrupoNameFilter(e.target.value)}
+                  style={{ flexGrow: 1, maxWidth: 360 }}
+                >
+                  <TextField.Slot>
+                    <Search size={14} />
+                  </TextField.Slot>
+                </TextField.Root>
+                {grupoNameFilter && (
+                  <Button size="1" variant="ghost" color="gray" onClick={() => setGrupoNameFilter('')}>
+                    Limpar
+                  </Button>
+                )}
+              </Flex>
+
+              {loadingGrupos ? <Loader2 className="spinner-icon" /> : (() => {
+                const filtered = gruposAtendimento.filter(g =>
+                  !grupoNameFilter || (g.nome || '').toLowerCase().includes(grupoNameFilter.toLowerCase())
+                );
+                return (
+                  <>
+                    <Text size="1" color="gray" mb="2" style={{ display: 'block' }}>
+                      {filtered.length} grupo(s) exibido(s){gruposAtendimento.length !== filtered.length ? ` de ${gruposAtendimento.length}` : ''}
+                    </Text>
+                    <Table.Root variant="surface">
+                      <Table.Header>
+                        <Table.Row>
+                          <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
+                          <Table.ColumnHeaderCell>Squad</Table.ColumnHeaderCell>
+                          <Table.ColumnHeaderCell>Origem</Table.ColumnHeaderCell>
+                          <Table.ColumnHeaderCell>Atualizado em</Table.ColumnHeaderCell>
+                          <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {filtered.map(grupo => {
+                          const squadGrupo = squads.find(s => s.id === grupo.squadId);
+                          return (
+                          <Table.Row key={grupo.id} align="center">
+                            <Table.Cell><Text weight="bold">{grupo.nome || grupo.id}</Text></Table.Cell>
+                            <Table.Cell>
+                              {squadGrupo ? (
+                                <Badge color="indigo">{squadGrupo.name}</Badge>
+                              ) : (
+                                <Text color="gray" size="1">-</Text>
+                              )}
+                            </Table.Cell>
+                            <Table.Cell>
+                              <Badge color={grupo.origem === 'jira_sync' ? 'blue' : 'green'}>
+                                {grupo.origem === 'jira_sync' ? 'Jira Sync' : grupo.origem || 'manual'}
+                              </Badge>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <Text size="1" color="gray">
+                                {grupo.updatedAt
+                                  ? (typeof grupo.updatedAt.toDate === 'function'
+                                    ? new Date(grupo.updatedAt.toDate()).toLocaleDateString('pt-BR')
+                                    : new Date(grupo.updatedAt).toLocaleDateString('pt-BR'))
+                                  : '-'}
+                              </Text>
+                            </Table.Cell>
+                            <Table.Cell justify="end">
+                              <Flex gap="2" justify="end">
+                                <Button size="1" variant="soft" onClick={() => openEditGrupoModal(grupo)}>
+                                  <Edit2 size={14} /> Editar
+                                </Button>
+                                <Button size="1" color="red" variant="soft" onClick={() => handleDeleteGrupo(grupo.id)}>
+                                  <Trash2 size={14} /> Excluir
+                                </Button>
+                              </Flex>
+                            </Table.Cell>
+                          </Table.Row>
+                          );
+                        })}
+                        {filtered.length === 0 && (
+                          <Table.Row>
+                            <Table.Cell colSpan={5}>
+                              <Text color="gray" size="2">Nenhum grupo encontrado.</Text>
+                            </Table.Cell>
+                          </Table.Row>
+                        )}
+                      </Table.Body>
+                    </Table.Root>
+                  </>
+                );
+              })()}
             </Tabs.Content>
 
             {/* COMPONENTS TAB */}
@@ -1709,6 +1859,50 @@ const Settings = ({ userRole = 'admin' }) => {
               </Dialog.Close>
               <Button type="submit" disabled={savingType}>
                 {savingType ? <Loader2 size={14} className="spinner-icon"/> : "Salvar"}
+              </Button>
+            </Flex>
+          </form>
+        </Dialog.Content>
+      </Dialog.Root>
+
+      {/* Edit/New Grupo Atendimento Modal */}
+      <Dialog.Root open={isGrupoModalOpen} onOpenChange={setIsGrupoModalOpen}>
+        <Dialog.Content maxWidth="400px" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <Dialog.Title>{grupoData.id ? 'Editar Grupo de Atendimento' : 'Novo Grupo de Atendimento'}</Dialog.Title>
+          <form onSubmit={handleSaveGrupo}>
+            <Flex direction="column" gap="3">
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Nome do Grupo <span style={{ color: 'red' }}>*</span></Text>
+                <TextField.Root
+                  value={grupoData.nome}
+                  onChange={(e) => setGrupoData({ ...grupoData, nome: e.target.value })}
+                  placeholder="Ex: TI_WEB_Agência_Virtual"
+                  required
+                />
+                <Text size="1" color="gray">Use o nome exato do grupo solucionador conforme cadastrado no Jira.</Text>
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Squad</Text>
+                <Select.Root
+                  value={grupoData.squadId || ''}
+                  onValueChange={(val) => setGrupoData({ ...grupoData, squadId: val })}
+                >
+                  <Select.Trigger placeholder="Selecione uma squad..." style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="">Nenhuma</Select.Item>
+                    {squads.map(s => (
+                      <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+            </Flex>
+            <Flex gap="3" mt="4" justify="end">
+              <Dialog.Close>
+                <Button variant="soft" color="gray" type="button">Cancelar</Button>
+              </Dialog.Close>
+              <Button type="submit" disabled={savingGrupo}>
+                {savingGrupo ? <Loader2 size={14} className="spinner-icon" /> : "Salvar"}
               </Button>
             </Flex>
           </form>

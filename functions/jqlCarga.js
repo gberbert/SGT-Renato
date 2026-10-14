@@ -85,6 +85,8 @@ const TICKET_FIELD_DEFINITIONS = {
     "Severidade",
     "severidade",
     "Severidade[Dropdown]",
+    "Severity",
+    "Severity[Dropdown]",
   ],
   sistemas_impactados: [
     "Sistemas Impactados",
