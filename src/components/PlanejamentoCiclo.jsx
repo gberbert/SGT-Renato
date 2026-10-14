@@ -530,6 +530,12 @@ export default function PlanejamentoCiclo() {
     [tickets, resolveSquad]
   );
 
+  // Fast lookup map: issueKey → ticket (full unfiltered set)
+  const enrichedTicketsMap = useMemo(
+    () => new Map(enrichedTickets.map(t => [t.issueKey || t.id, t])),
+    [enrichedTickets]
+  );
+
   const statusOptions = useMemo(() => {
     const s = new Set();
     enrichedTickets.forEach(t => { if (t.status) s.add(t.status); });
@@ -633,6 +639,22 @@ export default function PlanejamentoCiclo() {
     setFilaFilter(filaSet);
   }, []);
 
+  // Expands a filtered list upward: for every ticket in the list, also include
+  // its ancestor chain so the hierarchy is always rendered correctly.
+  const expandWithAncestors = useCallback((list) => {
+    const result = new Map(list.map(t => [t.issueKey || t.id, t]));
+    for (const ticket of list) {
+      let parentKey = ticket.parentKey || ticket.parent?.key;
+      while (parentKey && !result.has(parentKey)) {
+        const parent = enrichedTicketsMap.get(parentKey);
+        if (!parent) break;
+        result.set(parentKey, parent);
+        parentKey = parent.parentKey || parent.parent?.key;
+      }
+    }
+    return [...result.values()];
+  }, [enrichedTicketsMap]);
+
   const filteredTickets = useMemo(() => enrichedTickets.filter(t => {
     if (escopoFilter.size > 0 && !escopoFilter.has(t.escopo)) return false;
     if (squadFilter.size > 0 && !squadFilter.has(t._resolvedSquad || '')) return false;
@@ -680,6 +702,12 @@ export default function PlanejamentoCiclo() {
     return true;
   }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, createdAtFrom, createdAtTo, impedimentoFilter, demandaVulnerabFilter, search]);
 
+  // Hierarchy-aware filtered set: includes ancestors of matching tickets
+  const filteredTicketsHierarchy = useMemo(
+    () => expandWithAncestors(filteredTickets),
+    [filteredTickets, expandWithAncestors]
+  );
+
   const allCicloKeys = useMemo(() => {
     const s = new Set();
     ciclos.forEach(c => (c.ticketKeys || []).forEach(k => s.add(k)));
@@ -687,14 +715,14 @@ export default function PlanejamentoCiclo() {
   }, [ciclos]);
 
   const backlogTickets = useMemo(
-    () => filteredTickets.filter(t => !allCicloKeys.has(t.issueKey || t.id)),
-    [filteredTickets, allCicloKeys]
+    () => filteredTicketsHierarchy.filter(t => !allCicloKeys.has(t.issueKey || t.id)),
+    [filteredTicketsHierarchy, allCicloKeys]
   );
 
   const getCicloTickets = useCallback((ciclo) => {
     const keys = new Set(ciclo.ticketKeys || []);
-    return filteredTickets.filter(t => keys.has(t.issueKey || t.id));
-  }, [filteredTickets]);
+    return filteredTicketsHierarchy.filter(t => keys.has(t.issueKey || t.id));
+  }, [filteredTicketsHierarchy]);
 
   const trackCicloOnTicket = useCallback(async (ticketKey, cicloId) => {
     const ciclo = ciclos.find(c => c.id === cicloId);
@@ -1339,6 +1367,7 @@ export default function PlanejamentoCiclo() {
           ciclo={ciclo}
           tickets={getCicloTickets(ciclo)}
           allCiclos={ciclos}
+          allTickets={enrichedTickets}
           onMoveToCiclo={(ticket, fromId, destId) => handleMoveToCiclo(ticket, fromId, destId)}
           onMoveToBacklog={(ticket, cicloId) => handleMoveToBacklog(ticket, cicloId)}
           onTicketClick={setSelectedTicket}
@@ -1386,19 +1415,28 @@ export default function PlanejamentoCiclo() {
                   {activeFilters > 0 ? 'Nenhum ticket encontrado com os filtros aplicados' : 'Nenhum ticket no backlog'}
                 </div>
               ) : (
-                backlogTickets.map(t => (
-                  <TicketRow
-                    key={t.issueKey || t.id}
-                    ticket={t}
-                    cicloId={null}
-                    ciclos={ciclos}
-                    onMoveToCiclo={destId => handleMoveFromBacklog(t.issueKey || t.id, destId)}
-                    onMoveToBacklog={() => {}}
-                    onTicketClick={setSelectedTicket}
-                    dateField={dateField}
-                    showEstimativa={showEstimativa}
-                  />
-                ))
+                (() => {
+                  const backlogKeySet = new Set(backlogTickets.map(t => t.issueKey || t.id));
+                  const rootBacklog = backlogTickets.filter(t => {
+                    const pk = t.parentKey || t.parent?.key;
+                    return !pk || !backlogKeySet.has(pk);
+                  });
+                  return rootBacklog.map(t => (
+                    <TicketRow
+                      key={t.issueKey || t.id}
+                      ticket={t}
+                      cicloId={null}
+                      ciclos={ciclos}
+                      onMoveToCiclo={destId => handleMoveFromBacklog(t.issueKey || t.id, destId)}
+                      onMoveToBacklog={() => {}}
+                      onTicketClick={setSelectedTicket}
+                      dateField={dateField}
+                      showEstimativa={showEstimativa}
+                      allTickets={enrichedTickets}
+                      level={0}
+                    />
+                  ));
+                })()
               )}
             </div>
           )}

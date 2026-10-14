@@ -862,7 +862,7 @@ export function WorkflowTab({ filteredTickets, escopoFilter, onTicketClick, date
   );
 }
 
-export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true }) {
+export function CicloSection({ ciclo, tickets, allCiclos, allTickets = [], onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editNome, setEditNome] = useState(ciclo.nome);
@@ -967,6 +967,8 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
               const parentKey = t.parentKey || t.parent?.key;
               return !parentKey || !ticketKeySet.has(parentKey);
             });
+            // Use the full enriched set for child discovery so children are always found
+            const childPool = allTickets.length > 0 ? allTickets : tickets;
             return rootTickets.map(t => (
               <TicketRow
                 key={t.issueKey || t.id}
@@ -978,7 +980,7 @@ export function CicloSection({ ciclo, tickets, allCiclos, onMoveToCiclo, onMoveT
                 onTicketClick={onTicketClick}
                 dateField={dateField}
                 showEstimativa={showEstimativa}
-                allTickets={tickets}
+                allTickets={childPool}
                 level={0}
               />
             ));
