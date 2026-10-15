@@ -1147,6 +1147,44 @@ async function writeTicketsGlobal(tickets) {
     }
 
     if (ops > 0) await batch.commit();
+
+    // ── statusChangeLog: record status changes on sync ────────────────
+    // For each ticket whose status changed vs the existing doc, write a log entry.
+    // Uses a separate batch to avoid exceeding MAX_WRITE_BATCH on the main batch.
+    const STATUS_LOG_FIELDS = [
+      { field: 'status', label: 'Status' },
+    ];
+    let logBatch = db.batch();
+    let logOps = 0;
+    for (const ticket of chunk) {
+      const existingSnap = snaps.find(s => s.id === ticket.issueKey);
+      if (!existingSnap || !existingSnap.exists) continue;
+      const existingData = existingSnap.data();
+      for (const { field, label } of STATUS_LOG_FIELDS) {
+        const oldVal = existingData[field] ?? null;
+        const newVal = ticket[field] ?? null;
+        if (oldVal !== newVal) {
+          const logRef = db.collection(TICKETS_GLOBAL).doc(ticket.issueKey).collection('statusChangeLog').doc();
+          logBatch.set(logRef, {
+            issueKey: ticket.issueKey,
+            field,
+            fieldLabel: label,
+            oldValue: oldVal,
+            newValue: newVal,
+            changedAt: FieldValue.serverTimestamp(),
+            changedBy: 'sync',
+            source: 'sync',
+          });
+          logOps += 1;
+          if (logOps >= MAX_WRITE_BATCH) {
+            await logBatch.commit();
+            logBatch = db.batch();
+            logOps = 0;
+          }
+        }
+      }
+    }
+    if (logOps > 0) await logBatch.commit();
   }
 }
 

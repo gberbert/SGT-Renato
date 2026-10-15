@@ -394,6 +394,22 @@ function useReplanningLog(ticketDocId) {
   return log;
 }
 
+function useStatusChangeLog(ticketDocId) {
+  const [log, setLog] = useState([]);
+  useEffect(() => {
+    if (!ticketDocId) return;
+    const q = query(
+      collection(db, TICKETS_GLOBAL, ticketDocId, 'statusChangeLog'),
+      orderBy('changedAt', 'desc')
+    );
+    const unsub = onSnapshot(q, snap => {
+      setLog(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
+    return unsub;
+  }, [ticketDocId]);
+  return log;
+}
+
 const fmtLogDate = (ts) => {
   if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -407,6 +423,86 @@ const fmtIsoDate = (v) => {
   const [y, m, d] = s.split('-');
   return `${d}/${m}/${y}`;
 };
+
+function fmtStatusValue(v) {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
+  if (v === '') return '—';
+  return String(v);
+}
+
+function StatusChangeLog({ ticketDocId }) {
+  const log = useStatusChangeLog(ticketDocId);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div style={{ marginTop: 20, borderTop: '1px solid var(--gray-5)', paddingTop: 14 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: '4px 0', color: 'var(--gray-10)', fontSize: 12, fontWeight: 700,
+          letterSpacing: '0.05em', textTransform: 'uppercase',
+        }}
+      >
+        <History size={13} />
+        HISTÓRICO DE STATUS
+        {log.length > 0 && (
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: '1px 6px',
+            borderRadius: 10, background: 'rgba(99,102,241,0.2)',
+            color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.35)',
+          }}>{log.length}</span>
+        )}
+        <ChevronDown size={13} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          {log.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--gray-9)', margin: 0 }}>Nenhuma alteração registrada.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ color: 'var(--gray-9)', textAlign: 'left' }}>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Campo</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>De</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Para</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Por</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Quando</th>
+                  <th style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>Origem</th>
+                </tr>
+              </thead>
+              <tbody>
+                {log.map(entry => (
+                  <tr key={entry.id} style={{ borderBottom: '1px solid var(--gray-4)' }}>
+                    <td style={{ padding: '5px 8px', color: 'var(--gray-11)', fontWeight: 600 }}>{entry.fieldLabel || entry.field}</td>
+                    <td style={{ padding: '5px 8px', color: '#f87171' }}>{fmtStatusValue(entry.oldValue)}</td>
+                    <td style={{ padding: '5px 8px', color: '#4ade80' }}>{fmtStatusValue(entry.newValue)}</td>
+                    <td style={{ padding: '5px 8px', color: 'var(--gray-10)' }}>{entry.changedBy || '—'}</td>
+                    <td style={{ padding: '5px 8px', color: 'var(--gray-9)' }}>{fmtLogDate(entry.changedAt)}</td>
+                    <td style={{ padding: '5px 8px' }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                        background: entry.source === 'sync' ? 'rgba(56,189,248,0.15)' : 'rgba(99,102,241,0.15)',
+                        color: entry.source === 'sync' ? '#38bdf8' : '#a5b4fc',
+                        border: `1px solid ${entry.source === 'sync' ? 'rgba(56,189,248,0.4)' : 'rgba(99,102,241,0.35)'}`,
+                      }}>
+                        {entry.source === 'sync' ? 'carga' : 'usuário'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ReplanningLog({ ticketDocId }) {
   const log = useReplanningLog(ticketDocId);
@@ -1011,6 +1107,9 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                   <ReadField label="OBSERVAÇÃO" value={ticket.observacao} wide tall />
                 )}
               </div>
+
+              {/* ── Histórico de Status ── */}
+              <StatusChangeLog ticketDocId={ticketDocIdProp || ticket.id} />
             </div>
           ) : activeTab === 'plano' ? (
             <div className="dmd-tab-content">

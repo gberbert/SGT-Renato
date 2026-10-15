@@ -35,6 +35,21 @@ const DATE_FIELD_LABELS = {
   dataConclusao: 'Conclusão',
 };
 
+// Status/operational fields that generate a statusChangeLog entry on change
+const STATUS_FIELDS_TO_LOG = new Set([
+  'percentualConclusao',
+  'percentualConclusaoTesteInterno',
+  'prioridadeInterna',
+  'impedimento',
+]);
+
+const STATUS_FIELD_LABELS = {
+  percentualConclusao: '% Conclusão',
+  percentualConclusaoTesteInterno: '% Conclusão Teste Interno',
+  prioridadeInterna: 'Prioridade Interna',
+  impedimento: 'Impedimento',
+};
+
 const sel = {
   fontSize: 12,
   background: 'var(--gray-2)',
@@ -785,6 +800,18 @@ export default function PlanejamentoCiclo() {
           newValue,
           changedAt: serverTimestamp(),
           changedBy: auth.currentUser?.displayName || auth.currentUser?.email || auth.currentUser?.uid || 'unknown',
+        });
+      }
+      if (STATUS_FIELDS_TO_LOG.has(field) && oldValue !== newValue) {
+        await addDoc(collection(db, TICKETS_GLOBAL, t.id, 'statusChangeLog'), {
+          issueKey: t.issueKey || t.id,
+          field,
+          fieldLabel: STATUS_FIELD_LABELS[field] || field,
+          oldValue,
+          newValue,
+          changedAt: serverTimestamp(),
+          changedBy: auth.currentUser?.displayName || auth.currentUser?.email || auth.currentUser?.uid || 'unknown',
+          source: 'user',
         });
       }
       setTickets(prev => prev.map(x => x.id === t.id ? { ...x, [field]: value } : x));
