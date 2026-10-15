@@ -258,7 +258,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
   }
 
   // Importar XLSX dinamicamente
-  import('xlsx').then(({ utils: XLSXUtils, writeFile }) => {
+  import('xlsx').then(({ utils: XLSXUtils, writeFile, SSF }) => {
     // Criar mapa de status para ordenação
     const statusIndexMap = {};
     STATUS_EXPORT_ORDER.forEach((status, index) => {
@@ -435,9 +435,80 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       return { wch: 22 };
     });
 
+    // ── Sheet 2: Por Squad ───────────────────────────────────────────
+    const SQUAD_COLS = [
+      'Issue Type', 'Squad', 'Chave', 'Status', 'Resumo',
+      'Grupo Solucionador', 'Severidade', 'Impedido', 'Motivo Impedimento',
+      'Estimativa Interna (h)', 'Data Fim Teste Interno', 'Ciclo',
+    ];
+
+    const getSquadName = t =>
+      t._resolvedSquad || t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '(Sem Squad)';
+
+    const getCicloLabel = t => {
+      if (Array.isArray(t.ciclos) && t.ciclos.length > 0)
+        return t.ciclos.map(c => (typeof c === 'string' ? c : c?.nome || '')).filter(Boolean).join(', ');
+      return t.cicloId || '';
+    };
+
+    // Sort by squad name, then by issueKey
+    const ticketsBySquad = [...sortedTickets].sort((a, b) => {
+      const sa = getSquadName(a).toLowerCase();
+      const sb = getSquadName(b).toLowerCase();
+      if (sa !== sb) return sa.localeCompare(sb, 'pt-BR');
+      return (a.issueKey || '').localeCompare(b.issueKey || '');
+    });
+
+    // Build rows with group headers
+    const squadRows = [SQUAD_COLS]; // header row first
+    let lastSquad = null;
+
+    for (const t of ticketsBySquad) {
+      const squadName = getSquadName(t);
+      if (squadName !== lastSquad) {
+        // separator / group header row
+        squadRows.push([squadName, '', '', '', '', '', '', '', '', '', '', '']);
+        lastSquad = squadName;
+      }
+      squadRows.push([
+        t.issueType || '',
+        squadName,
+        t.issueKey || t.id || '',
+        t.status || '',
+        t.summary || '',
+        stripNumericPrefix(t.grupoSolucionador || t.grupoSuporte || '') || '',
+        t.severidade || '',
+        t.impedimento ? 'Sim' : 'Não',
+        t.observacaoAdicional || t.motivoImpedimento || '',
+        t.estimativaInterna != null ? t.estimativaInterna : '',
+        fmtD(t.dataFimTesteInterno),
+        getCicloLabel(t),
+      ]);
+    }
+
+    // aoa_to_sheet: array of arrays
+    const ws2 = XLSXUtils.aoa_to_sheet(squadRows);
+
+    // Column widths for sheet 2
+    ws2['!cols'] = [
+      { wch: 16 }, // Issue Type
+      { wch: 20 }, // Squad
+      { wch: 14 }, // Chave
+      { wch: 22 }, // Status
+      { wch: 50 }, // Resumo
+      { wch: 30 }, // Grupo Solucionador
+      { wch: 14 }, // Severidade
+      { wch: 10 }, // Impedido
+      { wch: 35 }, // Motivo Impedimento
+      { wch: 18 }, // Estimativa Interna
+      { wch: 20 }, // Data Fim Teste Interno
+      { wch: 20 }, // Ciclo
+    ];
+
     // Criar workbook
     const wb = XLSXUtils.book_new();
     XLSXUtils.book_append_sheet(wb, ws, 'Tickets');
+    XLSXUtils.book_append_sheet(wb, ws2, 'Por Squad');
 
     // Exportar arquivo
     writeFile(wb, filename);
