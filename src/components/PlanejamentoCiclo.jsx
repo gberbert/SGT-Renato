@@ -1434,6 +1434,7 @@ export default function PlanejamentoCiclo() {
                       showEstimativa={showEstimativa}
                       allTickets={enrichedTickets}
                       level={0}
+                      alwaysExpanded={true}
                     />
                   ));
                 })()

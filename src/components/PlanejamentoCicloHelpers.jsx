@@ -465,7 +465,7 @@ function fmtDateShort(val) {
   return s;
 }
 
-export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true, allTickets = [], level = 0 }) {
+export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true, allTickets = [], level = 0, alwaysExpanded = false }) {
   const [open, setOpen] = useState(false);
   const [expandChildren, setExpandChildren] = useState(false);
   const em = ESCOPO_META[ticket.escopo] || { color: '#6b7280', short: (ticket.escopo || '?').slice(0, 4) };
@@ -482,10 +482,13 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
 
   const hasChildren = childTickets.length > 0;
 
+  // alwaysExpanded: children sempre visíveis (modo CICLOS tab)
+  const showChildren = alwaysExpanded ? hasChildren : (hasChildren && expandChildren);
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', paddingLeft: `${14 + level * 20}px`, borderRadius: 6, background: level > 0 ? 'rgba(99,102,241,0.04)' : 'var(--color-surface)', border: '1px solid var(--gray-4)', marginBottom: 3 }}>
-        {hasChildren ? (
+        {hasChildren && !alwaysExpanded ? (
           <button
             onClick={() => setExpandChildren(!expandChildren)}
             style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--indigo-9)', flexShrink: 0 }}
@@ -633,7 +636,7 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
       </div>
       </div>
 
-      {hasChildren && expandChildren && (
+      {showChildren && (
         <div>
           {childTickets.map(childTicket => (
             <TicketRow
@@ -648,6 +651,7 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
               showEstimativa={showEstimativa}
               allTickets={allTickets}
               level={level + 1}
+              alwaysExpanded={alwaysExpanded}
             />
           ))}
         </div>
@@ -982,6 +986,7 @@ export function CicloSection({ ciclo, tickets, allCiclos, allTickets = [], onMov
                 showEstimativa={showEstimativa}
                 allTickets={childPool}
                 level={0}
+                alwaysExpanded={true}
               />
             ));
           })()}
