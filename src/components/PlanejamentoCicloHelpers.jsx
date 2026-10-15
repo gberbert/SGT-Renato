@@ -535,10 +535,88 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       { wch: 20 }, // Ciclo
     ];
 
+    // ── Sheet 3: Resumo (pivot tables) ──────────────────────────────
+    const getSquadNameR = t =>
+      t._resolvedSquad || t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '(Sem Squad)';
+
+    // Collect unique squads, issueTypes, statuses
+    const allSquads = [...new Set(sortedTickets.map(getSquadNameR))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const allIssueTypes = [...new Set(sortedTickets.map(t => t.issueType || '(Sem Tipo)'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const allStatuses = [...new Set(sortedTickets.map(t => t.status || '(Sem Status)'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    // Pivot 1: Squad × IssueType
+    const pivot1 = new Map(); // squad → Map(issueType → count)
+    for (const t of sortedTickets) {
+      const sq = getSquadNameR(t);
+      const it = t.issueType || '(Sem Tipo)';
+      if (!pivot1.has(sq)) pivot1.set(sq, new Map());
+      const m = pivot1.get(sq);
+      m.set(it, (m.get(it) || 0) + 1);
+    }
+
+    // Build aoa for pivot1
+    const p1Header = ['Squad', ...allIssueTypes, 'TOTAL'];
+    const p1Rows = [p1Header];
+    for (const sq of allSquads) {
+      const m = pivot1.get(sq) || new Map();
+      const row = [sq, ...allIssueTypes.map(it => m.get(it) || 0)];
+      row.push(allIssueTypes.reduce((s, it) => s + (m.get(it) || 0), 0));
+      p1Rows.push(row);
+    }
+    // Total row
+    const p1Total = ['TOTAL', ...allIssueTypes.map(it => sortedTickets.filter(t => (t.issueType || '(Sem Tipo)') === it).length)];
+    p1Total.push(sortedTickets.length);
+    p1Rows.push(p1Total);
+
+    // Pivot 2: Squad × IssueType × Status
+    const pivot2 = new Map(); // `${squad}||${issueType}` → Map(status → count)
+    for (const t of sortedTickets) {
+      const sq = getSquadNameR(t);
+      const it = t.issueType || '(Sem Tipo)';
+      const st = t.status || '(Sem Status)';
+      const key = `${sq}||${it}`;
+      if (!pivot2.has(key)) pivot2.set(key, new Map());
+      const m = pivot2.get(key);
+      m.set(st, (m.get(st) || 0) + 1);
+    }
+
+    // Build aoa for pivot2
+    const p2Header = ['Squad', 'IssueType', ...allStatuses, 'TOTAL'];
+    const p2Rows = [p2Header];
+    for (const sq of allSquads) {
+      for (const it of allIssueTypes) {
+        const key = `${sq}||${it}`;
+        const m = pivot2.get(key);
+        if (!m) continue; // skip zero combinations
+        const row = [sq, it, ...allStatuses.map(st => m.get(st) || 0)];
+        row.push(allStatuses.reduce((s, st) => s + (m.get(st) || 0), 0));
+        p2Rows.push(row);
+      }
+    }
+
+    // Combine into single sheet with a gap between tables
+    const resumoRows = [
+      ['RESUMO — Total de Tickets por Squad × IssueType'],
+      [],
+      ...p1Rows,
+      [],
+      [],
+      ['RESUMO — Total de Tickets por Squad × IssueType × Status'],
+      [],
+      ...p2Rows,
+    ];
+
+    const ws3 = XLSXUtils.aoa_to_sheet(resumoRows);
+
+    // Column widths for sheet 3
+    const maxCols = Math.max(p1Header.length, p2Header.length);
+    ws3['!cols'] = Array.from({ length: maxCols }, (_, i) => ({ wch: i === 0 ? 24 : i === 1 ? 18 : 14 }));
+
     // Criar workbook
     const wb = XLSXUtils.book_new();
     XLSXUtils.book_append_sheet(wb, ws, 'Tickets');
     XLSXUtils.book_append_sheet(wb, ws2, 'Por Squad');
+    XLSXUtils.book_append_sheet(wb, ws3, 'Resumo');
 
     // Exportar arquivo
     writeFile(wb, filename);
