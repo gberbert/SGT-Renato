@@ -437,8 +437,9 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
 
     // ── Sheet 2: Por Squad ───────────────────────────────────────────
     const SQUAD_COLS = [
-      'Squad', 'Issue Type', 'Chave', 'Status', 'Resumo',
+      'Chave', 'Status', 'Resumo',
       'Grupo Solucionador', 'Severidade', 'Impedido', 'Motivo Impedimento',
+      'Squad', 'Tickets Vinculados', 'Issue Type',
       'Estimativa Interna (h)', 'Data Fim Teste Interno', 'Ciclo',
     ];
 
@@ -468,8 +469,6 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
 
     // Within each squad group, do depth-first traversal (parent → children)
     const buildSquadRow = (t, squadName) => [
-      squadName,
-      t.issueType || '',
       t.issueKey || t.id || '',
       t.status || '',
       t.summary || '',
@@ -477,6 +476,9 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       t.severidade || '',
       t.impedimento ? 'Sim' : 'Não',
       t.observacaoAdicional || t.motivoImpedimento || '',
+      squadName,
+      t.ticketsVinculados || '',
+      t.issueType || '',
       t.estimativaInterna != null ? t.estimativaInterna : '',
       fmtD(t.dataFimTesteInterno),
       getCicloLabel(t),
@@ -501,7 +503,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       };
       roots.forEach(addNode);
       // add any tickets not yet captured (orphan children)
-      const added = new Set(rows.map(r => r[2])); // r[2] = Chave
+      const added = new Set(rows.map(r => r[0])); // r[0] = Chave
       ticketsInGroup.filter(t => !added.has(t.issueKey || t.id)).forEach(t => rows.push(buildSquadRow(t, squadName)));
       return rows;
     };
@@ -512,7 +514,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
     for (const squadName of sortedSquadNames) {
       const group = squadGroups.get(squadName) || [];
       // separator / group header row
-      squadRows.push([`▶ ${squadName}`, '', '', '', '', '', '', '', '', '', '', '']);
+      squadRows.push([`▶ ${squadName}`, '', '', '', '', '', '', '', '', '', '', '', '']);
       visitHierarchical(group, squadName).forEach(r => squadRows.push(r));
     }
 
@@ -521,8 +523,6 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
 
     // Column widths for sheet 2
     ws2['!cols'] = [
-      { wch: 16 }, // Issue Type
-      { wch: 20 }, // Squad
       { wch: 14 }, // Chave
       { wch: 22 }, // Status
       { wch: 50 }, // Resumo
@@ -530,94 +530,18 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       { wch: 14 }, // Severidade
       { wch: 10 }, // Impedido
       { wch: 35 }, // Motivo Impedimento
+      { wch: 20 }, // Squad
+      { wch: 30 }, // Tickets Vinculados
+      { wch: 16 }, // Issue Type
       { wch: 18 }, // Estimativa Interna
       { wch: 20 }, // Data Fim Teste Interno
       { wch: 20 }, // Ciclo
     ];
 
-    // ── Sheet 3: Resumo (pivot tables) ──────────────────────────────
-    const getSquadNameR = t =>
-      t._resolvedSquad || t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '(Sem Squad)';
-
-    // IssueType categories
-    const ISSUETYPE_PROBLEMS = new Set(['Problem', 'Problema', 'PROBLEM', 'PROBLEMA']);
-    const ISSUETYPE_SUBTASKS = new Set(['Execução', 'Planejamento', 'RCA', 'Execucao']);
-
-    const problemTickets = sortedTickets.filter(t => ISSUETYPE_PROBLEMS.has(t.issueType || ''));
-    const subtaskTickets = sortedTickets.filter(t => ISSUETYPE_SUBTASKS.has(t.issueType || ''));
-
-    // Helper: build Squad × Status flattened pivot with squad subtotals
-    // Returns aoa rows: header, then for each squad: [status rows] + [subtotal], then total
-    const buildSquadStatusPivot = (ticketList, extraColsHeader, extraColsFn) => {
-      const squadsP = [...new Set(ticketList.map(getSquadNameR))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-      const header = ['SQUAD', 'Status', ...extraColsHeader, 'Total'];
-      const rows = [header];
-      let grandTotals = new Array(extraColsHeader.length).fill(0);
-      let grandCount = 0;
-
-      for (const sq of squadsP) {
-        const sqTickets = ticketList.filter(t => getSquadNameR(t) === sq);
-        const statuses = [...new Set(sqTickets.map(t => t.status || '(Sem Status)'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-        let sqTotals = new Array(extraColsHeader.length).fill(0);
-        let sqCount = 0;
-
-        for (const st of statuses) {
-          const stTickets = sqTickets.filter(t => (t.status || '(Sem Status)') === st);
-          const extraVals = extraColsFn(stTickets, extraColsHeader);
-          extraVals.forEach((v, i) => { sqTotals[i] += v; });
-          sqCount += stTickets.length;
-          rows.push([sq, st, ...extraVals, stTickets.length]);
-        }
-
-        // Squad subtotal row
-        rows.push([`${sq} — TOTAL`, '', ...sqTotals, sqCount]);
-        sqTotals.forEach((v, i) => { grandTotals[i] += v; });
-        grandCount += sqCount;
-      }
-
-      // Grand total
-      rows.push(['TOTAL GERAL', '', ...grandTotals, grandCount]);
-      return rows;
-    };
-
-    // Pivot 1: Problem tickets — Squad × Status → count
-    const p1Rows = buildSquadStatusPivot(
-      problemTickets,
-      ['Contagem'],
-      (stTickets) => [stTickets.length]
-    );
-
-    // Pivot 2: Subtask tickets — Squad × Status × IssueType columns
-    const subtaskIssueTypes = [...new Set(subtaskTickets.map(t => t.issueType || ''))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    const p2Rows = buildSquadStatusPivot(
-      subtaskTickets,
-      subtaskIssueTypes,
-      (stTickets, cols) => cols.map(it => stTickets.filter(t => (t.issueType || '') === it).length)
-    );
-
-    // Combine into single sheet
-    const resumoRows = [
-      [`issuetype = ${[...ISSUETYPE_PROBLEMS].join(' + ')}`],
-      [],
-      ...p1Rows,
-      [],
-      [],
-      [`issuetype = ${subtaskIssueTypes.join(', ')}`],
-      [],
-      ...p2Rows,
-    ];
-
-    const ws3 = XLSXUtils.aoa_to_sheet(resumoRows);
-
-    // Column widths for sheet 3
-    const maxCols3 = Math.max(p1Rows[0]?.length || 4, p2Rows[0]?.length || 4);
-    ws3['!cols'] = Array.from({ length: maxCols3 }, (_, i) => ({ wch: i === 0 ? 30 : i === 1 ? 30 : 16 }));
-
     // Criar workbook
     const wb = XLSXUtils.book_new();
     XLSXUtils.book_append_sheet(wb, ws, 'Tickets');
     XLSXUtils.book_append_sheet(wb, ws2, 'Por Squad');
-    XLSXUtils.book_append_sheet(wb, ws3, 'Resumo');
 
     // Exportar arquivo
     writeFile(wb, filename);
