@@ -437,7 +437,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
 
     // ── Sheet 2: Por Squad ───────────────────────────────────────────
     const SQUAD_COLS = [
-      'Issue Type', 'Squad', 'Chave', 'Status', 'Resumo',
+      'Squad', 'Issue Type', 'Chave', 'Status', 'Resumo',
       'Grupo Solucionador', 'Severidade', 'Impedido', 'Motivo Impedimento',
       'Estimativa Interna (h)', 'Data Fim Teste Interno', 'Ciclo',
     ];
@@ -468,8 +468,8 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
 
     // Within each squad group, do depth-first traversal (parent → children)
     const buildSquadRow = (t, squadName) => [
-      t.issueType || '',
       squadName,
+      t.issueType || '',
       t.issueKey || t.id || '',
       t.status || '',
       t.summary || '',
@@ -539,69 +539,70 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
     const getSquadNameR = t =>
       t._resolvedSquad || t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '(Sem Squad)';
 
-    // Collect unique squads, issueTypes, statuses
-    const allSquads = [...new Set(sortedTickets.map(getSquadNameR))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    const allIssueTypes = [...new Set(sortedTickets.map(t => t.issueType || '(Sem Tipo)'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    const allStatuses = [...new Set(sortedTickets.map(t => t.status || '(Sem Status)'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    // IssueType categories
+    const ISSUETYPE_PROBLEMS = new Set(['Problem', 'Problema', 'PROBLEM', 'PROBLEMA']);
+    const ISSUETYPE_SUBTASKS = new Set(['Execução', 'Planejamento', 'RCA', 'Execucao']);
 
-    // Pivot 1: Squad × IssueType
-    const pivot1 = new Map(); // squad → Map(issueType → count)
-    for (const t of sortedTickets) {
-      const sq = getSquadNameR(t);
-      const it = t.issueType || '(Sem Tipo)';
-      if (!pivot1.has(sq)) pivot1.set(sq, new Map());
-      const m = pivot1.get(sq);
-      m.set(it, (m.get(it) || 0) + 1);
-    }
+    const problemTickets = sortedTickets.filter(t => ISSUETYPE_PROBLEMS.has(t.issueType || ''));
+    const subtaskTickets = sortedTickets.filter(t => ISSUETYPE_SUBTASKS.has(t.issueType || ''));
 
-    // Build aoa for pivot1
-    const p1Header = ['Squad', ...allIssueTypes, 'TOTAL'];
-    const p1Rows = [p1Header];
-    for (const sq of allSquads) {
-      const m = pivot1.get(sq) || new Map();
-      const row = [sq, ...allIssueTypes.map(it => m.get(it) || 0)];
-      row.push(allIssueTypes.reduce((s, it) => s + (m.get(it) || 0), 0));
-      p1Rows.push(row);
-    }
-    // Total row
-    const p1Total = ['TOTAL', ...allIssueTypes.map(it => sortedTickets.filter(t => (t.issueType || '(Sem Tipo)') === it).length)];
-    p1Total.push(sortedTickets.length);
-    p1Rows.push(p1Total);
+    // Helper: build Squad × Status flattened pivot with squad subtotals
+    // Returns aoa rows: header, then for each squad: [status rows] + [subtotal], then total
+    const buildSquadStatusPivot = (ticketList, extraColsHeader, extraColsFn) => {
+      const squadsP = [...new Set(ticketList.map(getSquadNameR))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const header = ['SQUAD', 'Status', ...extraColsHeader, 'Total'];
+      const rows = [header];
+      let grandTotals = new Array(extraColsHeader.length).fill(0);
+      let grandCount = 0;
 
-    // Pivot 2: Squad × IssueType × Status
-    const pivot2 = new Map(); // `${squad}||${issueType}` → Map(status → count)
-    for (const t of sortedTickets) {
-      const sq = getSquadNameR(t);
-      const it = t.issueType || '(Sem Tipo)';
-      const st = t.status || '(Sem Status)';
-      const key = `${sq}||${it}`;
-      if (!pivot2.has(key)) pivot2.set(key, new Map());
-      const m = pivot2.get(key);
-      m.set(st, (m.get(st) || 0) + 1);
-    }
+      for (const sq of squadsP) {
+        const sqTickets = ticketList.filter(t => getSquadNameR(t) === sq);
+        const statuses = [...new Set(sqTickets.map(t => t.status || '(Sem Status)'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        let sqTotals = new Array(extraColsHeader.length).fill(0);
+        let sqCount = 0;
 
-    // Build aoa for pivot2
-    const p2Header = ['Squad', 'IssueType', ...allStatuses, 'TOTAL'];
-    const p2Rows = [p2Header];
-    for (const sq of allSquads) {
-      for (const it of allIssueTypes) {
-        const key = `${sq}||${it}`;
-        const m = pivot2.get(key);
-        if (!m) continue; // skip zero combinations
-        const row = [sq, it, ...allStatuses.map(st => m.get(st) || 0)];
-        row.push(allStatuses.reduce((s, st) => s + (m.get(st) || 0), 0));
-        p2Rows.push(row);
+        for (const st of statuses) {
+          const stTickets = sqTickets.filter(t => (t.status || '(Sem Status)') === st);
+          const extraVals = extraColsFn(stTickets, extraColsHeader);
+          extraVals.forEach((v, i) => { sqTotals[i] += v; });
+          sqCount += stTickets.length;
+          rows.push([sq, st, ...extraVals, stTickets.length]);
+        }
+
+        // Squad subtotal row
+        rows.push([`${sq} — TOTAL`, '', ...sqTotals, sqCount]);
+        sqTotals.forEach((v, i) => { grandTotals[i] += v; });
+        grandCount += sqCount;
       }
-    }
 
-    // Combine into single sheet with a gap between tables
+      // Grand total
+      rows.push(['TOTAL GERAL', '', ...grandTotals, grandCount]);
+      return rows;
+    };
+
+    // Pivot 1: Problem tickets — Squad × Status → count
+    const p1Rows = buildSquadStatusPivot(
+      problemTickets,
+      ['Contagem'],
+      (stTickets) => [stTickets.length]
+    );
+
+    // Pivot 2: Subtask tickets — Squad × Status × IssueType columns
+    const subtaskIssueTypes = [...new Set(subtaskTickets.map(t => t.issueType || ''))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const p2Rows = buildSquadStatusPivot(
+      subtaskTickets,
+      subtaskIssueTypes,
+      (stTickets, cols) => cols.map(it => stTickets.filter(t => (t.issueType || '') === it).length)
+    );
+
+    // Combine into single sheet
     const resumoRows = [
-      ['RESUMO — Total de Tickets por Squad × IssueType'],
+      [`issuetype = ${[...ISSUETYPE_PROBLEMS].join(' + ')}`],
       [],
       ...p1Rows,
       [],
       [],
-      ['RESUMO — Total de Tickets por Squad × IssueType × Status'],
+      [`issuetype = ${subtaskIssueTypes.join(', ')}`],
       [],
       ...p2Rows,
     ];
@@ -609,8 +610,8 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
     const ws3 = XLSXUtils.aoa_to_sheet(resumoRows);
 
     // Column widths for sheet 3
-    const maxCols = Math.max(p1Header.length, p2Header.length);
-    ws3['!cols'] = Array.from({ length: maxCols }, (_, i) => ({ wch: i === 0 ? 24 : i === 1 ? 18 : 14 }));
+    const maxCols3 = Math.max(p1Rows[0]?.length || 4, p2Rows[0]?.length || 4);
+    ws3['!cols'] = Array.from({ length: maxCols3 }, (_, i) => ({ wch: i === 0 ? 30 : i === 1 ? 30 : 16 }));
 
     // Criar workbook
     const wb = XLSXUtils.book_new();
