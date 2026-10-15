@@ -732,6 +732,7 @@ const data = d.data();
     ciclos: Array.isArray(data.ciclos) ? data.ciclos : [],
     responsavelDesenvolvimento: data.responsavelDesenvolvimento || null,
     responsavelTesteInterno: data.responsavelTesteInterno || null,
+    severidade: data.severidade || null,
     naturezaOperacao: data.naturezaOperacao || data.naturezaIniciativa || '',
     observacao: data.observacao || '',
     description: data.description || '',

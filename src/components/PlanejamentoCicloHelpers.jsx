@@ -451,39 +451,69 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       return t.cicloId || '';
     };
 
-    // Sort by squad name, then by issueKey
-    const ticketsBySquad = [...sortedTickets].sort((a, b) => {
-      const sa = getSquadName(a).toLowerCase();
-      const sb = getSquadName(b).toLowerCase();
-      if (sa !== sb) return sa.localeCompare(sb, 'pt-BR');
-      return (a.issueKey || '').localeCompare(b.issueKey || '');
-    });
+    // Build a key-map for child discovery
+    const allTicketMap = new Map(sortedTickets.map(t => [t.issueKey || t.id, t]));
+
+    // Depth-first traversal within each squad group
+    // Group tickets by squad preserving input order
+    const squadGroups = new Map(); // squadName → [ticket, ...]
+    for (const t of sortedTickets) {
+      const sn = getSquadName(t);
+      if (!squadGroups.has(sn)) squadGroups.set(sn, []);
+      squadGroups.get(sn).push(t);
+    }
+
+    // Sort squad groups alphabetically
+    const sortedSquadNames = [...squadGroups.keys()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    // Within each squad group, do depth-first traversal (parent → children)
+    const buildSquadRow = (t, squadName) => [
+      t.issueType || '',
+      squadName,
+      t.issueKey || t.id || '',
+      t.status || '',
+      t.summary || '',
+      stripNumericPrefix(t.grupoSolucionador || t.grupoSuporte || '') || '',
+      t.severidade || '',
+      t.impedimento ? 'Sim' : 'Não',
+      t.observacaoAdicional || t.motivoImpedimento || '',
+      t.estimativaInterna != null ? t.estimativaInterna : '',
+      fmtD(t.dataFimTesteInterno),
+      getCicloLabel(t),
+    ];
+
+    const visitHierarchical = (ticketsInGroup, squadName) => {
+      const keySet = new Set(ticketsInGroup.map(t => t.issueKey || t.id));
+      const rows = [];
+      // find roots (no parent in this group)
+      const roots = ticketsInGroup.filter(t => {
+        const pk = t.parentKey || t.parent?.key;
+        return !pk || !keySet.has(pk);
+      });
+      const addNode = (t) => {
+        rows.push(buildSquadRow(t, squadName));
+        // find children from the FULL ticket list (not just same group)
+        const children = sortedTickets.filter(c => {
+          const pk = c.parentKey || c.parent?.key;
+          return pk === (t.issueKey || t.id) && getSquadName(c) === squadName;
+        });
+        children.forEach(addNode);
+      };
+      roots.forEach(addNode);
+      // add any tickets not yet captured (orphan children)
+      const added = new Set(rows.map(r => r[2])); // r[2] = Chave
+      ticketsInGroup.filter(t => !added.has(t.issueKey || t.id)).forEach(t => rows.push(buildSquadRow(t, squadName)));
+      return rows;
+    };
 
     // Build rows with group headers
     const squadRows = [SQUAD_COLS]; // header row first
-    let lastSquad = null;
 
-    for (const t of ticketsBySquad) {
-      const squadName = getSquadName(t);
-      if (squadName !== lastSquad) {
-        // separator / group header row
-        squadRows.push([squadName, '', '', '', '', '', '', '', '', '', '', '']);
-        lastSquad = squadName;
-      }
-      squadRows.push([
-        t.issueType || '',
-        squadName,
-        t.issueKey || t.id || '',
-        t.status || '',
-        t.summary || '',
-        stripNumericPrefix(t.grupoSolucionador || t.grupoSuporte || '') || '',
-        t.severidade || '',
-        t.impedimento ? 'Sim' : 'Não',
-        t.observacaoAdicional || t.motivoImpedimento || '',
-        t.estimativaInterna != null ? t.estimativaInterna : '',
-        fmtD(t.dataFimTesteInterno),
-        getCicloLabel(t),
-      ]);
+    for (const squadName of sortedSquadNames) {
+      const group = squadGroups.get(squadName) || [];
+      // separator / group header row
+      squadRows.push([`▶ ${squadName}`, '', '', '', '', '', '', '', '', '', '', '']);
+      visitHierarchical(group, squadName).forEach(r => squadRows.push(r));
     }
 
     // aoa_to_sheet: array of arrays

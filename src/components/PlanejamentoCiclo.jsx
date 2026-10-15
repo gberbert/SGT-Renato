@@ -997,7 +997,7 @@ export default function PlanejamentoCiclo() {
           <button
             onClick={() => {
               const filename = `tickets_planejamento_${new Date().toISOString().slice(0, 10)}.xlsx`;
-              exportTicketsToXlsx(filteredTickets, filename);
+              exportTicketsToXlsx(filteredTicketsHierarchy, filename);
             }}
             title="Exportar tickets filtrados em XLSX"
             style={{
