@@ -41,6 +41,14 @@ const STATUS_FIELDS_TO_LOG = new Set([
   'percentualConclusaoTesteInterno',
   'prioridadeInterna',
   'impedimento',
+  'demandaVulnerabilidade',
+  'squadPrincipal',
+  'ticketsVinculados',
+  'observacaoAdicional',
+  'responsavelDesenvolvimento',
+  'responsavelTesteInterno',
+  'observacao',
+  'estimativaInterna',
 ]);
 
 const STATUS_FIELD_LABELS = {
@@ -48,6 +56,14 @@ const STATUS_FIELD_LABELS = {
   percentualConclusaoTesteInterno: '% Conclusão Teste Interno',
   prioridadeInterna: 'Prioridade Interna',
   impedimento: 'Impedimento',
+  demandaVulnerabilidade: 'Demanda Vulnerabilidade',
+  squadPrincipal: 'Squad Principal',
+  ticketsVinculados: 'Tickets Vinculados',
+  observacaoAdicional: 'Motivo Impedimento',
+  responsavelDesenvolvimento: 'Resp. Desenvolvimento',
+  responsavelTesteInterno: 'Resp. Teste Interno',
+  observacao: 'Observação',
+  estimativaInterna: 'Estimativa Interna (h)',
 };
 
 const sel = {
