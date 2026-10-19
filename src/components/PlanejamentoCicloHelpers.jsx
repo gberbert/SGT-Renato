@@ -440,7 +440,8 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       'Chave', 'Status', 'Resumo',
       'Grupo Solucionador', 'Severidade', 'Impedido', 'Motivo Impedimento',
       'Squad', 'Tickets Vinculados', 'Issue Type',
-      'Estimativa Interna (h)', 'Data Fim Teste Interno', 'Ciclo',
+      'Estimativa Interna (h)', 'Resp. Desenvolvimento', 'Resp. Teste Interno',
+      'Data Fim Teste Interno', 'Ciclo',
     ];
 
     const getSquadName = t =>
@@ -480,6 +481,8 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       t.ticketsVinculados || '',
       t.issueType || '',
       t.estimativaInterna != null ? t.estimativaInterna : '',
+      t.responsavelDesenvolvimento || '',
+      t.responsavelTesteInterno || '',
       fmtD(t.dataFimTesteInterno),
       getCicloLabel(t),
     ];
@@ -514,7 +517,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
     for (const squadName of sortedSquadNames) {
       const group = squadGroups.get(squadName) || [];
       // separator / group header row
-      squadRows.push([`▶ ${squadName}`, '', '', '', '', '', '', '', '', '', '', '', '']);
+      squadRows.push([`▶ ${squadName}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
       visitHierarchical(group, squadName).forEach(r => squadRows.push(r));
     }
 
@@ -534,6 +537,8 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       { wch: 30 }, // Tickets Vinculados
       { wch: 16 }, // Issue Type
       { wch: 18 }, // Estimativa Interna
+      { wch: 30 }, // Resp. Desenvolvimento
+      { wch: 30 }, // Resp. Teste Interno
       { wch: 20 }, // Data Fim Teste Interno
       { wch: 20 }, // Ciclo
     ];
