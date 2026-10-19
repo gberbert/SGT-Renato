@@ -769,20 +769,45 @@ export default function PlanejamentoCiclo() {
     } catch (e) { console.error('trackCicloOnTicket:', e); }
   }, [ciclos, tickets]);
 
+  const logCicloChange = useCallback(async (ticketKey, oldCicloName, newCicloName) => {
+    const t = tickets.find(x => (x.issueKey || x.id) === ticketKey);
+    if (!t) return;
+    try {
+      await addDoc(collection(db, TICKETS_GLOBAL, t.id, 'statusChangeLog'), {
+        issueKey: t.issueKey || t.id,
+        field: 'ciclo',
+        fieldLabel: 'Ciclo',
+        oldValue: oldCicloName ?? null,
+        newValue: newCicloName ?? null,
+        changedAt: serverTimestamp(),
+        changedBy: auth.currentUser?.displayName || auth.currentUser?.email || auth.currentUser?.uid || 'unknown',
+        source: 'user',
+      });
+    } catch (e) { console.error('logCicloChange:', e); }
+  }, [tickets]);
+
   const handleMoveToCiclo = async (ticket, fromCicloId, destCicloId) => {
     const key = ticket.issueKey || ticket.id;
+    const fromNome = fromCicloId ? (ciclos.find(c => c.id === fromCicloId)?.nome || 'Ciclo') : 'Backlog';
+    const destNome = ciclos.find(c => c.id === destCicloId)?.nome || 'Ciclo';
     if (fromCicloId) await removeTicketFromCiclo(fromCicloId, key);
     await addTicketToCiclo(destCicloId, key, ciclos);
     await trackCicloOnTicket(key, destCicloId);
+    await logCicloChange(key, fromNome, destNome);
   };
 
   const handleMoveToBacklog = async (ticket, cicloId) => {
-    await removeTicketFromCiclo(cicloId, ticket.issueKey || ticket.id);
+    const key = ticket.issueKey || ticket.id;
+    const fromNome = ciclos.find(c => c.id === cicloId)?.nome || 'Ciclo';
+    await removeTicketFromCiclo(cicloId, key);
+    await logCicloChange(key, fromNome, 'Backlog');
   };
 
   const handleMoveFromBacklog = async (ticketKey, cicloId) => {
+    const destNome = ciclos.find(c => c.id === cicloId)?.nome || 'Ciclo';
     await addTicketToCiclo(cicloId, ticketKey, ciclos);
     await trackCicloOnTicket(ticketKey, cicloId);
+    await logCicloChange(ticketKey, 'Backlog', destNome);
   };
 
   const handleCreateCiclo = async () => {
