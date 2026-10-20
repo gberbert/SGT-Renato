@@ -214,6 +214,7 @@ const RoadmapGeral = () => {
   const [sortField, setSortField] = useState('none');
   const [sortDir, setSortDir] = useState('asc');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
+  const [naoImpedidoFilter, setNaoImpedidoFilter] = useState(false);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(
     () => localStorage.getItem('roadmap_filtersCollapsed') !== 'false'
@@ -367,6 +368,7 @@ const RoadmapGeral = () => {
       if (filters.respDev?.size > 0) { if (!filters.respDev.has(t.responsavelDesenvolvimento||'')) return false; }
       if (filters.respTeste?.size > 0) { if (!filters.respTeste.has(t.responsavelTesteInterno||'')) return false; }
       if (impedimentoFilter && t.impedimento !== true) return false;
+      if (naoImpedidoFilter && t.impedimento === true) return false;
       if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
       return true;
     });
@@ -527,6 +529,7 @@ const RoadmapGeral = () => {
     const hadScopedEscopos = scopeConfig.escopos.length > 0;
     setFilters(createEmptyFilters());
     setImpedimentoFilter(false);
+    setNaoImpedidoFilter(false);
     setDemandaVulnerabFilter(false);
     setScopeConfig(createDefaultScopeConfig());
     if (hadScopedEscopos) {
@@ -536,7 +539,7 @@ const RoadmapGeral = () => {
     }
   };
 
-  const filterActive = filters.escopos.size>0 || filters.squads.size>0 || filters.grupos.size>0 || filters.statuses.size>0 || (filters.tickets?.size||0)>0 || (filters.prioridades?.size||0)>0 || (filters.sistemas?.size||0)>0 || (filters.naturezaIniciativa?.size||0)>0 || (filters.issuetype?.size||0)>0 || (filters.pctConclusao?.size||0)>0 || (filters.pctTesteInterno?.size||0)>0 || (filters.respDev?.size||0)>0 || (filters.respTeste?.size||0)>0 || impedimentoFilter || demandaVulnerabFilter;
+  const filterActive = filters.escopos.size>0 || filters.squads.size>0 || filters.grupos.size>0 || filters.statuses.size>0 || (filters.tickets?.size||0)>0 || (filters.prioridades?.size||0)>0 || (filters.sistemas?.size||0)>0 || (filters.naturezaIniciativa?.size||0)>0 || (filters.issuetype?.size||0)>0 || (filters.pctConclusao?.size||0)>0 || (filters.pctTesteInterno?.size||0)>0 || (filters.respDev?.size||0)>0 || (filters.respTeste?.size||0)>0 || impedimentoFilter || naoImpedidoFilter || demandaVulnerabFilter;
 
   const handleSavePriority = async (issueKey) => {
     try {
@@ -676,21 +679,8 @@ const RoadmapGeral = () => {
 
   const handleDiscardActiveViewChanges = () => {
     if (!activeView) return;
-    applyViewState(activeView);
-    setActiveViewSnapshot(serializeRoadmapState(
-      {
-        escopos: new Set(activeView.filters?.escopos || []),
-        squads: new Set(activeView.filters?.squads || []),
-        grupos: new Set(activeView.filters?.grupos || []),
-        statuses: new Set(activeView.filters?.statuses || []),
-        tickets: new Set(activeView.filters?.tickets || []),
-        prioridades: new Set((activeView.filters?.prioridades || []).map(Number).filter(Number.isFinite)),
-      },
-      activeView.groupBy || 'none',
-      activeView.granularity || 'mes',
-      activeView.dateConfig || createDefaultDateConfig(),
-      activeView.scopeConfig || createDefaultScopeConfig()
-    ));
+    const snapshot = applyViewState(activeView);
+    setActiveViewSnapshot(snapshot);
   };
 
   const handleDeleteView = async (id) => {
@@ -937,7 +927,7 @@ const RoadmapGeral = () => {
                   <Text size="1" color="gray">Nenhuma visao salva.</Text>
                 ) : (
                   [...savedViews].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)).map((view) => (
-                    <Flex key={view.id} justify="between" align="center" style={{ background: view.isPrimary ? 'rgba(56,189,248,0.08)' : 'var(--gray-3)', border: view.isPrimary ? '1px solid rgba(56,189,248,0.35)' : '1px solid transparent', padding: 8, borderRadius: 6 }}>
+                    <Flex key={view.id} justify="between" align="center" style={{ background: view.id === activeViewId ? 'rgba(99,102,241,0.1)' : view.isPrimary ? 'rgba(56,189,248,0.08)' : 'var(--gray-3)', border: view.id === activeViewId ? '1px solid rgba(99,102,241,0.5)' : view.isPrimary ? '1px solid rgba(56,189,248,0.35)' : '1px solid transparent', padding: 8, borderRadius: 6 }}>
                       <Flex align="center" gap="2" style={{ flex: 1 }}>
                         <input type="checkbox" checked={!!view.isPrimary} title="Definir como visao principal" onChange={() => handleTogglePrimaryView(view.id)} />
                         <Text size="2" style={{ cursor: 'pointer' }} onClick={() => handleLoadView(view)}>{view.name}{view.isPrimary && <Badge color="sky" variant="soft" ml="2" size="1">principal</Badge>}</Text>
@@ -1020,8 +1010,12 @@ const RoadmapGeral = () => {
           <MultiSelectFilter options={respDevOptions} selected={filters.respDev||new Set()} onChange={s=>setFilters(p=>({...p,respDev:s}))} placeholder="Resp. Desenvolvimento" maxWidth={195} />
           <MultiSelectFilter options={respTesteOptions} selected={filters.respTeste||new Set()} onChange={s=>setFilters(p=>({...p,respTeste:s}))} placeholder="Resp. Teste Interno" maxWidth={185} />
           <label className={`rg-check-label${impedimentoFilter?' active-imp':''}`}>
-            <input type="checkbox" checked={impedimentoFilter} onChange={e=>setImpedimentoFilter(e.target.checked)} style={{accentColor:'#eab308'}} />
+            <input type="checkbox" checked={impedimentoFilter} onChange={e=>{ setImpedimentoFilter(e.target.checked); if(e.target.checked) setNaoImpedidoFilter(false); }} style={{accentColor:'#eab308'}} />
             🚧 Impedidos
+          </label>
+          <label className={`rg-check-label${naoImpedidoFilter?' active-imp':''}`} style={naoImpedidoFilter?{borderColor:'#38bdf8',background:'rgba(56,189,248,0.1)',color:'#38bdf8'}:{}}>
+            <input type="checkbox" checked={naoImpedidoFilter} onChange={e=>{ setNaoImpedidoFilter(e.target.checked); if(e.target.checked) setImpedimentoFilter(false); }} style={{accentColor:'#38bdf8'}} />
+            ✅ Não impedidos
           </label>
           <label className={`rg-check-label${demandaVulnerabFilter?' active-vuln':''}`}>
             <input type="checkbox" checked={demandaVulnerabFilter} onChange={e=>setDemandaVulnerabFilter(e.target.checked)} style={{accentColor:'#ef4444'}} />
