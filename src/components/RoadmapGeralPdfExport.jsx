@@ -153,6 +153,109 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
         </div>
       </div>
 
+      {/* ── STATS SECTION ── */}
+      {(() => {
+        const allTickets = groupedRows.flatMap(g => g.tickets);
+        const total = allTickets.length;
+        const impedidos = allTickets.filter(t => t.impedimento === true).length;
+
+        // By escopo
+        const escopoMap = {};
+        allTickets.forEach(t => {
+          const k = normalizeEscopo(t.escopo);
+          const eb = ESCOPO_COLORS[k] || { bg: '#374151', text: '#d1d5db', short: k.slice(0,4) };
+          if (!escopoMap[k]) escopoMap[k] = { count: 0, bg: eb.bg, text: eb.text, short: eb.short };
+          escopoMap[k].count++;
+        });
+        const escopos = Object.entries(escopoMap).sort((a,b) => b[1].count - a[1].count).slice(0,6);
+
+        // By squad
+        const squadMap = {};
+        allTickets.forEach(t => {
+          const sq = t.squadPrincipal || (t.grupoSuporte ? t.grupoSuporte.replace(/^\d+\s*-\s*/,'').trim() : '') || 'Sem squad';
+          const key = sq.slice(0,14);
+          squadMap[key] = (squadMap[key] || 0) + 1;
+        });
+        const squads = Object.entries(squadMap).sort((a,b) => b[1]-a[1]).slice(0,8);
+        const squadMax = squads[0]?.[1] || 1;
+
+        // By prioridade
+        const PRIO_COLORS = { 'Crise':'#dc2626','Alto':'#ea580c','Médio':'#eab308','Baixo':'#3b82f6','Muito baixo':'#93c5fd','(sem prioridade)':'#9ca3af' };
+        const prioMap = {};
+        allTickets.forEach(t => {
+          const k = t.prioridadeInterna || '(sem prioridade)';
+          prioMap[k] = (prioMap[k] || 0) + 1;
+        });
+        const PRIO_ORDER_ARR = ['Crise','Alto','Médio','Baixo','Muito baixo','(sem prioridade)'];
+        const prios = Object.entries(prioMap).sort((a,b) => { const ia=PRIO_ORDER_ARR.indexOf(a[0]); const ib=PRIO_ORDER_ARR.indexOf(b[0]); return (ia===-1?99:ia)-(ib===-1?99:ib); });
+        const prioMax = prios[0]?.[1] || 1;
+
+        const BAR_LABEL_W = 72;
+        const BAR_CHART_W = (PAGE_W / 2) - 24;
+        const BAR_TRACK_W = BAR_CHART_W - BAR_LABEL_W - 36;
+        const BAR_ROW_H = 13;
+
+        return (
+          <div style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', padding: '8px 12px' }}>
+            {/* KPI boxes row */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'stretch' }}>
+              {/* Total tickets */}
+              <div style={{ background: '#1e40af', borderRadius: 6, padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 70 }}>
+                <span style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{total}</span>
+                <span style={{ fontSize: 7.5, fontWeight: 700, color: '#bfdbfe', marginTop: 2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Tickets</span>
+              </div>
+              {/* Impedidos */}
+              <div style={{ background: impedidos > 0 ? '#991b1b' : '#374151', borderRadius: 6, padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 70 }}>
+                <span style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{impedidos}</span>
+                <span style={{ fontSize: 7.5, fontWeight: 700, color: impedidos > 0 ? '#fca5a5' : '#9ca3af', marginTop: 2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Impedidos</span>
+              </div>
+              {/* Escopo boxes */}
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+                {escopos.map(([key, info]) => (
+                  <div key={key} style={{ background: info.bg, borderRadius: 6, padding: '4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 48 }}>
+                    <span style={{ fontSize: 18, fontWeight: 900, color: info.text, lineHeight: 1 }}>{info.count}</span>
+                    <span style={{ fontSize: 7, fontWeight: 800, color: info.text, opacity: 0.85, marginTop: 1, textTransform: 'uppercase' }}>{info.short}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bar charts row */}
+            <div style={{ display: 'flex', gap: 16 }}>
+              {/* Squad chart */}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 8, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Por Squad</div>
+                {squads.map(([name, count]) => (
+                  <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                    <span style={{ fontSize: 7, color: '#374151', minWidth: BAR_LABEL_W, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                    <div style={{ flex: 1, height: BAR_ROW_H, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ width: `${(count/squadMax)*100}%`, height: '100%', background: '#3b82f6', borderRadius: 2 }} />
+                    </div>
+                    <span style={{ fontSize: 7, fontWeight: 700, color: '#1e40af', minWidth: 22, textAlign: 'left' }}>{count}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Prioridade chart */}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 8, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Por Prioridade</div>
+                {prios.map(([name, count]) => {
+                  const c = PRIO_COLORS[name] || '#9ca3af';
+                  return (
+                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                      <span style={{ fontSize: 7, color: '#374151', minWidth: BAR_LABEL_W, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                      <div style={{ flex: 1, height: BAR_ROW_H, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${(count/prioMax)*100}%`, height: '100%', background: c, borderRadius: 2 }} />
+                      </div>
+                      <span style={{ fontSize: 7, fontWeight: 700, color: '#374151', minWidth: 22, textAlign: 'left' }}>{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── COLUMN HEADERS ── */}
       <div style={{ display: 'flex', borderBottom: '2px solid #cbd5e1', minHeight: HEADER_H, background: '#f1f5f9' }}>
         {/* Title col */}
