@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress, Separator } from '@radix-ui/themes';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress } from '@radix-ui/themes';
 import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock } from 'lucide-react';
 import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import { auth } from '../firebase';
@@ -281,8 +281,13 @@ const RoadmapGeral = () => {
 
     setLoading(true); setLoadProgress(0); setLoadedCount(0);
     try {
+      // Usar escopos específicos para query rápida (igual PlanejamentoCiclo)
+      // Se nenhum escopo selecionado, carrega todos via queries individuais (mais rápido que scan completo)
+      const escoposToLoad = scopeConfig.escopos.length > 0
+        ? scopeConfig.escopos
+        : ESCOPO_RADAR_ORDER.map(e => e.key);
       const tickets = await fetchTicketsForRoadmap({
-        escopos: scopeConfig.escopos,
+        escopos: escoposToLoad,
         onProgress: (count) => {
           setLoadedCount(count);
           if (totalHint > 0 && scopeConfig.escopos.length === 0) {
@@ -328,7 +333,7 @@ const RoadmapGeral = () => {
         if (!names.some((n) => allowed.has(n))) return false;
       }
       if (filters.prioridades?.size > 0) {
-        const p = t.prioridadeInterna != null ? Number(t.prioridadeInterna) : null;
+        const p = t.prioridadeInterna != null ? String(t.prioridadeInterna) : null;
         if (p === null || !filters.prioridades.has(p)) return false;
       }
       return true;
@@ -494,7 +499,16 @@ const RoadmapGeral = () => {
   const activeViewDirty =
     Boolean(activeView) && activeViewSnapshot !== null && activeViewSnapshot !== currentStateSnapshot;
 
-  // Auto-reload quando uma visão é carregada
+  // Auto-load na montagem inicial (após views carregadas)
+  const hasAutoLoaded = useRef(false);
+  useEffect(() => {
+    if (!savedViewsLoading && !hasAutoLoaded.current) {
+      hasAutoLoaded.current = true;
+      setPendingAutoReload(true);
+    }
+  }, [savedViewsLoading]); // eslint-disable-line
+
+  // Auto-reload quando uma visão é carregada ou ao montar
   useEffect(() => {
     if (!pendingAutoReload) return;
     setPendingAutoReload(false);
