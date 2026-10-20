@@ -100,7 +100,7 @@ const TV_W    = 60;   // tickets vinculados
 const NAT_W   = 100;  // natureza iniciativa (wider for full text)
 const LEFT_W  = TITLE_W + SQ_W + ST_W + IMP_W + VUL_W + PR_W + PC_W + PT_W + TV_W + NAT_W; // 552
 const TRACK_W = PAGE_W - LEFT_W;  // 728
-const ROW_H   = 26;
+const ROW_H   = 20;
 const HEADER_H = 44;
 
 // Cell border style
@@ -332,7 +332,7 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                 <div style={{ ...cellBase, width: TITLE_W, gap: 3, padding: '0 5px', justifyContent: 'flex-start' }}>
                   <div style={{ background: eb.bg, color: eb.text, fontSize: 7, fontWeight: 800, padding: '1px 3px', borderRadius: 3, flexShrink: 0, minWidth: 24, textAlign: 'center' }}>{eb.short}</div>
                   {isImpedido && <span style={{ fontSize: 8, flexShrink: 0 }}>⚠</span>}
-                  <span style={{ fontSize: 7.5, fontWeight: 700, color: isImpedido ? '#dc2626' : '#1d4ed8', fontFamily: 'monospace', flexShrink: 0 }}>{String(ticket.issueKey || '').slice(-6)}</span>
+                  <span style={{ fontSize: 7.5, fontWeight: 700, color: isImpedido ? '#dc2626' : '#1d4ed8', fontFamily: 'monospace', flexShrink: 0 }}>{String(ticket.issueKey || '')}</span>
                   <span style={{ fontSize: 7.5, color: isImpedido ? '#b91c1c' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ticket.summary || ''}</span>
                 </div>
 
@@ -489,7 +489,7 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                   <div style={{ ...cellBase, width: TITLE_W, gap: 3, padding: '0 5px', justifyContent: 'flex-start' }}>
                     <div style={{ background: eb.bg, color: eb.text, fontSize: 7, fontWeight: 800, padding: '1px 3px', borderRadius: 3, flexShrink: 0, minWidth: 24, textAlign: 'center' }}>{eb.short}</div>
                     <span style={{ fontSize: 8, flexShrink: 0 }}>⚠</span>
-                    <span style={{ fontSize: 7.5, fontWeight: 700, color: '#dc2626', fontFamily: 'monospace', flexShrink: 0 }}>{String(ticket.issueKey || '').slice(-6)}</span>
+                    <span style={{ fontSize: 7.5, fontWeight: 700, color: '#dc2626', fontFamily: 'monospace', flexShrink: 0 }}>{String(ticket.issueKey || '')}</span>
                     <span style={{ fontSize: 7.5, color: '#b91c1c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ticket.summary || ''}</span>
                   </div>
                   <div style={{ ...cellBase, width: SQ_W, padding: '0 2px' }}>
