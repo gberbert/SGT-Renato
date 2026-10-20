@@ -811,7 +811,7 @@ const RoadmapGeral = () => {
 
         {/* Header toggle */}
         <Flex
-          align="center" gap="8" style={{ padding: '8px 14px', borderBottom: filtersCollapsed ? 'none' : '1px solid var(--gray-5)', cursor: 'pointer', userSelect: 'none', borderRadius: filtersCollapsed ? 10 : '10px 10px 0 0' }}
+          align="center" style={{ gap: 8, padding: '8px 14px', borderBottom: filtersCollapsed ? 'none' : '1px solid var(--gray-5)', cursor: 'pointer', userSelect: 'none', borderRadius: filtersCollapsed ? 10 : '10px 10px 0 0' }}
           onClick={() => { const n = !filtersCollapsed; setFiltersCollapsed(n); localStorage.setItem('roadmap_filtersCollapsed', String(n)); }}
         >
           <Filter size={13} color="var(--gray-9)" />
@@ -825,8 +825,8 @@ const RoadmapGeral = () => {
         {!filtersCollapsed && (
         <>
         {/* Row 1: Squad tags + Escopo tags */}
-        <Flex wrap="wrap" align="center" gap="8" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
-          <Flex align="center" gap="5" style={{ flexShrink: 0, marginRight: 4 }}>
+        <Flex wrap="wrap" align="center" style={{ gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
+          <Flex align="center" style={{ gap: 5, flexShrink: 0, marginRight: 4 }}>
             <Filter size={13} />
             <Text size="2" weight="bold" color="gray">SQUAD</Text>
           </Flex>
@@ -857,14 +857,14 @@ const RoadmapGeral = () => {
         </Flex>
 
         {/* Row 2: MultiSelect dropdowns */}
-        <Flex wrap="wrap" gap="8" align="center" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
+        <Flex wrap="wrap" align="center" style={{ gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
           <MultiSelectFilter options={(filterOptions.statuses || []).map(s => s.nome)} selected={filters.statuses} onChange={s => setFilters(p => ({ ...p, statuses: s }))} placeholder="Todos os status" maxWidth={200} />
           <MultiSelectFilter options={(filterOptions.grupos || []).map(g => g.nome)} selected={filters.grupos} onChange={g => setFilters(p => ({ ...p, grupos: g }))} placeholder="Grupo atendimento" maxWidth={200} />
           <MultiSelectFilter options={PRIORIDADE_INTERNA_OPTIONS.map(p => p.value)} selected={filters.prioridades} onChange={p => setFilters(prev => ({ ...prev, prioridades: p }))} placeholder="Todas as prioridades" maxWidth={180} />
         </Flex>
 
           {/* Row 3: EXIBIÇÃO — compact inline layout */}
-        <Flex wrap="wrap" gap="10" align="center" style={{ padding: '10px 14px' }}>
+        <Flex wrap="wrap" align="center" style={{ gap: 8, padding: '10px 14px' }}>
 
           {/* BARRAS — inline */}
           <Flex wrap="nowrap" gap="6" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
