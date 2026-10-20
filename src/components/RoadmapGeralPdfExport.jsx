@@ -8,6 +8,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { getStorage, ref, getDownloadURL, listAll } from 'firebase/storage';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 const ESCOPO_COLORS = {
@@ -105,7 +106,7 @@ const CB = '1px solid #e2e8f0';
 const cellBase = { flexShrink: 0, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: CB, overflow: 'hidden' };
 
 // ── GanttPdfContent ─────────────────────────────────────────────────────────
-function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedAt, totalTickets }) {
+function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedAt, totalTickets, logoClient, logoNtt }) {
   const COL_W = columns.length > 0 ? Math.max(32, Math.floor(TRACK_W / columns.length)) : 80;
 
   const timelineStart = columns.length > 0 ? columns[0].start.getTime() : 0;
@@ -144,7 +145,10 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
             Exportado em {exportedAt} · {totalTickets} tickets{groupBy !== 'none' ? ` · Agrupado por ${groupBy}` : ''}
           </div>
         </div>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#1e40af' }}>NTT Data · SGT</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {logoClient && <img src={logoClient} alt="Client" style={{ height: 32, objectFit: 'contain', maxWidth: 100 }} crossOrigin="anonymous" />}
+          {logoNtt && <img src={logoNtt} alt="NTT Data" style={{ height: 32, objectFit: 'contain', maxWidth: 100 }} crossOrigin="anonymous" />}
+        </div>
       </div>
 
       {/* ── COLUMN HEADERS ── */}
@@ -368,6 +372,16 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
 // ══════════════════════════════════════════════════════════════════════════
 // exportRoadmapGeralPdf — função principal exportada
 // ══════════════════════════════════════════════════════════════════════════
+async function getLogoUrl(storage, prefix) {
+  try {
+    const listRef = ref(storage, '/');
+    const res = await listAll(listRef);
+    const match = res.items.find(item => item.name.startsWith(prefix) && (item.name.endsWith('.png') || item.name.endsWith('.jpg') || item.name.endsWith('.jpeg')));
+    if (match) return await getDownloadURL(match);
+  } catch { /* ignore */ }
+  return null;
+}
+
 export async function exportRoadmapGeralPdf({ groupedRows, columns, granularity, groupBy, ticketsWithRange }) {
   const exportedAt = new Date().toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -375,6 +389,13 @@ export async function exportRoadmapGeralPdf({ groupedRows, columns, granularity,
   });
 
   const totalTickets = ticketsWithRange.length;
+
+  // Load logos from Firebase Storage
+  const storage = getStorage();
+  const [logoClient, logoNtt] = await Promise.all([
+    getLogoUrl(storage, 'client_'),
+    getLogoUrl(storage, 'ntt_'),
+  ]);
 
   const container = document.createElement('div');
   container.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:#fff;z-index:-9999;pointer-events:none;`;
@@ -389,6 +410,8 @@ export async function exportRoadmapGeralPdf({ groupedRows, columns, granularity,
       groupBy={groupBy || 'none'}
       exportedAt={exportedAt}
       totalTickets={totalTickets}
+      logoClient={logoClient}
+      logoNtt={logoNtt}
     />
   );
 
