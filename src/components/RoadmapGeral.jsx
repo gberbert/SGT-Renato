@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress } from '@radix-ui/themes';
-import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText, Flame, ArrowUp, Minus, ArrowDown } from 'lucide-react';
+import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText, Flame, ArrowUp, Minus, ArrowDown, AlertCircle, Eye, Pencil } from 'lucide-react';
 import { exportRoadmapGeralPdf } from './RoadmapGeralPdfExport';
 import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
-import { auth } from '../firebase';
+import { db, auth } from '../firebase';
+import { doc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useOperacaoRadar } from '../contexts/OperacaoRadarContext';
 import {
   fetchTicketsForRoadmap,
@@ -199,6 +200,7 @@ const RoadmapGeral = () => {
   const [editingPriority, setEditingPriority] = useState(null);
   const [editingPriorityValue, setEditingPriorityValue] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedTicketMode, setSelectedTicketMode] = useState('view');
   // Controla re-carga automática após carregar uma visão
   const [pendingAutoReload, setPendingAutoReload] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(
@@ -628,6 +630,24 @@ const RoadmapGeral = () => {
     }
   };
 
+  // ── Save field (edit mode) ─────────────────────────────────────────────
+  const handleSaveField = useCallback(async (issueKey, field, value) => {
+    const t = Array.isArray(ticketsCache) ? ticketsCache.find(x => (x.issueKey || x.id) === issueKey) : null;
+    if (!t) return;
+    const docId = t.id || t.issueKey;
+    try {
+      const oldVal = t[field] ?? null;
+      const newVal = value ?? null;
+      await updateDoc(doc(db, 'tickets_global', docId), { [field]: value });
+      const sfl = { dataFimDesenvolvimento:'Fim Desenvolvimento', dataFimTesteInterno:'Fim Teste Interno', dataFimTesteQa:'Fim Teste (QA)', dataFimHomologacao:'Fim Homologação', dataConclusao:'Conclusão' };
+      const stl = { percentualConclusao:'% Conclusão', percentualConclusaoTesteInterno:'% Conclusão Teste', prioridadeInterna:'Prioridade', impedimento:'Impedimento', demandaVulnerabilidade:'Vuln.', squadPrincipal:'Squad', ticketsVinculados:'Tickets Vinc.', observacaoAdicional:'Motivo Impedimento', responsavelDesenvolvimento:'Resp. Dev', responsavelTesteInterno:'Resp. Teste', observacao:'Observação', estimativaInterna:'Estimativa (h)' };
+      if (sfl[field] && oldVal !== newVal) await addDoc(collection(db, 'tickets_global', docId, 'replanningLog'), { issueKey: t.issueKey || t.id, field, fieldLabel: sfl[field], oldValue: oldVal, newValue: newVal, changedAt: serverTimestamp(), changedBy: auth.currentUser?.displayName || auth.currentUser?.email || 'unknown' });
+      if (stl[field] && oldVal !== newVal) await addDoc(collection(db, 'tickets_global', docId, 'statusChangeLog'), { issueKey: t.issueKey || t.id, field, fieldLabel: stl[field], oldValue: oldVal, newValue: newVal, changedAt: serverTimestamp(), changedBy: auth.currentUser?.displayName || auth.currentUser?.email || 'unknown', source: 'user' });
+      setTicketsCache(prev => Array.isArray(prev) ? prev.map(x => x.id === t.id ? { ...x, [field]: value } : x) : prev);
+      setSelectedTicket(prev => prev ? { ...prev, [field]: value } : prev);
+    } catch (e) { console.error(e); }
+  }, [ticketsCache]); // eslint-disable-line
+
   // ── Helpers for row tags ────────────────────────────────────────────────
   const getPrioMeta = (v) => {
     const p = String(v || '').toLowerCase().trim();
@@ -999,14 +1019,20 @@ const RoadmapGeral = () => {
                                 {/* Key */}
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedTicket(ticket)}
+                                  onClick={() => { setSelectedTicket(ticket); setSelectedTicketMode('view'); }}
                                   title="Ver detalhes"
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--rg-accent)', fontWeight: 700, fontFamily: 'monospace', fontSize: 10, flexShrink: 0, textDecoration: 'underline', textUnderlineOffset: 2, whiteSpace: 'nowrap' }}
                                 >
                                   {ticket.issueKey}
                                 </button>
+                                {/* Impedimento icon */}
+                                {ticket.impedimento === true && (
+                                  <span title="Impedido" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', color: '#fbbf24' }}>
+                                    <AlertCircle size={11} />
+                                  </span>
+                                )}
                                 {/* Title */}
-                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, color: 'var(--gray-11)', cursor: 'pointer', minWidth: 0 }} onClick={() => setSelectedTicket(ticket)}>
+                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, color: 'var(--gray-11)', cursor: 'pointer', minWidth: 0 }} onClick={() => { setSelectedTicket(ticket); setSelectedTicketMode('view'); }}>
                                   {' · '}{ticket.summary || ''}
                                 </span>
                                 {/* Squad badge */}
@@ -1022,6 +1048,14 @@ const RoadmapGeral = () => {
                                   const short = ticket.status.length > 12 ? ticket.status.slice(0, 12) + '…' : ticket.status;
                                   return <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 10, background: sc + '22', color: sc, border: `1px solid ${sc}55`, flexShrink: 0, whiteSpace: 'nowrap' }}>{short}</span>;
                                 })()}
+                                {/* View button */}
+                                <button type="button" title="Visualizar" onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setSelectedTicketMode('view'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 3px', color: 'var(--gray-9)', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                                  <Eye size={11} />
+                                </button>
+                                {/* Edit button */}
+                                <button type="button" title="Editar" onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); setSelectedTicketMode('edit'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 3px', color: 'var(--indigo-9)', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                                  <Pencil size={11} />
+                                </button>
                               </div>
                             </Box>
                             {/* Coluna Prioridade Interna editável */}
@@ -1116,13 +1150,13 @@ const RoadmapGeral = () => {
         );
       })()}
 
-      {/* ── Ticket detail modal (view only) ── */}
+      {/* ── Ticket detail modal ── */}
       {selectedTicket && (
         <DemandaDetailsModal
           ticket={selectedTicket}
-          mode="view"
-          onClose={() => setSelectedTicket(null)}
-          onSave={() => {}}
+          mode={selectedTicketMode}
+          onClose={() => { setSelectedTicket(null); setSelectedTicketMode('view'); }}
+          onSave={handleSaveField}
         />
       )}
 
