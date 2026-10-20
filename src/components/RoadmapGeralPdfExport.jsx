@@ -286,6 +286,81 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
         ))}
         <div style={{ marginLeft: 'auto', fontSize: 7, color: '#9ca3af' }}>⚠ Impedido · 🔒 Vulnerabilidade · Linha vermelha = hoje</div>
       </div>
+
+      {/* ── IMPEDIDOS SECTION ── */}
+      {(() => {
+        const impTickets = groupedRows.flatMap(g => g.tickets).filter(t => t.impedimento === true);
+        if (impTickets.length === 0) return null;
+        const MOTIVO_W = PAGE_W - LEFT_W;
+        return (
+          <div style={{ marginTop: 0 }}>
+            {/* Section header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#fef2f2', borderTop: '3px solid #dc2626', borderBottom: '2px solid #fecaca' }}>
+              <span style={{ fontSize: 12 }}>🚧</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#991b1b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Itens Impedidos</span>
+              <span style={{ fontSize: 9, color: '#dc2626', fontWeight: 600 }}>({impTickets.length})</span>
+            </div>
+            {/* Column headers */}
+            <div style={{ display: 'flex', borderBottom: '2px solid #fecaca', background: '#fff1f2', minHeight: 28 }}>
+              {hCell(TITLE_W, 'Ticket', null)}
+              {hCell(SQ_W, 'Squad', null)}
+              {hCell(ST_W, 'Status', null)}
+              {hCell(IMP_W, '⚠', 'Imp.')}
+              {hCell(VUL_W, '🔒', 'Vuln.')}
+              {hCell(PR_W, 'Prio', null)}
+              {hCell(PC_W, '%C', 'Concl.')}
+              {hCell(PT_W, '%T', 'Teste')}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', padding: '4px 8px', borderRight: CB }}>
+                <span style={{ fontSize: 7.5, fontWeight: 800, color: '#991b1b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Motivo do Impedimento</span>
+              </div>
+            </div>
+            {/* Impedido rows */}
+            {impTickets.map((ticket, ti) => {
+              const eb = escopoBadge(ticket.escopo);
+              const isVuln = ticket.demandaVulnerabilidade === 'Sim';
+              const squad = ticket.squadPrincipal || (ticket.grupoSuporte ? ticket.grupoSuporte.replace(/^\d+\s*-\s*/, '').trim().slice(0, 8) : '');
+              const statusTxt = (ticket.status || '').length > 10 ? ticket.status.slice(0, 10) + '…' : (ticket.status || '');
+              const sc = statusColor(ticket.status);
+              const pb = prioBadge(ticket.prioridadeInterna);
+              const pct = ticket.percentualConclusao != null ? `${ticket.percentualConclusao}%` : '';
+              const pctT = ticket.percentualConclusaoTesteInterno != null ? `${ticket.percentualConclusaoTesteInterno}%` : '';
+              const motivo = ticket.observacaoAdicional || ticket.motivoImpedimento || '—';
+              const rowBg = ti % 2 === 0 ? '#fff8f8' : '#fff1f2';
+              return (
+                <div key={ticket.issueKey || ti} style={{ display: 'flex', alignItems: 'center', minHeight: ROW_H, borderBottom: '1px solid #fecaca', background: rowBg }}>
+                  <div style={{ ...cellBase, width: TITLE_W, gap: 3, padding: '0 5px', justifyContent: 'flex-start' }}>
+                    <div style={{ background: eb.bg, color: eb.text, fontSize: 7, fontWeight: 800, padding: '1px 3px', borderRadius: 3, flexShrink: 0, minWidth: 24, textAlign: 'center' }}>{eb.short}</div>
+                    <span style={{ fontSize: 8, flexShrink: 0 }}>⚠</span>
+                    <span style={{ fontSize: 7.5, fontWeight: 700, color: '#dc2626', fontFamily: 'monospace', flexShrink: 0 }}>{String(ticket.issueKey || '').slice(-6)}</span>
+                    <span style={{ fontSize: 7.5, color: '#b91c1c', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{ticket.summary || ''}</span>
+                  </div>
+                  <div style={{ ...cellBase, width: SQ_W, padding: '0 2px' }}>
+                    {squad && <span style={{ fontSize: 7, fontWeight: 600, color: '#065f46', background: '#d1fae5', padding: '1px 3px', borderRadius: 3, maxWidth: SQ_W - 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{squad}</span>}
+                  </div>
+                  <div style={{ ...cellBase, width: ST_W, padding: '0 2px' }}>
+                    <span style={{ fontSize: 7, fontWeight: 600, color: sc, maxWidth: ST_W - 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{statusTxt}</span>
+                  </div>
+                  <div style={{ ...cellBase, width: IMP_W }}><span style={{ fontSize: 11 }}>⚠</span></div>
+                  <div style={{ ...cellBase, width: VUL_W }}>{isVuln && <span style={{ fontSize: 11 }}>🔒</span>}</div>
+                  <div style={{ ...cellBase, width: PR_W, padding: '0 2px' }}>
+                    {pb && <span style={{ fontSize: 7, fontWeight: 700, background: pb.bg, color: pb.color, padding: '1px 3px', borderRadius: 3, whiteSpace: 'nowrap' }}>{pb.label}</span>}
+                  </div>
+                  <div style={{ ...cellBase, width: PC_W }}>
+                    <span style={{ fontSize: 7.5, fontWeight: 700, color: pct === '100%' ? '#16a34a' : '#374151' }}>{pct}</span>
+                  </div>
+                  <div style={{ ...cellBase, width: PT_W }}>
+                    <span style={{ fontSize: 7.5, fontWeight: 700, color: pctT === '100%' ? '#16a34a' : '#374151' }}>{pctT}</span>
+                  </div>
+                  {/* Motivo do impedimento */}
+                  <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', padding: '4px 8px', overflow: 'hidden' }}>
+                    <span style={{ fontSize: 8, color: '#7f1d1d', lineHeight: 1.3, wordBreak: 'break-word', maxHeight: ROW_H * 2 }}>{motivo}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
   );
 }
