@@ -96,10 +96,10 @@ const VUL_W   = 16;   // 🔒 vulnerabilidade icon
 const PR_W    = 44;   // prioridade
 const PC_W    = 26;   // % conclusão
 const PT_W    = 26;   // % teste interno
-const TV_W    = 68;   // tickets vinculados
-const NAT_W   = 60;   // natureza iniciativa
-const LEFT_W  = TITLE_W + SQ_W + ST_W + IMP_W + VUL_W + PR_W + PC_W + PT_W + TV_W + NAT_W; // 520
-const TRACK_W = PAGE_W - LEFT_W;  // 760
+const TV_W    = 60;   // tickets vinculados
+const NAT_W   = 100;  // natureza iniciativa (wider for full text)
+const LEFT_W  = TITLE_W + SQ_W + ST_W + IMP_W + VUL_W + PR_W + PC_W + PT_W + TV_W + NAT_W; // 552
+const TRACK_W = PAGE_W - LEFT_W;  // 728
 const ROW_H   = 26;
 const HEADER_H = 44;
 
@@ -266,7 +266,7 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                 {/* Natureza Iniciativa */}
                 {(() => {
                   const nat = ticket.naturezaIniciativa || ticket.naturezaOperacao || '';
-                  const natShort = nat.length > 12 ? nat.slice(0, 12) + '…' : nat;
+                  const natShort = nat.length > 20 ? nat.slice(0, 20) + '…' : nat;
                   return (
                     <div style={{ ...cellBase, width: NAT_W, padding: '0 2px' }}>
                       <span style={{ fontSize: 6.5, fontWeight: 600, color: '#0891b2', textAlign: 'center', lineHeight: 1.2 }}>{natShort}</span>
@@ -397,7 +397,7 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                   })()}
                   {(() => {
                     const nat = ticket.naturezaIniciativa || ticket.naturezaOperacao || '';
-                    const natShort = nat.length > 12 ? nat.slice(0, 12) + '…' : nat;
+                    const natShort = nat.length > 20 ? nat.slice(0, 20) + '…' : nat;
                     return <div style={{ ...cellBase, width: NAT_W, padding: '0 2px' }}><span style={{ fontSize: 6.5, fontWeight: 600, color: '#0891b2', textAlign: 'center', lineHeight: 1.2 }}>{natShort}</span></div>;
                   })()}
                   {/* Motivo do impedimento */}
