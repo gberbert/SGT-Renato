@@ -198,7 +198,7 @@ const RoadmapGeral = () => {
   // Controla re-carga automática após carregar uma visão
   const [pendingAutoReload, setPendingAutoReload] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(
-    () => localStorage.getItem('roadmap_filtersCollapsed') === 'true'
+    () => localStorage.getItem('roadmap_filtersCollapsed') !== 'false'
   );
 
   const uid = auth.currentUser?.uid || null;
@@ -848,71 +848,65 @@ const RoadmapGeral = () => {
           <MultiSelectFilter options={PRIORIDADE_INTERNA_OPTIONS.map(p => p.value)} selected={filters.prioridades} onChange={p => setFilters(prev => ({ ...prev, prioridades: p }))} placeholder="Todas as prioridades" maxWidth={180} />
         </Flex>
 
-        {/* Row 3: EXIBIÇÃO (barras, marcos, período, escopo carga) */}
-        <Flex wrap="wrap" gap="10" align="stretch" style={{ padding: '10px 14px' }}>
+          {/* Row 3: EXIBIÇÃO — compact inline layout */}
+        <Flex wrap="wrap" gap="10" align="center" style={{ padding: '10px 14px' }}>
 
-          {/* Box: Barras */}
-          <Flex wrap="nowrap" gap="8" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
-            <Text size="1" weight="bold" color="gray" style={{ letterSpacing: '0.06em', flexShrink: 0, marginRight: 4 }}>BARRAS</Text>
-            <Box>
-              <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>Início</Text>
-              <select value={dateConfig.startField} onChange={e => setDateConfig(p => ({ ...p, startField: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 160 }}>
-                {START_FIELD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-            </Box>
-            <Box>
-              <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>Fim</Text>
-              <select value={dateConfig.endField} onChange={e => setDateConfig(p => ({ ...p, endField: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 160 }}>
-                {END_FIELD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-            </Box>
+          {/* BARRAS — inline */}
+          <Flex wrap="nowrap" gap="6" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 2 }}>BARRAS</span>
+            <span style={{ fontSize: 11, color: 'var(--gray-10)', flexShrink: 0 }}>Início</span>
+            <select value={dateConfig.startField} onChange={e => setDateConfig(p => ({ ...p, startField: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 165 }}>
+              {START_FIELD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+            <span style={{ fontSize: 11, color: 'var(--gray-10)', flexShrink: 0 }}>Fim</span>
+            <select value={dateConfig.endField} onChange={e => setDateConfig(p => ({ ...p, endField: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 165 }}>
+              {END_FIELD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
           </Flex>
 
-          {/* Box: Marcos A-F */}
-          <Flex wrap="nowrap" gap="8" align="flex-start" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
-            <Text size="1" weight="bold" color="gray" style={{ letterSpacing: '0.06em', flexShrink: 0, marginRight: 4, marginTop: 2 }}>MARCOS</Text>
-            <Flex direction="column" gap="1">
-              {MILESTONE_FIELDS.map(mf => (
-                <label key={mf.key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <input type="checkbox"
-                    checked={!scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key)}
+          {/* MARCOS — compact circles with tooltip */}
+          <Flex wrap="nowrap" gap="4" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 2 }}>MARCOS</span>
+            {MILESTONE_FIELDS.map(mf => {
+              const checked = !scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key);
+              return (
+                <label key={mf.key} title={mf.label} style={{ cursor: 'pointer', opacity: checked ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                  <input type="checkbox" checked={checked}
                     onChange={() => setScopeConfig(prev => {
                       const cur = prev.visibleMilestones?.length ? prev.visibleMilestones : MILESTONE_FIELDS.map(f => f.key);
                       const nxt = cur.includes(mf.key) ? cur.filter(k => k !== mf.key) : [...cur, mf.key];
                       return { ...prev, visibleMilestones: nxt.length === MILESTONE_FIELDS.length ? [] : nxt };
                     })}
-                    style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12, flexShrink: 0 }}
+                    style={{ display: 'none' }}
                   />
-                  <div style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0, background: mf.highlight?.background || '#fff', border: '1.5px solid rgba(15,15,15,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 800, color: mf.highlight?.color || '#000' }}>{mf.letter}</div>
-                  <span style={{ fontSize: 11, color: 'var(--gray-11)' }}>{mf.label}</span>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: mf.highlight?.background || '#fff', border: `1.5px solid ${mf.highlight?.borderColor || 'rgba(15,15,15,0.5)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 800, color: mf.highlight?.color || '#000' }}>{mf.letter}</div>
                 </label>
-              ))}
-            </Flex>
+              );
+            })}
           </Flex>
 
-          {/* Box: Periodo + Escopo de carga */}
-          <Flex direction="column" gap="8" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flex: '1 1 auto', minWidth: 200 }}>
-            <Text size="1" weight="bold" color="gray" style={{ letterSpacing: '0.06em' }}>PERIODO / ESCOPO</Text>
-            <Flex gap="8" wrap="wrap" align="center">
-              <Box>
-                <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>De</Text>
-                <input type="date" value={scopeConfig.dateRangeStart} onChange={e => setScopeConfig(p => ({ ...p, dateRangeStart: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)' }} />
-              </Box>
-              <Box>
-                <Text size="1" color="gray" style={{ display: 'block', marginBottom: 3 }}>Ate</Text>
-                <input type="date" value={scopeConfig.dateRangeEnd} onChange={e => setScopeConfig(p => ({ ...p, dateRangeEnd: e.target.value }))} style={{ fontSize: 12, background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)' }} />
-              </Box>
-            </Flex>
-            <Flex gap="6" wrap="wrap" align="center">
-              <Text size="1" color="gray" style={{ flexShrink: 0 }}>Escopo carga:</Text>
-              {ESCOPO_RADAR_ORDER.map(esc => (
-                <label key={esc.key} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={scopeConfig.escopos.includes(esc.key)} onChange={() => setScopeConfig(prev => { const nxt = prev.escopos.includes(esc.key) ? prev.escopos.filter(k => k !== esc.key) : [...prev.escopos, esc.key]; return { ...prev, escopos: nxt }; })} style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12, flexShrink: 0 }} />
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: esc.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: 'var(--gray-11)' }}>{esc.label}</span>
-                </label>
-              ))}
-            </Flex>
+          {/* PERÍODO */}
+          <Flex wrap="nowrap" gap="6" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 2 }}>PERÍODO</span>
+            <span style={{ fontSize: 11, color: 'var(--gray-10)', flexShrink: 0 }}>De</span>
+            <input type="date" value={scopeConfig.dateRangeStart} onChange={e => setScopeConfig(p => ({ ...p, dateRangeStart: e.target.value }))} style={{ fontSize: 11, background: 'var(--gray-2)', border: `1px solid ${scopeConfig.dateRangeStart ? 'var(--indigo-7)' : 'var(--gray-5)'}`, borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 130 }} />
+            <span style={{ fontSize: 11, color: 'var(--gray-9)', flexShrink: 0 }}>→</span>
+            <input type="date" value={scopeConfig.dateRangeEnd} onChange={e => setScopeConfig(p => ({ ...p, dateRangeEnd: e.target.value }))} style={{ fontSize: 11, background: 'var(--gray-2)', border: `1px solid ${scopeConfig.dateRangeEnd ? 'var(--indigo-7)' : 'var(--gray-5)'}`, borderRadius: 6, padding: '3px 8px', color: 'var(--gray-12)', maxWidth: 130 }} />
+            {(scopeConfig.dateRangeStart || scopeConfig.dateRangeEnd) && (
+              <button onClick={() => setScopeConfig(p => ({ ...p, dateRangeStart: '', dateRangeEnd: '' }))} style={{ fontSize: 10, padding: '2px 6px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 4, cursor: 'pointer', color: 'var(--gray-9)', flexShrink: 0 }}>✕</button>
+            )}
+          </Flex>
+
+          {/* ESCOPO CARGA */}
+          <Flex wrap="nowrap" gap="6" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flex: '1 1 auto' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 2 }}>ESCOPO CARGA</span>
+            {ESCOPO_RADAR_ORDER.map(esc => (
+              <label key={esc.key} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                <input type="checkbox" checked={scopeConfig.escopos.includes(esc.key)} onChange={() => setScopeConfig(prev => { const nxt = prev.escopos.includes(esc.key) ? prev.escopos.filter(k => k !== esc.key) : [...prev.escopos, esc.key]; return { ...prev, escopos: nxt }; })} style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12, flexShrink: 0 }} />
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: esc.color, flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: 'var(--gray-11)', whiteSpace: 'nowrap' }}>{esc.label}</span>
+              </label>
+            ))}
           </Flex>
 
         </Flex>
