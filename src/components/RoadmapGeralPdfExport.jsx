@@ -224,11 +224,11 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
               {grpLbl('Por Natureza')}
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 {nats.map(([name, count]) => {
-                  const sh = name.length > 18 ? name.slice(0,18)+'…' : name;
+                  const sh = name.length > 10 ? name.slice(0,10)+'…' : name;
                   return (
-                    <div key={name} style={{ ...boxStyle('#e0f2fe', 62), maxWidth: 90 }}>
+                    <div key={name} style={boxStyle('#e0f2fe', 60)}>
                       <span style={numStyle('#0369a1', 26)}>{count}</span>
-                      <span style={{ fontSize: 6.5, fontWeight: 700, color: '#0891b2', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'center', lineHeight: 1.2, maxWidth: 86, whiteSpace: 'normal', wordBreak: 'break-word' }}>{sh}</span>
+                      <span style={lblStyle('#0891b2')}>{sh}</span>
                     </div>
                   );
                 })}
@@ -237,33 +237,38 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
 
             <div style={divStyle} />
 
-            {/* Group 3: squad stacked bar chart with prioridade distribution */}
+            {/* Group 3: squad stacked bar chart + legend on right */}
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
               {grpLbl('Por Squad · Prioridade')}
-              {sqList.map(({n, tot, pd}) => (
-                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
-                  <span style={{ fontSize: 7, color: '#374151', width: 68, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{n}</span>
-                  <div style={{ width: 120, height: 11, background: '#e2e8f0', borderRadius: 2, display: 'flex', overflow: 'hidden', flexShrink: 0 }}>
-                    {PR_ORD2.filter(p => pd[p]).map(p => (
-                      <div key={p} title={`${p}: ${pd[p]}`} style={{ width: `${(pd[p]/tot)*100}%`, height: '100%', background: SQ_PC[p], flexShrink: 0 }} />
-                    ))}
-                  </div>
-                  <span style={{ fontSize: 6.5, fontWeight: 800, color: '#374151', minWidth: 18, flexShrink: 0 }}>{tot}</span>
-                  <span style={{ display: 'flex', gap: 3, flexWrap: 'nowrap' }}>
-                    {PR_ORD2.filter(p => pd[p]).map(p => (
-                      <span key={p} style={{ fontSize: 6, fontWeight: 700, color: SQ_PC[p] === '#eab308' ? '#854d0e' : SQ_PC[p] === '#c7d2fe' ? '#3730a3' : SQ_PC[p] === '#cbd5e1' ? '#475569' : '#fff', background: SQ_PC[p], borderRadius: 2, padding: '0 2px', lineHeight: '11px' }}>{pd[p]}</span>
-                    ))}
-                  </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {/* Chart rows */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {sqList.map(({n, tot, pd}) => (
+                    <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
+                      <span style={{ fontSize: 7, color: '#374151', width: 68, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{n}</span>
+                      <div style={{ flex: 1, height: 11, background: '#e2e8f0', borderRadius: 2, display: 'flex', overflow: 'hidden' }}>
+                        {PR_ORD2.filter(p => pd[p]).map(p => (
+                          <div key={p} title={`${p}: ${pd[p]}`} style={{ width: `${(pd[p]/tot)*100}%`, height: '100%', background: SQ_PC[p], flexShrink: 0 }} />
+                        ))}
+                      </div>
+                      <span style={{ fontSize: 6.5, fontWeight: 800, color: '#374151', minWidth: 16, flexShrink: 0, textAlign: 'right' }}>{tot}</span>
+                      <span style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                        {PR_ORD2.filter(p => pd[p]).map(p => (
+                          <span key={p} style={{ fontSize: 6, fontWeight: 700, color: SQ_PC[p] === '#eab308' ? '#854d0e' : SQ_PC[p] === '#c7d2fe' ? '#3730a3' : SQ_PC[p] === '#cbd5e1' ? '#475569' : '#fff', background: SQ_PC[p], borderRadius: 2, padding: '0 2px', lineHeight: '11px' }}>{pd[p]}</span>
+                        ))}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {/* Legend */}
-              <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                {PR_ORD2.map(p => (
-                  <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 1, background: SQ_PC[p] }} />
-                    <span style={{ fontSize: 6, color: '#374151' }}>{p}</span>
-                  </div>
-                ))}
+                {/* Legend on right */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center', flexShrink: 0 }}>
+                  {PR_ORD2.map(p => (
+                    <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <div style={{ width: 9, height: 9, borderRadius: 2, background: SQ_PC[p], flexShrink: 0 }} />
+                      <span style={{ fontSize: 6.5, color: '#374151', whiteSpace: 'nowrap' }}>{p}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
