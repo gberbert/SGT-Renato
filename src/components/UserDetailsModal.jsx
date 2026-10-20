@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, Avatar, Text } from '@radix-ui/themes';
-import { Camera } from 'lucide-react';
+import { Camera, Sun, Moon } from 'lucide-react';
 import { storage } from '../firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateUser } from '../services/settingsService';
@@ -120,7 +120,7 @@ function AvatarUploader({ draftUser, setDraftUser, userId, readOnly }) {
 }
 
 /* ── Main Modal ── */
-export default function UserDetailsModal({ open, onOpenChange, user, currentUser }) {
+export default function UserDetailsModal({ open, onOpenChange, user, currentUser, theme, toggleTheme }) {
   const [draftUser, setDraftUser]   = useState(null);
   const [activeTab, setActiveTab]   = useState(TABS[0]);
   const [saving, setSaving]         = useState(false);
@@ -251,6 +251,38 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
             </div>
           )}
         </div>
+
+        {/* Theme toggle — always visible */}
+        {typeof toggleTheme === 'function' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 24px', borderTop: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(0,0,0,0.10)', flexShrink: 0,
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--gray-9)', textTransform: 'uppercase' }}>
+              Tema da Interface
+            </span>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 14px', borderRadius: 20,
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
+                color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
+                cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+            >
+              {theme === 'dark'
+                ? <><Sun size={14} />&nbsp;Mudar para Claro</>
+                : <><Moon size={14} />&nbsp;Mudar para Escuro</>
+              }
+            </button>
+          </div>
+        )}
 
         {/* Footer */}
         {!readOnly && (
