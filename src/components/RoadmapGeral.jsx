@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress } from '@radix-ui/themes';
 import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock } from 'lucide-react';
 import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
+import DemandaDetailsModal from './operacao/DemandaDetailsModal';
+import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 import { auth } from '../firebase';
 import { useOperacaoRadar } from '../contexts/OperacaoRadarContext';
 import {
@@ -195,6 +197,7 @@ const RoadmapGeral = () => {
   const [activeViewSnapshot, setActiveViewSnapshot] = useState(null);
   const [editingPriority, setEditingPriority] = useState(null);
   const [editingPriorityValue, setEditingPriorityValue] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(null);
   // Controla re-carga automática após carregar uma visão
   const [pendingAutoReload, setPendingAutoReload] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(
@@ -325,12 +328,9 @@ const RoadmapGeral = () => {
         if (!names.some((n) => filters.grupos.has(n))) return false;
       }
       if (filters.squads.size > 0) {
-        const allowed = new Set();
-        for (const squadId of filters.squads) {
-          for (const g of squadGrupoMap.get(squadId) || []) allowed.add(g);
-        }
-        const names = ticketGrupoNamesLocal(t);
-        if (!names.some((n) => allowed.has(n))) return false;
+        // Match by squadPrincipal or stripped grupoSuporte name (same as PlanejamentoCiclo)
+        const sname = t.squadPrincipal || stripNumericPrefix(t.grupoSuporte) || t.squad || '';
+        if (!sname || !filters.squads.has(sname)) return false;
       }
       if (filters.prioridades?.size > 0) {
         const p = t.prioridadeInterna != null ? String(t.prioridadeInterna) : null;
@@ -831,10 +831,11 @@ const RoadmapGeral = () => {
             <Text size="2" weight="bold" color="gray">SQUAD</Text>
           </Flex>
           {squads.slice().sort((a,b) => (a.name||'').localeCompare(b.name||'')).map(sq => {
-            const active = filters.squads.has(sq.id);
+            const squadKey = sq.sigla || sq.name || sq.nome || sq.id;
+            const active = filters.squads.has(squadKey);
             return (
               <button key={sq.id} type="button"
-                onClick={() => { const next = new Set(filters.squads); active ? next.delete(sq.id) : next.add(sq.id); setFilters(p => ({ ...p, squads: next })); }}
+                onClick={() => { const next = new Set(filters.squads); active ? next.delete(squadKey) : next.add(squadKey); setFilters(p => ({ ...p, squads: next })); }}
                 style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, cursor: 'pointer', userSelect: 'none', border: active ? '1px solid rgba(99,102,241,0.7)' : '1px solid var(--gray-5)', background: active ? 'rgba(99,102,241,0.2)' : 'var(--gray-3)', color: active ? '#a5b4fc' : 'var(--gray-10)', transition: 'all 0.12s' }}
               >{sq.sigla || sq.name || sq.nome}</button>
             );
@@ -980,20 +981,15 @@ const RoadmapGeral = () => {
                           <Flex key={ticket.issueKey} align="center" className="roadmap-geral-row">
                             <Box className="roadmap-geral-row-label-cell">
                               <Text size="1" className="roadmap-geral-row-label-text" title={ticket.summary} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                {ticket.issueUrl ? (
-                                  <a
-                                    href={ticket.issueUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ color: 'var(--rg-accent)', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {ticket.issueKey}
-                                  </a>
-                                ) : (
-                                  <span style={{ flexShrink: 0 }}>{ticket.issueKey}</span>
-                                )}
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTicket(ticket)}
+                                  title="Ver detalhes"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--rg-accent)', fontWeight: 600, fontFamily: 'monospace', fontSize: 11, flexShrink: 0, textDecoration: 'underline', textUnderlineOffset: 2 }}
+                                >
+                                  {ticket.issueKey}
+                                </button>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => setSelectedTicket(ticket)}>
                                   {' · '}{ticket.summary || 'Sem titulo'}
                                 </span>
                               </Text>
@@ -1087,6 +1083,16 @@ const RoadmapGeral = () => {
           </Box>
         );
       })()}
+
+      {/* ── Ticket detail modal (view only) ── */}
+      {selectedTicket && (
+        <DemandaDetailsModal
+          ticket={selectedTicket}
+          mode="view"
+          onClose={() => setSelectedTicket(null)}
+          onSave={() => {}}
+        />
+      )}
 
       <Flex justify="end" mt="3">
         <Flex align="center" gap="2" className="roadmap-geral-granularity-footer">
