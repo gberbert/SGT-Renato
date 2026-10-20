@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress } from '@radix-ui/themes';
-import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText, Flame, ArrowUp, Minus, ArrowDown, AlertCircle, Eye, Pencil } from 'lucide-react';
+import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText, Flame, ArrowUp, Minus, ArrowDown, AlertCircle, Eye, Pencil, ArrowUpDown } from 'lucide-react';
 import { exportRoadmapGeralPdf } from './RoadmapGeralPdfExport';
 import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
@@ -211,6 +211,8 @@ const RoadmapGeral = () => {
   const [selectedTicketMode, setSelectedTicketMode] = useState('view');
   // Controla re-carga automática após carregar uma visão
   const [pendingAutoReload, setPendingAutoReload] = useState(false);
+  const [sortField, setSortField] = useState('none');
+  const [sortDir, setSortDir] = useState('asc');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(
@@ -457,10 +459,43 @@ const RoadmapGeral = () => {
     [groupBy, squadGrupoMap, squads]
   );
 
+  const PRIO_ORDER = { 'crise': 1, 'crítica': 1, 'critica': 1, 'alto': 2, 'alta': 2, 'medio': 3, 'médio': 3, 'media': 3, 'média': 3, 'baixo': 4, 'baixa': 4, 'muito baixo': 5 };
+  const sortTickets = useCallback((tickets) => {
+    if (!sortField || sortField === 'none') return tickets;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...tickets].sort((a, b) => {
+      let va, vb;
+      if (sortField === 'squad') {
+        va = a.squadPrincipal || stripNumericPrefix(a.grupoSuporte) || a.squad || '';
+        vb = b.squadPrincipal || stripNumericPrefix(b.grupoSuporte) || b.squad || '';
+        return dir * String(va).localeCompare(String(vb), 'pt-BR');
+      }
+      if (sortField === 'status') {
+        va = a.status || ''; vb = b.status || '';
+        return dir * String(va).localeCompare(String(vb), 'pt-BR');
+      }
+      if (sortField === 'prioridade') {
+        const pa = PRIO_ORDER[String(a.prioridadeInterna || '').toLowerCase()] || 99;
+        const pb = PRIO_ORDER[String(b.prioridadeInterna || '').toLowerCase()] || 99;
+        return dir * (pa - pb);
+      }
+      if (sortField.startsWith('marco_')) {
+        const field = sortField.slice(6);
+        va = a[field]; vb = b[field];
+        if (!va && !vb) return 0;
+        if (!va) return 1;
+        if (!vb) return -1;
+        return dir * String(va).localeCompare(String(vb));
+      }
+      return 0;
+    });
+  }, [sortField, sortDir]); // eslint-disable-line
+
   const groupedRows = useMemo(() => {
-    if (groupBy === 'none') return [{ key: '__all__', label: null, tickets: ticketsWithRange }];
+    const sorted = sortTickets(ticketsWithRange);
+    if (groupBy === 'none') return [{ key: '__all__', label: null, tickets: sorted }];
     const map = new Map();
-    for (const ticket of ticketsWithRange) {
+    for (const ticket of sorted) {
       const key = groupKeyForTicket(ticket) || 'Outros';
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(ticket);
@@ -468,7 +503,7 @@ const RoadmapGeral = () => {
     return [...map.entries()]
       .map(([key, tickets]) => ({ key, label: key, tickets }))
       .sort((a, b) => String(a.label).localeCompare(String(b.label), 'pt-BR'));
-  }, [groupBy, ticketsWithRange, groupKeyForTicket]);
+  }, [groupBy, ticketsWithRange, groupKeyForTicket, sortTickets]);
 
   const toggleGroupCollapse = (key) => {
     setCollapsedGroups((prev) => {
@@ -841,7 +876,7 @@ const RoadmapGeral = () => {
 
       {/* ── Linha de controles ────────────────────────────────── */}
       <Flex align="center" justify="between" gap="3" wrap="wrap" mb="3">
-        <Flex align="center" gap="2">
+        <Flex align="center" gap="2" wrap="wrap">
           <Layers size={16} color="var(--gray-9)" />
           <Text size="1" color="gray" style={{ letterSpacing: '0.05em' }}>AGRUPAR POR</Text>
           <Select.Root value={groupBy} onValueChange={setGroupBy}>
@@ -852,6 +887,32 @@ const RoadmapGeral = () => {
               ))}
             </Select.Content>
           </Select.Root>
+          <span style={{ width: 1, height: 20, background: 'var(--glass-border)', margin: '0 4px' }} />
+          <ArrowUpDown size={14} color="var(--gray-9)" />
+          <Text size="1" color="gray" style={{ letterSpacing: '0.05em' }}>ORDENAR POR</Text>
+          <Select.Root value={sortField} onValueChange={setSortField}>
+            <Select.Trigger style={{ minWidth: 140 }} />
+            <Select.Content>
+              <Select.Item value="none">Padrão</Select.Item>
+              <Select.Item value="squad">Squad</Select.Item>
+              <Select.Item value="status">Status</Select.Item>
+              <Select.Item value="prioridade">Prioridade</Select.Item>
+              {MILESTONE_FIELDS.filter(mf => !scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key)).map(mf => (
+                <Select.Item key={mf.key} value={`marco_${mf.key}`}>{mf.letter} — {mf.label}</Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+          {sortField !== 'none' && (
+            <button
+              type="button"
+              onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+              title={sortDir === 'asc' ? 'Crescente — clique para inverter' : 'Decrescente — clique para inverter'}
+              style={{ background: 'var(--gray-3)', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', padding: '4px 8px', fontSize: 11, fontWeight: 700, color: 'var(--rg-accent)', display: 'flex', alignItems: 'center', gap: 3 }}
+            >
+              {sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+              {sortDir === 'asc' ? 'Cresc.' : 'Decresc.'}
+            </button>
+          )}
         </Flex>
         <Flex align="center" gap="2">
           <Popover.Root>
