@@ -43,6 +43,10 @@ const GROUP_BY_OPTIONS = [
   { value: 'squad', label: 'Squad' },
   { value: 'grupo', label: 'Grupo de Atendimento' },
   { value: 'status', label: 'Status' },
+  { value: 'prioridade', label: 'Prioridade Interna' },
+  { value: 'natureza', label: 'Natureza Iniciativa' },
+  { value: 'respDev', label: 'Resp. Desenvolvimento' },
+  { value: 'respTeste', label: 'Resp. Teste Interno' },
 ];
 
 const DATE_FIELD_OPTIONS = [
@@ -438,10 +442,11 @@ const RoadmapGeral = () => {
         case 'escopo': return normalizeEscopoKey(ticket.escopo) || 'Sem escopo';
         case 'grupo': return ticket.grupoSuporte || 'Sem grupo';
         case 'status': return ticket.status || 'Sem status';
-        case 'squad': {
-          // Same resolution as filter: use squadPrincipal or stripped grupoSuporte
-          return ticket.squadPrincipal || stripNumericPrefix(ticket.grupoSuporte) || ticket.squad || 'Sem squad';
-        }
+        case 'squad': return ticket.squadPrincipal || stripNumericPrefix(ticket.grupoSuporte) || ticket.squad || 'Sem squad';
+        case 'prioridade': return ticket.prioridadeInterna || 'Sem prioridade';
+        case 'natureza': return ticket.naturezaIniciativa || ticket.naturezaOperacao || 'Sem natureza';
+        case 'respDev': return ticket.responsavelDesenvolvimento || 'Sem responsável';
+        case 'respTeste': return ticket.responsavelTesteInterno || 'Sem responsável';
         default: return null;
       }
     },
@@ -479,7 +484,18 @@ const RoadmapGeral = () => {
     });
   };
 
-  const clearFilters = () => { setFilters(createEmptyFilters()); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); };
+  const clearFilters = () => {
+    const hadScopedEscopos = scopeConfig.escopos.length > 0;
+    setFilters(createEmptyFilters());
+    setImpedimentoFilter(false);
+    setDemandaVulnerabFilter(false);
+    setScopeConfig(createDefaultScopeConfig());
+    if (hadScopedEscopos) {
+      // Cache was loaded with restricted escopos; invalidate and re-fetch all
+      setTicketsCache(null);
+      setPendingAutoReload(true);
+    }
+  };
 
   const filterActive = filters.escopos.size>0 || filters.squads.size>0 || filters.grupos.size>0 || filters.statuses.size>0 || (filters.tickets?.size||0)>0 || (filters.prioridades?.size||0)>0 || (filters.sistemas?.size||0)>0 || (filters.naturezaIniciativa?.size||0)>0 || (filters.issuetype?.size||0)>0 || (filters.pctConclusao?.size||0)>0 || (filters.pctTesteInterno?.size||0)>0 || (filters.respDev?.size||0)>0 || (filters.respTeste?.size||0)>0 || impedimentoFilter || demandaVulnerabFilter;
 
@@ -917,7 +933,7 @@ const RoadmapGeral = () => {
             );
           })}
           {(filterActive || scopeActive) && (
-            <button onClick={() => { clearFilters(); setScopeConfig(createDefaultScopeConfig()); }} style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}>Limpar filtros</button>
+            <button onClick={() => clearFilters()} style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}>Limpar filtros</button>
           )}
         </Flex>
 
