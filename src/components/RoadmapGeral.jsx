@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress } from '@radix-ui/themes';
-import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock } from 'lucide-react';
+import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText } from 'lucide-react';
+import { exportRoadmapGeralPdf } from './RoadmapGeralPdfExport';
 import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
@@ -645,6 +646,16 @@ const RoadmapGeral = () => {
           </Box>
         </Flex>
         <Flex align="center" gap="2">
+          <Button
+            size="2"
+            variant="outline"
+            color="red"
+            disabled={loading || !ticketsWithRange || ticketsWithRange.length === 0}
+            onClick={() => exportRoadmapGeralPdf({ groupedRows, columns, granularity, groupBy, ticketsWithRange })}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <FileText size={15} /> Exportar PDF
+          </Button>
           <Button
             size="3"
             variant="solid"
