@@ -153,100 +153,99 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
         </div>
       </div>
 
-      {/* ── STATS SECTION ── */}
+      {/* ── STATS SECTION — all big-number KPI boxes, grouped by vertical dividers ── */}
       {(() => {
         const allTickets = groupedRows.flatMap(g => g.tickets);
         const total = allTickets.length;
         const impedidos = allTickets.filter(t => t.impedimento === true).length;
 
-        // By escopo
-        const escopoMap = {};
-        allTickets.forEach(t => {
-          const k = normalizeEscopo(t.escopo);
-          const eb = ESCOPO_COLORS[k] || { bg: '#374151', text: '#d1d5db', short: k.slice(0,4) };
-          if (!escopoMap[k]) escopoMap[k] = { count: 0, bg: eb.bg, text: eb.text, short: eb.short };
-          escopoMap[k].count++;
-        });
-        const escopos = Object.entries(escopoMap).sort((a,b) => b[1].count - a[1].count).slice(0,6);
-
         // By squad
         const squadMap = {};
         allTickets.forEach(t => {
           const sq = t.squadPrincipal || (t.grupoSuporte ? t.grupoSuporte.replace(/^\d+\s*-\s*/,'').trim() : '') || 'Sem squad';
-          const key = sq.slice(0,14);
-          squadMap[key] = (squadMap[key] || 0) + 1;
+          const k = sq.slice(0,11);
+          squadMap[k] = (squadMap[k]||0)+1;
         });
-        const squads = Object.entries(squadMap).sort((a,b) => b[1]-a[1]).slice(0,8);
-        const squadMax = squads[0]?.[1] || 1;
+        const squads = Object.entries(squadMap).sort((a,b) => b[1]-a[1]).slice(0,10);
 
         // By prioridade
-        const PRIO_COLORS = { 'Crise':'#dc2626','Alto':'#ea580c','Médio':'#eab308','Baixo':'#3b82f6','Muito baixo':'#93c5fd','(sem prioridade)':'#9ca3af' };
+        const PBGS = { 'Crise':'#dc2626','Alto':'#ea580c','Médio':'#eab308','Baixo':'#3b82f6','Muito baixo':'#c7d2fe','(sem prioridade)':'#e2e8f0' };
+        const PTXTS = { 'Crise':'#fff','Alto':'#fff','Médio':'#713f12','Baixo':'#fff','Muito baixo':'#1e3a8a','(sem prioridade)':'#64748b' };
         const prioMap = {};
-        allTickets.forEach(t => {
-          const k = t.prioridadeInterna || '(sem prioridade)';
-          prioMap[k] = (prioMap[k] || 0) + 1;
-        });
-        const PRIO_ORDER_ARR = ['Crise','Alto','Médio','Baixo','Muito baixo','(sem prioridade)'];
-        const prios = Object.entries(prioMap).sort((a,b) => { const ia=PRIO_ORDER_ARR.indexOf(a[0]); const ib=PRIO_ORDER_ARR.indexOf(b[0]); return (ia===-1?99:ia)-(ib===-1?99:ib); });
-        const prioMax = prios[0]?.[1] || 1;
+        allTickets.forEach(t => { const k = t.prioridadeInterna||'(sem prioridade)'; prioMap[k]=(prioMap[k]||0)+1; });
+        const PRIO_ORD = ['Crise','Alto','Médio','Baixo','Muito baixo','(sem prioridade)'];
+        const prios = Object.entries(prioMap).sort((a,b)=>{const ia=PRIO_ORD.indexOf(a[0]);const ib=PRIO_ORD.indexOf(b[0]);return(ia===-1?99:ia)-(ib===-1?99:ib);});
 
-        const BAR_LABEL_W = 72;
-        const BAR_CHART_W = (PAGE_W / 2) - 24;
-        const BAR_TRACK_W = BAR_CHART_W - BAR_LABEL_W - 36;
-        const BAR_ROW_H = 13;
+        // By natureza
+        const natMap = {};
+        allTickets.forEach(t => { const k = t.naturezaIniciativa||t.naturezaOperacao||'(sem natureza)'; natMap[k]=(natMap[k]||0)+1; });
+        const nats = Object.entries(natMap).sort((a,b) => b[1]-a[1]).slice(0,8);
+
+        const boxStyle = (bg, fw) => ({ background: bg, borderRadius: 5, padding: '4px 7px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: fw });
+        const numStyle = (c, fs) => ({ fontSize: fs, fontWeight: 900, color: c, lineHeight: 1 });
+        const lblStyle = (c) => ({ fontSize: 6.5, fontWeight: 700, color: c, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
+        const divStyle = { width: 1, background: '#cbd5e1', alignSelf: 'stretch', margin: '0 8px' };
+        const grpLbl = (t) => <div style={{ fontSize: 7, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{t}</div>;
 
         return (
-          <div style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', padding: '8px 12px' }}>
-            {/* KPI boxes row */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'stretch' }}>
-              {/* Total tickets */}
-              <div style={{ background: '#1e40af', borderRadius: 6, padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 70 }}>
-                <span style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{total}</span>
-                <span style={{ fontSize: 7.5, fontWeight: 700, color: '#bfdbfe', marginTop: 2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Tickets</span>
+          <div style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1', padding: '8px 12px', display: 'flex', alignItems: 'stretch' }}>
+            {/* Group 1: totals */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {grpLbl('Totais')}
+              <div style={{ display: 'flex', gap: 5, alignItems: 'flex-start' }}>
+                <div style={boxStyle('#1e40af', 60)}>
+                  <span style={numStyle('#fff', 26)}>{total}</span>
+                  <span style={lblStyle('#bfdbfe')}>Tickets</span>
+                </div>
+                <div style={boxStyle(impedidos > 0 ? '#991b1b' : '#374151', 60)}>
+                  <span style={numStyle('#fff', 26)}>{impedidos}</span>
+                  <span style={lblStyle(impedidos > 0 ? '#fca5a5' : '#9ca3af')}>Impedidos</span>
+                </div>
               </div>
-              {/* Impedidos */}
-              <div style={{ background: impedidos > 0 ? '#991b1b' : '#374151', borderRadius: 6, padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 70 }}>
-                <span style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{impedidos}</span>
-                <span style={{ fontSize: 7.5, fontWeight: 700, color: impedidos > 0 ? '#fca5a5' : '#9ca3af', marginTop: 2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Impedidos</span>
-              </div>
-              {/* Escopo boxes */}
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-                {escopos.map(([key, info]) => (
-                  <div key={key} style={{ background: info.bg, borderRadius: 6, padding: '4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 48 }}>
-                    <span style={{ fontSize: 18, fontWeight: 900, color: info.text, lineHeight: 1 }}>{info.count}</span>
-                    <span style={{ fontSize: 7, fontWeight: 800, color: info.text, opacity: 0.85, marginTop: 1, textTransform: 'uppercase' }}>{info.short}</span>
+            </div>
+
+            <div style={divStyle} />
+
+            {/* Group 2: por squad */}
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+              {grpLbl('Por Squad')}
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {squads.map(([name, count]) => (
+                  <div key={name} style={boxStyle('#dbeafe', 42)}>
+                    <span style={numStyle('#1e40af', 17)}>{count}</span>
+                    <span style={lblStyle('#3b82f6')}>{name}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Bar charts row */}
-            <div style={{ display: 'flex', gap: 16 }}>
-              {/* Squad chart */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Por Squad</div>
-                {squads.map(([name, count]) => (
-                  <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                    <span style={{ fontSize: 7, color: '#374151', minWidth: BAR_LABEL_W, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                    <div style={{ flex: 1, height: BAR_ROW_H, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ width: `${(count/squadMax)*100}%`, height: '100%', background: '#3b82f6', borderRadius: 2 }} />
-                    </div>
-                    <span style={{ fontSize: 7, fontWeight: 700, color: '#1e40af', minWidth: 22, textAlign: 'left' }}>{count}</span>
+            <div style={divStyle} />
+
+            {/* Group 3: por prioridade */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {grpLbl('Por Prioridade')}
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {prios.map(([name, count]) => (
+                  <div key={name} style={boxStyle(PBGS[name]||'#e2e8f0', 42)}>
+                    <span style={numStyle(PTXTS[name]||'#374151', 17)}>{count}</span>
+                    <span style={lblStyle(PTXTS[name]||'#374151')}>{name}</span>
                   </div>
                 ))}
               </div>
-              {/* Prioridade chart */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Por Prioridade</div>
-                {prios.map(([name, count]) => {
-                  const c = PRIO_COLORS[name] || '#9ca3af';
+            </div>
+
+            <div style={divStyle} />
+
+            {/* Group 4: por natureza */}
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+              {grpLbl('Por Natureza')}
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {nats.map(([name, count]) => {
+                  const short = name.length > 14 ? name.slice(0, 14) + '…' : name;
                   return (
-                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                      <span style={{ fontSize: 7, color: '#374151', minWidth: BAR_LABEL_W, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                      <div style={{ flex: 1, height: BAR_ROW_H, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
-                        <div style={{ width: `${(count/prioMax)*100}%`, height: '100%', background: c, borderRadius: 2 }} />
-                      </div>
-                      <span style={{ fontSize: 7, fontWeight: 700, color: '#374151', minWidth: 22, textAlign: 'left' }}>{count}</span>
+                    <div key={name} style={boxStyle('#e0f2fe', 44)}>
+                      <span style={numStyle('#0369a1', 17)}>{count}</span>
+                      <span style={lblStyle('#0891b2')}>{short}</span>
                     </div>
                   );
                 })}
