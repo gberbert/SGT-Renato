@@ -213,6 +213,7 @@ const RoadmapGeral = () => {
   const [pendingAutoReload, setPendingAutoReload] = useState(false);
   const [sortField, setSortField] = useState('none');
   const [sortDir, setSortDir] = useState('asc');
+  const [includeObservacaoPdf, setIncludeObservacaoPdf] = useState(false);
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [naoImpedidoFilter, setNaoImpedidoFilter] = useState(false);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
@@ -751,12 +752,16 @@ const RoadmapGeral = () => {
           </Box>
         </Flex>
         <Flex align="center" gap="2">
+          <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--gray-10)', cursor: 'pointer', userSelect: 'none', flexShrink: 0 }} title="Incluir coluna Observação na seção de impedidos">
+            <input type="checkbox" checked={includeObservacaoPdf} onChange={e => setIncludeObservacaoPdf(e.target.checked)} style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12 }} />
+            Obs. no PDF
+          </label>
           <Button
             size="2"
             variant="outline"
             color="red"
             disabled={loading || !ticketsWithRange || ticketsWithRange.length === 0}
-            onClick={() => exportRoadmapGeralPdf({ groupedRows, columns, granularity, groupBy, ticketsWithRange })}
+            onClick={() => exportRoadmapGeralPdf({ groupedRows, columns, granularity, groupBy, ticketsWithRange, includeObservacao: includeObservacaoPdf })}
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <FileText size={15} /> Exportar PDF

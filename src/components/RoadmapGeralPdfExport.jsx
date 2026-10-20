@@ -106,7 +106,7 @@ const CB = '1px solid #e2e8f0';
 const cellBase = { flexShrink: 0, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: CB, overflow: 'hidden' };
 
 // ── GanttPdfContent ─────────────────────────────────────────────────────────
-function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedAt, totalTickets, logoClient, logoNtt }) {
+function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedAt, totalTickets, logoClient, logoNtt, includeObservacao }) {
   const COL_W = columns.length > 0 ? Math.max(32, Math.floor(TRACK_W / columns.length)) : 80;
 
   const timelineStart = columns.length > 0 ? columns[0].start.getTime() : 0;
@@ -314,9 +314,14 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
               {hCell(PR_W, 'Prio', null)}
               {hCell(PC_W, '%C', 'Concl.')}
               {hCell(PT_W, '%T', 'Teste')}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', padding: '4px 8px', borderRight: CB }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', padding: '4px 8px', borderRight: includeObservacao ? CB : 'none' }}>
                 <span style={{ fontSize: 7.5, fontWeight: 800, color: '#991b1b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Motivo do Impedimento</span>
               </div>
+              {includeObservacao && (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', padding: '4px 8px' }}>
+                  <span style={{ fontSize: 7.5, fontWeight: 800, color: '#1e40af', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Observação</span>
+                </div>
+              )}
             </div>
             {/* Impedido rows */}
             {impTickets.map((ticket, ti) => {
@@ -356,9 +361,15 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                     <span style={{ fontSize: 7.5, fontWeight: 700, color: pctT === '100%' ? '#16a34a' : '#374151' }}>{pctT}</span>
                   </div>
                   {/* Motivo do impedimento */}
-                  <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', padding: '4px 8px', overflow: 'hidden' }}>
-                    <span style={{ fontSize: 8, color: '#7f1d1d', lineHeight: 1.3, wordBreak: 'break-word', maxHeight: ROW_H * 2 }}>{motivo}</span>
+                  <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', padding: '4px 8px', overflow: 'hidden', borderRight: includeObservacao ? CB : 'none' }}>
+                    <span style={{ fontSize: 8, color: '#7f1d1d', lineHeight: 1.3, wordBreak: 'break-word' }}>{motivo}</span>
                   </div>
+                  {/* Observação (optional) */}
+                  {includeObservacao && (
+                    <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', padding: '4px 8px', overflow: 'hidden' }}>
+                      <span style={{ fontSize: 8, color: '#1e3a5f', lineHeight: 1.3, wordBreak: 'break-word' }}>{ticket.observacao || ''}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -382,7 +393,7 @@ async function getLogoUrl(storage, prefix) {
   return null;
 }
 
-export async function exportRoadmapGeralPdf({ groupedRows, columns, granularity, groupBy, ticketsWithRange }) {
+export async function exportRoadmapGeralPdf({ groupedRows, columns, granularity, groupBy, ticketsWithRange, includeObservacao = false }) {
   const exportedAt = new Date().toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -412,6 +423,7 @@ export async function exportRoadmapGeralPdf({ groupedRows, columns, granularity,
       totalTickets={totalTickets}
       logoClient={logoClient}
       logoNtt={logoNtt}
+      includeObservacao={includeObservacao}
     />
   );
 
