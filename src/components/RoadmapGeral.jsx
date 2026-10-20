@@ -113,7 +113,7 @@ function serializeRoadmapState(filters, groupBy, granularity, dateConfig, scopeC
 }
 
 function createEmptyFilters() {
-  return { escopos: new Set(), squads: new Set(), grupos: new Set(), statuses: new Set(), tickets: new Set(), prioridades: new Set() };
+  return { escopos: new Set(), squads: new Set(), grupos: new Set(), statuses: new Set(), tickets: new Set(), prioridades: new Set(), sistemas: new Set(), naturezaIniciativa: new Set(), issuetype: new Set(), pctConclusao: new Set(), pctTesteInterno: new Set(), respDev: new Set(), respTeste: new Set() };
 }
 
 function ticketGrupoNamesLocal(ticket) {
@@ -203,6 +203,8 @@ const RoadmapGeral = () => {
   const [selectedTicketMode, setSelectedTicketMode] = useState('view');
   // Controla re-carga automática após carregar uma visão
   const [pendingAutoReload, setPendingAutoReload] = useState(false);
+  const [impedimentoFilter, setImpedimentoFilter] = useState(false);
+  const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(
     () => localStorage.getItem('roadmap_filtersCollapsed') !== 'false'
   );
@@ -319,6 +321,14 @@ const RoadmapGeral = () => {
   const squadGrupoMap = filterOptions.squadGrupoMap || new Map();
   const escopoOptions = ESCOPO_RADAR_ORDER;
 
+  const sistemasOptions = useMemo(() => { const s = new Set(); (ticketsCache||[]).forEach(t => { const v = t.sistemasImpactados; if (!v) return; (typeof v === 'string' ? v.split(',').map(x=>x.trim()).filter(Boolean) : []).forEach(x=>s.add(x)); }); return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR')); }, [ticketsCache]);
+  const naturezaOptions = useMemo(() => { const s = new Set(); (ticketsCache||[]).forEach(t => { const v = t.naturezaIniciativa||t.naturezaOperacao; if (v) s.add(v); }); return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR')); }, [ticketsCache]);
+  const issuetypeOptions = useMemo(() => { const s = new Set(); (ticketsCache||[]).forEach(t => { const v = t.issueType||t.issuetype; if (v) s.add(v); }); return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR')); }, [ticketsCache]);
+  const pctOptions = useMemo(() => { const s = new Set(); (ticketsCache||[]).forEach(t => { if (t.percentualConclusao!=null&&t.percentualConclusao!=='') s.add(String(t.percentualConclusao)); }); return [...s].sort((a,b)=>Number(a)-Number(b)).map(v=>`${v}%`); }, [ticketsCache]);
+  const pctTesteOptions = useMemo(() => { const s = new Set(); (ticketsCache||[]).forEach(t => { if (t.percentualConclusaoTesteInterno!=null&&t.percentualConclusaoTesteInterno!=='') s.add(String(t.percentualConclusaoTesteInterno)); }); return [...s].sort((a,b)=>Number(a)-Number(b)).map(v=>`${v}%`); }, [ticketsCache]);
+  const respDevOptions = useMemo(() => { const s = new Set(); (ticketsCache||[]).forEach(t => { if (t.responsavelDesenvolvimento) s.add(t.responsavelDesenvolvimento); }); return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR')); }, [ticketsCache]);
+  const respTesteOptions = useMemo(() => { const s = new Set(); (ticketsCache||[]).forEach(t => { if (t.responsavelTesteInterno) s.add(t.responsavelTesteInterno); }); return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR')); }, [ticketsCache]);
+
   const filteredTickets = useMemo(() => {
     if (!Array.isArray(ticketsCache)) return [];
     return ticketsCache.filter((t) => {
@@ -339,9 +349,18 @@ const RoadmapGeral = () => {
         const p = t.prioridadeInterna != null ? String(t.prioridadeInterna) : null;
         if (p === null || !filters.prioridades.has(p)) return false;
       }
+      if (filters.sistemas?.size > 0) { const val = t.sistemasImpactados; const vals = typeof val==='string' ? val.split(',').map(v=>v.trim()).filter(Boolean) : []; if (!vals.some(v=>filters.sistemas.has(v))) return false; }
+      if (filters.naturezaIniciativa?.size > 0) { const v = t.naturezaIniciativa||t.naturezaOperacao||''; if (!filters.naturezaIniciativa.has(v)) return false; }
+      if (filters.issuetype?.size > 0) { const v = t.issueType||t.issuetype||''; if (!filters.issuetype.has(v)) return false; }
+      if (filters.pctConclusao?.size > 0) { const v = t.percentualConclusao!=null?`${t.percentualConclusao}%`:'%'; if (!filters.pctConclusao.has(v)) return false; }
+      if (filters.pctTesteInterno?.size > 0) { const v = t.percentualConclusaoTesteInterno!=null?`${t.percentualConclusaoTesteInterno}%`:'%'; if (!filters.pctTesteInterno.has(v)) return false; }
+      if (filters.respDev?.size > 0) { if (!filters.respDev.has(t.responsavelDesenvolvimento||'')) return false; }
+      if (filters.respTeste?.size > 0) { if (!filters.respTeste.has(t.responsavelTesteInterno||'')) return false; }
+      if (impedimentoFilter && t.impedimento !== true) return false;
+      if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
       return true;
     });
-  }, [ticketsCache, filters, squadGrupoMap, scopeConfig]);
+  }, [ticketsCache, filters, squadGrupoMap, scopeConfig, impedimentoFilter, demandaVulnerabFilter]);
 
   const ticketsWithRange = useMemo(() => {
     const now = new Date().toISOString();
@@ -460,10 +479,9 @@ const RoadmapGeral = () => {
     });
   };
 
-  const clearFilters = () => setFilters(createEmptyFilters());
+  const clearFilters = () => { setFilters(createEmptyFilters()); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); };
 
-  const filterActive =
-    filters.escopos.size > 0 || filters.squads.size > 0 || filters.grupos.size > 0 || filters.statuses.size > 0 || filters.tickets?.size > 0 || filters.prioridades?.size > 0;
+  const filterActive = filters.escopos.size>0 || filters.squads.size>0 || filters.grupos.size>0 || filters.statuses.size>0 || (filters.tickets?.size||0)>0 || (filters.prioridades?.size||0)>0 || (filters.sistemas?.size||0)>0 || (filters.naturezaIniciativa?.size||0)>0 || (filters.issuetype?.size||0)>0 || (filters.pctConclusao?.size||0)>0 || (filters.pctTesteInterno?.size||0)>0 || (filters.respDev?.size||0)>0 || (filters.respTeste?.size||0)>0 || impedimentoFilter || demandaVulnerabFilter;
 
   const handleSavePriority = async (issueKey) => {
     try {
@@ -903,11 +921,31 @@ const RoadmapGeral = () => {
           )}
         </Flex>
 
-        {/* Row 2: MultiSelect dropdowns */}
+        {/* Row 2a: dropdowns */}
         <Flex wrap="wrap" align="center" style={{ gap: 8, padding: '10px 14px', borderBottom: '1px solid var(--gray-5)' }}>
-          <MultiSelectFilter options={(filterOptions.statuses || []).map(s => s.nome)} selected={filters.statuses} onChange={s => setFilters(p => ({ ...p, statuses: s }))} placeholder="Todos os status" maxWidth={200} />
-          <MultiSelectFilter options={(filterOptions.grupos || []).map(g => g.nome)} selected={filters.grupos} onChange={g => setFilters(p => ({ ...p, grupos: g }))} placeholder="Grupo atendimento" maxWidth={200} />
-          <MultiSelectFilter options={PRIORIDADE_INTERNA_OPTIONS.map(p => p.value)} selected={filters.prioridades} onChange={p => setFilters(prev => ({ ...prev, prioridades: p }))} placeholder="Todas as prioridades" maxWidth={180} />
+          <MultiSelectFilter options={(filterOptions.statuses||[]).map(s=>s.nome)} selected={filters.statuses} onChange={s=>setFilters(p=>({...p,statuses:s}))} placeholder="Todos os status" maxWidth={180} />
+          <MultiSelectFilter options={(filterOptions.grupos||[]).map(g=>g.nome)} selected={filters.grupos} onChange={g=>setFilters(p=>({...p,grupos:g}))} placeholder="Grupo atendimento" maxWidth={175} />
+          <MultiSelectFilter options={PRIORIDADE_INTERNA_OPTIONS.map(p=>p.value)} selected={filters.prioridades} onChange={p=>setFilters(v=>({...v,prioridades:p}))} placeholder="Todas as prioridades" maxWidth={155} />
+          <MultiSelectFilter options={sistemasOptions} selected={filters.sistemas||new Set()} onChange={s=>setFilters(p=>({...p,sistemas:s}))} placeholder="Sistemas impactados" maxWidth={175} />
+          <MultiSelectFilter options={naturezaOptions} selected={filters.naturezaIniciativa||new Set()} onChange={s=>setFilters(p=>({...p,naturezaIniciativa:s}))} placeholder="Natureza Iniciativa" maxWidth={165} />
+          <MultiSelectFilter options={issuetypeOptions} selected={filters.issuetype||new Set()} onChange={s=>setFilters(p=>({...p,issuetype:s}))} placeholder="Issue Type" maxWidth={145} />
+          <MultiSelectFilter options={pctOptions} selected={filters.pctConclusao||new Set()} onChange={s=>setFilters(p=>({...p,pctConclusao:s}))} placeholder="% Conclusão" maxWidth={125} />
+          <MultiSelectFilter options={pctTesteOptions} selected={filters.pctTesteInterno||new Set()} onChange={s=>setFilters(p=>({...p,pctTesteInterno:s}))} placeholder="% Conclusão Teste" maxWidth={150} />
+        </Flex>
+
+        {/* Row 2b: Responsáveis + Impedidos + Vulnerabilidade */}
+        <Flex wrap="wrap" align="center" style={{ gap: 8, padding: '8px 14px', borderBottom: '1px solid var(--gray-5)' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0 }}>RESPONSÁVEIS</span>
+          <MultiSelectFilter options={respDevOptions} selected={filters.respDev||new Set()} onChange={s=>setFilters(p=>({...p,respDev:s}))} placeholder="Resp. Desenvolvimento" maxWidth={195} />
+          <MultiSelectFilter options={respTesteOptions} selected={filters.respTeste||new Set()} onChange={s=>setFilters(p=>({...p,respTeste:s}))} placeholder="Resp. Teste Interno" maxWidth={185} />
+          <label className={`rg-check-label${impedimentoFilter?' active-imp':''}`}>
+            <input type="checkbox" checked={impedimentoFilter} onChange={e=>setImpedimentoFilter(e.target.checked)} style={{accentColor:'#eab308'}} />
+            🚧 Impedidos
+          </label>
+          <label className={`rg-check-label${demandaVulnerabFilter?' active-vuln':''}`}>
+            <input type="checkbox" checked={demandaVulnerabFilter} onChange={e=>setDemandaVulnerabFilter(e.target.checked)} style={{accentColor:'#ef4444'}} />
+            🔒 Vulnerabilidade
+          </label>
         </Flex>
 
           {/* Row 3: EXIBIÇÃO — compact inline layout */}
