@@ -54,7 +54,7 @@
   display: flex;
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 4;
   background: var(--bg-surface, #0f172a);
 }
 
@@ -71,7 +71,7 @@
   border-right: 1px solid var(--glass-border);
   position: sticky;
   left: 0;
-  z-index: 1;
+  z-index: 3;
   background: var(--bg-surface, #0f172a);
   overflow: hidden;
 }
@@ -87,7 +87,7 @@
   border-right: 1px solid var(--glass-border);
   position: sticky;
   left: 260px;
-  z-index: 1;
+  z-index: 3;
   background: var(--bg-surface, #0f172a);
   cursor: pointer;
 }
@@ -187,9 +187,12 @@
 .roadmap-geral-group-header {
   padding: 8px 10px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-surface, #0f172a);
   border-bottom: 1px solid var(--glass-border);
   border-top: 1px solid var(--glass-border);
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
 
 .roadmap-geral-group-header:hover {
@@ -249,7 +252,7 @@
   width: 2px;
   background: transparent;
   border-left: 2px dashed rgba(56, 189, 248, 0.75);
-  z-index: 3;
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -310,7 +313,7 @@
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  z-index: 5;
+  z-index: 2;
   cursor: default;
 }
 
