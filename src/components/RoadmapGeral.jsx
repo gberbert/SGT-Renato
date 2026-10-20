@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Progress } from '@radix-ui/themes';
-import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText } from 'lucide-react';
+import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText, Flame, ArrowUp, Minus, ArrowDown } from 'lucide-react';
 import { exportRoadmapGeralPdf } from './RoadmapGeralPdfExport';
 import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
@@ -628,6 +628,28 @@ const RoadmapGeral = () => {
     }
   };
 
+  // ── Helpers for row tags ────────────────────────────────────────────────
+  const getPrioMeta = (v) => {
+    const p = String(v || '').toLowerCase().trim();
+    if (p === 'crise' || p === 'crítica' || p === 'critica') return { label: 'Crise', iconType: 'flame', color: '#fca5a5', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)' };
+    if (p === 'alto' || p === 'alta') return { label: 'Alto', iconType: 'up', color: '#fdba74', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.35)' };
+    if (p === 'medio' || p === 'médio' || p === 'media' || p === 'média') return { label: 'Médio', iconType: 'minus', color: '#fde68a', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.35)' };
+    if (p === 'baixo' || p === 'baixa') return { label: 'Baixo', iconType: 'down', color: '#93c5fd', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)' };
+    if (p === 'muito baixo') return { label: 'M.Baixo', iconType: 'down', color: '#c7d2fe', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.25)' };
+    return null;
+  };
+  const getScColor = (s) => {
+    const l = String(s || '').toLowerCase();
+    if (l.includes('conclu') || l.includes('resolv') || l.includes('done') || l.includes('fechad')) return '#4ade80';
+    if (l.includes('execu') || l.includes('andament') || l.includes('atendiment')) return '#38bdf8';
+    if (l.includes('homolog') || l.includes('revisão de homolog')) return '#fb923c';
+    if (l.includes('t-shirt') || l.includes('tshirt')) return '#facc15';
+    if (l.includes('planej') || l.includes('aprova')) return '#c084fc';
+    if (l.includes('aguard') || l.includes('pendent')) return '#f59e0b';
+    if (l.includes('teste')) return '#22d3ee';
+    return '#6b7280';
+  };
+
   const totalWidth = columns.length * colWidth;
 
 
@@ -930,7 +952,7 @@ const RoadmapGeral = () => {
         const todayPx = todayPixelOffset(columns, colWidth);
         return (
           <Box className="roadmap-geral-timeline-wrap">
-            <Box className="roadmap-geral-timeline" style={{ width: totalWidth + 258 }}>
+            <Box className="roadmap-geral-timeline" style={{ width: totalWidth + 332 }}>
               <Box className="roadmap-geral-header-row">
                 <Box className="roadmap-geral-row-label-cell roadmap-geral-header-corner" />
                 <Box className="roadmap-geral-priority-cell roadmap-geral-header-corner" style={{ fontSize: 9, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.05em', cursor: 'default' }}>PRIO</Box>
@@ -955,7 +977,7 @@ const RoadmapGeral = () => {
               </Box>
               <Box className="roadmap-geral-body-wrap" style={{ position: 'relative' }}>
                 {todayPx !== null && (
-                  <Box className="roadmap-geral-today-line" style={{ left: 258 + todayPx }} title={`Hoje: ${new Date().toLocaleDateString('pt-BR')}`} />
+                  <Box className="roadmap-geral-today-line" style={{ left: 332 + todayPx }} title={`Hoje: ${new Date().toLocaleDateString('pt-BR')}`} />
                 )}
                 {groupedRows.map((group) => {
                   const isCollapsed = collapsedGroups.has(group.key);
@@ -973,19 +995,34 @@ const RoadmapGeral = () => {
                         return (
                           <Flex key={ticket.issueKey} align="center" className="roadmap-geral-row">
                             <Box className="roadmap-geral-row-label-cell">
-                              <Text size="1" className="roadmap-geral-row-label-text" title={ticket.summary} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div className="roadmap-geral-row-label-text">
+                                {/* Key */}
                                 <button
                                   type="button"
                                   onClick={() => setSelectedTicket(ticket)}
                                   title="Ver detalhes"
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--rg-accent)', fontWeight: 600, fontFamily: 'monospace', fontSize: 11, flexShrink: 0, textDecoration: 'underline', textUnderlineOffset: 2 }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--rg-accent)', fontWeight: 700, fontFamily: 'monospace', fontSize: 10, flexShrink: 0, textDecoration: 'underline', textUnderlineOffset: 2, whiteSpace: 'nowrap' }}
                                 >
                                   {ticket.issueKey}
                                 </button>
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} onClick={() => setSelectedTicket(ticket)}>
-                                  {' · '}{ticket.summary || 'Sem titulo'}
+                                {/* Title */}
+                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, color: 'var(--gray-11)', cursor: 'pointer', minWidth: 0 }} onClick={() => setSelectedTicket(ticket)}>
+                                  {' · '}{ticket.summary || ''}
                                 </span>
-                              </Text>
+                                {/* Squad badge */}
+                                {(() => {
+                                  const sq = ticket.squadPrincipal || stripNumericPrefix(ticket.grupoSuporte) || ticket.squad;
+                                  if (!sq) return null;
+                                  const short = sq.length > 10 ? sq.slice(0, 10) + '…' : sq;
+                                  return <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.3)', flexShrink: 0, whiteSpace: 'nowrap' }}>{short}</span>;
+                                })()}
+                                {/* Status badge */}
+                                {ticket.status && (() => {
+                                  const sc = getScColor(ticket.status);
+                                  const short = ticket.status.length > 12 ? ticket.status.slice(0, 12) + '…' : ticket.status;
+                                  return <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 10, background: sc + '22', color: sc, border: `1px solid ${sc}55`, flexShrink: 0, whiteSpace: 'nowrap' }}>{short}</span>;
+                                })()}
+                              </div>
                             </Box>
                             {/* Coluna Prioridade Interna editável */}
                             <Box
@@ -1004,12 +1041,12 @@ const RoadmapGeral = () => {
                                     className="roadmap-geral-priority-select"
                                     value={editingPriorityValue ?? ''}
                                     autoFocus
-                                    onChange={(e) => setEditingPriorityValue(e.target.value === '' ? null : Number(e.target.value))}
+                                    onChange={(e) => setEditingPriorityValue(e.target.value === '' ? null : e.target.value)}
                                     onKeyDown={(e) => { if (e.key === 'Enter') handleSavePriority(ticket.issueKey); if (e.key === 'Escape') setEditingPriority(null); }}
                                   >
                                     <option value="">—</option>
                                     {PRIORIDADE_INTERNA_OPTIONS.map((p) => (
-                                      <option key={p.value} value={p.value}>{p.label} {p.description}</option>
+                                      <option key={p.value} value={p.value}>{p.label}</option>
                                     ))}
                                   </select>
                                   <div className="roadmap-geral-priority-actions">
@@ -1018,11 +1055,13 @@ const RoadmapGeral = () => {
                                   </div>
                                 </div>
                               ) : (() => {
-                                const pm = getPrioridadeInternaMeta(ticket.prioridadeInterna);
-                                return pm ? (
-                                  <span className="roadmap-geral-priority-badge" style={{ background: pm.color }} title={`${pm.label} — ${pm.description}`}>{pm.label}</span>
-                                ) : (
-                                  <div className="roadmap-geral-priority-empty" title="Sem prioridade definida" />
+                                const pm = getPrioMeta(ticket.prioridadeInterna);
+                                if (!pm) return <div className="roadmap-geral-priority-empty" title="Clique para definir prioridade" />;
+                                const Icon = pm.iconType === 'flame' ? Flame : pm.iconType === 'up' ? ArrowUp : pm.iconType === 'minus' ? Minus : ArrowDown;
+                                return (
+                                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: pm.bg, color: pm.color, border: `1px solid ${pm.border}`, display: 'flex', alignItems: 'center', gap: 2, whiteSpace: 'nowrap' }} title={`Prioridade: ${pm.label} — clique para editar`}>
+                                    <Icon size={10} />{pm.label}
+                                  </span>
                                 );
                               })()}
                             </Box>

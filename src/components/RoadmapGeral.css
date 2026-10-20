@@ -64,8 +64,8 @@
 
 .roadmap-geral-row-label-cell {
   flex-shrink: 0;
-  width: 200px;
-  padding: 6px 10px;
+  width: 260px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
   border-right: 1px solid var(--glass-border);
@@ -73,19 +73,20 @@
   left: 0;
   z-index: 1;
   background: var(--bg-surface, #0f172a);
+  overflow: hidden;
 }
 
 /* Coluna de Prioridade Interna */
 .roadmap-geral-priority-cell {
   flex-shrink: 0;
-  width: 58px;
-  padding: 2px 4px;
+  width: 72px;
+  padding: 2px 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-right: 1px solid var(--glass-border);
   position: sticky;
-  left: 200px;
+  left: 260px;
   z-index: 1;
   background: var(--bg-surface, #0f172a);
   cursor: pointer;
@@ -204,11 +205,11 @@
 }
 
 .roadmap-geral-row-label-text {
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-  max-width: 178px;
 }
 
 .roadmap-geral-row-track {
