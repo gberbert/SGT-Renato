@@ -194,7 +194,8 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
         const sqList = Object.entries(sqPrioMap).map(([n,pd])=>({n,tot:Object.values(pd).reduce((s,v)=>s+v,0),pd})).sort((a,b)=>b.tot-a.tot).slice(0,8);
         const sqMax = sqList[0]?.tot || 1;
 
-        const boxStyle = (bg, fw) => ({ background: bg, borderRadius: 5, padding: '4px 7px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: fw });
+        const BOX_H = 54;
+        const boxStyle = (bg, fw) => ({ background: bg, borderRadius: 5, padding: '4px 7px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: fw, height: BOX_H });
         const numStyle = (c, fs) => ({ fontSize: fs, fontWeight: 900, color: c, lineHeight: 1 });
         const lblStyle = (c) => ({ fontSize: 6.5, fontWeight: 700, color: c, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
         const divStyle = { width: 1, background: '#cbd5e1', alignSelf: 'stretch', margin: '0 8px' };
@@ -223,15 +224,12 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {grpLbl('Por Natureza')}
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                {nats.map(([name, count]) => {
-                  const sh = name.length > 10 ? name.slice(0,10)+'…' : name;
-                  return (
-                    <div key={name} style={boxStyle('#e0f2fe', 60)}>
-                      <span style={numStyle('#0369a1', 26)}>{count}</span>
-                      <span style={lblStyle('#0891b2')}>{sh}</span>
-                    </div>
-                  );
-                })}
+                {nats.map(([name, count]) => (
+                  <div key={name} style={boxStyle('#e0f2fe', 60)}>
+                    <span style={numStyle('#0369a1', 26)}>{count}</span>
+                    <span style={{ fontSize: 6.5, fontWeight: 700, color: '#0891b2', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center', lineHeight: 1.2, maxWidth: 70, whiteSpace: 'normal', wordBreak: 'break-word' }}>{name}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -246,17 +244,17 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                   {sqList.map(({n, tot, pd}) => (
                     <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
                       <span style={{ fontSize: 7, color: '#374151', width: 68, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{n}</span>
-                      <div style={{ flex: 1, height: 11, background: '#e2e8f0', borderRadius: 2, display: 'flex', overflow: 'hidden' }}>
-                        {PR_ORD2.filter(p => pd[p]).map(p => (
-                          <div key={p} title={`${p}: ${pd[p]}`} style={{ width: `${(pd[p]/tot)*100}%`, height: '100%', background: SQ_PC[p], flexShrink: 0 }} />
-                        ))}
-                      </div>
-                      <span style={{ fontSize: 6.5, fontWeight: 800, color: '#374151', minWidth: 16, flexShrink: 0, textAlign: 'right' }}>{tot}</span>
-                      <span style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                        {PR_ORD2.filter(p => pd[p]).map(p => (
-                          <span key={p} style={{ fontSize: 6, fontWeight: 700, color: SQ_PC[p] === '#eab308' ? '#854d0e' : SQ_PC[p] === '#c7d2fe' ? '#3730a3' : SQ_PC[p] === '#cbd5e1' ? '#475569' : '#fff', background: SQ_PC[p], borderRadius: 2, padding: '0 2px', lineHeight: '11px' }}>{pd[p]}</span>
-                        ))}
-                      </span>
+                  <div style={{ flex: 1, height: 13, background: '#e2e8f0', borderRadius: 2, display: 'flex', overflow: 'hidden' }}>
+                    {PR_ORD2.filter(p => pd[p]).map(p => {
+                      const tc = SQ_PC[p] === '#eab308' ? '#854d0e' : SQ_PC[p] === '#c7d2fe' ? '#3730a3' : SQ_PC[p] === '#cbd5e1' ? '#475569' : '#fff';
+                      return (
+                        <div key={p} title={`${p}: ${pd[p]}`} style={{ width: `${(pd[p]/tot)*100}%`, height: '100%', background: SQ_PC[p], flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          <span style={{ fontSize: 6, fontWeight: 800, color: tc, lineHeight: 1, userSelect: 'none' }}>{pd[p]}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <span style={{ fontSize: 6.5, fontWeight: 800, color: '#374151', minWidth: 16, flexShrink: 0, textAlign: 'right' }}>{tot}</span>
                     </div>
                   ))}
                 </div>
