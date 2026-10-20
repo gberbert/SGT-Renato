@@ -858,12 +858,11 @@ export async function fetchTicketsForDrill({ escopoKey } = {}) {
 export async function fetchTicketsForRoadmap({ escopos = [], onProgress } = {}) {
   if (escopos.length > 0) {
     const allTickets = [];
-    // Firestore 'in' suporta ate 10 valores; ESCOPO_RADAR_ORDER tem 6 entradas
-    const batchSize = 10;
-    for (let i = 0; i < escopos.length; i += batchSize) {
-      const batch = escopos.slice(i, i + batchSize);
+    // Busca cada escopo individualmente para não exceder o limite de memória do Firestore
+    // (uma query 'in' com 6 escopos × ~3k docs cada = ~18k docs pode ultrapassar 128MB)
+    for (const escopo of escopos) {
       const snap = await getDocs(
-        query(collection(db, TICKETS_GLOBAL), where('escopo', 'in', batch), limit(10000))
+        query(collection(db, TICKETS_GLOBAL), where('escopo', '==', escopo), limit(5000))
       );
       snap.docs.forEach((d) => allTickets.push(mapFirestoreTicketDoc(d)));
       onProgress?.(allTickets.length);
