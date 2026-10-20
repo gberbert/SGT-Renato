@@ -181,6 +181,19 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
         allTickets.forEach(t => { const k = t.naturezaIniciativa||t.naturezaOperacao||'(sem natureza)'; natMap[k]=(natMap[k]||0)+1; });
         const nats = Object.entries(natMap).sort((a,b) => b[1]-a[1]).slice(0,8);
 
+        // Squad × Prioridade stacked bar
+        const SQ_PC = { 'Crise':'#dc2626','Alto':'#ea580c','Médio':'#eab308','Baixo':'#3b82f6','Muito baixo':'#c7d2fe','(sem prio)':'#cbd5e1' };
+        const PR_ORD2 = ['Crise','Alto','Médio','Baixo','Muito baixo','(sem prio)'];
+        const sqPrioMap = {};
+        allTickets.forEach(t => {
+          const sq = (t.squadPrincipal||(t.grupoSuporte?t.grupoSuporte.replace(/^\d+\s*-\s*/,'').trim():'')||'Sem squad').slice(0,12);
+          const pr = t.prioridadeInterna||'(sem prio)';
+          if (!sqPrioMap[sq]) sqPrioMap[sq] = {};
+          sqPrioMap[sq][pr] = (sqPrioMap[sq][pr]||0)+1;
+        });
+        const sqList = Object.entries(sqPrioMap).map(([n,pd])=>({n,tot:Object.values(pd).reduce((s,v)=>s+v,0),pd})).sort((a,b)=>b.tot-a.tot).slice(0,8);
+        const sqMax = sqList[0]?.tot || 1;
+
         const boxStyle = (bg, fw) => ({ background: bg, borderRadius: 5, padding: '4px 7px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: fw });
         const numStyle = (c, fs) => ({ fontSize: fs, fontWeight: 900, color: c, lineHeight: 1 });
         const lblStyle = (c) => ({ fontSize: 6.5, fontWeight: 700, color: c, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
@@ -206,50 +219,38 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
 
             <div style={divStyle} />
 
-            {/* Group 2: por squad */}
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-              {grpLbl('Por Squad')}
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {squads.map(([name, count]) => (
-                  <div key={name} style={boxStyle('#dbeafe', 42)}>
-                    <span style={numStyle('#1e40af', 17)}>{count}</span>
-                    <span style={lblStyle('#3b82f6')}>{name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={divStyle} />
-
-            {/* Group 3: por prioridade */}
+            {/* Group 2: por natureza (big boxes same size as totals) */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {grpLbl('Por Prioridade')}
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {prios.map(([name, count]) => (
-                  <div key={name} style={boxStyle(PBGS[name]||'#e2e8f0', 42)}>
-                    <span style={numStyle(PTXTS[name]||'#374151', 17)}>{count}</span>
-                    <span style={lblStyle(PTXTS[name]||'#374151')}>{name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={divStyle} />
-
-            {/* Group 4: por natureza */}
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
               {grpLbl('Por Natureza')}
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 {nats.map(([name, count]) => {
-                  const short = name.length > 14 ? name.slice(0, 14) + '…' : name;
+                  const sh = name.length > 11 ? name.slice(0,11)+'…' : name;
                   return (
-                    <div key={name} style={boxStyle('#e0f2fe', 44)}>
-                      <span style={numStyle('#0369a1', 17)}>{count}</span>
-                      <span style={lblStyle('#0891b2')}>{short}</span>
+                    <div key={name} style={boxStyle('#e0f2fe', 62)}>
+                      <span style={numStyle('#0369a1', 22)}>{count}</span>
+                      <span style={lblStyle('#0891b2')}>{sh}</span>
                     </div>
                   );
                 })}
               </div>
+            </div>
+
+            <div style={divStyle} />
+
+            {/* Group 3: squad stacked bar chart with prioridade distribution */}
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+              {grpLbl('Por Squad · Prioridade')}
+              {sqList.map(({n, tot, pd}) => (
+                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                  <span style={{ fontSize: 7, color: '#374151', width: 70, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{n}</span>
+                  <div style={{ flex: 1, height: 11, background: '#e2e8f0', borderRadius: 2, display: 'flex', overflow: 'hidden' }}>
+                    {PR_ORD2.filter(p => pd[p]).map(p => (
+                      <div key={p} title={`${p}: ${pd[p]}`} style={{ width: `${(pd[p]/sqMax)*100}%`, height: '100%', background: SQ_PC[p], flexShrink: 0 }} />
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 7, fontWeight: 700, color: '#374151', minWidth: 22, textAlign: 'left' }}>{tot}</span>
+                </div>
+              ))}
             </div>
           </div>
         );
