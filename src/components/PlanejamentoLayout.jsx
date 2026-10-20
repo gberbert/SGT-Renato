@@ -3,12 +3,12 @@ import CapacityPlanning from './CapacityPlanning';
 import PlanejamentoCiclo from './PlanejamentoCiclo';
 
 const TABS = [
-  { id: 'capacidade', label: 'Capacidade' },
   { id: 'ciclos', label: 'Ciclos' },
+  { id: 'capacidade', label: 'Capacidade' },
 ];
 
 export default function PlanejamentoLayout({ userRole }) {
-  const [activeTab, setActiveTab] = useState('capacidade');
+  const [activeTab, setActiveTab] = useState('ciclos');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

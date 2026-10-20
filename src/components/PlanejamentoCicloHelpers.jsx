@@ -1097,7 +1097,7 @@ export function CicloSection({ ciclo, tickets, allCiclos, allTickets = [], onMov
                 allTickets={childPool}
                 level={0}
                 alwaysExpanded={false}
-                defaultExpanded={true}
+                defaultExpanded={false}
               />
             ));
           })()}
