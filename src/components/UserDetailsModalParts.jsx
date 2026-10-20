@@ -3,8 +3,8 @@ import { Text } from '@radix-ui/themes';
 import { Plus, Trash2, CalendarDays, ChevronDown, ChevronUp, Pencil, X, Check } from 'lucide-react';
 
 export const S = {
-  inp:  { width:"100%",height:34,borderRadius:8,background:"#232336",border:"1px solid rgba(255,255,255,0.12)",color:"var(--text)",padding:"0 10px",fontSize:13,boxSizing:"border-box" },
-  inpR: { width:"100%",height:34,borderRadius:8,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",color:"var(--text)",padding:"0 10px",fontSize:13,boxSizing:"border-box",opacity:0.8 },
+  inp:  { width:"100%",height:34,borderRadius:8,background:"var(--gray-3)",border:"1px solid var(--gray-6)",color:"var(--gray-12)",padding:"0 10px",fontSize:13,boxSizing:"border-box" },
+  inpR: { width:"100%",height:34,borderRadius:8,background:"var(--gray-2)",border:"1px solid var(--gray-5)",color:"var(--gray-12)",padding:"0 10px",fontSize:13,boxSizing:"border-box",opacity:0.8 },
   lbl:  { fontSize:10,fontWeight:700,color:"var(--gray-9)",letterSpacing:"0.07em",textTransform:"uppercase",display:"block",marginBottom:3 },
 };
 
@@ -142,9 +142,9 @@ export function CustomSelect({ value, onChange, options=[], placeholder, disable
     <div ref={cRef} style={{ position:"relative", width:"100%" }}>
       <button type="button" onClick={() => { if (!disabled) setOpen(v => !v); }} style={{
         width:"100%", height:34, borderRadius:8,
-        background: disabled ? "rgba(255,255,255,0.03)" : "#232336",
-        border:"1px solid rgba(255,255,255,0.12)",
-        color: value ? "var(--text)" : "var(--gray-7)",
+        background: disabled ? "var(--gray-2)" : "var(--gray-3)",
+        border:"1px solid var(--gray-6)",
+        color: value ? "var(--gray-12)" : "var(--gray-7)",
         padding:"0 10px", fontSize:13,
         display:"flex", alignItems:"center", justifyContent:"space-between",
         cursor: disabled ? "default" : "pointer",
@@ -156,7 +156,7 @@ export function CustomSelect({ value, onChange, options=[], placeholder, disable
       {open && !disabled && (
         <div style={{
           position:"absolute", top:"calc(100% + 4px)", left:0, right:0, zIndex:9999,
-          background:"#1a1a2e", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8,
+          background:"var(--color-panel-solid,var(--gray-2))", border:"1px solid var(--gray-6)", borderRadius:8,
           boxShadow:"0 8px 32px rgba(0,0,0,0.6)", maxHeight:220, overflowY:"auto",
         }}>
           <div onClick={() => { onChange(""); setOpen(false); }} style={{
@@ -192,8 +192,8 @@ export function HardSkillsInput({ value=[], onChange, readOnly }) {
     <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
       <div style={{
         display:"flex", flexWrap:"wrap", gap:5, minHeight:36, padding:"4px 6px",
-        borderRadius:8, background: readOnly ? "rgba(255,255,255,0.03)" : "#232336",
-        border:"1px solid rgba(255,255,255,0.12)",
+        borderRadius:8, background: readOnly ? "var(--gray-2)" : "var(--gray-3)",
+        border:"1px solid var(--gray-6)",
       }}>
         {value.length === 0 && <span style={{ fontSize:11, color:"var(--gray-7)", alignSelf:"center" }}>Nenhuma skill</span>}
         {value.map((sk, i) => (

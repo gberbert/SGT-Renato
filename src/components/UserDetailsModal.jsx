@@ -182,15 +182,15 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Content style={{
         maxWidth:920, width:"96vw", maxHeight:"90vh",
-        background:"var(--panel-bg,#16162a)", borderRadius:16,
-        border:"1px solid rgba(255,255,255,0.08)",
+        background:"var(--color-panel-solid)", borderRadius:16,
+        border:"1px solid var(--gray-5)",
         padding:0, overflow:"hidden", display:"flex", flexDirection:"column",
       }}>
         {/* Header */}
         <div style={{
           display:"flex", alignItems:"center", gap:18,
-          padding:"20px 24px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)",
-          background:"rgba(255,255,255,0.02)", flexShrink:0,
+          padding:"20px 24px 16px", borderBottom:"1px solid var(--gray-5)",
+          background:"var(--gray-1)", flexShrink:0,
         }}>
           <AvatarUploader draftUser={draftUser} setDraftUser={setDraftUser} userId={draftUser.id || draftUser.uid} readOnly={readOnly}/>
           <div style={{ flex:1, minWidth:0 }}>
@@ -216,14 +216,14 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
 
         {/* Tabs */}
         <div style={{
-          display:"flex", gap:0, borderBottom:"1px solid rgba(255,255,255,0.08)",
-          overflowX:"auto", flexShrink:0, background:"rgba(0,0,0,0.15)",
+          display:"flex", gap:0, borderBottom:"1px solid var(--gray-5)",
+          overflowX:"auto", flexShrink:0, background:"var(--gray-2)",
         }}>
           {TABS.map(tab => (
             <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{
               padding:"10px 18px", fontSize:11, fontWeight:700, letterSpacing:"0.06em",
               border:"none", borderBottom: activeTab===tab ? "2px solid var(--indigo-9)" : "2px solid transparent",
-              background:"transparent", color: activeTab===tab ? "var(--indigo-11)" : "var(--gray-9)",
+              background:"transparent", color: activeTab===tab ? "var(--indigo-11)" : "var(--gray-10)",
               cursor:"pointer", whiteSpace:"nowrap", transition:"color 0.15s",
             }}>{tab}</button>
           ))}
@@ -256,8 +256,8 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
         {typeof toggleTheme === 'function' && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '10px 24px', borderTop: '1px solid rgba(255,255,255,0.08)',
-            background: 'rgba(0,0,0,0.10)', flexShrink: 0,
+            padding: '10px 24px', borderTop: '1px solid var(--gray-5)',
+            background: 'var(--gray-2)', flexShrink: 0,
           }}>
             <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--gray-9)', textTransform: 'uppercase' }}>
               Tema da Interface
@@ -269,9 +269,9 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '6px 14px', borderRadius: 20,
-                border: '1px solid rgba(255,255,255,0.15)',
-                background: theme === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
-                color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
+                border: '1px solid var(--gray-6)',
+                background: 'var(--gray-3)',
+                color: 'var(--gray-12)',
                 cursor: 'pointer', fontSize: 12, fontWeight: 600,
                 transition: 'all 0.2s',
               }}
@@ -288,8 +288,8 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
         {!readOnly && (
           <div style={{
             display:"flex", justifyContent:"space-between", alignItems:"center", gap:10,
-            padding:"14px 24px", borderTop:"1px solid rgba(255,255,255,0.08)",
-            background:"rgba(0,0,0,0.15)", flexShrink:0,
+            padding:"14px 24px", borderTop:"1px solid var(--gray-5)",
+            background:"var(--gray-2)", flexShrink:0,
           }}>
             <div style={{ flex:1, minWidth:0 }}>
               {errorMsg && (
@@ -300,7 +300,7 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
             </div>
             <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
               <Dialog.Close asChild>
-                <button style={{ padding:"8px 20px", borderRadius:8, border:"1px solid rgba(255,255,255,0.15)", background:"transparent", color:"var(--text)", cursor:"pointer", fontSize:13 }}>
+                <button style={{ padding:"8px 20px", borderRadius:8, border:"1px solid var(--gray-6)", background:"transparent", color:"var(--gray-12)", cursor:"pointer", fontSize:13 }}>
                   Cancelar
                 </button>
               </Dialog.Close>
