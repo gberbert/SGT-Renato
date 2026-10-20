@@ -88,16 +88,18 @@ function diffDays(a, b) {
 // ── Layout constants ─────────────────────────────────────────────────────
 // A4 landscape at ~115dpi → 1366×966 — we use 1280 for safety
 const PAGE_W  = 1280;
-const TITLE_W = 170;  // escopo badge + key + title
-const SQ_W    = 52;   // squad
-const ST_W    = 60;   // status
-const IMP_W   = 18;   // 🚧 impedido icon
-const VUL_W   = 18;   // 🔒 vulnerabilidade icon
-const PR_W    = 46;   // prioridade
-const PC_W    = 28;   // % conclusão
-const PT_W    = 28;   // % teste interno
-const LEFT_W  = TITLE_W + SQ_W + ST_W + IMP_W + VUL_W + PR_W + PC_W + PT_W; // 420
-const TRACK_W = PAGE_W - LEFT_W;  // 860
+const TITLE_W = 160;  // escopo badge + key + title
+const SQ_W    = 48;   // squad
+const ST_W    = 56;   // status
+const IMP_W   = 16;   // 🚧 impedido icon
+const VUL_W   = 16;   // 🔒 vulnerabilidade icon
+const PR_W    = 44;   // prioridade
+const PC_W    = 26;   // % conclusão
+const PT_W    = 26;   // % teste interno
+const TV_W    = 68;   // tickets vinculados
+const NAT_W   = 60;   // natureza iniciativa
+const LEFT_W  = TITLE_W + SQ_W + ST_W + IMP_W + VUL_W + PR_W + PC_W + PT_W + TV_W + NAT_W; // 520
+const TRACK_W = PAGE_W - LEFT_W;  // 760
 const ROW_H   = 26;
 const HEADER_H = 44;
 
@@ -162,6 +164,8 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
         {hCell(PR_W, 'Prio', null)}
         {hCell(PC_W, '%C', 'Concl.')}
         {hCell(PT_W, '%T', 'Teste')}
+        {hCell(TV_W, 'Vinc.', 'Tickets')}
+        {hCell(NAT_W, 'Natureza', 'Iniciativa')}
         {/* Timeline cols */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {columns.map((col, idx) => (
@@ -247,6 +251,29 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                   <span style={{ fontSize: 7.5, fontWeight: 700, color: pctT === '100%' ? '#16a34a' : '#374151' }}>{pctT}</span>
                 </div>
 
+                {/* Tickets Vinculados */}
+                {(() => {
+                  const tv = ticket.ticketsVinculados;
+                  const tvStr = Array.isArray(tv) ? tv.join(', ') : (tv || '');
+                  const tvShort = tvStr.length > 18 ? tvStr.slice(0, 18) + '…' : tvStr;
+                  return (
+                    <div style={{ ...cellBase, width: TV_W, padding: '0 2px' }}>
+                      <span style={{ fontSize: 6.5, color: '#4338ca', fontFamily: 'monospace', textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-all' }}>{tvShort}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* Natureza Iniciativa */}
+                {(() => {
+                  const nat = ticket.naturezaIniciativa || ticket.naturezaOperacao || '';
+                  const natShort = nat.length > 12 ? nat.slice(0, 12) + '…' : nat;
+                  return (
+                    <div style={{ ...cellBase, width: NAT_W, padding: '0 2px' }}>
+                      <span style={{ fontSize: 6.5, fontWeight: 600, color: '#0891b2', textAlign: 'center', lineHeight: 1.2 }}>{natShort}</span>
+                    </div>
+                  );
+                })()}
+
                 {/* Track */}
                 <div style={{ flex: 1, position: 'relative', height: '100%', overflow: 'hidden', background: ti % 2 === 0 ? 'transparent' : 'rgba(241,245,249,0.5)' }}>
                   {columns.map((col, ci) => (
@@ -314,6 +341,8 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
               {hCell(PR_W, 'Prio', null)}
               {hCell(PC_W, '%C', 'Concl.')}
               {hCell(PT_W, '%T', 'Teste')}
+              {hCell(TV_W, 'Vinc.', 'Tickets')}
+              {hCell(NAT_W, 'Natureza', 'Inic.')}
               <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-start', padding: '4px 8px', borderRight: includeObservacao ? CB : 'none' }}>
                 <span style={{ fontSize: 7.5, fontWeight: 800, color: '#991b1b', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Motivo do Impedimento</span>
               </div>
@@ -360,6 +389,17 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
                   <div style={{ ...cellBase, width: PT_W }}>
                     <span style={{ fontSize: 7.5, fontWeight: 700, color: pctT === '100%' ? '#16a34a' : '#374151' }}>{pctT}</span>
                   </div>
+                  {(() => {
+                    const tv = ticket.ticketsVinculados;
+                    const tvStr = Array.isArray(tv) ? tv.join(', ') : (tv || '');
+                    const tvShort = tvStr.length > 18 ? tvStr.slice(0, 18) + '…' : tvStr;
+                    return <div style={{ ...cellBase, width: TV_W, padding: '0 2px' }}><span style={{ fontSize: 6.5, color: '#4338ca', fontFamily: 'monospace', textAlign: 'center', lineHeight: 1.2 }}>{tvShort}</span></div>;
+                  })()}
+                  {(() => {
+                    const nat = ticket.naturezaIniciativa || ticket.naturezaOperacao || '';
+                    const natShort = nat.length > 12 ? nat.slice(0, 12) + '…' : nat;
+                    return <div style={{ ...cellBase, width: NAT_W, padding: '0 2px' }}><span style={{ fontSize: 6.5, fontWeight: 600, color: '#0891b2', textAlign: 'center', lineHeight: 1.2 }}>{natShort}</span></div>;
+                  })()}
                   {/* Motivo do impedimento */}
                   <div style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', padding: '4px 8px', overflow: 'hidden', borderRight: includeObservacao ? CB : 'none' }}>
                     <span style={{ fontSize: 8, color: '#7f1d1d', lineHeight: 1.3, wordBreak: 'break-word' }}>{motivo}</span>
