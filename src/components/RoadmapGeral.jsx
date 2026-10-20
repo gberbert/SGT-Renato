@@ -96,7 +96,11 @@ function dateFieldLabel(value) {
 
 function formatShortDate(value) {
   if (!value) return '-';
-  const d = new Date(value);
+  const s = String(value).trim();
+  // Parse YYYY-MM-DD as local time (avoid UTC midnight → day-before in UTC-3)
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = new Date(s);
   if (Number.isNaN(d.getTime())) return '-';
   return d.toLocaleDateString('pt-BR');
 }
@@ -1166,31 +1170,38 @@ const RoadmapGeral = () => {
                                 </Box>
                               )}
                               {/* Circulos de milestone: datas-chave com letra identificadora */}
-                              {MILESTONE_FIELDS.filter((mf) =>
-                                !scopeConfig.visibleMilestones?.length ||
-                                scopeConfig.visibleMilestones.includes(mf.key)
-                              ).map((mf) => {
-                                const px = getMilestonePixelOffset(columns, ticket[mf.key], colWidth);
-                                if (px === null) return null;
-                                return (
-                                  <div key={mf.key} className="roadmap-geral-milestone" style={{ left: px }}>
-                                    <div
-                                      className="roadmap-geral-milestone-circle"
-                                      style={mf.highlight ? {
-                                        background: mf.highlight.background,
-                                        borderColor: mf.highlight.borderColor,
-                                        color: mf.highlight.color,
-                                      } : undefined}
-                                    >
-                                      {mf.letter}
-                                    </div>
-                                    <div className="roadmap-geral-milestone-tooltip">
-                                      <b>{mf.letter ? `${mf.letter} — ` : ''}{mf.label}</b>
-                                      <span>{formatShortDate(ticket[mf.key])}</span>
-                                    </div>
-                                  </div>
+                              {(() => {
+                                const visibleMfs = MILESTONE_FIELDS.filter(mf =>
+                                  !scopeConfig.visibleMilestones?.length || scopeConfig.visibleMilestones.includes(mf.key)
                                 );
-                              })}
+                                let maxPx = -1;
+                                let maxDateStr = null;
+                                return (
+                                  <>
+                                    {visibleMfs.map((mf) => {
+                                      const px = getMilestonePixelOffset(columns, ticket[mf.key], colWidth);
+                                      if (px === null) return null;
+                                      if (px > maxPx) { maxPx = px; maxDateStr = ticket[mf.key]; }
+                                      return (
+                                        <div key={mf.key} className="roadmap-geral-milestone" style={{ left: px }}>
+                                          <div className="roadmap-geral-milestone-circle" style={mf.highlight ? { background: mf.highlight.background, borderColor: mf.highlight.borderColor, color: mf.highlight.color } : undefined}>
+                                            {mf.letter}
+                                          </div>
+                                          <div className="roadmap-geral-milestone-tooltip">
+                                            <b>{mf.letter ? `${mf.letter} — ` : ''}{mf.label}</b>
+                                            <span>{formatShortDate(ticket[mf.key])}</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                    {maxPx >= 0 && maxDateStr && (
+                                      <span style={{ position: 'absolute', left: maxPx + 12, top: '50%', transform: 'translateY(-50%)', fontSize: 9, fontWeight: 600, color: 'var(--gray-9)', whiteSpace: 'nowrap', pointerEvents: 'none', letterSpacing: '0.02em' }}>
+                                        {formatShortDate(maxDateStr)}
+                                      </span>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </Box>
                           </Flex>
                         );
