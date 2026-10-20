@@ -224,11 +224,11 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
               {grpLbl('Por Natureza')}
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 {nats.map(([name, count]) => {
-                  const sh = name.length > 11 ? name.slice(0,11)+'…' : name;
+                  const sh = name.length > 18 ? name.slice(0,18)+'…' : name;
                   return (
-                    <div key={name} style={boxStyle('#e0f2fe', 62)}>
-                      <span style={numStyle('#0369a1', 22)}>{count}</span>
-                      <span style={lblStyle('#0891b2')}>{sh}</span>
+                    <div key={name} style={{ ...boxStyle('#e0f2fe', 62), maxWidth: 90 }}>
+                      <span style={numStyle('#0369a1', 26)}>{count}</span>
+                      <span style={{ fontSize: 6.5, fontWeight: 700, color: '#0891b2', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.03em', textAlign: 'center', lineHeight: 1.2, maxWidth: 86, whiteSpace: 'normal', wordBreak: 'break-word' }}>{sh}</span>
                     </div>
                   );
                 })}
@@ -241,16 +241,30 @@ function GanttPdfContent({ groupedRows, columns, granularity, groupBy, exportedA
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
               {grpLbl('Por Squad · Prioridade')}
               {sqList.map(({n, tot, pd}) => (
-                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                  <span style={{ fontSize: 7, color: '#374151', width: 70, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{n}</span>
-                  <div style={{ flex: 1, height: 11, background: '#e2e8f0', borderRadius: 2, display: 'flex', overflow: 'hidden' }}>
+                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
+                  <span style={{ fontSize: 7, color: '#374151', width: 68, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{n}</span>
+                  <div style={{ width: 120, height: 11, background: '#e2e8f0', borderRadius: 2, display: 'flex', overflow: 'hidden', flexShrink: 0 }}>
                     {PR_ORD2.filter(p => pd[p]).map(p => (
-                      <div key={p} title={`${p}: ${pd[p]}`} style={{ width: `${(pd[p]/sqMax)*100}%`, height: '100%', background: SQ_PC[p], flexShrink: 0 }} />
+                      <div key={p} title={`${p}: ${pd[p]}`} style={{ width: `${(pd[p]/tot)*100}%`, height: '100%', background: SQ_PC[p], flexShrink: 0 }} />
                     ))}
                   </div>
-                  <span style={{ fontSize: 7, fontWeight: 700, color: '#374151', minWidth: 22, textAlign: 'left' }}>{tot}</span>
+                  <span style={{ fontSize: 6.5, fontWeight: 800, color: '#374151', minWidth: 18, flexShrink: 0 }}>{tot}</span>
+                  <span style={{ display: 'flex', gap: 3, flexWrap: 'nowrap' }}>
+                    {PR_ORD2.filter(p => pd[p]).map(p => (
+                      <span key={p} style={{ fontSize: 6, fontWeight: 700, color: SQ_PC[p] === '#eab308' ? '#854d0e' : SQ_PC[p] === '#c7d2fe' ? '#3730a3' : SQ_PC[p] === '#cbd5e1' ? '#475569' : '#fff', background: SQ_PC[p], borderRadius: 2, padding: '0 2px', lineHeight: '11px' }}>{pd[p]}</span>
+                    ))}
+                  </span>
                 </div>
               ))}
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                {PR_ORD2.map(p => (
+                  <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 1, background: SQ_PC[p] }} />
+                    <span style={{ fontSize: 6, color: '#374151' }}>{p}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
