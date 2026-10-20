@@ -200,8 +200,17 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
+/* Light mode: use a visible gray border */
+.light .roadmap-geral-row {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.10);
+}
+
 .roadmap-geral-row:hover {
   background: rgba(255, 255, 255, 0.02);
+}
+
+.light .roadmap-geral-row:hover {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .roadmap-geral-row-label-text {
