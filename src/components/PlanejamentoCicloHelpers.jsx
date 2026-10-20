@@ -574,9 +574,9 @@ function fmtDateShort(val) {
   return s;
 }
 
-export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true, allTickets = [], level = 0, alwaysExpanded = false }) {
+export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBacklog, onTicketClick, dateField, showEstimativa = true, allTickets = [], level = 0, alwaysExpanded = false, defaultExpanded = false }) {
   const [open, setOpen] = useState(false);
-  const [expandChildren, setExpandChildren] = useState(false);
+  const [expandChildren, setExpandChildren] = useState(defaultExpanded);
   const em = ESCOPO_META[ticket.escopo] || { color: '#6b7280', short: (ticket.escopo || '?').slice(0, 4) };
   const sc = getStatusColor(ticket.status);
   const tkey = ticket.issueKey || ticket.id;
@@ -761,6 +761,7 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
               allTickets={allTickets}
               level={level + 1}
               alwaysExpanded={alwaysExpanded}
+              defaultExpanded={defaultExpanded}
             />
           ))}
         </div>
@@ -1095,7 +1096,8 @@ export function CicloSection({ ciclo, tickets, allCiclos, allTickets = [], onMov
                 showEstimativa={showEstimativa}
                 allTickets={childPool}
                 level={0}
-                alwaysExpanded={true}
+                alwaysExpanded={false}
+                defaultExpanded={true}
               />
             ));
           })()}
