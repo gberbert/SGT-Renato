@@ -417,14 +417,8 @@ const RoadmapGeral = () => {
         case 'grupo': return ticket.grupoSuporte || 'Sem grupo';
         case 'status': return ticket.status || 'Sem status';
         case 'squad': {
-          const names = ticketGrupoNamesLocal(ticket);
-          for (const [squadId, grupos] of squadGrupoMap.entries()) {
-            if (grupos.some((g) => names.includes(g))) {
-              const squad = squads.find((s) => s.id === squadId);
-              return squad ? squad.name || squad.nome || squad.sigla || squadId : squadId;
-            }
-          }
-          return 'Sem squad';
+          // Same resolution as filter: use squadPrincipal or stripped grupoSuporte
+          return ticket.squadPrincipal || stripNumericPrefix(ticket.grupoSuporte) || ticket.squad || 'Sem squad';
         }
         default: return null;
       }
@@ -910,18 +904,6 @@ const RoadmapGeral = () => {
             {(scopeConfig.dateRangeStart || scopeConfig.dateRangeEnd) && (
               <button onClick={() => setScopeConfig(p => ({ ...p, dateRangeStart: '', dateRangeEnd: '' }))} style={{ fontSize: 10, padding: '2px 6px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 4, cursor: 'pointer', color: 'var(--gray-9)', flexShrink: 0 }}>✕</button>
             )}
-          </Flex>
-
-          {/* ESCOPO CARGA */}
-          <Flex wrap="nowrap" gap="6" align="center" style={{ border: '1px solid var(--gray-5)', borderRadius: 8, padding: '6px 12px', background: 'var(--gray-3)', flex: '1 1 auto' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', flexShrink: 0, marginRight: 2 }}>ESCOPO CARGA</span>
-            {ESCOPO_RADAR_ORDER.map(esc => (
-              <label key={esc.key} style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
-                <input type="checkbox" checked={scopeConfig.escopos.includes(esc.key)} onChange={() => setScopeConfig(prev => { const nxt = prev.escopos.includes(esc.key) ? prev.escopos.filter(k => k !== esc.key) : [...prev.escopos, esc.key]; return { ...prev, escopos: nxt }; })} style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12, flexShrink: 0 }} />
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: esc.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 11, color: 'var(--gray-11)', whiteSpace: 'nowrap' }}>{esc.label}</span>
-              </label>
-            ))}
           </Flex>
 
         </Flex>
