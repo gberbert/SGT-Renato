@@ -373,7 +373,7 @@ const RoadmapGeral = () => {
       if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
       return true;
     });
-  }, [ticketsCache, filters, squadGrupoMap, scopeConfig, impedimentoFilter, demandaVulnerabFilter]);
+  }, [ticketsCache, filters, squadGrupoMap, scopeConfig, impedimentoFilter, naoImpedidoFilter, demandaVulnerabFilter]);
 
   const ticketsWithRange = useMemo(() => {
     const now = new Date().toISOString();
