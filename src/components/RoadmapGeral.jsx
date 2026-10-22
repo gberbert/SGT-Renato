@@ -1090,9 +1090,11 @@ const RoadmapGeral = () => {
         const todayPx = todayPixelOffset(columns, colWidth);
         return (
           <Box className="roadmap-geral-timeline-wrap">
-            <Box className="roadmap-geral-timeline" style={{ width: totalWidth + 332 }}>
+            <Box className="roadmap-geral-timeline" style={{ width: totalWidth + 444 }}>
               <Box className="roadmap-geral-header-row">
                 <Box className="roadmap-geral-row-label-cell roadmap-geral-header-corner" />
+                <Box className="roadmap-geral-pct-cell roadmap-geral-header-corner" style={{ fontSize: 9, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.05em', cursor: 'default', textAlign: 'center', lineHeight: 1.2 }} title="% Conclusão">%<br/>CONC</Box>
+                <Box className="roadmap-geral-pct-teste-cell roadmap-geral-header-corner" style={{ fontSize: 9, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.05em', cursor: 'default', textAlign: 'center', lineHeight: 1.2 }} title="% Conclusão Teste Interno">%<br/>TESTE</Box>
                 <Box className="roadmap-geral-priority-cell roadmap-geral-header-corner" style={{ fontSize: 9, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.05em', cursor: 'default' }}>PRIO</Box>
                 <Flex>
                   {superHeaderGroups.map((g, idx) => (
@@ -1104,6 +1106,8 @@ const RoadmapGeral = () => {
               </Box>
               <Box className="roadmap-geral-header-row roadmap-geral-header-row-cols">
                 <Box className="roadmap-geral-row-label-cell roadmap-geral-header-corner" />
+                <Box className="roadmap-geral-pct-cell roadmap-geral-header-corner" />
+                <Box className="roadmap-geral-pct-teste-cell roadmap-geral-header-corner" />
                 <Box className="roadmap-geral-priority-cell roadmap-geral-header-corner" />
                 <Flex>
                   {columns.map((col, idx) => (
@@ -1115,7 +1119,7 @@ const RoadmapGeral = () => {
               </Box>
               <Box className="roadmap-geral-body-wrap" style={{ position: 'relative' }}>
                 {todayPx !== null && (
-                  <Box className="roadmap-geral-today-line" style={{ left: 332 + todayPx }} title={`Hoje: ${new Date().toLocaleDateString('pt-BR')}`} />
+                  <Box className="roadmap-geral-today-line" style={{ left: 444 + todayPx }} title={`Hoje: ${new Date().toLocaleDateString('pt-BR')}`} />
                 )}
                 {groupedRows.map((group) => {
                   const isCollapsed = collapsedGroups.has(group.key);
@@ -1176,6 +1180,40 @@ const RoadmapGeral = () => {
                                 </button>
                               </div>
                             </Box>
+                            {/* Coluna % Conclusão */}
+                            {(() => {
+                              const pct = ticket.percentualConclusao;
+                              const val = pct != null && pct !== '' ? Number(pct) : null;
+                              const color = val === null ? 'var(--gray-7)' : val >= 100 ? '#4ade80' : val >= 67 ? '#38bdf8' : val >= 34 ? '#facc15' : '#f87171';
+                              return (
+                                <Box className="roadmap-geral-pct-cell" title={`% Conclusão: ${val != null ? val + '%' : '—'}`}>
+                                  {val != null ? (
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 4px', borderRadius: 4, background: color + '22', color, border: `1px solid ${color}55`, whiteSpace: 'nowrap' }}>
+                                      {val}%
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: 10, color: 'var(--gray-7)' }}>—</span>
+                                  )}
+                                </Box>
+                              );
+                            })()}
+                            {/* Coluna % Conclusão Teste Interno */}
+                            {(() => {
+                              const pct = ticket.percentualConclusaoTesteInterno;
+                              const val = pct != null && pct !== '' ? Number(pct) : null;
+                              const color = val === null ? 'var(--gray-7)' : val >= 100 ? '#4ade80' : val >= 67 ? '#38bdf8' : val >= 34 ? '#facc15' : '#f87171';
+                              return (
+                                <Box className="roadmap-geral-pct-teste-cell" title={`% Conclusão Teste Interno: ${val != null ? val + '%' : '—'}`}>
+                                  {val != null ? (
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 4px', borderRadius: 4, background: color + '22', color, border: `1px solid ${color}55`, whiteSpace: 'nowrap' }}>
+                                      {val}%
+                                    </span>
+                                  ) : (
+                                    <span style={{ fontSize: 10, color: 'var(--gray-7)' }}>—</span>
+                                  )}
+                                </Box>
+                              );
+                            })()}
                             {/* Coluna Prioridade Interna editável */}
                             <Box
                               className="roadmap-geral-priority-cell"

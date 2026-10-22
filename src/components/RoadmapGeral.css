@@ -76,6 +76,35 @@
   overflow: hidden;
 }
 
+/* Colunas % Conclusão e % Conclusão Teste Interno */
+.roadmap-geral-pct-cell {
+  flex-shrink: 0;
+  width: 56px;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--glass-border);
+  position: sticky;
+  left: 260px;
+  z-index: 3;
+  background: var(--bg-surface, #0f172a);
+}
+
+.roadmap-geral-pct-teste-cell {
+  flex-shrink: 0;
+  width: 56px;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--glass-border);
+  position: sticky;
+  left: 316px;
+  z-index: 3;
+  background: var(--bg-surface, #0f172a);
+}
+
 /* Coluna de Prioridade Interna */
 .roadmap-geral-priority-cell {
   flex-shrink: 0;
@@ -86,7 +115,7 @@
   justify-content: center;
   border-right: 1px solid var(--glass-border);
   position: sticky;
-  left: 260px;
+  left: 372px;
   z-index: 3;
   background: var(--bg-surface, #0f172a);
   cursor: pointer;
