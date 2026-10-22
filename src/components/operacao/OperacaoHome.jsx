@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
 import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download, DatabaseZap, Eye, Pencil } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../firebase';
 import DemandaDetailsModal from './DemandaDetailsModal';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
@@ -394,6 +394,8 @@ const OperacaoHome = ({ userRole }) => {
   const [modalLoadingKey, setModalLoadingKey] = useState(null);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [selectedNaturezaFilter, setSelectedNaturezaFilter] = useState(() => new Set());
+  const [progressTimeline, setProgressTimeline] = useState(null); // null=hidden, array=shown
+  const [progressTimelineLoading, setProgressTimelineLoading] = useState(false);
 
   // Pre-compute squad per issueKey as soon as drillTickets + systems + squads are available
   const squadByIssueKey = useMemo(() => {
@@ -725,6 +727,37 @@ const OperacaoHome = ({ userRole }) => {
     }
   }, [ticketsCacheLoading, loadedEscopos, ensureRadarBootstrap, statsFingerprint]);
 
+  // Carrega histórico de % dos statusChangeLogs dos tickets visíveis
+  const loadProgressTimeline = useCallback(async (tickets) => {
+    if (progressTimelineLoading) return;
+    setProgressTimelineLoading(true);
+    setProgressTimeline(null);
+    try {
+      const FIELDS = new Set(['percentualConclusao', 'percentualConclusaoTesteInterno']);
+      const allEvents = [];
+      const list = tickets.slice(0, 60);
+      await Promise.all(list.map(async (ticket) => {
+        try {
+          const docId = ticket.id || ticket.issueKey;
+          const snap = await getDocs(collection(db, 'tickets_global', docId, 'statusChangeLog'));
+          snap.forEach(doc => {
+            const d = doc.data();
+            if (!FIELDS.has(d.field)) return;
+            const ts = d.changedAt?.toDate?.() || (d.changedAt ? new Date(d.changedAt) : null);
+            if (!ts) return;
+            const val = Number(d.newValue);
+            if (!Number.isFinite(val)) return;
+            allEvents.push({ issueKey: ticket.issueKey, field: d.field, newValue: val, changedAt: ts });
+          });
+        } catch { /* ignore */ }
+      }));
+      allEvents.sort((a, b) => a.changedAt - b.changedAt);
+      setProgressTimeline(allEvents);
+    } finally {
+      setProgressTimelineLoading(false);
+    }
+  }, [progressTimelineLoading]); // eslint-disable-line
+
   // 2) Ao filtrar, recomputa totais/lanes a partir do tickets em memória
   useEffect(() => {
     let cancelled = false;
@@ -951,6 +984,8 @@ const OperacaoHome = ({ userRole }) => {
               setSelectedDueDateFilter(null);
               setDemandaVulnerabFilter(false);
               setSelectedNaturezaFilter(new Set());
+              setProgressTimeline(null);
+              setProgressTimelineLoading(false);
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
@@ -1335,17 +1370,19 @@ const OperacaoHome = ({ userRole }) => {
                           <Flex align="center" gap="4" wrap="wrap">
                             <button
                               type="button"
+                              title={progressTimeline !== null ? 'Clique para fechar a linha do tempo' : 'Clique para ver linha do tempo de progresso'}
                               onClick={() => {
-                                if (selectedSquadFilter || demandaStatusFilters.size > 0) {
-                                  openDrillDirect(visibleTickets, drillLabel || 'Demandas');
+                                if (progressTimeline !== null || progressTimelineLoading) {
+                                  setProgressTimeline(null);
+                                  setProgressTimelineLoading(false);
                                 } else {
-                                  openDrill('DEMANDA', 'Demandas');
+                                  loadProgressTimeline(visibleTickets);
                                 }
                               }}
                               disabled={drillLoading}
                               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', lineHeight: 1 }}
                             >
-                              <span style={{ fontSize: 52, fontWeight: 900, color: '#38bdf8', lineHeight: 1 }}>
+                              <span style={{ fontSize: 52, fontWeight: 900, color: progressTimeline !== null || progressTimelineLoading ? '#818cf8' : '#38bdf8', lineHeight: 1, transition: 'color 0.2s' }}>
                                 {formatNumber(totalDemandas)}
                               </span>
                             </button>
@@ -1532,6 +1569,80 @@ const OperacaoHome = ({ userRole }) => {
                             )}
                           </Flex>
                         </Box>
+
+                        {/* ── Linha do tempo de progresso (% Conclusão / % Conclusão Teste) ── */}
+                        {(progressTimelineLoading || progressTimeline !== null) && (() => {
+                          if (progressTimelineLoading) {
+                            return (
+                              <Box mb="4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px' }}>
+                                <Flex align="center" gap="2">
+                                  <Loader2 size={16} color="#818cf8" className="spin" />
+                                  <Text size="2" color="gray">Carregando histórico de progresso dos tickets…</Text>
+                                </Flex>
+                              </Box>
+                            );
+                          }
+                          const devEvents = progressTimeline.filter(e => e.field === 'percentualConclusao');
+                          const testeEvents = progressTimeline.filter(e => e.field === 'percentualConclusaoTesteInterno');
+                          if (!devEvents.length && !testeEvents.length) {
+                            return (
+                              <Box mb="4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px' }}>
+                                <Text size="2" color="gray">Nenhum registro de % Conclusão encontrado no histórico dos tickets filtrados.</Text>
+                              </Box>
+                            );
+                          }
+                          const allEvents = [...devEvents, ...testeEvents];
+                          const allTs = allEvents.map(e => e.changedAt.getTime());
+                          const minT = Math.min(...allTs);
+                          const maxT = Math.max(...allTs);
+                          const range = maxT - minT || 86400000;
+                          const toX = (ts) => Math.max(0, Math.min(100, ((ts.getTime() - minT) / range) * 100));
+                          const fmtD = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                          const renderTrack = (events, color, label) => {
+                            if (!events.length) return null;
+                            const sorted = events.slice().sort((a, b) => a.changedAt - b.changedAt);
+                            return (
+                              <Box mb="3">
+                                <Text size="1" weight="bold" style={{ color, letterSpacing: '0.07em', fontSize: 10, display: 'block', marginBottom: 8 }}>{label}</Text>
+                                <Box style={{ position: 'relative', height: 56, background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+                                  {/* Track line */}
+                                  <Box style={{ position: 'absolute', top: '50%', left: '1%', right: '1%', height: 2, background: `${color}33`, borderRadius: 1, transform: 'translateY(-50%)' }} />
+                                  {/* Dots */}
+                                  {sorted.map((ev, i) => {
+                                    const xPct = toX(ev.changedAt);
+                                    const above = i % 2 === 0;
+                                    return (
+                                      <div key={i} style={{ position: 'absolute', left: `${xPct}%`, top: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
+                                        <div title={`${ev.issueKey} · ${fmtD(ev.changedAt)}`} style={{ width: 12, height: 12, borderRadius: '50%', background: color, border: '2px solid rgba(0,0,0,0.4)', boxShadow: `0 0 8px ${color}88`, cursor: 'default' }} />
+                                        <div style={{ position: 'absolute', [above ? 'bottom' : 'top']: 14, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
+                                          <span style={{ fontSize: 11, fontWeight: 800, color, display: 'block', lineHeight: 1 }}>{ev.newValue}%</span>
+                                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', display: 'block', marginTop: 1 }}>{fmtD(ev.changedAt)}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </Box>
+                              </Box>
+                            );
+                          };
+                          return (
+                            <Box mb="4" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px', overflowX: 'auto' }}>
+                              <Flex align="center" justify="between" mb="3">
+                                <Text size="2" weight="bold" style={{ color: 'var(--gray-11)' }}>Linha do Tempo — Progresso das Demandas</Text>
+                                <Flex align="center" gap="3">
+                                  <Text size="1" color="gray">{allEvents.length} registros · {new Set(allEvents.map(e => e.issueKey)).size} demandas</Text>
+                                  <button type="button" onClick={() => { setProgressTimeline(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', fontSize: 16, lineHeight: 1, padding: 0 }}>×</button>
+                                </Flex>
+                              </Flex>
+                              {renderTrack(devEvents, '#818cf8', 'DESENVOLVIMENTO — % CONCLUSÃO')}
+                              {renderTrack(testeEvents, '#f59e0b', 'TESTE INTERNO — % CONCLUSÃO TESTE')}
+                              <Flex justify="between" style={{ paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                <Text size="1" color="gray">{fmtD(new Date(minT))}</Text>
+                                <Text size="1" color="gray">{fmtD(new Date(maxT))}</Text>
+                              </Flex>
+                            </Box>
+                          );
+                        })()}
 
                         {/* ── Gráficos Agrupadores ── */}
                         {(() => {
