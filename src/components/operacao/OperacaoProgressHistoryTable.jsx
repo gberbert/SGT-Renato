@@ -55,8 +55,14 @@ export function OperacaoProgressHistoryTable({ historyMap, rows, squadMap, modal
               {tstDs.length > 0 && <th colSpan={tstDs.length} style={{ color: '#f59e0b', textAlign: 'center', background: 'rgba(245,158,11,0.06)', borderBottom: '2px solid rgba(245,158,11,0.3)' }}>% CONCLUSÃO TESTE</th>}
             </tr>
             <tr>
-              {devDs.map(d => <th key={d} style={{ color: '#818cf8', fontSize: 11, fontWeight: 700, textAlign: 'center', padding: '4px 6px', background: 'rgba(129,140,248,0.04)', whiteSpace: 'nowrap' }}>{fD(d)}</th>)}
-              {tstDs.map(d => <th key={d} style={{ color: '#f59e0b', fontSize: 11, fontWeight: 700, textAlign: 'center', padding: '4px 6px', background: 'rgba(245,158,11,0.04)', whiteSpace: 'nowrap' }}>{fD(d)}</th>)}
+              {devDs.map(d => {
+                const isBase = d === '2026-10-10';
+                return <th key={d} style={{ color: isBase ? 'rgba(129,140,248,0.55)' : '#818cf8', fontSize: 11, fontWeight: 700, textAlign: 'center', padding: '4px 6px', background: isBase ? 'rgba(129,140,248,0.02)' : 'rgba(129,140,248,0.04)', whiteSpace: 'nowrap', borderRight: isBase ? '2px dashed rgba(129,140,248,0.3)' : undefined }}>{isBase ? `📌 ${fD(d)}` : fD(d)}</th>;
+              })}
+              {tstDs.map(d => {
+                const isBase = d === '2026-10-10';
+                return <th key={d} style={{ color: isBase ? 'rgba(245,158,11,0.55)' : '#f59e0b', fontSize: 11, fontWeight: 700, textAlign: 'center', padding: '4px 6px', background: isBase ? 'rgba(245,158,11,0.02)' : 'rgba(245,158,11,0.04)', whiteSpace: 'nowrap', borderRight: isBase ? '2px dashed rgba(245,158,11,0.3)' : undefined }}>{isBase ? `📌 ${fD(d)}` : fD(d)}</th>;
+              })}
             </tr>
           </thead>
           <tbody>
@@ -91,20 +97,26 @@ export function OperacaoProgressHistoryTable({ historyMap, rows, squadMap, modal
                       ? <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: 'rgba(16,185,129,0.13)', border: '1px solid rgba(16,185,129,0.35)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>{sq}</span>
                       : (stripNumericPrefix(ticket.grupoSuporte) || '—')}
                   </td>
-                  {devDs.map(d => (
-                    <td key={d} style={{ textAlign: 'center', padding: '4px 6px', background: dm.has(d) ? 'rgba(129,140,248,0.08)' : undefined }}>
-                      {dm.has(d)
-                        ? <span style={{ fontWeight: 700, fontSize: 12, color: '#818cf8' }}>{dm.get(d)}%</span>
-                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>—</span>}
-                    </td>
-                  ))}
-                  {tstDs.map(d => (
-                    <td key={d} style={{ textAlign: 'center', padding: '4px 6px', background: tm.has(d) ? 'rgba(245,158,11,0.08)' : undefined }}>
-                      {tm.has(d)
-                        ? <span style={{ fontWeight: 700, fontSize: 12, color: '#f59e0b' }}>{tm.get(d)}%</span>
-                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>—</span>}
-                    </td>
-                  ))}
+                  {devDs.map(d => {
+                    const isBase = d === '2026-10-10';
+                    return (
+                      <td key={d} style={{ textAlign: 'center', padding: '4px 6px', background: dm.has(d) ? (isBase ? 'rgba(129,140,248,0.04)' : 'rgba(129,140,248,0.08)') : undefined, borderRight: isBase ? '2px dashed rgba(129,140,248,0.2)' : undefined }}>
+                        {dm.has(d)
+                          ? <span style={{ fontWeight: 700, fontSize: 12, color: isBase ? 'rgba(129,140,248,0.6)' : '#818cf8' }}>{dm.get(d)}%</span>
+                          : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>—</span>}
+                      </td>
+                    );
+                  })}
+                  {tstDs.map(d => {
+                    const isBase = d === '2026-10-10';
+                    return (
+                      <td key={d} style={{ textAlign: 'center', padding: '4px 6px', background: tm.has(d) ? (isBase ? 'rgba(245,158,11,0.04)' : 'rgba(245,158,11,0.08)') : undefined, borderRight: isBase ? '2px dashed rgba(245,158,11,0.2)' : undefined }}>
+                        {tm.has(d)
+                          ? <span style={{ fontWeight: 700, fontSize: 12, color: isBase ? 'rgba(245,158,11,0.6)' : '#f59e0b' }}>{tm.get(d)}%</span>
+                          : <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11 }}>—</span>}
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}

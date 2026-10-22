@@ -733,6 +733,8 @@ const OperacaoHome = ({ userRole }) => {
     setProgressHistoryLoading(true);
     try {
       const FIELDS = new Set(['percentualConclusao', 'percentualConclusaoTesteInterno']);
+      // Baseline date: 10/10/2026 — marco inicial de observabilidade
+      const BASELINE = new Date('2026-10-10T00:00:00');
       const map = new Map();
       await Promise.all(tickets.slice(0, 50).map(async (ticket) => {
         try {
@@ -743,13 +745,22 @@ const OperacaoHome = ({ userRole }) => {
             if (!FIELDS.has(d.field)) return;
             const ts = d.changedAt?.toDate?.() || (d.changedAt ? new Date(d.changedAt) : null);
             if (!ts) return;
-            const val = Number(d.newValue);
-            if (!Number.isFinite(val)) return;
-            if (d.field === 'percentualConclusao') dev.push({ date: ts, value: val });
-            else teste.push({ date: ts, value: val });
+            const newVal = Number(d.newValue);
+            const oldVal = Number(d.oldValue);
+            if (!Number.isFinite(newVal)) return;
+            const entry = { date: ts, value: newVal, oldValue: Number.isFinite(oldVal) && oldVal >= 0 ? oldVal : null };
+            if (d.field === 'percentualConclusao') dev.push(entry);
+            else teste.push(entry);
           });
           dev.sort((a, b) => a.date - b.date);
           teste.sort((a, b) => a.date - b.date);
+          // Inject synthetic baseline from first entry's oldValue
+          if (dev.length > 0 && dev[0].oldValue != null) {
+            dev.unshift({ date: BASELINE, value: dev[0].oldValue, baseline: true });
+          }
+          if (teste.length > 0 && teste[0].oldValue != null) {
+            teste.unshift({ date: BASELINE, value: teste[0].oldValue, baseline: true });
+          }
           map.set(ticket.issueKey, { dev, teste });
         } catch { }
       }));
