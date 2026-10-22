@@ -1273,8 +1273,8 @@ const OperacaoHome = ({ userRole }) => {
                       <Box mt="1">
                         {/* ── Filtros: Squad / Vulnerabilidade / Natureza Iniciativa ── */}
                         <Box mb="3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 14px' }}>
-                          {/* Row 1: Squad pills */}
-                          <Flex wrap="wrap" align="center" gap="2" mb="2">
+                          {/* Row 1: Squad pills + Vulnerabilidade checkbox */}
+                          <Flex wrap="wrap" align="center" gap="2" mb={naturezaOptions.length > 0 ? "2" : "0"}>
                             <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', flexShrink: 0 }}>SQUAD</span>
                             {squads.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((sq) => {
                               const sqKey = sq.sigla || sq.name || sq.nome || sq.id;
@@ -1298,38 +1298,27 @@ const OperacaoHome = ({ userRole }) => {
                                 </button>
                               );
                             })}
-                          </Flex>
-                          {/* Row 2: Vuln + Natureza */}
-                          <Flex wrap="wrap" align="center" gap="2">
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', userSelect: 'none', padding: '3px 8px', borderRadius: 6, border: demandaVulnerabFilter ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.12)', background: demandaVulnerabFilter ? 'rgba(239,68,68,0.1)' : 'transparent', color: demandaVulnerabFilter ? '#f87171' : 'rgba(255,255,255,0.55)', transition: 'all 0.12s', flexShrink: 0 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', userSelect: 'none', padding: '3px 8px', borderRadius: 6, border: demandaVulnerabFilter ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.12)', background: demandaVulnerabFilter ? 'rgba(239,68,68,0.1)' : 'transparent', color: demandaVulnerabFilter ? '#f87171' : 'rgba(255,255,255,0.55)', transition: 'all 0.12s', flexShrink: 0, marginLeft: 4 }}>
                               <input type="checkbox" checked={demandaVulnerabFilter} onChange={(e) => setDemandaVulnerabFilter(e.target.checked)} style={{ accentColor: '#ef4444', width: 12, height: 12 }} />
                               🔒 Vulnerabilidade
                             </label>
-                            {naturezaOptions.length > 0 && (
-                              <>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', flexShrink: 0, marginLeft: 4 }}>NATUREZA</span>
-                                {naturezaOptions.map((n) => {
-                                  const isActive = selectedNaturezaFilter.has(n);
-                                  return (
-                                    <button key={n} type="button"
-                                      onClick={() => {
-                                        const next = new Set(selectedNaturezaFilter);
-                                        isActive ? next.delete(n) : next.add(n);
-                                        setSelectedNaturezaFilter(next);
-                                      }}
-                                      style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10, cursor: 'pointer', userSelect: 'none', border: isActive ? '1px solid rgba(56,189,248,0.7)' : '1px solid rgba(255,255,255,0.12)', background: isActive ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)', color: isActive ? '#38bdf8' : 'rgba(255,255,255,0.55)', transition: 'all 0.12s', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                      title={n}
-                                    >
-                                      {n.length > 25 ? n.slice(0, 24) + '…' : n}
-                                    </button>
-                                  );
-                                })}
-                              </>
-                            )}
                             {(selectedSquadFilter || demandaVulnerabFilter || selectedNaturezaFilter.size > 0) && (
                               <button type="button" onClick={() => { setSelectedSquadFilter(null); setDemandaVulnerabFilter(false); setSelectedNaturezaFilter(new Set()); setDemandaStatusFilters(new Set()); setFilteringImpedidas(false); }} style={{ fontSize: 10, padding: '3px 8px', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, cursor: 'pointer', color: 'rgba(255,255,255,0.35)', marginLeft: 'auto', flexShrink: 0 }}>Limpar</button>
                             )}
                           </Flex>
+                          {/* Row 2: Natureza Iniciativa combobox */}
+                          {naturezaOptions.length > 0 && (
+                            <Box style={{ maxWidth: 320 }}>
+                              <OperacaoMultiCombobox
+                                label="NATUREZA INICIATIVA"
+                                placeholder="Todas as naturezas"
+                                options={naturezaOptions.map((n) => ({ id: n, nome: n }))}
+                                selected={selectedNaturezaFilter}
+                                onChange={setSelectedNaturezaFilter}
+                                formatOption={(item) => item.nome}
+                              />
+                            </Box>
+                          )}
                         </Box>
                         {/* ── Cabeçalho: total + impedidas ── */}
                         <Box mb="4" style={{ paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
