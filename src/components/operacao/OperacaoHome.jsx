@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../firebase';
 import DemandaDetailsModal from './DemandaDetailsModal';
+import OperacaoProgressHistoryTable from './OperacaoProgressHistoryTable';
 import OperacaoMultiCombobox from './OperacaoMultiCombobox';
 import OperacaoDateRangeFilter from './OperacaoDateRangeFilter';
 import OperacaoEscopoTimelineChart from './OperacaoEscopoTimelineChart';
@@ -1916,7 +1917,7 @@ const OperacaoHome = ({ userRole }) => {
                         ? `Nenhum ticket com issue_key contendo "${drillIssueKeyQuery.trim()}".`
                         : 'Nenhum ticket encontrado para esta seleção.'}
                     </Text>
-                  ) : (
+                  ) : progressHistoryMap !== null ? null : (
                     <Box className="operacao-radar-tickets-table-wrap">
                       <table className="operacao-radar-tickets-table">
                         <colgroup>
@@ -2136,61 +2137,14 @@ const OperacaoHome = ({ userRole }) => {
                     </Box>
                   )}
                   {progressHistoryMap !== null && (activeEscopoTab === 'DEMANDA' || activeEscopoTab === 'DEMANDA FAST') && (
-                    <Box mt="4" className="operacao-radar-tickets-panel">
-                      <Flex align="center" justify="between" mb="2" wrap="wrap" gap="2">
-                        <Box>
-                          <Text size="3" weight="bold">Histórico de % Conclusão por Demanda</Text>
-                          <Text size="1" color="gray">Datas de alteração registradas no statusChangeLog · máx. 50 demandas</Text>
-                        </Box>
-                      </Flex>
-                      <Box className="operacao-radar-tickets-table-wrap">
-                        <table className="operacao-radar-tickets-table">
-                          <thead>
-                            <tr>
-                              <th>#</th>
-                              <th>AÇÕES</th>
-                              <th>ISSUE_KEY</th>
-                              <th>STATUS</th>
-                              <th>ISSUETYPE</th>
-                              <th>SUMMARY</th>
-                              <th>SQUAD</th>
-                              <th style={{ color: '#818cf8', minWidth: 220 }}>% CONCLUSÃO (HISTÓRICO)</th>
-                              <th style={{ color: '#f59e0b', minWidth: 220 }}>% CONCLUSÃO TESTE INT (HISTÓRICO)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {drillRows.map((ticket, idx) => {
-                              const hist = progressHistoryMap.get(ticket.issueKey) || { dev: [], teste: [] };
-                              const fmtE = (e) => `${e.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}: ${e.value}%`;
-                              const renderH = (entries, color) => entries.length === 0
-                                ? <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>—</span>
-                                : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>{entries.map((e, i) => <span key={i} style={{ display: 'inline-block', background: `${color}18`, border: `1px solid ${color}44`, borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{fmtE(e)}</span>)}</div>;
-                              return (
-                                <tr key={ticket.issueKey}>
-                                  <td className="operacao-radar-tickets-num">{idx + 1}</td>
-                                  <td className="operacao-radar-tickets-acoes">
-                                    <button type="button" className="operacao-radar-tickets-action-btn action-view" title="Ver detalhes" disabled={modalLoadingKey === ticket.issueKey} onClick={() => openDemandaModal(ticket, 'view')}>{modalLoadingKey === ticket.issueKey ? <Loader2 size={14} className="spin" /> : <Eye size={14} />}</button>
-                                    <button type="button" className="operacao-radar-tickets-action-btn action-edit" title="Editar" disabled={modalLoadingKey === ticket.issueKey} onClick={() => openDemandaModal(ticket, 'edit')}><Pencil size={14} /></button>
-                                  </td>
-                                  <td className="operacao-radar-tickets-key-cell">
-                                    <div className="operacao-radar-tickets-key-inner">
-                                      <span className="operacao-radar-tickets-expand placeholder" aria-hidden="true" />
-                                      {ticket.issueUrl ? <a className="operacao-radar-tickets-key" href={ticket.issueUrl} target="_blank" rel="noopener noreferrer">{ticket.issueKey}</a> : ticket.issueKey}
-                                    </div>
-                                  </td>
-                                  <td>{ticket.status || '—'}</td>
-                                  <td>{ticket.issueType || '—'}</td>
-                                  <td className="operacao-radar-tickets-summary">{ticket.summary || '—'}</td>
-                                  <td>{(() => { const sq = squadByIssueKey.get(ticket.issueKey); return sq ? <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: 'rgba(16,185,129,0.13)', border: '1px solid rgba(16,185,129,0.35)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>{sq}</span> : (stripNumericPrefix(ticket.grupoSuporte) || '—'); })()}</td>
-                                  <td style={{ padding: '6px 8px', verticalAlign: 'top' }}>{renderH(hist.dev, '#818cf8')}</td>
-                                  <td style={{ padding: '6px 8px', verticalAlign: 'top' }}>{renderH(hist.teste, '#f59e0b')}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </Box>
-                    </Box>
+                    <OperacaoProgressHistoryTable
+                      historyMap={progressHistoryMap}
+                      rows={drillRows}
+                      squadMap={squadByIssueKey}
+                      modalLoadingKey={modalLoadingKey}
+                      onView={(t) => openDemandaModal(t, 'view')}
+                      onEdit={(t) => openDemandaModal(t, 'edit')}
+                    />
                   )}
                 </Box>
               )}
