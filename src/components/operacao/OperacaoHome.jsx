@@ -394,6 +394,8 @@ const OperacaoHome = ({ userRole }) => {
   const [modalLoadingKey, setModalLoadingKey] = useState(null);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [selectedNaturezaFilter, setSelectedNaturezaFilter] = useState(() => new Set());
+  const [progressHistoryMap, setProgressHistoryMap] = useState(null);
+  const [progressHistoryLoading, setProgressHistoryLoading] = useState(false);
 
   // Pre-compute squad per issueKey as soon as drillTickets + systems + squads are available
   const squadByIssueKey = useMemo(() => {
@@ -725,6 +727,37 @@ const OperacaoHome = ({ userRole }) => {
     }
   }, [ticketsCacheLoading, loadedEscopos, ensureRadarBootstrap, statsFingerprint]);
 
+  const loadProgressHistory = useCallback(async (tickets) => {
+    if (progressHistoryLoading) return;
+    setProgressHistoryLoading(true);
+    try {
+      const FIELDS = new Set(['percentualConclusao', 'percentualConclusaoTesteInterno']);
+      const map = new Map();
+      await Promise.all(tickets.slice(0, 50).map(async (ticket) => {
+        try {
+          const snap = await getDocs(collection(db, 'tickets_global', ticket.id || ticket.issueKey, 'statusChangeLog'));
+          const dev = [], teste = [];
+          snap.forEach(docSnap => {
+            const d = docSnap.data();
+            if (!FIELDS.has(d.field)) return;
+            const ts = d.changedAt?.toDate?.() || (d.changedAt ? new Date(d.changedAt) : null);
+            if (!ts) return;
+            const val = Number(d.newValue);
+            if (!Number.isFinite(val)) return;
+            if (d.field === 'percentualConclusao') dev.push({ date: ts, value: val });
+            else teste.push({ date: ts, value: val });
+          });
+          dev.sort((a, b) => a.date - b.date);
+          teste.sort((a, b) => a.date - b.date);
+          map.set(ticket.issueKey, { dev, teste });
+        } catch { }
+      }));
+      setProgressHistoryMap(map);
+    } finally {
+      setProgressHistoryLoading(false);
+    }
+  }, [progressHistoryLoading]); // eslint-disable-line
+
   // 2) Ao filtrar, recomputa totais/lanes a partir do tickets em memória
   useEffect(() => {
     let cancelled = false;
@@ -951,6 +984,8 @@ const OperacaoHome = ({ userRole }) => {
               setSelectedDueDateFilter(null);
               setDemandaVulnerabFilter(false);
               setSelectedNaturezaFilter(new Set());
+              setProgressHistoryMap(null);
+              setProgressHistoryLoading(false);
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
@@ -1818,6 +1853,16 @@ const OperacaoHome = ({ userRole }) => {
                       </Text>
                     </Box>
                     <Flex align="end" gap="2">
+                    {(activeEscopoTab === 'DEMANDA' || activeEscopoTab === 'DEMANDA FAST') && (
+                      <button type="button" className="btn btn-ghost"
+                        title="Histórico de % Conclusão"
+                        disabled={progressHistoryLoading || drillRows.length === 0}
+                        onClick={() => progressHistoryMap !== null ? setProgressHistoryMap(null) : loadProgressHistory(drillRows)}
+                        style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6, ...(progressHistoryMap !== null ? { background: 'rgba(129,140,248,0.15)', border: '1px solid rgba(129,140,248,0.5)', color: '#818cf8' } : {}) }}>
+                        {progressHistoryLoading ? <Loader2 size={14} className="spin" /> : '📊'}
+                        {progressHistoryMap !== null ? 'Fechar histórico %' : 'Histórico %'}
+                      </button>
+                    )}
                     <Box className="operacao-radar-drill-filter">
                       <Text size="1" weight="bold" color="gray" mb="1" style={{ letterSpacing: '0.06em' }}>
                         ISSUE_KEY
@@ -2088,6 +2133,63 @@ const OperacaoHome = ({ userRole }) => {
                           ))}
                         </tbody>
                       </table>
+                    </Box>
+                  )}
+                  {progressHistoryMap !== null && (activeEscopoTab === 'DEMANDA' || activeEscopoTab === 'DEMANDA FAST') && (
+                    <Box mt="4" className="operacao-radar-tickets-panel">
+                      <Flex align="center" justify="between" mb="2" wrap="wrap" gap="2">
+                        <Box>
+                          <Text size="3" weight="bold">Histórico de % Conclusão por Demanda</Text>
+                          <Text size="1" color="gray">Datas de alteração registradas no statusChangeLog · máx. 50 demandas</Text>
+                        </Box>
+                      </Flex>
+                      <Box className="operacao-radar-tickets-table-wrap">
+                        <table className="operacao-radar-tickets-table">
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>AÇÕES</th>
+                              <th>ISSUE_KEY</th>
+                              <th>STATUS</th>
+                              <th>ISSUETYPE</th>
+                              <th>SUMMARY</th>
+                              <th>SQUAD</th>
+                              <th style={{ color: '#818cf8', minWidth: 220 }}>% CONCLUSÃO (HISTÓRICO)</th>
+                              <th style={{ color: '#f59e0b', minWidth: 220 }}>% CONCLUSÃO TESTE INT (HISTÓRICO)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {drillRows.map((ticket, idx) => {
+                              const hist = progressHistoryMap.get(ticket.issueKey) || { dev: [], teste: [] };
+                              const fmtE = (e) => `${e.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}: ${e.value}%`;
+                              const renderH = (entries, color) => entries.length === 0
+                                ? <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>—</span>
+                                : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>{entries.map((e, i) => <span key={i} style={{ display: 'inline-block', background: `${color}18`, border: `1px solid ${color}44`, borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{fmtE(e)}</span>)}</div>;
+                              return (
+                                <tr key={ticket.issueKey}>
+                                  <td className="operacao-radar-tickets-num">{idx + 1}</td>
+                                  <td className="operacao-radar-tickets-acoes">
+                                    <button type="button" className="operacao-radar-tickets-action-btn action-view" title="Ver detalhes" disabled={modalLoadingKey === ticket.issueKey} onClick={() => openDemandaModal(ticket, 'view')}>{modalLoadingKey === ticket.issueKey ? <Loader2 size={14} className="spin" /> : <Eye size={14} />}</button>
+                                    <button type="button" className="operacao-radar-tickets-action-btn action-edit" title="Editar" disabled={modalLoadingKey === ticket.issueKey} onClick={() => openDemandaModal(ticket, 'edit')}><Pencil size={14} /></button>
+                                  </td>
+                                  <td className="operacao-radar-tickets-key-cell">
+                                    <div className="operacao-radar-tickets-key-inner">
+                                      <span className="operacao-radar-tickets-expand placeholder" aria-hidden="true" />
+                                      {ticket.issueUrl ? <a className="operacao-radar-tickets-key" href={ticket.issueUrl} target="_blank" rel="noopener noreferrer">{ticket.issueKey}</a> : ticket.issueKey}
+                                    </div>
+                                  </td>
+                                  <td>{ticket.status || '—'}</td>
+                                  <td>{ticket.issueType || '—'}</td>
+                                  <td className="operacao-radar-tickets-summary">{ticket.summary || '—'}</td>
+                                  <td>{(() => { const sq = squadByIssueKey.get(ticket.issueKey); return sq ? <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: 'rgba(16,185,129,0.13)', border: '1px solid rgba(16,185,129,0.35)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>{sq}</span> : (stripNumericPrefix(ticket.grupoSuporte) || '—'); })()}</td>
+                                  <td style={{ padding: '6px 8px', verticalAlign: 'top' }}>{renderH(hist.dev, '#818cf8')}</td>
+                                  <td style={{ padding: '6px 8px', verticalAlign: 'top' }}>{renderH(hist.teste, '#f59e0b')}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </Box>
                     </Box>
                   )}
                 </Box>
