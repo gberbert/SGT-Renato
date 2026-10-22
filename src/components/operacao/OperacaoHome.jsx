@@ -392,6 +392,8 @@ const OperacaoHome = ({ userRole }) => {
   const [demandaModalTicket, setDemandaModalTicket] = useState(null);
   const [editModalTicket, setEditModalTicket] = useState(null);
   const [modalLoadingKey, setModalLoadingKey] = useState(null);
+  const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
+  const [selectedNaturezaFilter, setSelectedNaturezaFilter] = useState(() => new Set());
 
   // Pre-compute squad per issueKey as soon as drillTickets + systems + squads are available
   const squadByIssueKey = useMemo(() => {
@@ -939,6 +941,8 @@ const OperacaoHome = ({ userRole }) => {
               setSelectedSquadFilter(null);
               setSelectedPriorityFilter(null);
               setSelectedDueDateFilter(null);
+              setDemandaVulnerabFilter(false);
+              setSelectedNaturezaFilter(new Set());
               setExpandedParents(new Set());
               setDrillTickets([]);
               setDrillError('');
@@ -1126,17 +1130,30 @@ const OperacaoHome = ({ userRole }) => {
                         })
                       : squadFilteredTickets;
 
+                    // Vuln + Natureza filters
+                    const vulnNaturezaFilteredTickets = (() => {
+                      let base = prioFilteredTickets;
+                      if (demandaVulnerabFilter) base = base.filter((t) => t.demandaVulnerabilidade === 'Sim');
+                      if (selectedNaturezaFilter.size > 0) {
+                        base = base.filter((t) => selectedNaturezaFilter.has(t.naturezaIniciativa || t.naturezaOperacao || ''));
+                      }
+                      return base;
+                    })();
+
+                    // Natureza options from escopo tickets
+                    const naturezaOptions = [...new Set(escopoTickets.map((t) => t.naturezaIniciativa || t.naturezaOperacao).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
                     // When in "impedidas mode", visibleTickets = only impedidas within active status filters
                     const visibleTickets = (() => {
                       if (filteringImpedidas && demandaStatusFilters.size > 0) {
-                        return prioFilteredTickets.filter(
+                        return vulnNaturezaFilteredTickets.filter(
                           (t) => t.impedimento === true && demandaStatusFilters.has(String(t.status || '').trim())
                         );
                       }
                       if (demandaStatusFilters.size > 0) {
-                        return prioFilteredTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()));
+                        return vulnNaturezaFilteredTickets.filter((t) => demandaStatusFilters.has(String(t.status || '').trim()));
                       }
-                      return prioFilteredTickets;
+                      return vulnNaturezaFilteredTickets;
                     })();
                     const totalDemandas = visibleTickets.length;
                     const totalImpedidas = filteringImpedidas
@@ -1254,6 +1271,66 @@ const OperacaoHome = ({ userRole }) => {
 
                     return (
                       <Box mt="1">
+                        {/* ── Filtros: Squad / Vulnerabilidade / Natureza Iniciativa ── */}
+                        <Box mb="3" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 14px' }}>
+                          {/* Row 1: Squad pills */}
+                          <Flex wrap="wrap" align="center" gap="2" mb="2">
+                            <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', flexShrink: 0 }}>SQUAD</span>
+                            {squads.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((sq) => {
+                              const sqKey = sq.sigla || sq.name || sq.nome || sq.id;
+                              const isActive = selectedSquadFilter?.name === sqKey && selectedSquadFilter?.mode === 'all';
+                              return (
+                                <button key={sq.id} type="button"
+                                  onClick={() => {
+                                    if (isActive) {
+                                      setSelectedSquadFilter(null);
+                                      setDemandaStatusFilters(new Set());
+                                      setFilteringImpedidas(false);
+                                    } else {
+                                      setSelectedSquadFilter({ name: sqKey, mode: 'all' });
+                                      setDemandaStatusFilters(new Set());
+                                      setFilteringImpedidas(false);
+                                    }
+                                  }}
+                                  style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10, cursor: 'pointer', userSelect: 'none', border: isActive ? '1px solid rgba(99,102,241,0.7)' : '1px solid rgba(255,255,255,0.12)', background: isActive ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)', color: isActive ? '#a5b4fc' : 'rgba(255,255,255,0.55)', transition: 'all 0.12s' }}
+                                >
+                                  {sq.sigla || sq.name || sq.nome}
+                                </button>
+                              );
+                            })}
+                          </Flex>
+                          {/* Row 2: Vuln + Natureza */}
+                          <Flex wrap="wrap" align="center" gap="2">
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', userSelect: 'none', padding: '3px 8px', borderRadius: 6, border: demandaVulnerabFilter ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.12)', background: demandaVulnerabFilter ? 'rgba(239,68,68,0.1)' : 'transparent', color: demandaVulnerabFilter ? '#f87171' : 'rgba(255,255,255,0.55)', transition: 'all 0.12s', flexShrink: 0 }}>
+                              <input type="checkbox" checked={demandaVulnerabFilter} onChange={(e) => setDemandaVulnerabFilter(e.target.checked)} style={{ accentColor: '#ef4444', width: 12, height: 12 }} />
+                              🔒 Vulnerabilidade
+                            </label>
+                            {naturezaOptions.length > 0 && (
+                              <>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', flexShrink: 0, marginLeft: 4 }}>NATUREZA</span>
+                                {naturezaOptions.map((n) => {
+                                  const isActive = selectedNaturezaFilter.has(n);
+                                  return (
+                                    <button key={n} type="button"
+                                      onClick={() => {
+                                        const next = new Set(selectedNaturezaFilter);
+                                        isActive ? next.delete(n) : next.add(n);
+                                        setSelectedNaturezaFilter(next);
+                                      }}
+                                      style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10, cursor: 'pointer', userSelect: 'none', border: isActive ? '1px solid rgba(56,189,248,0.7)' : '1px solid rgba(255,255,255,0.12)', background: isActive ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)', color: isActive ? '#38bdf8' : 'rgba(255,255,255,0.55)', transition: 'all 0.12s', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                      title={n}
+                                    >
+                                      {n.length > 25 ? n.slice(0, 24) + '…' : n}
+                                    </button>
+                                  );
+                                })}
+                              </>
+                            )}
+                            {(selectedSquadFilter || demandaVulnerabFilter || selectedNaturezaFilter.size > 0) && (
+                              <button type="button" onClick={() => { setSelectedSquadFilter(null); setDemandaVulnerabFilter(false); setSelectedNaturezaFilter(new Set()); setDemandaStatusFilters(new Set()); setFilteringImpedidas(false); }} style={{ fontSize: 10, padding: '3px 8px', background: 'none', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, cursor: 'pointer', color: 'rgba(255,255,255,0.35)', marginLeft: 'auto', flexShrink: 0 }}>Limpar</button>
+                            )}
+                          </Flex>
+                        </Box>
                         {/* ── Cabeçalho: total + impedidas ── */}
                         <Box mb="4" style={{ paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                           <Text style={{ fontSize: 11, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', fontWeight: 700, display: 'block', marginBottom: 8 }}>
