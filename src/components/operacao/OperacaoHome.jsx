@@ -645,6 +645,14 @@ const OperacaoHome = ({ userRole }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statsFingerprint]);
 
+  // Auto-carrega tickets ao ativar qualquer aba de escopo (sem botão manual)
+  useEffect(() => {
+    const scopeTabs = ['PROBLEMAS', 'DEMANDA', 'DEMANDA FAST', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO', 'PRECIFICACAO DEMANDAS'];
+    if (!scopeTabs.includes(activeEscopoTab)) return;
+    loadTicketsData(activeEscopoTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEscopoTab]);
+
   // Auto-abre o drill com todos os tickets quando a aba DEMANDA FAST está ativa e os dados já estão carregados
   useEffect(() => {
     if (activeEscopoTab !== 'DEMANDA FAST') return;
@@ -1051,12 +1059,12 @@ const OperacaoHome = ({ userRole }) => {
                 (() => {
                   const escopoLoaded = loadedEscopos.has(activeEscopoTab);
                   if (!escopoLoaded) {
+                    // Auto-loading is in progress — show inline spinner
                     return (
-                      <TabLoadBanner
-                        tabLabel={visibleTabs.find((t) => t.value === activeEscopoTab)?.label || activeEscopoTab}
-                        onLoad={() => loadTicketsData(activeEscopoTab)}
-                        loading={ticketsCacheLoading}
-                      />
+                      <Flex align="center" justify="center" gap="3" style={{ padding: 48 }}>
+                        <Loader2 size={22} color="#38bdf8" className="spin" />
+                        <Text size="2" color="gray">Carregando dados da aba {visibleTabs.find((t) => t.value === activeEscopoTab)?.label || activeEscopoTab}…</Text>
+                      </Flex>
                     );
                   }
                   const tabCard = geralCards.find((c) => c.key === activeEscopoTab) || {
