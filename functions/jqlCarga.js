@@ -96,7 +96,7 @@ const TICKET_FIELD_DEFINITIONS = {
   estimativa_macro: [
     "Estimativa Macro",
     "estimativa macro",
-    "Estimativa Macro[Number]",
+    "Estimativa Macro[Dropdown]",
   ],
   estimativa_total: [
     "Estimativa Total",

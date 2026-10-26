@@ -550,10 +550,12 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     dataFimHomologacaoPlanejada: extracted.data_fim_homologacao_planejada || null,
     dataFimHomologacaoEfetiva: extracted.data_fim_homologacao_efetiva || null,
     dataEntregaProducaoPrevista: extracted.data_entrega_producao_prevista || null,
-    estimativaHoras: (() => { const n = Number(extracted.estimativa_horas); return Number.isFinite(n) ? n : null; })(),
-    estimativaMacro: (() => { const n = Number(extracted.estimativa_macro); return Number.isFinite(n) ? n : null; })(),
-    estimativaTotal: (() => { const n = Number(extracted.estimativa_total); return Number.isFinite(n) ? n : null; })(),
-    estimativaMacroJira: (() => { const n = Number(extracted.estimativa_macro); return Number.isFinite(n) ? n : null; })(),
+    estimativaHoras: (() => { if (extracted.estimativa_horas == null) return null; const n = Number(extracted.estimativa_horas); return Number.isFinite(n) ? n : null; })(),
+    // estimativaMacro (customfield_10266) é Dropdown/Select — armazenar como string (ex: "P", "M", "G", "GG")
+    estimativaMacro: extracted.estimativa_macro || null,
+    estimativaTotal: (() => { if (extracted.estimativa_total == null) return null; const n = Number(extracted.estimativa_total); return Number.isFinite(n) ? n : null; })(),
+    // estimativaMacroJira = valor textual do dropdown de estimativa macro do Jira (ex: "P", "M", "G", "GG")
+    estimativaMacroJira: extracted.estimativa_macro || null,
     dataFimPlanejado: extracted.data_fim_planejado || null,
     planejamentoHorasDemandaFast: extracted.planejamento_horas_demanda_fast != null ? Number(extracted.planejamento_horas_demanda_fast) : null,
     demandaVulnerabilidade: extracted.demanda_vulnerabilidade || null,
