@@ -571,6 +571,7 @@ export function mapDrillTicket(t) {
     dataFimTesteQa: t.dataFimTesteQa || null,
     dataFimHomologacao: t.dataFimHomologacao || null,
     dataConclusao: t.dataConclusao || null,
+    planejamentoHorasDemandaFast: t.planejamentoHorasDemandaFast ?? null,
   };
 }
 
@@ -741,6 +742,7 @@ const data = d.data();
     ticketsVinculados: data.ticketsVinculados || '',
     motivoImpedimento: data.motivoImpedimento || '',
     fila: data.fila || '',
+    planejamentoHorasDemandaFast: data.planejamentoHorasDemandaFast ?? null,
   };
 }
 
