@@ -1175,7 +1175,18 @@ const Settings = ({ userRole = 'admin' }) => {
                               const squad = squads.find(s => s.id === sys.squadId);
                               return (
                                 <Table.Row key={sys.id} align="center">
-                                  <Table.Cell><Text weight="bold">{sys.name}</Text></Table.Cell>
+                                  <Table.Cell>
+                                    <Flex direction="column" gap="0">
+                                      <Text weight="bold">
+                                        {sys.name === sys.grupoSuporte
+                                          ? sys.name.replace(/^TI_/i, '').replace(/_/g, ' ')
+                                          : sys.name}
+                                      </Text>
+                                      {sys.name === sys.grupoSuporte && (
+                                        <Text size="1" color="gray">{sys.name}</Text>
+                                      )}
+                                    </Flex>
+                                  </Table.Cell>
                                   <Table.Cell>{proj ? proj.name : '-'}</Table.Cell>
                                   <Table.Cell>{sys.grupoSuporte || <Text color="gray">-</Text>}</Table.Cell>
                                   <Table.Cell>{squad ? squad.name : <Text color="gray">-</Text>}</Table.Cell>
