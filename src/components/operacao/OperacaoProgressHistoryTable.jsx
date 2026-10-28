@@ -63,21 +63,35 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
   // Apply date range filter to allDates
   const filteredDates=allDates.filter(d=>(!filterStart||d>=filterStart)&&(!filterEnd||d<=filterEnd));
 
-  // Build chart data: for each filtered date, compute running avanço for each ticket
-  const chartData=filteredDates.map(d=>{
-    const pt={label:fD(d),date:d};
-    for(const ticket of rows){
-      const dm=devByKey.get(ticket.issueKey)||new Map();
-      const tm=tstByKey.get(ticket.issueKey)||new Map();
-      const isBase=d==='2026-10-10';
-      const devV=lastKnownVal(dm,d);
-      const testeV=lastKnownVal(tm,d);
-      const curDev=ticket.percentualConclusao!=null?Number(ticket.percentualConclusao):null;
-      const curTeste=ticket.percentualConclusaoTesteInterno!=null?Number(ticket.percentualConclusaoTesteInterno):null;
-      if(devV!=null||testeV!=null||curDev!=null||curTeste!=null){
-        const devEff=(devV!=null&&(devV>0||!isBase))?devV:(curDev??0);
-        const testeEff=(testeV!=null&&(testeV>0||!isBase))?testeV:(curTeste??0);
-        pt[ticket.issueKey]=Math.round(((devEff+testeEff)/2)*10)/10;
+  // Build chart data: for each filtered date, compute running avanço for each ticket.
+  // At the baseline date (2026-10-10) all tickets start at 0% to allow relative analysis.
+  const CHART_BASE = '2026-10-10';
+  // Ensure baseline is always included if it falls within the filter range
+  const chartDates = filteredDates.includes(CHART_BASE)
+    ? filteredDates
+    : ((!filterStart || CHART_BASE >= filterStart) && (!filterEnd || CHART_BASE <= filterEnd))
+      ? [CHART_BASE, ...filteredDates].sort()
+      : filteredDates;
+
+  const chartData = chartDates.map(d => {
+    const isBaselineDate = d === CHART_BASE;
+    const pt = { label: fD(d), date: d };
+    for (const ticket of rows) {
+      const dm = devByKey.get(ticket.issueKey) || new Map();
+      const tm = tstByKey.get(ticket.issueKey) || new Map();
+      const curDev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
+      const curTeste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
+      // At baseline date: always 0% (normalise to zero for relative analysis)
+      if (isBaselineDate) {
+        pt[ticket.issueKey] = 0;
+      } else {
+        const devV = lastKnownVal(dm, d);
+        const testeV = lastKnownVal(tm, d);
+        if (devV != null || testeV != null || curDev != null || curTeste != null) {
+          const devEff = devV != null ? devV : (curDev ?? 0);
+          const testeEff = testeV != null ? testeV : (curTeste ?? 0);
+          pt[ticket.issueKey] = Math.round(((devEff + testeEff) / 2) * 10) / 10;
+        }
       }
     }
     return pt;
