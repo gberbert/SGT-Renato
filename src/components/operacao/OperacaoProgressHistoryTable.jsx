@@ -39,6 +39,16 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
   const [filterStart,setFilterStart]=useState('');
   const [filterEnd,setFilterEnd]=useState('');
   const [showChart,setShowChart]=useState(false);
+  const [selectedKeys,setSelectedKeys]=useState(new Set());
+
+  const toggleSelect = (issueKey) => {
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(issueKey)) next.delete(issueKey); else next.add(issueKey);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedKeys(new Set());
 
   if(!historyMap||!rows.length) return null;
 
@@ -119,6 +129,13 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
                 style={{background:'none',border:'none',cursor:'pointer',color:'var(--gray-8)',fontSize:13,lineHeight:1,padding:0}}>×</button>
             )}
           </Flex>
+          {/* Selection clear button */}
+          {selectedKeys.size > 0 && (
+            <button type="button" onClick={clearSelection}
+              style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:6,cursor:'pointer',border:'1px solid rgba(239,68,68,0.4)',background:'rgba(239,68,68,0.08)',color:'#f87171'}}>
+              × Limpar seleção ({selectedKeys.size})
+            </button>
+          )}
           {/* Chart toggle */}
           <button type="button" onClick={()=>setShowChart(v=>!v)}
             style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:6,cursor:'pointer',border:showChart?'1px solid rgba(74,222,128,0.6)':'1px solid rgba(74,222,128,0.3)',background:showChart?'rgba(74,222,128,0.15)':'rgba(74,222,128,0.05)',color:'#4ade80'}}>
@@ -173,7 +190,9 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
               const curDev=ticket.percentualConclusao!=null?Number(ticket.percentualConclusao):null;
               const curTeste=ticket.percentualConclusaoTesteInterno!=null?Number(ticket.percentualConclusaoTesteInterno):null;
               return(
-                <tr key={ticket.issueKey}>
+                <tr key={ticket.issueKey}
+                  onClick={()=>toggleSelect(ticket.issueKey)}
+                  style={{cursor:'pointer',background:selectedKeys.has(ticket.issueKey)?'rgba(74,222,128,0.08)':undefined,outline:selectedKeys.has(ticket.issueKey)?'1px solid rgba(74,222,128,0.3)':undefined,transition:'background 0.1s'}}>
                   <td className="operacao-radar-tickets-num">{idx+1}</td>
                   <td className="operacao-radar-tickets-acoes">
                     <button type="button" className="operacao-radar-tickets-action-btn action-view" title="Ver" disabled={modalLoadingKey===ticket.issueKey} onClick={()=>onView(ticket)}>
@@ -235,18 +254,23 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
               <YAxis domain={[0,100]} tick={{fill:'var(--gray-9)',fontSize:10}} tickFormatter={v=>`${v}%`}/>
               <RTooltip content={<ChartTip/>}/>
               <Legend wrapperStyle={{fontSize:10,color:'var(--gray-9)',paddingTop:4}}/>
-              {rows.map((ticket,idx)=>(
-                <Line
-                  key={ticket.issueKey}
-                  type="monotone"
-                  dataKey={ticket.issueKey}
-                  stroke={LINE_COLORS[idx%LINE_COLORS.length]}
-                  strokeWidth={1.5}
-                  dot={false}
-                  activeDot={{r:4}}
-                  connectNulls
-                />
-              ))}
+              {rows
+                .filter(t => selectedKeys.size === 0 || selectedKeys.has(t.issueKey))
+                .map((ticket,idx)=>{
+                  const origIdx = rows.indexOf(ticket);
+                  return(
+                    <Line
+                      key={ticket.issueKey}
+                      type="monotone"
+                      dataKey={ticket.issueKey}
+                      stroke={LINE_COLORS[origIdx%LINE_COLORS.length]}
+                      strokeWidth={selectedKeys.has(ticket.issueKey)?2.5:1.5}
+                      dot={false}
+                      activeDot={{r:4}}
+                      connectNulls
+                    />
+                  );
+                })}
             </LineChart>
           </ResponsiveContainer>
         </Box>
