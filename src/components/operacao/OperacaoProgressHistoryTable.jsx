@@ -154,24 +154,17 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
       ? [CHART_BASE, ...filteredDates].sort()
       : filteredDates;
 
+  // Chart data uses the same avancoTable values as the table (baseline=0%, 0% until first real change)
   const chartData = chartDates.map(d => {
-    const isBaselineDate = d === CHART_BASE;
+    const isBase = d === CHART_BASE;
     const pt = { label: fD(d), date: d };
     for (const ticket of rows) {
-      const dm = devByKey.get(ticket.issueKey) || new Map();
-      const tm = tstByKey.get(ticket.issueKey) || new Map();
-      const curDev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
-      const curTeste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
-      // At baseline date: always 0% (normalise to zero for relative analysis)
-      if (isBaselineDate) {
+      if (isBase) {
         pt[ticket.issueKey] = 0;
       } else {
-        const devV = lastKnownVal(dm, d);
-        const testeV = lastKnownVal(tm, d);
-        if (devV != null || testeV != null || curDev != null || curTeste != null) {
-          const devEff = devV != null ? devV : (curDev ?? 0);
-          const testeEff = testeV != null ? testeV : (curTeste ?? 0);
-          pt[ticket.issueKey] = Math.round(((devEff + testeEff) / 2) * 10) / 10;
+        const cell = avancoTable.get(ticket.issueKey)?.get(d);
+        if (cell != null) {
+          pt[ticket.issueKey] = cell.value;
         }
       }
     }
