@@ -1,7 +1,7 @@
 {
   "name": "sistema-demandas-renato",
   "private": true,
-  "version": "0.1.387",
+  "version": "0.1.388",
   "type": "module",
   "scripts": {
     "dev": "vite",
