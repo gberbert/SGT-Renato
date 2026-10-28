@@ -572,6 +572,8 @@ export function mapDrillTicket(t) {
     dataFimHomologacao: t.dataFimHomologacao || null,
     dataConclusao: t.dataConclusao || null,
     planejamentoHorasDemandaFast: t.planejamentoHorasDemandaFast ?? null,
+    percentualConclusao: t.percentualConclusao ?? null,
+    percentualConclusaoTesteInterno: t.percentualConclusaoTesteInterno ?? null,
   };
 }
 

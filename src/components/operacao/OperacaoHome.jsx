@@ -1597,12 +1597,19 @@ const OperacaoHome = ({ userRole }) => {
                         {/* ── Gráficos Agrupadores ── */}
                         {(() => {
 
-                          const _DUE_FIELDS = ['dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataConclusao'];
-                          const _getDueDates = (t) => _DUE_FIELDS.map((f) => t[f] ? String(t[f]).slice(0, 10) : null).filter(Boolean);
                           const isTerminal = (t) => TERMINAL_STATUSES.has(String(t.status || '').trim());
-                          const vencidos = visibleTickets.filter((t) => !isTerminal(t) && _getDueDates(t).some((d) => d < todayStr)).length;
-                          const venceHoje = visibleTickets.filter((t) => !isTerminal(t) && _getDueDates(t).includes(todayStr)).length;
-                          const vence2dias = visibleTickets.filter((t) => { const dates = _getDueDates(t); return !isTerminal(t) && (dates.includes(plus1Str) || dates.includes(plus2Str)); }).length;
+                          const devDate = (t) => t.dataFimDesenvolvimento ? String(t.dataFimDesenvolvimento).slice(0, 10) : null;
+                          const testeDate = (t) => t.dataFimTesteInterno ? String(t.dataFimTesteInterno).slice(0, 10) : null;
+                          const devNotDone = (t) => t.percentualConclusao == null || Number(t.percentualConclusao) < 100;
+                          const testeNotDone = (t) => t.percentualConclusaoTesteInterno == null || Number(t.percentualConclusaoTesteInterno) < 100;
+                          // DEV counters: dataFimDesenvolvimento + % conclusão < 100
+                          const vencidos = visibleTickets.filter((t) => !isTerminal(t) && devNotDone(t) && devDate(t) && devDate(t) < todayStr).length;
+                          const venceHoje = visibleTickets.filter((t) => !isTerminal(t) && devNotDone(t) && devDate(t) === todayStr).length;
+                          const vence2dias = visibleTickets.filter((t) => !isTerminal(t) && devNotDone(t) && (devDate(t) === plus1Str || devDate(t) === plus2Str)).length;
+                          // TESTE counters: dataFimTesteInterno + % conclusão teste < 100
+                          const vencidosTeste = visibleTickets.filter((t) => !isTerminal(t) && testeNotDone(t) && testeDate(t) && testeDate(t) < todayStr).length;
+                          const venceHojeTeste = visibleTickets.filter((t) => !isTerminal(t) && testeNotDone(t) && testeDate(t) === todayStr).length;
+                          const vence2diasTeste = visibleTickets.filter((t) => !isTerminal(t) && testeNotDone(t) && (testeDate(t) === plus1Str || testeDate(t) === plus2Str)).length;
 
                           return (
                             <Box mb="4" style={{ paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
@@ -1733,6 +1740,45 @@ const OperacaoHome = ({ userRole }) => {
                                   <span style={{ fontSize: 28, fontWeight: 900, color: '#fbbf24', lineHeight: 1 }}>{vence2dias}</span>
                                   <span style={{ fontSize: 11, lineHeight: 1.3, color: 'rgba(251,191,36,0.7)', whiteSpace: 'normal' }}>Vence em 2 dias</span>
                                 </button>
+                                {/* Teste: Vencidos */}
+                                {vencidosTeste > 0 && (
+                                  <button type="button"
+                                    onClick={() => {
+                                      const pool = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
+                                      const f = pool.filter((t) => !isTerminal(t) && testeNotDone(t) && testeDate(t) && testeDate(t) < todayStr);
+                                      openDrillDirect(f, (selectedSquadFilter ? `Squad: ${selectedSquadFilter.name} · ` : '') + 'Teste Vencido');
+                                    }}
+                                    style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.35)', borderRadius:10, padding:'10px 14px', textAlign:'left', width:120, flex:'0 0 120px', cursor:'pointer', display:'flex', flexDirection:'column', gap:4 }}>
+                                    <span style={{ fontSize: 28, fontWeight: 900, color: '#ef4444', lineHeight: 1 }}>{vencidosTeste}</span>
+                                    <span style={{ fontSize: 11, lineHeight: 1.3, color: 'rgba(239,68,68,0.7)', whiteSpace: 'normal' }}>Teste Vencido</span>
+                                  </button>
+                                )}
+                                {/* Teste: Vence Hoje */}
+                                {venceHojeTeste > 0 && (
+                                  <button type="button"
+                                    onClick={() => {
+                                      const pool = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
+                                      const f = pool.filter((t) => !isTerminal(t) && testeNotDone(t) && testeDate(t) === todayStr);
+                                      openDrillDirect(f, (selectedSquadFilter ? `Squad: ${selectedSquadFilter.name} · ` : '') + 'Teste Vence Hoje');
+                                    }}
+                                    style={{ background:'rgba(249,115,22,0.08)', border:'1px solid rgba(249,115,22,0.35)', borderRadius:10, padding:'10px 14px', textAlign:'left', width:120, flex:'0 0 120px', cursor:'pointer', display:'flex', flexDirection:'column', gap:4 }}>
+                                    <span style={{ fontSize: 28, fontWeight: 900, color: '#f97316', lineHeight: 1 }}>{venceHojeTeste}</span>
+                                    <span style={{ fontSize: 11, lineHeight: 1.3, color: 'rgba(249,115,22,0.7)', whiteSpace: 'normal' }}>Teste Vence Hoje</span>
+                                  </button>
+                                )}
+                                {/* Teste: Vence em 2 dias */}
+                                {vence2diasTeste > 0 && (
+                                  <button type="button"
+                                    onClick={() => {
+                                      const pool = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
+                                      const f = pool.filter((t) => !isTerminal(t) && testeNotDone(t) && (testeDate(t) === plus1Str || testeDate(t) === plus2Str));
+                                      openDrillDirect(f, (selectedSquadFilter ? `Squad: ${selectedSquadFilter.name} · ` : '') + 'Teste Vence em 2 dias');
+                                    }}
+                                    style={{ background:'rgba(234,179,8,0.08)', border:'1px solid rgba(234,179,8,0.35)', borderRadius:10, padding:'10px 14px', textAlign:'left', width:120, flex:'0 0 120px', cursor:'pointer', display:'flex', flexDirection:'column', gap:4 }}>
+                                    <span style={{ fontSize: 28, fontWeight: 900, color: '#fbbf24', lineHeight: 1 }}>{vence2diasTeste}</span>
+                                    <span style={{ fontSize: 11, lineHeight: 1.3, color: 'rgba(251,191,36,0.7)', whiteSpace: 'normal' }}>Teste Vence 2 dias</span>
+                                  </button>
+                                )}
                               </Flex>
                             </Box>
                           );
