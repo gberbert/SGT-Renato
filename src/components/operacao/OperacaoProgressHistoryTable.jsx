@@ -36,7 +36,8 @@ function ChartTip({active,payload,label}){
 export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoadingKey,onView,onEdit}){
   const [showDev,setShowDev]=useState(false);
   const [showTeste,setShowTeste]=useState(false);
-  const [filterStart,setFilterStart]=useState('2026-10-22');
+  const [showBaseline,setShowBaseline]=useState(true);
+  const [filterStart,setFilterStart]=useState('2026-10-26');
   const [filterEnd,setFilterEnd]=useState('');
   const [showChart,setShowChart]=useState(false);
   const [selectedKeys,setSelectedKeys]=useState(new Set());
@@ -57,6 +58,9 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
   const devDs=[...new Set(allV.flatMap(h=>h.dev.map(e=>e.date.toISOString().slice(0,10))))].sort();
   const tstDs=[...new Set(allV.flatMap(h=>h.teste.map(e=>e.date.toISOString().slice(0,10))))].sort();
   const allDates=[...new Set([...devDs,...tstDs])].sort();
+  // filtered versions for % Conclusão and % Conclusão Teste columns
+  const filteredDevDs=devDs.filter(d=>(!filterStart||d>=filterStart)&&(!filterEnd||d<=filterEnd));
+  const filteredTstDs=tstDs.filter(d=>(!filterStart||d>=filterStart)&&(!filterEnd||d<=filterEnd));
 
   if(!allDates.length) return(
     <Box mt="2" style={{padding:'14px',background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8}}>
@@ -83,28 +87,21 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
     const tm = tstByKey.get(ticket.issueKey) || new Map();
     const curDev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
     const curTeste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
-    // First post-baseline change date for this ticket (strictly after 10/10)
+    // First post-baseline change date for this ticket (strictly after 27/10)
     const firstPostBase = [...dm.keys(), ...tm.keys()]
-      .filter(k => k > '2026-10-10')
+      .filter(k => k > '2026-10-26')
       .sort()[0] ?? null;
     const tdMap = new Map();
     for (const d of filteredDates) {
-      const isBase = d === '2026-10-10';
+      const isBase = d === '2026-10-26';
       const hasChange = dm.has(d) || tm.has(d);
-      let value;
-      if (isBase) {
-        value = 0;
-      } else if (!firstPostBase || d < firstPostBase) {
-        // No real change yet after baseline → still 0%
-        value = 0;
-      } else {
-        const devV = lastKnownVal(dm, d);
-        const testeV = lastKnownVal(tm, d);
-        const devEff = devV != null ? devV : (curDev ?? 0);
-        const testeEff = testeV != null ? testeV : (curTeste ?? 0);
-        value = Math.round(((devEff + testeEff) / 2) * 10) / 10;
-      }
-      tdMap.set(d, { value, isChange: isBase || hasChange });
+      // Always carry the last-known value (27/10 shows the real snapshot, not 0)
+      const devV = lastKnownVal(dm, d);
+      const testeV = lastKnownVal(tm, d);
+      const devEff = devV != null ? devV : (curDev ?? 0);
+      const testeEff = testeV != null ? testeV : (curTeste ?? 0);
+      const value = Math.round((devEff * 0.7 + testeEff * 0.3) * 10) / 10;
+      tdMap.set(d, { value, isChange: hasChange, isBase });
     }
     avancoTable.set(ticket.issueKey, tdMap);
   }
@@ -146,7 +143,7 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
 
   // Build chart data: for each filtered date, compute running avanço for each ticket.
   // At the baseline date (2026-10-10) all tickets start at 0% to allow relative analysis.
-  const CHART_BASE = '2026-10-10';
+  const CHART_BASE = '2026-10-26';
   // Ensure baseline is always included if it falls within the filter range
   const chartDates = filteredDates.includes(CHART_BASE)
     ? filteredDates
@@ -154,18 +151,13 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
       ? [CHART_BASE, ...filteredDates].sort()
       : filteredDates;
 
-  // Chart data uses the same avancoTable values as the table (baseline=0%, 0% until first real change)
+  // Chart data: use actual avancoTable values for all dates including the 27/10 baseline
   const chartData = chartDates.map(d => {
-    const isBase = d === CHART_BASE;
     const pt = { label: fD(d), date: d };
     for (const ticket of rows) {
-      if (isBase) {
-        pt[ticket.issueKey] = 0;
-      } else {
-        const cell = avancoTable.get(ticket.issueKey)?.get(d);
-        if (cell != null) {
-          pt[ticket.issueKey] = cell.value;
-        }
+      const cell = avancoTable.get(ticket.issueKey)?.get(d);
+      if (cell != null) {
+        pt[ticket.issueKey] = cell.value;
       }
     }
     return pt;
@@ -207,13 +199,17 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
             {showChart?'Fechar Gráfico':'Ver Gráfico'}
           </button>
           {/* Detail toggles */}
+          <button type="button" onClick={()=>setShowBaseline(v=>!v)}
+            style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:6,cursor:'pointer',border:showBaseline?'1px solid rgba(234,179,8,0.6)':'1px solid rgba(234,179,8,0.3)',background:showBaseline?'rgba(234,179,8,0.18)':'rgba(234,179,8,0.05)',color:'#eab308'}}>
+            {showBaseline?<ChevronDown size={13}/>:<ChevronRight size={13}/>}📌 Baseline 26/10
+          </button>
           <button type="button" onClick={()=>setShowDev(v=>!v)}
             style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:6,cursor:'pointer',border:'1px solid rgba(129,140,248,0.4)',background:showDev?'rgba(129,140,248,0.15)':'rgba(129,140,248,0.06)',color:'#818cf8'}}>
-            {showDev?<ChevronDown size={13}/>:<ChevronRight size={13}/>}% Conclusão ({devDs.length})
+            {showDev?<ChevronDown size={13}/>:<ChevronRight size={13}/>}% Conclusão ({filteredDevDs.length})
           </button>
           <button type="button" onClick={()=>setShowTeste(v=>!v)}
             style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,padding:'4px 10px',borderRadius:6,cursor:'pointer',border:'1px solid rgba(245,158,11,0.4)',background:showTeste?'rgba(245,158,11,0.15)':'rgba(245,158,11,0.06)',color:'#f59e0b'}}>
-            {showTeste?<ChevronDown size={13}/>:<ChevronRight size={13}/>}% Conclusão Teste ({tstDs.length})
+            {showTeste?<ChevronDown size={13}/>:<ChevronRight size={13}/>}% Conclusão Teste ({filteredTstDs.length})
           </button>
         </Flex>
       </Flex>
@@ -225,20 +221,23 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
             <col className="col-num"/><col className="col-acoes"/><col className="col-key"/>
             <col className="col-status"/><col className="col-squad"/>
             {filteredDates.map(d=><col key={`ac-${d}`} style={{minWidth:68}}/>)}
-            {showDev&&devDs.map(d=><col key={`dc-${d}`} style={{minWidth:64}}/>)}
-            {showTeste&&tstDs.map(d=><col key={`tc-${d}`} style={{minWidth:64}}/>)}
+            {showBaseline&&<col style={{minWidth:90}}/>}
+            {showBaseline&&<col style={{minWidth:90}}/>}
+            {showDev&&filteredDevDs.map(d=><col key={`dc-${d}`} style={{minWidth:64}}/>)}
+            {showTeste&&filteredTstDs.map(d=><col key={`tc-${d}`} style={{minWidth:64}}/>)}
           </colgroup>
           <thead>
             <tr>
               <th rowSpan={2}>#</th><th rowSpan={2}>AÇÕES</th><th rowSpan={2}>ISSUE_KEY</th>
               <th rowSpan={2}>STATUS</th><th rowSpan={2}>SQUAD</th>
               {filteredDates.length>0&&<th colSpan={filteredDates.length} style={{color:'#4ade80',textAlign:'center',background:'rgba(74,222,128,0.06)',borderBottom:'2px solid rgba(74,222,128,0.3)'}}>AVANÇO</th>}
-              {showDev&&devDs.length>0&&<th colSpan={devDs.length} style={{color:'#818cf8',textAlign:'center',background:'rgba(129,140,248,0.06)',borderBottom:'2px solid rgba(129,140,248,0.3)'}}>% CONCLUSÃO</th>}
-              {showTeste&&tstDs.length>0&&<th colSpan={tstDs.length} style={{color:'#f59e0b',textAlign:'center',background:'rgba(245,158,11,0.06)',borderBottom:'2px solid rgba(245,158,11,0.3)'}}>% CONCLUSÃO TESTE</th>}
+              {showBaseline&&<th colSpan={2} style={{color:'#eab308',textAlign:'center',background:'rgba(234,179,8,0.07)',borderBottom:'2px solid rgba(234,179,8,0.4)',whiteSpace:'nowrap',letterSpacing:'0.04em',fontSize:11}}>📌 BASELINE 26/10</th>}
+              {showDev&&filteredDevDs.length>0&&<th colSpan={filteredDevDs.length} style={{color:'#818cf8',textAlign:'center',background:'rgba(129,140,248,0.06)',borderBottom:'2px solid rgba(129,140,248,0.3)'}}>% CONCLUSÃO</th>}
+              {showTeste&&filteredTstDs.length>0&&<th colSpan={filteredTstDs.length} style={{color:'#f59e0b',textAlign:'center',background:'rgba(245,158,11,0.06)',borderBottom:'2px solid rgba(245,158,11,0.3)'}}>% CONCLUSÃO TESTE</th>}
             </tr>
             <tr>
               {filteredDates.map(d=>{
-                const isBase=d==='2026-10-10';
+                const isBase=d==='2026-10-26';
                 const cs=colStats.get(d);
                 return(
                   <th key={`ah-${d}`} style={{color:isBase?'rgba(74,222,128,0.55)':'#4ade80',fontSize:11,fontWeight:700,textAlign:'center',padding:'2px 6px',background:isBase?'rgba(74,222,128,0.02)':'rgba(74,222,128,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(74,222,128,0.3)':undefined}}>
@@ -251,8 +250,10 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
                   </th>
                 );
               })}
-              {showDev&&devDs.map(d=>{const isBase=d==='2026-10-10';return <th key={`dh-${d}`} style={{color:isBase?'rgba(129,140,248,0.55)':'#818cf8',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:isBase?'rgba(129,140,248,0.02)':'rgba(129,140,248,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(129,140,248,0.3)':undefined}}>{isBase?`📌 ${fD(d)}`:fD(d)}</th>;})}
-              {showTeste&&tstDs.map(d=>{const isBase=d==='2026-10-10';return <th key={`th-${d}`} style={{color:isBase?'rgba(245,158,11,0.55)':'#f59e0b',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:isBase?'rgba(245,158,11,0.02)':'rgba(245,158,11,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(245,158,11,0.3)':undefined}}>{isBase?`📌 ${fD(d)}`:fD(d)}</th>;})}
+              {showBaseline&&<th style={{color:'#eab308',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:'rgba(234,179,8,0.05)',whiteSpace:'nowrap'}}>% Conc.</th>}
+              {showBaseline&&<th style={{color:'#eab308',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:'rgba(234,179,8,0.05)',whiteSpace:'nowrap',borderRight:'2px solid rgba(234,179,8,0.3)'}}>% Teste</th>}
+              {showDev&&filteredDevDs.map(d=>{const isBase=d==='2026-10-26';return <th key={`dh-${d}`} style={{color:isBase?'rgba(129,140,248,0.55)':'#818cf8',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:isBase?'rgba(129,140,248,0.02)':'rgba(129,140,248,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(129,140,248,0.3)':undefined}}>{isBase?`📌 ${fD(d)}`:fD(d)}</th>;})}
+              {showTeste&&filteredTstDs.map(d=>{const isBase=d==='2026-10-26';return <th key={`th-${d}`} style={{color:isBase?'rgba(245,158,11,0.55)':'#f59e0b',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:isBase?'rgba(245,158,11,0.02)':'rgba(245,158,11,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(245,158,11,0.3)':undefined}}>{isBase?`📌 ${fD(d)}`:fD(d)}</th>;})}
             </tr>
           </thead>
           <tbody>
@@ -287,7 +288,7 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
                     const cell = avancoTable.get(ticket.issueKey)?.get(d);
                     if (!cell) return <td key={`av-${d}`} style={{textAlign:'center',padding:'4px 6px'}}><span style={{color:'rgba(255,255,255,0.12)',fontSize:11}}>—</span></td>;
                     const {value: rounded, isChange} = cell;
-                    const isBase = d==='2026-10-10';
+                    const isBase = d==='2026-10-26';
                     const dimmed = !isChange; // carry-forward value
                     return(
                       <td key={`av-${d}`} style={{textAlign:'center',padding:'4px 6px',background:isChange?'rgba(74,222,128,0.06)':undefined,borderRight:isBase?'2px dashed rgba(74,222,128,0.2)':undefined}}>
@@ -297,12 +298,18 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
                       </td>
                     );
                   })}
-                  {showDev&&devDs.map(d=>{const isBase=d==='2026-10-10';return(
+                  {showBaseline&&<td style={{textAlign:'center',padding:'4px 6px',background:'rgba(234,179,8,0.04)'}}>
+                    {curDev!=null?<span style={{fontWeight:700,fontSize:12,color:'#eab308'}}>{curDev}%</span>:<span style={{color:'rgba(255,255,255,0.15)',fontSize:11}}>—</span>}
+                  </td>}
+                  {showBaseline&&<td style={{textAlign:'center',padding:'4px 6px',background:'rgba(234,179,8,0.04)',borderRight:'2px solid rgba(234,179,8,0.2)'}}>
+                    {curTeste!=null?<span style={{fontWeight:700,fontSize:12,color:'#ca8a04'}}>{curTeste}%</span>:<span style={{color:'rgba(255,255,255,0.15)',fontSize:11}}>—</span>}
+                  </td>}
+                  {showDev&&filteredDevDs.map(d=>{const isBase=d==='2026-10-26';return(
                     <td key={`dv-${d}`} style={{textAlign:'center',padding:'4px 6px',background:dm.has(d)?(isBase?'rgba(129,140,248,0.04)':'rgba(129,140,248,0.08)'):undefined,borderRight:isBase?'2px dashed rgba(129,140,248,0.2)':undefined}}>
                       {dm.has(d)?<span style={{fontWeight:700,fontSize:12,color:isBase?'rgba(129,140,248,0.6)':'#818cf8'}}>{dm.get(d)}%</span>:<span style={{color:'rgba(255,255,255,0.15)',fontSize:11}}>—</span>}
                     </td>
                   );})}
-                  {showTeste&&tstDs.map(d=>{const isBase=d==='2026-10-10';return(
+                  {showTeste&&filteredTstDs.map(d=>{const isBase=d==='2026-10-26';return(
                     <td key={`tv-${d}`} style={{textAlign:'center',padding:'4px 6px',background:tm.has(d)?(isBase?'rgba(245,158,11,0.04)':'rgba(245,158,11,0.08)'):undefined,borderRight:isBase?'2px dashed rgba(245,158,11,0.2)':undefined}}>
                       {tm.has(d)?<span style={{fontWeight:700,fontSize:12,color:isBase?'rgba(245,158,11,0.6)':'#f59e0b'}}>{tm.get(d)}%</span>:<span style={{color:'rgba(255,255,255,0.15)',fontSize:11}}>—</span>}
                     </td>

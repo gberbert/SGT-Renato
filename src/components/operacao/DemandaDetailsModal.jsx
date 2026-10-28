@@ -895,7 +895,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                   const dev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
                   const teste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
                   if (dev == null && teste == null) return null;
-                  const avg = Math.round(((dev ?? 0) + (teste ?? 0)) / 2 * 10) / 10;
+                  const avg = Math.round(((dev ?? 0) * 0.7 + (teste ?? 0) * 0.3) * 10) / 10;
                   const color = avg >= 75 ? '#4ade80' : avg >= 40 ? '#fbbf24' : '#f87171';
                   return (
                     <div className="dmd-field">
@@ -911,7 +911,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                           </span>
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--gray-8)', marginTop: 3 }}>
-                          ({dev ?? '—'} + {teste ?? '—'}) / 2
+                          {dev ?? '—'} × 0,7 + {teste ?? '—'} × 0,3
                         </div>
                       </div>
                     </div>

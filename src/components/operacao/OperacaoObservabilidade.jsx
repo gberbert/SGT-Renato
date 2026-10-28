@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Box, Flex, Text, Select } from '@radix-ui/themes';
-import { ShieldCheck, BarChart2, X, Info } from 'lucide-react';
+import { ShieldCheck, BarChart2, X, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { computeObservabilidadeIndicators } from '../../utils/observabilidadeRules';
 import { normalizeEscopoKey, ESCOPO_RADAR_ORDER } from '../../services/operacaoRadarService';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 const EF = [{ value:'ALL', label:'Todos os escopos' }, ...ESCOPO_RADAR_ORDER.map(e=>({ value:e.key, label:e.label }))];
 const DF = [
@@ -72,8 +72,9 @@ export default function OperacaoObservabilidade({tickets=[],onDrillTickets}){
   const [se,setSe]=useState(null);
   const [df,setDf]=useState('createdAt');
   const [gr,setGr]=useState('month');
-  const [rangeStart,setRangeStart]=useState('');
+  const [rangeStart,setRangeStart]=useState('2026-01-01');
   const [rangeEnd,setRangeEnd]=useState('');
+  const [healthExpanded,setHealthExpanded]=useState(true);
   const filtered=useMemo(()=>ef==='ALL'?tickets:tickets.filter(t=>normalizeEscopoKey(t.escopo)===ef),[tickets,ef]);
   const indicators=useMemo(()=>computeObservabilidadeIndicators(filtered),[filtered]);
   const totals=useMemo(()=>{const c={};for(const t of tickets){const k=normalizeEscopoKey(t.escopo);if(k)c[k]=(c[k]||0)+1;}return ESCOPO_RADAR_ORDER.map(e=>({...e,count:c[e.key]||0})).filter(e=>e.count>0);},[tickets]);
@@ -181,7 +182,9 @@ export default function OperacaoObservabilidade({tickets=[],onDrillTickets}){
                       <XAxis dataKey="label" tick={{fill:'var(--gray-9)',fontSize:11}} angle={cdata.length>8?-35:0} textAnchor={cdata.length>8?'end':'middle'} interval={0}/>
                       <YAxis tick={{fill:'var(--gray-9)',fontSize:11}} allowDecimals={false}/>
                       <RTooltip content={<Tip/>}/>
-                      <Bar dataKey="count" fill={sm.color} radius={[4,4,0,0]} maxBarSize={48}/>
+                      <Bar dataKey="count" fill={sm.color} radius={[4,4,0,0]} maxBarSize={48}>
+                        <LabelList dataKey="count" position="top" fill={sm.color} fontSize={11} fontWeight={600} formatter={v=>v>0?fN(v):''}/>
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </>
@@ -191,10 +194,13 @@ export default function OperacaoObservabilidade({tickets=[],onDrillTickets}){
         </Box>
       )}
       <Box>
-        <Text size="1" weight="bold" color="gray" style={{textTransform:'uppercase',letterSpacing:'0.08em',display:'block',marginBottom:12}}>
-          Indicadores de Saúde Operacional
-        </Text>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:14}}>
+        <Flex align="center" justify="between" style={{marginBottom:12,cursor:'pointer'}} onClick={()=>setHealthExpanded(!healthExpanded)}>
+          <Text size="1" weight="bold" color="gray" style={{textTransform:'uppercase',letterSpacing:'0.08em'}}>
+            Indicadores de Saúde Operacional
+          </Text>
+          {healthExpanded?<ChevronUp size={16} color="var(--gray-9)"/>:<ChevronDown size={16} color="var(--gray-9)"/>}
+        </Flex>
+        {healthExpanded&&<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:14}}>
           {indicators.map(ind=>(
             <div key={ind.key} style={{border:'1px solid rgba(255,255,255,.08)',borderRadius:14,background:'rgba(255,255,255,.02)',padding:16,display:'flex',flexDirection:'column',gap:8}}>
               <Flex align="center" justify="between">
@@ -212,7 +218,7 @@ export default function OperacaoObservabilidade({tickets=[],onDrillTickets}){
               )}
             </div>
           ))}
-        </div>
+        </div>}
         {indicators.every(i=>i.total===0)&&(
           <Text size="2" color="gray" mt="3">Nenhum indicador acusou pendências. Operação saudável.</Text>
         )}
