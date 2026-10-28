@@ -169,9 +169,11 @@ export function OperacaoProgressHistoryTable({ historyMap, rows, squadMap, modal
                     if (!hasChange) return <td key={`av-${d}`} style={{ textAlign:'center', padding:'4px 6px' }}><span style={{ color:'rgba(255,255,255,0.12)', fontSize:11 }}>—</span></td>;
                     const devV = lastKnownVal(dm, d);
                     const testeV = lastKnownVal(tm, d);
-                    // Fallback: if no history value, use current ticket value
-                    const devEff = devV != null ? devV : (curDev ?? 0);
-                    const testeEff = testeV != null ? testeV : (curTeste ?? 0);
+                    const isBaselineDate = d === '2026-10-10';
+                    // At baseline (10/10), value=0 means "not recorded before tracking started"
+                    // → substitute with the current field value as best approximation
+                    const devEff = (devV != null && (devV > 0 || !isBaselineDate)) ? devV : (curDev ?? 0);
+                    const testeEff = (testeV != null && (testeV > 0 || !isBaselineDate)) ? testeV : (curTeste ?? 0);
                     const avg = (devEff + testeEff) / 2;
                     const rounded = Math.round(avg * 10) / 10;
                     const isBase = d === '2026-10-10';
