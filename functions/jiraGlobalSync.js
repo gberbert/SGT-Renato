@@ -1160,12 +1160,13 @@ async function writeTicketsGlobal(tickets) {
     let logOps = 0;
     for (const ticket of chunk) {
       const existingSnap = snaps.find(s => s.id === ticket.issueKey);
-      if (!existingSnap || !existingSnap.exists) continue;
-      const existingData = existingSnap.data();
+      const isNewTicket = !existingSnap || !existingSnap.exists;
+      const existingData = isNewTicket ? {} : (existingSnap.data() || {});
       for (const { field, label } of STATUS_LOG_FIELDS) {
         const oldVal = existingData[field] ?? null;
         const newVal = ticket[field] ?? null;
-        if (oldVal !== newVal) {
+        // Log if: new ticket with a status, OR existing ticket whose status changed
+        if (isNewTicket ? (newVal != null) : (oldVal !== newVal)) {
           const logRef = db.collection(TICKETS_GLOBAL).doc(ticket.issueKey).collection('statusChangeLog').doc();
           logBatch.set(logRef, {
             issueKey: ticket.issueKey,
