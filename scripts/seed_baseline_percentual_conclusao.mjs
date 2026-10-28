@@ -48,6 +48,9 @@ async function main() {
     const snap = await q.get();
     if (snap.empty) break;
 
+    // Cache statusChangeLog per ticket to avoid duplicate reads for both FIELDS
+    const allLogByTicket = new Map();
+
     for (const ticketDoc of snap.docs) {
       const data = ticketDoc.data();
       const issueKey = data.issueKey || ticketDoc.id;
@@ -59,18 +62,23 @@ async function main() {
         const numVal = Number(currentVal);
         if (!Number.isFinite(numVal) || numVal <= 0) continue;
 
-        // Check statusChangeLog for entries of this field on or before baseline
-        const logSnap = await db
-          .collection('tickets_global')
-          .doc(ticketDoc.id)
-          .collection('statusChangeLog')
-          .where('field', '==', field)
-          .get();
+        // Fetch ALL statusChangeLog entries (no WHERE to avoid index issues) and filter in memory
+        // Only fetch once per ticket - cache below
+        if (!allLogByTicket.has(ticketDoc.id)) {
+          const allLog = await db
+            .collection('tickets_global')
+            .doc(ticketDoc.id)
+            .collection('statusChangeLog')
+            .get();
+          allLogByTicket.set(ticketDoc.id, allLog.docs.map(d => ({ id: d.id, ...d.data() })));
+        }
+        const allLogDocs = allLogByTicket.get(ticketDoc.id);
+        const fieldDocs = allLogDocs.filter(d => d.field === field);
 
         // Check if any entry is at or before baseline date
         let hasBaseline = false;
-        for (const logDoc of logSnap.docs) {
-          const ts = logDoc.data().changedAt;
+        for (const logDoc of fieldDocs) {
+          const ts = logDoc.changedAt;
           if (!ts) continue;
           const d = ts.toDate ? ts.toDate() : new Date(ts);
           if (d.toISOString().slice(0, 10) <= BASELINE_ISO) {
@@ -84,20 +92,18 @@ async function main() {
           continue;
         }
 
-        // Determine oldValue: if there are later entries, the first one's oldValue makes sense
-        // Otherwise null
+        // Determine oldValue from the first (oldest) entry for this field
         let oldValue = null;
-        if (logSnap.docs.length > 0) {
-          // Sort by changedAt asc, first entry's oldValue is our oldValue
-          const sorted = logSnap.docs
-            .filter(d => d.data().changedAt)
+        if (fieldDocs.length > 0) {
+          const sorted = fieldDocs
+            .filter(d => d.changedAt)
             .sort((a, b) => {
-              const ta = a.data().changedAt.toDate ? a.data().changedAt.toDate() : new Date(a.data().changedAt);
-              const tb = b.data().changedAt.toDate ? b.data().changedAt.toDate() : new Date(b.data().changedAt);
+              const ta = a.changedAt.toDate ? a.changedAt.toDate() : new Date(a.changedAt);
+              const tb = b.changedAt.toDate ? b.changedAt.toDate() : new Date(b.changedAt);
               return ta - tb;
             });
           if (sorted.length > 0) {
-            const ov = sorted[0].data().oldValue;
+            const ov = sorted[0].oldValue;
             oldValue = ov != null ? Number(ov) : null;
           }
         }
