@@ -74,20 +74,28 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
   // Apply date range filter to allDates
   const filteredDates=allDates.filter(d=>(!filterStart||d>=filterStart)&&(!filterEnd||d<=filterEnd));
 
-  // Pre-compute per-ticket running AVANÇO for every filteredDate
-  // baseline=0%, carry-forward fills "—" cells with last known value
+  // Pre-compute per-ticket running AVANÇO for every filteredDate.
+  // baseline=0%; carry-forward of 0% until the first real change entry after baseline;
+  // after the first real change, carry-forward the last known value.
   const avancoTable = new Map();
   for (const ticket of rows) {
     const dm = devByKey.get(ticket.issueKey) || new Map();
     const tm = tstByKey.get(ticket.issueKey) || new Map();
     const curDev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
     const curTeste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
+    // First post-baseline change date for this ticket (strictly after 10/10)
+    const firstPostBase = [...dm.keys(), ...tm.keys()]
+      .filter(k => k > '2026-10-10')
+      .sort()[0] ?? null;
     const tdMap = new Map();
     for (const d of filteredDates) {
       const isBase = d === '2026-10-10';
       const hasChange = dm.has(d) || tm.has(d);
       let value;
       if (isBase) {
+        value = 0;
+      } else if (!firstPostBase || d < firstPostBase) {
+        // No real change yet after baseline → still 0%
         value = 0;
       } else {
         const devV = lastKnownVal(dm, d);
