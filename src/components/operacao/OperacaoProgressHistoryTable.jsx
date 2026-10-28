@@ -74,6 +74,43 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
   // Apply date range filter to allDates
   const filteredDates=allDates.filter(d=>(!filterStart||d>=filterStart)&&(!filterEnd||d<=filterEnd));
 
+  // Pre-compute per-ticket running AVANÇO for every filteredDate
+  // baseline=0%, carry-forward fills "—" cells with last known value
+  const avancoTable = new Map();
+  for (const ticket of rows) {
+    const dm = devByKey.get(ticket.issueKey) || new Map();
+    const tm = tstByKey.get(ticket.issueKey) || new Map();
+    const curDev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
+    const curTeste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
+    const tdMap = new Map();
+    for (const d of filteredDates) {
+      const isBase = d === '2026-10-10';
+      const hasChange = dm.has(d) || tm.has(d);
+      let value;
+      if (isBase) {
+        value = 0;
+      } else {
+        const devV = lastKnownVal(dm, d);
+        const testeV = lastKnownVal(tm, d);
+        const devEff = devV != null ? devV : (curDev ?? 0);
+        const testeEff = testeV != null ? testeV : (curTeste ?? 0);
+        value = Math.round(((devEff + testeEff) / 2) * 10) / 10;
+      }
+      tdMap.set(d, { value, isChange: isBase || hasChange });
+    }
+    avancoTable.set(ticket.issueKey, tdMap);
+  }
+
+  // Column stats: for each date, midrange = (min+max)/2 across all tickets
+  const colStats = new Map();
+  for (const d of filteredDates) {
+    const vals = rows.map(t => avancoTable.get(t.issueKey)?.get(d)?.value).filter(v => v != null);
+    if (vals.length > 0) {
+      const min = Math.min(...vals), max = Math.max(...vals);
+      colStats.set(d, { min, max, midrange: Math.round(((min + max) / 2) * 10) / 10 });
+    }
+  }
+
   // ── Chart grouping helpers ─────────────────────────────────────────────────────
   const CHART_GROUPINGS = [
     {value:'day',label:'Dia'},{value:'week',label:'Semana'},{value:'month',label:'Mês'},
@@ -196,11 +233,20 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
               {showTeste&&tstDs.length>0&&<th colSpan={tstDs.length} style={{color:'#f59e0b',textAlign:'center',background:'rgba(245,158,11,0.06)',borderBottom:'2px solid rgba(245,158,11,0.3)'}}>% CONCLUSÃO TESTE</th>}
             </tr>
             <tr>
-              {filteredDates.map(d=>{const isBase=d==='2026-10-10';return(
-                <th key={`ah-${d}`} style={{color:isBase?'rgba(74,222,128,0.55)':'#4ade80',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:isBase?'rgba(74,222,128,0.02)':'rgba(74,222,128,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(74,222,128,0.3)':undefined}}>
-                  {isBase?`📌 ${fD(d)}`:fD(d)}
-                </th>
-              );})}
+              {filteredDates.map(d=>{
+                const isBase=d==='2026-10-10';
+                const cs=colStats.get(d);
+                return(
+                  <th key={`ah-${d}`} style={{color:isBase?'rgba(74,222,128,0.55)':'#4ade80',fontSize:11,fontWeight:700,textAlign:'center',padding:'2px 6px',background:isBase?'rgba(74,222,128,0.02)':'rgba(74,222,128,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(74,222,128,0.3)':undefined}}>
+                    {cs && (
+                      <div style={{fontSize:9,fontWeight:700,color:'rgba(74,222,128,0.65)',marginBottom:2,letterSpacing:'0.02em'}}>
+                        ⌀ {cs.midrange}%
+                      </div>
+                    )}
+                    {isBase?`📌 ${fD(d)}`:fD(d)}
+                  </th>
+                );
+              })}
               {showDev&&devDs.map(d=>{const isBase=d==='2026-10-10';return <th key={`dh-${d}`} style={{color:isBase?'rgba(129,140,248,0.55)':'#818cf8',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:isBase?'rgba(129,140,248,0.02)':'rgba(129,140,248,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(129,140,248,0.3)':undefined}}>{isBase?`📌 ${fD(d)}`:fD(d)}</th>;})}
               {showTeste&&tstDs.map(d=>{const isBase=d==='2026-10-10';return <th key={`th-${d}`} style={{color:isBase?'rgba(245,158,11,0.55)':'#f59e0b',fontSize:11,fontWeight:700,textAlign:'center',padding:'4px 6px',background:isBase?'rgba(245,158,11,0.02)':'rgba(245,158,11,0.04)',whiteSpace:'nowrap',borderRight:isBase?'2px dashed rgba(245,158,11,0.3)':undefined}}>{isBase?`📌 ${fD(d)}`:fD(d)}</th>;})}
             </tr>
@@ -234,16 +280,16 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
                   <td>{ticket.status||'—'}</td>
                   <td>{sq?<span style={{fontSize:12,fontWeight:600,padding:'2px 8px',borderRadius:5,background:'rgba(16,185,129,0.13)',border:'1px solid rgba(16,185,129,0.35)',color:'#6ee7b7',whiteSpace:'nowrap'}}>{sq}</span>:(stripNumericPrefix(ticket.grupoSuporte)||'—')}</td>
                   {filteredDates.map(d=>{
-                    const hasChange=dm.has(d)||tm.has(d);
-                    if(!hasChange) return <td key={`av-${d}`} style={{textAlign:'center',padding:'4px 6px'}}><span style={{color:'rgba(255,255,255,0.12)',fontSize:11}}>—</span></td>;
-                    const devV=lastKnownVal(dm,d); const testeV=lastKnownVal(tm,d);
-                    const isBase=d==='2026-10-10';
-                    const devEff=(devV!=null&&(devV>0||!isBase))?devV:(curDev??0);
-                    const testeEff=(testeV!=null&&(testeV>0||!isBase))?testeV:(curTeste??0);
-                    const rounded=Math.round(((devEff+testeEff)/2)*10)/10;
+                    const cell = avancoTable.get(ticket.issueKey)?.get(d);
+                    if (!cell) return <td key={`av-${d}`} style={{textAlign:'center',padding:'4px 6px'}}><span style={{color:'rgba(255,255,255,0.12)',fontSize:11}}>—</span></td>;
+                    const {value: rounded, isChange} = cell;
+                    const isBase = d==='2026-10-10';
+                    const dimmed = !isChange; // carry-forward value
                     return(
-                      <td key={`av-${d}`} style={{textAlign:'center',padding:'4px 6px',background:'rgba(74,222,128,0.06)',borderRight:isBase?'2px dashed rgba(74,222,128,0.2)':undefined}}>
-                        <span style={{fontWeight:800,fontSize:12,color:avancoColor(rounded)}} title={`Dev: ${devEff}% | Teste: ${testeEff}%`}>{rounded}%</span>
+                      <td key={`av-${d}`} style={{textAlign:'center',padding:'4px 6px',background:isChange?'rgba(74,222,128,0.06)':undefined,borderRight:isBase?'2px dashed rgba(74,222,128,0.2)':undefined}}>
+                        <span style={{fontWeight:dimmed?500:800,fontSize:12,color:dimmed?'rgba(255,255,255,0.3)':avancoColor(rounded),fontStyle:dimmed?'italic':undefined}} title={dimmed?'Valor mantido do dia anterior':`Avanço: ${rounded}%`}>
+                          {rounded}%
+                        </span>
                       </td>
                     );
                   })}
