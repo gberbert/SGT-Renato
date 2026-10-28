@@ -36,7 +36,7 @@ function ChartTip({active,payload,label}){
 export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoadingKey,onView,onEdit}){
   const [showDev,setShowDev]=useState(false);
   const [showTeste,setShowTeste]=useState(false);
-  const [filterStart,setFilterStart]=useState('');
+  const [filterStart,setFilterStart]=useState('2026-10-22');
   const [filterEnd,setFilterEnd]=useState('');
   const [showChart,setShowChart]=useState(false);
   const [selectedKeys,setSelectedKeys]=useState(new Set());
