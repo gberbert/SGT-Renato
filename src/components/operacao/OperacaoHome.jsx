@@ -1632,14 +1632,8 @@ const OperacaoHome = ({ userRole }) => {
                                       setSelectedDueDateFilter('overdue');
                                       setDemandaStatusFilters(new Set());
                                       setFilteringImpedidas(false);
-                                      const todayIso = new Date().toISOString().slice(0, 10);
-                                      const DDO = ['dataFimDesenvolvimento','dataFimTesteInterno','dataConclusao'];
                                       const basePoolO = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
-                                      const filteredO = basePoolO.filter((t) => {
-                                        if (TERMINAL_STATUSES.has(String(t.status || '').trim())) return false;
-                                        const dates = DDO.map((f) => t[f] ? String(t[f]).slice(0,10) : null).filter(Boolean);
-                                        return dates.some((d) => d < todayIso);
-                                      });
+                                      const filteredO = basePoolO.filter((t) => !isTerminal(t) && devNotDone(t) && devDate(t) && devDate(t) < todayStr);
                                       const squadLabelO = selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · ` : '';
                                       openDrillDirect(filteredO, `${squadLabelO}Vencidos`);
                                     }
@@ -1673,13 +1667,8 @@ const OperacaoHome = ({ userRole }) => {
                                       setSelectedDueDateFilter('today');
                                       setDemandaStatusFilters(new Set());
                                       setFilteringImpedidas(false);
-                                      const ddStr = new Date().toISOString().slice(0, 10);
-                                      const DD_FIELDS = ['dataFimDesenvolvimento','dataFimTesteInterno','dataConclusao'];
                                       const basePool = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
-                                      const filtered = basePool.filter((t) => {
-                                        if (TERMINAL_STATUSES.has(String(t.status || '').trim())) return false;
-                                        return DD_FIELDS.map((f) => t[f] ? String(t[f]).slice(0,10) : null).filter(Boolean).includes(ddStr);
-                                      });
+                                      const filtered = basePool.filter((t) => !isTerminal(t) && devNotDone(t) && devDate(t) === todayStr);
                                       const squadLabel = selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · ` : '';
                                       openDrillDirect(filtered, `${squadLabel}Vence Hoje`);
                                     }
@@ -1713,17 +1702,8 @@ const OperacaoHome = ({ userRole }) => {
                                       setSelectedDueDateFilter('2days');
                                       setDemandaStatusFilters(new Set());
                                       setFilteringImpedidas(false);
-                                      const d1v = new Date(); d1v.setDate(d1v.getDate() + 1);
-                                      const d2v = new Date(); d2v.setDate(d2v.getDate() + 2);
-                                      const p1v = d1v.toISOString().slice(0, 10);
-                                      const p2v = d2v.toISOString().slice(0, 10);
-                                      const DD2 = ['dataFimDesenvolvimento','dataFimTesteInterno','dataConclusao'];
                                       const basePool2 = selectedSquadFilter ? squadFilteredTickets : escopoTickets;
-                                      const filtered2 = basePool2.filter((t) => {
-                                        if (TERMINAL_STATUSES.has(String(t.status || '').trim())) return false;
-                                        const dates = DD2.map((f) => t[f] ? String(t[f]).slice(0,10) : null).filter(Boolean);
-                                        return dates.includes(p1v) || dates.includes(p2v);
-                                      });
+                                      const filtered2 = basePool2.filter((t) => !isTerminal(t) && devNotDone(t) && (devDate(t) === plus1Str || devDate(t) === plus2Str));
                                       const squadLabel2 = selectedSquadFilter ? `Squad: ${selectedSquadFilter.name === '-' ? '(sem squad)' : selectedSquadFilter.name} · ` : '';
                                       openDrillDirect(filtered2, `${squadLabel2}Vence em 2 dias`);
                                     }
