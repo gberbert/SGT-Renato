@@ -72,10 +72,26 @@ export default function OperacaoObservabilidade({tickets=[],onDrillTickets}){
   const [se,setSe]=useState(null);
   const [df,setDf]=useState('createdAt');
   const [gr,setGr]=useState('month');
+  const [rangeStart,setRangeStart]=useState('');
+  const [rangeEnd,setRangeEnd]=useState('');
   const filtered=useMemo(()=>ef==='ALL'?tickets:tickets.filter(t=>normalizeEscopoKey(t.escopo)===ef),[tickets,ef]);
   const indicators=useMemo(()=>computeObservabilidadeIndicators(filtered),[filtered]);
   const totals=useMemo(()=>{const c={};for(const t of tickets){const k=normalizeEscopoKey(t.escopo);if(k)c[k]=(c[k]||0)+1;}return ESCOPO_RADAR_ORDER.map(e=>({...e,count:c[e.key]||0})).filter(e=>e.count>0);},[tickets]);
-  const ctix=useMemo(()=>se?tickets.filter(t=>normalizeEscopoKey(t.escopo)===se):[],[tickets,se]);
+  const ctix=useMemo(()=>{
+    if(!se) return [];
+    let base=tickets.filter(t=>normalizeEscopoKey(t.escopo)===se);
+    if(rangeStart||rangeEnd) {
+      base=base.filter(t=>{
+        const d=pd(t[df]);
+        if(!d) return false;
+        const iso=d.toISOString().slice(0,10);
+        if(rangeStart && iso<rangeStart) return false;
+        if(rangeEnd && iso>rangeEnd) return false;
+        return true;
+      });
+    }
+    return base;
+  },[tickets,se,df,rangeStart,rangeEnd]);
   const cdata=useMemo(()=>mkData(ctix,df,gr),[ctix,df,gr]);
   const sm=ESCOPO_RADAR_ORDER.find(e=>e.key===se);
   const dfl=DF.find(f=>f.value===df)?.label||df;
@@ -127,6 +143,27 @@ export default function OperacaoObservabilidade({tickets=[],onDrillTickets}){
               <div>
                 <Text size="1" weight="bold" color="gray" style={{textTransform:'uppercase',letterSpacing:'0.07em',display:'block',marginBottom:8}}>Agrupamento</Text>
                 <div style={{display:'flex',flexDirection:'column',gap:3}}>{GR.map(g=><SB key={g.value} label={g.label} active={gr===g.value} color={sm.color} onClick={()=>setGr(g.value)}/>)}</div>
+              </div>
+              <div>
+                <Text size="1" weight="bold" color="gray" style={{textTransform:'uppercase',letterSpacing:'0.07em',display:'block',marginBottom:8}}>Período</Text>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  <div>
+                    <Text size="1" color="gray" style={{display:'block',marginBottom:3}}>De</Text>
+                    <input type="date" value={rangeStart} onChange={e=>setRangeStart(e.target.value)}
+                      style={{width:'100%',background:'var(--gray-3)',border:'1px solid var(--gray-6)',borderRadius:6,padding:'4px 8px',fontSize:12,color:'var(--gray-12)',outline:'none'}}/>
+                  </div>
+                  <div>
+                    <Text size="1" color="gray" style={{display:'block',marginBottom:3}}>Até</Text>
+                    <input type="date" value={rangeEnd} onChange={e=>setRangeEnd(e.target.value)}
+                      style={{width:'100%',background:'var(--gray-3)',border:'1px solid var(--gray-6)',borderRadius:6,padding:'4px 8px',fontSize:12,color:'var(--gray-12)',outline:'none'}}/>
+                  </div>
+                  {(rangeStart||rangeEnd)&&(
+                    <button type="button" onClick={()=>{setRangeStart('');setRangeEnd('');}}
+                      style={{fontSize:11,padding:'3px 8px',background:'none',border:'1px solid rgba(255,255,255,.12)',borderRadius:6,cursor:'pointer',color:'var(--gray-9)',textAlign:'center'}}>
+                      × Limpar período
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div style={{flex:1,padding:'20px 16px',display:'flex',flexDirection:'column',justifyContent:'center'}}>

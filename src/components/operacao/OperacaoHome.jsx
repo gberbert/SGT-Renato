@@ -656,6 +656,17 @@ const OperacaoHome = ({ userRole }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEscopoTab]);
 
+  // Auto-carrega TODOS os escopos quando OBSERVABILIDADE ou EFICIENCIA ficam ativos e o cache está incompleto
+  useEffect(() => {
+    if (activeEscopoTab !== 'OBSERVABILIDADE' && activeEscopoTab !== 'EFICIENCIA') return;
+    const KEY_ESCOPOS = ['PROBLEMAS', 'DEMANDA', 'DEMANDA FAST', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO'];
+    const allLoaded = KEY_ESCOPOS.every((e) => loadedEscopos.has(e));
+    if (!allLoaded) {
+      loadTicketsData(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEscopoTab, loadedEscopos.size]);
+
   // Auto-abre o drill com todos os tickets quando a aba DEMANDA FAST está ativa e os dados já estão carregados
   useEffect(() => {
     if (activeEscopoTab !== 'DEMANDA FAST') return;
@@ -1085,23 +1096,26 @@ const OperacaoHome = ({ userRole }) => {
                   })()
                 )
               ) : activeEscopoTab === 'OBSERVABILIDADE' ? (
-                ticketsCache === null ? (
-                  <TabLoadBanner
-                    tabLabel="Observabilidade (todos os escopos)"
-                    onLoad={() => loadTicketsData(null)}
-                    loading={ticketsCacheLoading}
-                  />
-                ) : (
-                  (() => {
-                    const filteredTicketsAll = filterTickets(ticketsCache, filters, squadGrupoMap || new Map());
+                (() => {
+                  const KEY_ESCOPOS_OBS = ['PROBLEMAS', 'DEMANDA', 'DEMANDA FAST', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO'];
+                  const allLoadedObs = KEY_ESCOPOS_OBS.every((e) => loadedEscopos.has(e));
+                  if (!allLoadedObs || ticketsCache === null) {
                     return (
-                      <OperacaoObservabilidade
-                        tickets={filteredTicketsAll}
-                        onDrillTickets={openDrillDirect}
+                      <TabLoadBanner
+                        tabLabel="Observabilidade (todos os escopos)"
+                        onLoad={() => loadTicketsData(null)}
+                        loading={ticketsCacheLoading}
                       />
                     );
-                  })()
-                )
+                  }
+                  const filteredTicketsAll = filterTickets(ticketsCache, filters, squadGrupoMap || new Map());
+                  return (
+                    <OperacaoObservabilidade
+                      tickets={filteredTicketsAll}
+                      onDrillTickets={openDrillDirect}
+                    />
+                  );
+                })()
               ) : (
                 (() => {
                   const escopoLoaded = loadedEscopos.has(activeEscopoTab);
