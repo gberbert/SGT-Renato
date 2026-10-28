@@ -101,12 +101,15 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
     avancoTable.set(ticket.issueKey, tdMap);
   }
 
-  // Column stats: for each date, midrange = (min+max)/2 across all tickets
+  // Column stats: for each date, midrange = (min_nonzero + max) / 2
+  // min excludes 0% (baseline/carry-forward zeros)
   const colStats = new Map();
   for (const d of filteredDates) {
     const vals = rows.map(t => avancoTable.get(t.issueKey)?.get(d)?.value).filter(v => v != null);
     if (vals.length > 0) {
-      const min = Math.min(...vals), max = Math.max(...vals);
+      const nonZero = vals.filter(v => v > 0);
+      const min = nonZero.length > 0 ? Math.min(...nonZero) : 0;
+      const max = Math.max(...vals);
       colStats.set(d, { min, max, midrange: Math.round(((min + max) / 2) * 10) / 10 });
     }
   }
