@@ -40,6 +40,7 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
   const [filterEnd,setFilterEnd]=useState('');
   const [showChart,setShowChart]=useState(false);
   const [selectedKeys,setSelectedKeys]=useState(new Set());
+  const [chartGrouping,setChartGrouping]=useState('day');
 
   const toggleSelect = (issueKey) => {
     setSelectedKeys(prev => {
@@ -72,6 +73,28 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
 
   // Apply date range filter to allDates
   const filteredDates=allDates.filter(d=>(!filterStart||d>=filterStart)&&(!filterEnd||d<=filterEnd));
+
+  // ── Chart grouping helpers ─────────────────────────────────────────────────────
+  const CHART_GROUPINGS = [
+    {value:'day',label:'Dia'},{value:'week',label:'Semana'},{value:'month',label:'Mês'},
+    {value:'quarter',label:'Trimestre'},{value:'semester',label:'Semestre'},{value:'year',label:'Ano'},
+  ];
+  function isoW2(d){const j4=new Date(d.getFullYear(),0,4),s=new Date(j4);s.setDate(j4.getDate()-((j4.getDay()+6)%7));return Math.max(1,Math.min(Math.floor((d-s)/86400000/7)+1,53));}
+  function bKey(isoDate,g){const d=new Date(isoDate),y=d.getFullYear(),m=d.getMonth(),day=d.getDate();
+    if(g==='day') return isoDate;
+    if(g==='week') return y+'-W'+String(isoW2(d)).padStart(2,'0');
+    if(g==='month') return y+'-'+String(m+1).padStart(2,'0');
+    if(g==='quarter') return y+'-Q'+(Math.floor(m/3)+1);
+    if(g==='semester') return y+'-S'+(m<6?1:2);
+    return String(y);
+  }
+  const MO2=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  function bLabel(k,g){
+    if(g==='day'){const p=k.split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0].slice(2):k;}
+    if(g==='week') return k.replace('-W',' W');
+    if(g==='month'){const p=k.split('-');return p.length===2?MO2[+p[1]-1]+'/'+p[0]:k;}
+    return k;
+  }
 
   // Build chart data: for each filtered date, compute running avanço for each ticket.
   // At the baseline date (2026-10-10) all tickets start at 0% to allow relative analysis.
@@ -244,13 +267,38 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
       {/* Timeline Chart */}
       {showChart && chartData.length > 0 && (
         <Box mt="4" style={{border:'1px solid rgba(74,222,128,0.2)',borderRadius:12,background:'rgba(255,255,255,0.01)',padding:'16px 8px 8px'}}>
-          <Text size="2" weight="bold" color="gray" style={{display:'block',marginBottom:10,paddingLeft:8}}>
-            Evolução do Avanço por Ticket
-          </Text>
+          <Flex align="center" justify="between" wrap="wrap" gap="2" style={{paddingLeft:8,marginBottom:12}}>
+            <Text size="2" weight="bold" color="gray">Evolução do Avanço por Ticket</Text>
+            {/* Grouping pills */}
+            <Flex gap="1">
+              {CHART_GROUPINGS.map(g=>(
+                <button key={g.value} type="button" onClick={()=>setChartGrouping(g.value)}
+                  style={{padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',
+                    border:chartGrouping===g.value?'1px solid rgba(74,222,128,0.6)':'1px solid rgba(255,255,255,0.1)',
+                    background:chartGrouping===g.value?'rgba(74,222,128,0.2)':'rgba(255,255,255,0.04)',
+                    color:chartGrouping===g.value?'#4ade80':'var(--gray-9)',transition:'all .12s'}}>
+                  {g.label}
+                </button>
+              ))}
+            </Flex>
+          </Flex>
+          {(() => {
+            // Aggregate chart data by grouping
+            const grouped = new Map();
+            for (const pt of chartData) {
+              const k = bKey(pt.date, chartGrouping);
+              if (!grouped.has(k)) grouped.set(k, pt); // first = establishes key
+              else grouped.set(k, pt); // last in bucket = closing value
+            }
+            const aggData = [...grouped.entries()]
+              .sort(([a],[b])=>a.localeCompare(b))
+              .map(([k,pt])=>({ ...pt, label: bLabel(k,chartGrouping) }));
+            const rotateX = aggData.length > 8;
+            return (
           <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={chartData} margin={{top:4,right:24,left:0,bottom:filteredDates.length>10?30:8}}>
+            <LineChart data={aggData} margin={{top:4,right:24,left:0,bottom:rotateX?30:8}}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)"/>
-              <XAxis dataKey="label" tick={{fill:'var(--gray-9)',fontSize:10}} angle={filteredDates.length>8?-35:0} textAnchor={filteredDates.length>8?'end':'middle'} interval={0}/>
+              <XAxis dataKey="label" tick={{fill:'var(--gray-9)',fontSize:10}} angle={rotateX?-35:0} textAnchor={rotateX?'end':'middle'} interval={0}/>
               <YAxis domain={[0,100]} tick={{fill:'var(--gray-9)',fontSize:10}} tickFormatter={v=>`${v}%`}/>
               <RTooltip content={<ChartTip/>}/>
               <Legend wrapperStyle={{fontSize:10,color:'var(--gray-9)',paddingTop:4}}/>
@@ -273,6 +321,8 @@ export function OperacaoProgressHistoryTable({historyMap,rows,squadMap,modalLoad
                 })}
             </LineChart>
           </ResponsiveContainer>
+            );
+          })()}
         </Box>
       )}
     </Box>
