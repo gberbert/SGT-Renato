@@ -890,6 +890,33 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 ) : (
                   <ReadPercent label="% CONCLUSÃO TESTE INTERNO" value={ticket.percentualConclusaoTesteInterno} />
                 )}
+                {/* AVANÇO — média aritmética de % Conclusão e % Conclusão Teste Interno */}
+                {(() => {
+                  const dev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
+                  const teste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
+                  if (dev == null && teste == null) return null;
+                  const avg = Math.round(((dev ?? 0) + (teste ?? 0)) / 2 * 10) / 10;
+                  const color = avg >= 75 ? '#4ade80' : avg >= 40 ? '#fbbf24' : '#f87171';
+                  return (
+                    <div className="dmd-field">
+                      <FieldLabel>AVANÇO</FieldLabel>
+                      <div style={{ paddingTop: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ flex: 1, height: 8, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${Math.min(100, avg)}%`, borderRadius: 99, background: color, transition: 'width 0.3s ease' }} />
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 800, color, minWidth: 46, textAlign: 'right' }}
+                            title={`% Conclusão: ${dev ?? '—'}% · % Teste Interno: ${teste ?? '—'}%`}>
+                            {avg}%
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--gray-8)', marginTop: 3 }}>
+                          ({dev ?? '—'} + {teste ?? '—'}) / 2
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="dmd-field">
                   <FieldLabel>CICLO</FieldLabel>
                   {Array.isArray(ticket.ciclos) && ticket.ciclos.length > 0 ? (
