@@ -86,7 +86,7 @@ function hCell(w, label, sub) {
 }
 
 // ── TicketRow ─────────────────────────────────────────────────────────────
-function TicketRow({ ticket, rowBg }) {
+function TicketRow({ ticket, rowBg, includeObservacao }) {
   const eb = escopoBadge(ticket.escopo);
   const squad = trunc(resolveSquad(ticket), 9);
   const status = trunc(ticket.status||'', 14);
@@ -138,31 +138,32 @@ function TicketRow({ ticket, rowBg }) {
         <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#94a3b8', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fmtDate(ticket.dataConclusao)||'—'}</span>
       </div>
       {/* Motivo */}
-      <div style={{ flex:1, height:'100%', display:'flex', alignItems:'center', padding:'0 6px', overflow:'hidden' }}>
+      <div style={{ flex:1, height:'100%', display:'flex', alignItems:'center', padding:'0 6px', overflow:'hidden', borderRight:includeObservacao?CB:'none' }}>
         <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.3 }}>{motivo}</span>
       </div>
+      {includeObservacao && (
+        <div style={{ flex:1, height:'100%', display:'flex', alignItems:'center', padding:'0 6px', overflow:'hidden' }}>
+          <span style={{ fontSize:7.5, color:'#374151', lineHeight:1.3 }}>{trunc(ticket.observacao||'',90)}</span>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Stats section (same layout as RoadmapGeralPdfExport) ─────────────────
-function StatsSection({ filteredTickets }) {
+// ── Stats section ─────────────────────────────────────────────────────────
+function StatsSection({ filteredTickets, escopoFilter }) {
   const total = filteredTickets.length;
   const impedidos = filteredTickets.filter(t => t.impedimento === true).length;
   const stMap = {};
   filteredTickets.forEach(t => { if (t.status) stMap[t.status]=(stMap[t.status]||0)+1; });
-  const topSt = Object.entries(stMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const SQ_PC = { 'Crise':'#dc2626','Alto':'#ea580c','Médio':'#eab308','Baixo':'#3b82f6','Muito baixo':'#c7d2fe','(sem prio)':'#cbd5e1' };
-  const PR_ORD = ['Crise','Alto','Médio','Baixo','Muito baixo','(sem prio)'];
-  const sqPrioMap = {};
-  filteredTickets.forEach(t => {
-    const sq = trunc(resolveSquad(t)||'Sem squad',12);
-    const pr = t.prioridadeInterna||'(sem prio)';
-    if (!sqPrioMap[sq]) sqPrioMap[sq]={};
-    sqPrioMap[sq][pr]=(sqPrioMap[sq][pr]||0)+1;
-  });
-  const sqList = Object.entries(sqPrioMap).map(([n,pd])=>({n,tot:Object.values(pd).reduce((s,v)=>s+v,0),pd})).sort((a,b)=>b.tot-a.tot).slice(0,8);
-  const sqMax = sqList[0]?.tot||1;
+  const wfOrder = buildWFOrder(escopoFilter);
+  const wfIdx = {}; wfOrder.forEach((s,i)=>{ wfIdx[s]=i; });
+  const topSt = Object.entries(stMap)
+    .sort((a,b)=>{ const ia=wfIdx[a[0]]??wfOrder.length; const ib=wfIdx[b[0]]??wfOrder.length; return ia!==ib?ia-ib:b[1]-a[1]; })
+    .slice(0,10);
+  const sqMap = {};
+  filteredTickets.forEach(t=>{ const sq=trunc(resolveSquad(t)||'Sem squad',10); sqMap[sq]=(sqMap[sq]||0)+1; });
+  const topSq = Object.entries(sqMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
   const BOX_H=54;
   const box=(bg,fw)=>({ background:bg,borderRadius:5,padding:'4px 7px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minWidth:fw,height:BOX_H });
   const num=(c,fs)=>({ fontSize:fs,fontWeight:900,color:c,lineHeight:1 });
@@ -191,26 +192,15 @@ function StatsSection({ filteredTickets }) {
         </div>
       </div>
       <div style={div}/>
-      <div style={{ display:'flex',flexDirection:'column',flex:1,minWidth:0 }}>
-        {grp('Por Squad · Prioridade')}
-        <div style={{ display:'flex',gap:8 }}>
-          <div style={{ flex:1,minWidth:0 }}>
-            {sqList.map(({n,tot,pd})=>(
-              <div key={n} style={{ display:'flex',alignItems:'center',gap:3,marginBottom:2 }}>
-                <span style={{ fontSize:7,color:'#374151',width:68,textAlign:'right',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flexShrink:0 }}>{n}</span>
-                <div style={{ flex:1,height:13,background:'#e2e8f0',borderRadius:2,display:'flex',overflow:'hidden' }}>
-                  {PR_ORD.filter(p=>pd[p]).map(p=>{
-                    const tc=SQ_PC[p]==='#eab308'?'#854d0e':SQ_PC[p]==='#c7d2fe'?'#3730a3':SQ_PC[p]==='#cbd5e1'?'#475569':'#fff';
-                    return <div key={p} style={{ width:`${(pd[p]/tot)*100}%`,height:'100%',background:SQ_PC[p],display:'flex',alignItems:'center',justifyContent:'center' }}><span style={{ fontSize:6,fontWeight:800,color:tc }}>{pd[p]}</span></div>;
-                  })}
-                </div>
-                <span style={{ fontSize:6.5,fontWeight:800,color:'#374151',minWidth:16,textAlign:'right' }}>{tot}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display:'flex',flexDirection:'column',gap:3,justifyContent:'center',flexShrink:0 }}>
-            {PR_ORD.map(p=><div key={p} style={{ display:'flex',alignItems:'center',gap:3 }}><div style={{ width:9,height:9,borderRadius:2,background:SQ_PC[p] }}/><span style={{ fontSize:6.5,color:'#374151',whiteSpace:'nowrap' }}>{p}</span></div>)}
-          </div>
+      <div style={{ display:'flex',flexDirection:'column' }}>
+        {grp('Por Squad')}
+        <div style={{ display:'flex',gap:5,flexWrap:'wrap',alignItems:'flex-start' }}>
+          {topSq.map(([sq,cnt])=>(
+            <div key={sq} style={box('#f0fdf4',60)}>
+              <span style={num('#16a34a',22)}>{cnt}</span>
+              <span style={{ fontSize:6.5,fontWeight:700,color:'#15803d',marginTop:2,textAlign:'center',lineHeight:1.2,maxWidth:70,whiteSpace:'normal',wordBreak:'break-word' }}>{trunc(sq,12)}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -218,7 +208,7 @@ function StatsSection({ filteredTickets }) {
 }
 
 // ── Column headers row ────────────────────────────────────────────────────
-function ColHeaders() {
+function ColHeaders({ includeObservacao }) {
   return (
     <div style={{ display:'flex',borderBottom:'2px solid #cbd5e1',minHeight:36,background:'#f1f5f9' }}>
       {hCell(TIX_W,'Ticket',null)}
@@ -230,15 +220,20 @@ function ColHeaders() {
       {hCell(PT_W,'%T','Teste')}
       {hCell(FT_W,'Fim Teste','Interno')}
       {hCell(DC_W,'Data','Conclusão')}
-      <div style={{ flex:1,display:'flex',alignItems:'flex-end',padding:'3px 6px',borderRight:'none' }}>
+      <div style={{ flex:1,display:'flex',alignItems:'flex-end',padding:'3px 6px',borderRight:includeObservacao?CB:'none' }}>
         <span style={{ fontSize:7.5,fontWeight:800,color:'#475569',letterSpacing:'0.04em',textTransform:'uppercase' }}>Motivo Impedimento</span>
       </div>
+      {includeObservacao && (
+        <div style={{ flex:1,display:'flex',alignItems:'flex-end',padding:'3px 6px' }}>
+          <span style={{ fontSize:7.5,fontWeight:800,color:'#1e40af',letterSpacing:'0.04em',textTransform:'uppercase' }}>Observação</span>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── PdfContent (full document) ────────────────────────────────────────────
-function PdfContent({ groups, filteredTickets, exportedAt, activeTab }) {
+function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilter, includeObservacao }) {
   return (
     <div style={{ width:PAGE_W,background:'#fff',color:'#111827',fontFamily:'Inter,Segoe UI,Arial,sans-serif',fontSize:10 }}>
       {/* PAGE HEADER */}
@@ -251,9 +246,9 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab }) {
         </div>
       </div>
       {/* STATS */}
-      <StatsSection filteredTickets={filteredTickets}/>
+      <StatsSection filteredTickets={filteredTickets} escopoFilter={escopoFilter}/>
       {/* COL HEADERS */}
-      <ColHeaders/>
+      <ColHeaders includeObservacao={includeObservacao}/>
       {/* GROUPS */}
       {groups.map((group, gi) => (
         <div key={group.key}>
@@ -262,7 +257,7 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab }) {
             <span style={{ fontSize:8.5,color:'#3b82f6',marginLeft:8 }}>({group.tickets.length})</span>
           </div>
           {group.tickets.map((ticket, ti) => (
-            <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f8fafc'}/>
+            <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f8fafc'} includeObservacao={includeObservacao}/>
           ))}
         </div>
       ))}
@@ -297,7 +292,7 @@ function buildGroupsByWorkflow(filteredTickets, escopoFilter) {
 }
 
 // ── Main export function ──────────────────────────────────────────────────
-export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTickets = [], backlogTickets = [], activeTab = 'ciclos', escopoFilter }) {
+export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTickets = [], backlogTickets = [], activeTab = 'ciclos', escopoFilter, includeObservacao = false }) {
   const exportedAt = new Date().toLocaleString('pt-BR', { day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit' });
   const groups = activeTab==='workflow'
     ? buildGroupsByWorkflow(filteredTickets, escopoFilter)
@@ -314,6 +309,8 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
       filteredTickets={filteredTickets}
       exportedAt={exportedAt}
       activeTab={activeTab}
+      escopoFilter={escopoFilter}
+      includeObservacao={includeObservacao}
     />
   );
 

@@ -414,6 +414,7 @@ export default function PlanejamentoCiclo() {
   const [showEstimativa, setShowEstimativa] = useState(
     () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
+  const [includeObservacaoExport, setIncludeObservacaoExport] = useState(false);
 
   const [filtersCollapsed, setFiltersCollapsed] = useState(
     () => localStorage.getItem('ciclo_filtersCollapsed') === 'true'
@@ -1096,8 +1097,12 @@ export default function PlanejamentoCiclo() {
           >
             <Download size={15} /> Exportar XLSX
           </button>
+          <label style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--gray-10)', cursor:'pointer', userSelect:'none', padding:'6px 10px', border:'1px solid var(--gray-5)', borderRadius:8, background:'var(--gray-3)' }}>
+            <input type="checkbox" checked={includeObservacaoExport} onChange={e=>setIncludeObservacaoExport(e.target.checked)} style={{ accentColor:'var(--indigo-9)', width:12, height:12 }} />
+            Obs. no PDF
+          </label>
           <button
-            title="Exportar retrato PDF A4 da lista de tickets com totais por status"
+            title="Exportar PDF A4 paisagem da lista de tickets"
             onClick={async () => {
               await exportCicloPdf({
                 ciclos,
@@ -1106,6 +1111,7 @@ export default function PlanejamentoCiclo() {
                 backlogTickets,
                 activeTab,
                 escopoFilter,
+                includeObservacao: includeObservacaoExport,
               });
             }}
             style={{
