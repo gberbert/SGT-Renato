@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, Avatar, Text } from '@radix-ui/themes';
 import { Camera, Sun, Moon } from 'lucide-react';
-import { storage } from '../firebase';
+import { storage, db } from '../firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { updateUser } from '../services/settingsService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { userHasFunctionPermission } from '../services/permissionService';
@@ -127,6 +128,8 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
   const [squads, setSquads]         = useState([]);
   const [userSquads, setUserSquads] = useState([]);
   const [errorMsg, setErrorMsg]     = useState("");
+  const [memberChangeLog, setMemberChangeLog] = useState([]);
+  const [changeLogOpen, setChangeLogOpen] = useState(false);
 
   const canEdit = userHasFunctionPermission(currentUser, PermissionFunctionKeys.EDIT_TEAM_MEMBER);
 
@@ -136,6 +139,15 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
       setActiveTab(TABS[0]);
     }
   }, [open, user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const q = query(collection(db, 'users', user.id, 'changeLog'), orderBy('changedAt', 'desc'));
+    const unsub = onSnapshot(q, snap => {
+      setMemberChangeLog(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
+    return unsub;
+  }, [user?.id]);
 
   useEffect(() => {
     const unsub = subscribeToProjectSquads('all', all => {
@@ -164,6 +176,32 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
         payload[k] = persistVal(k, v);
       }
       await updateUser(userId, payload);
+      // Log de alterações campo a campo
+      const changedBy = user?.displayName || user?.email || 'Sistema';
+      const LABEL = {
+        displayName:'Nome de Exibição', email:'E-mail', phone:'Telefone', contato:'Contato',
+        role:'Cargo', bio:'Bio', status:'Status', foundation:'Foundation', uf:'UF',
+        contract:'Contrato', seniority:'Senioridade', ratecardSeniority:'Senioridade Ratecard',
+        ratecardProfile:'Perfil Ratecard', project:'Projeto', allocation:'Alocação (%)',
+        monthlyHours:'Horas Mensais', observation:'Observação', photoURL:'Foto',
+        hardSkills:'Hard Skills', shortName:'Nome Curto', name:'Nome',
+      };
+      const logRef = collection(db, 'users', userId, 'changeLog');
+      for (const [k, v] of Object.entries(payload)) {
+        const orig = user?.[k];
+        const stringOrig = orig == null ? '' : String(Array.isArray(orig) ? orig.join(', ') : orig);
+        const stringNew  = v   == null ? '' : String(Array.isArray(v)   ? v.join(', ')   : v);
+        if (stringOrig !== stringNew) {
+          await addDoc(logRef, {
+            field: k,
+            fieldLabel: LABEL[k] || k,
+            oldValue: stringOrig || null,
+            newValue: stringNew  || null,
+            changedBy,
+            changedAt: serverTimestamp(),
+          });
+        }
+      }
       onOpenChange(false);
     } catch (err) {
       console.error("Erro ao salvar usuário:", err);
@@ -251,6 +289,59 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
             </div>
           )}
         </div>
+
+        {/* Histórico de Alterações */}
+        {memberChangeLog.length > 0 && (
+          <div style={{ marginTop: 24, borderTop: '1px solid var(--gray-5)', paddingTop: 14 }}>
+            <button
+              type="button"
+              onClick={() => setChangeLogOpen(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '4px 0', color: 'var(--gray-10)', fontSize: 12, fontWeight: 700,
+                letterSpacing: '0.05em', textTransform: 'uppercase', width: '100%',
+              }}
+            >
+              <span style={{ fontSize: 14 }}>🕓</span>
+              HISTÓRICO DE ALTERAÇÕES
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+                background: 'rgba(99,102,241,0.2)', color: '#a5b4fc',
+                border: '1px solid rgba(99,102,241,0.35)',
+              }}>{memberChangeLog.length}</span>
+              <span style={{ marginLeft: 'auto', fontSize: 13, transform: changeLogOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
+            </button>
+            {changeLogOpen && (
+              <div style={{ marginTop: 10, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ color: 'var(--gray-9)', textAlign: 'left' }}>
+                      {['Campo', 'De', 'Para', 'Por', 'Quando'].map(h => (
+                        <th key={h} style={{ padding: '4px 8px', fontWeight: 700, borderBottom: '1px solid var(--gray-5)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {memberChangeLog.map(entry => {
+                      const d = entry.changedAt?.toDate ? entry.changedAt.toDate() : null;
+                      const when = d ? d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+                      return (
+                        <tr key={entry.id} style={{ borderBottom: '1px solid var(--gray-4)' }}>
+                          <td style={{ padding: '5px 8px', color: 'var(--gray-11)', fontWeight: 600 }}>{entry.fieldLabel || entry.field}</td>
+                          <td style={{ padding: '5px 8px', color: '#f87171' }}>{entry.oldValue || '—'}</td>
+                          <td style={{ padding: '5px 8px', color: '#4ade80' }}>{entry.newValue || '—'}</td>
+                          <td style={{ padding: '5px 8px', color: 'var(--gray-10)' }}>{entry.changedBy || '—'}</td>
+                          <td style={{ padding: '5px 8px', color: 'var(--gray-9)' }}>{when}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Theme toggle — always visible */}
         {typeof toggleTheme === 'function' && (
