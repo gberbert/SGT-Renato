@@ -34,8 +34,8 @@ const AuditDashboard = ({ userRole }) => {
   const [syncLogs, setSyncLogs] = useState([]);
   const [syncLoading, setSyncLoading] = useState(false);
 
-  // Todos os usuários do sistema (carregados independente dos logs)
-  const [allSystemUsers, setAllSystemUsers] = useState([]);
+  // Usuários distintos presentes na coleção de logs (sem limite de paginação)
+  const [auditUsers, setAuditUsers] = useState([]);
 
   // Filtros de acesso
   const [filterUser, setFilterUser] = useState('');
@@ -56,17 +56,23 @@ const AuditDashboard = ({ userRole }) => {
     }
   };
 
-  const loadAllSystemUsers = async () => {
+  const loadAuditUsers = async () => {
     try {
-      const snap = await getDocs(collection(db, 'users'));
-      const list = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .map(u => ({ id: u.id, name: u.displayName || u.shortName || u.name || u.email || u.id }))
-        .filter(u => u.name)
+      // Busca todos os logs sem limit para extrair usuários distintos
+      const snap = await getDocs(query(collection(db, ACCESS_LOGS), orderBy('timestamp', 'desc')));
+      const map = new Map();
+      snap.docs.forEach(d => {
+        const data = d.data();
+        if (data.userId && data.userName && !map.has(data.userId)) {
+          map.set(data.userId, data.userName);
+        }
+      });
+      const list = [...map.entries()]
+        .map(([id, name]) => ({ id, name }))
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-      setAllSystemUsers(list);
+      setAuditUsers(list);
     } catch (e) {
-      console.error('Erro ao carregar usuários:', e);
+      console.error('Erro ao carregar usuários dos logs:', e);
     }
   };
 
@@ -85,7 +91,7 @@ const AuditDashboard = ({ userRole }) => {
 
   useEffect(() => {
     if (!isAdmin) return;
-    loadAllSystemUsers();
+    loadAuditUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
@@ -104,13 +110,10 @@ const AuditDashboard = ({ userRole }) => {
     );
   }
 
-  // Opções de filtro: todos os usuários do sistema + usuários que aparecem nos logs mas não estão em 'users'
+  // Opções de filtro: todos os usuários que possuem registro na coleção de logs
   const userOptions = useMemo(() => {
-    const map = new Map(allSystemUsers.map(u => [u.id, u.name]));
-    // Complementa com usuários que aparecem nos logs mas não estão na coleção users
-    accessLogs.forEach(l => { if (l.userId && l.userName && !map.has(l.userId)) map.set(l.userId, l.userName); });
-    return [...map.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [allSystemUsers, accessLogs]);
+    return auditUsers;
+  }, [auditUsers]);
 
   const pageOptions = useMemo(() => {
     const s = new Set(accessLogs.map(l => l.page).filter(Boolean));
