@@ -185,12 +185,21 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
         ratecardProfile:'Perfil Ratecard', project:'Projeto', allocation:'Alocação (%)',
         monthlyHours:'Horas Mensais', observation:'Observação', photoURL:'Foto',
         hardSkills:'Hard Skills', shortName:'Nome Curto', name:'Nome',
+        dataNascimento:'Data de Nascimento', dataInicio:'Data de Início',
+        dataDesligamento:'Data de Desligamento', city:'Cidade',
+      };
+      // Normaliza valor para comparação — campos de data usam toInputDate para converter Timestamps
+      const normalizeVal = (k, val) => {
+        if (val == null) return '';
+        if (isDateF(k)) return toInputDate(val) || '';
+        if (Array.isArray(val)) return val.join(', ');
+        return String(val);
       };
       const logRef = collection(db, 'users', userId, 'changeLog');
       for (const [k, v] of Object.entries(payload)) {
         const orig = user?.[k];
-        const stringOrig = orig == null ? '' : String(Array.isArray(orig) ? orig.join(', ') : orig);
-        const stringNew  = v   == null ? '' : String(Array.isArray(v)   ? v.join(', ')   : v);
+        const stringOrig = normalizeVal(k, orig);
+        const stringNew  = normalizeVal(k, v);
         if (stringOrig !== stringNew) {
           await addDoc(logRef, {
             field: k,
