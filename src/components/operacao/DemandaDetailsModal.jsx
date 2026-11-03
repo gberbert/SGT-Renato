@@ -835,6 +835,12 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
           >
             PLANEJAMENTO
           </button>
+          <button
+            className={`dmd-tab${activeTab === 'planoTeste' ? ' dmd-tab--active' : ''}`}
+            onClick={() => setActiveTab('planoTeste')}
+          >
+            PLANO DE TESTE
+          </button>
         </div>
 
         {/* ── BODY ── */}
@@ -872,7 +878,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                 ) : (
                   <ReadField label="PRIORIDADE" value={prioLabel} />
                 )}
-                <ReadField label="ESTIMATIVA MACRO" value={ticket.estimativaMacro} />
+                <ReadField label="ESTIMATIVA MACRO" value={ticket.estimativaMacro ?? ticket.estimativaMacroJira} />
                 <ReadField label="ESTIMATIVA TOTAL" value={ticket.estimativaTotal} />
                 <ReadField label="NATUREZA DA OPERAÇÃO" value={ticket.naturezaOperacao} />
                 <ReadField label="SEVERIDADE" value={ticket.severidade} />
@@ -889,6 +895,11 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                   <EditPercent label="% CONCLUSÃO TESTE INTERNO" fieldKey="percentualConclusaoTesteInterno" value={ticket.percentualConclusaoTesteInterno} onSave={save} />
                 ) : (
                   <ReadPercent label="% CONCLUSÃO TESTE INTERNO" value={ticket.percentualConclusaoTesteInterno} />
+                )}
+                {isEdit ? (
+                  <EditPercent label="% CONCLUSÃO HOMOLOGAÇÃO" fieldKey="percentualConclusaoHomologacao" value={ticket.percentualConclusaoHomologacao} onSave={save} />
+                ) : (
+                  <ReadPercent label="% CONCLUSÃO HOMOLOGAÇÃO" value={ticket.percentualConclusaoHomologacao} />
                 )}
                 {/* AVANÇO — média aritmética de % Conclusão e % Conclusão Teste Interno */}
                 {(() => {
@@ -917,6 +928,23 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                     </div>
                   );
                 })()}
+              </div>
+
+              {/* Row 2c: PLANEJAMENTO HORAS DEMANDA FAST + DEMANDA VULNERABILIDADE + CICLO */}
+              <div className="dmd-row">
+                <ReadField label="PLAN. HORAS DEMANDA FAST" value={ticket.planejamentoHorasDemandaFast} />
+                {isEdit ? (
+                  <EditSelect
+                    label="DEMANDA VULNERABILIDADE"
+                    fieldKey="demandaVulnerabilidade"
+                    options={[{ value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }]}
+                    value={ticket.demandaVulnerabilidade || ''}
+                    onSave={save}
+                    placeholder="—"
+                  />
+                ) : (
+                  <ReadField label="DEMANDA VULNERABILIDADE" value={ticket.demandaVulnerabilidade} />
+                )}
                 <div className="dmd-field">
                   <FieldLabel>CICLO</FieldLabel>
                   {Array.isArray(ticket.ciclos) && ticket.ciclos.length > 0 ? (
@@ -943,23 +971,6 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                     <span style={{ color: '#6b7280', fontSize: 13 }}>—</span>
                   )}
                 </div>
-              </div>
-
-              {/* Row 2c: PLANEJAMENTO HORAS DEMANDA FAST + DEMANDA VULNERABILIDADE */}
-              <div className="dmd-row">
-                <ReadField label="PLAN. HORAS DEMANDA FAST" value={ticket.planejamentoHorasDemandaFast} />
-                {isEdit ? (
-                  <EditSelect
-                    label="DEMANDA VULNERABILIDADE"
-                    fieldKey="demandaVulnerabilidade"
-                    options={[{ value: 'Sim', label: 'Sim' }, { value: 'Não', label: 'Não' }]}
-                    value={ticket.demandaVulnerabilidade || ''}
-                    onSave={save}
-                    placeholder="—"
-                  />
-                ) : (
-                  <ReadField label="DEMANDA VULNERABILIDADE" value={ticket.demandaVulnerabilidade} />
-                )}
               </div>
 
               {/* Row 3: SISTEMAS IMPACTADOS — tags (somente leitura) */}
@@ -1150,6 +1161,102 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
                   <ReadField label="ESTIMATIVA INTERNA (h)" value={ticket.estimativaInterna} />
                 )}
               </div>
+            </div>
+          ) : activeTab === 'planoTeste' ? (
+            <div className="dmd-tab-content">
+              <div style={{ padding: '12px 0 4px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--gray-4)', marginBottom: 16 }}>
+                Resultados de Teste
+              </div>
+              {(() => {
+                const aprovados      = Number(pendingChanges.ptAprovados      ?? ticket.ptAprovados      ?? 0);
+                const reprovados     = Number(pendingChanges.ptReprovados     ?? ticket.ptReprovados     ?? 0);
+                const bloqueados     = Number(pendingChanges.ptBloqueados     ?? ticket.ptBloqueados     ?? 0);
+                const atencao        = Number(pendingChanges.ptAtencao        ?? ticket.ptAtencao        ?? 0);
+                const naoAplicavel   = Number(pendingChanges.ptNaoAplicavel   ?? ticket.ptNaoAplicavel   ?? 0);
+                const naoExecutado   = Number(pendingChanges.ptNaoExecutado   ?? ticket.ptNaoExecutado   ?? 0);
+                const totalCasos     = aprovados + reprovados + bloqueados + atencao + naoAplicavel + naoExecutado;
+
+                const fieldStyle = {
+                  display: 'flex', flexDirection: 'column', gap: 6,
+                  background: 'rgba(255,255,255,.03)',
+                  border: '1px solid rgba(255,255,255,.08)',
+                  borderRadius: 10, padding: '14px 16px', minWidth: 160,
+                };
+                const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textTransform: 'uppercase', letterSpacing: '0.06em' };
+                const inputStyle = {
+                  background: 'var(--gray-3)', border: '1px solid var(--gray-6)',
+                  borderRadius: 6, padding: '6px 10px', fontSize: 15,
+                  fontWeight: 700, color: 'var(--gray-12)', outline: 'none', width: '100%',
+                };
+                const readStyle = { fontSize: 22, fontWeight: 800, color: 'var(--gray-12)', paddingTop: 2 };
+
+                const FIELDS = [
+                  { key: 'ptAprovados',    label: 'Aprovados',      color: '#4ade80', val: aprovados },
+                  { key: 'ptReprovados',   label: 'Reprovados',     color: '#f87171', val: reprovados },
+                  { key: 'ptBloqueados',   label: 'Bloqueados',     color: '#fb923c', val: bloqueados },
+                  { key: 'ptAtencao',      label: 'Atenção',        color: '#fbbf24', val: atencao },
+                  { key: 'ptNaoAplicavel', label: 'Não Aplicável',  color: '#94a3b8', val: naoAplicavel },
+                  { key: 'ptNaoExecutado', label: 'Não Executado',  color: '#64748b', val: naoExecutado },
+                ];
+
+                return (
+                  <>
+                    {/* Total — read-only, auto-sum */}
+                    <div style={{ ...fieldStyle, border: '1px solid rgba(99,102,241,.35)', background: 'rgba(99,102,241,.07)', marginBottom: 8 }}>
+                      <span style={{ ...labelStyle, color: '#a5b4fc' }}>Casos de Teste (total)</span>
+                      <span style={{ fontSize: 28, fontWeight: 800, color: '#a5b4fc' }}>{totalCasos}</span>
+                    </div>
+
+                    {/* Progresso do Teste: (Aprovados + Atenção + Não Aplicável) / Casos de Teste */}
+                    {(() => {
+                      const progressoPct = totalCasos > 0
+                        ? Math.min(100, Math.round(((aprovados + atencao + naoAplicavel) / totalCasos) * 1000) / 10)
+                        : 0;
+                      const progressoColor = progressoPct >= 75 ? '#4ade80' : progressoPct >= 40 ? '#fbbf24' : '#f87171';
+                      return (
+                        <div style={{ ...fieldStyle, border: '1px solid rgba(74,222,128,.35)', background: 'rgba(74,222,128,.05)', marginBottom: 18 }}>
+                          <span style={{ ...labelStyle, color: '#4ade80' }}>PROGRESSO DO TESTE</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
+                            <div style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                              <div style={{
+                                height: '100%', width: `${progressoPct}%`, borderRadius: 99,
+                                background: progressoColor, transition: 'width 0.3s ease',
+                              }} />
+                            </div>
+                            <span style={{ fontSize: 20, fontWeight: 800, color: progressoColor, minWidth: 52, textAlign: 'right' }}>
+                              {progressoPct}%
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--gray-8)', marginTop: 3 }}>
+                            ({aprovados} Aprov. + {atencao} Atenção + {naoAplicavel} N.Apl.) / {totalCasos} casos
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 6 editable fields in a 3×2 grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 12 }}>
+                      {FIELDS.map(f => (
+                        <div key={f.key} style={{ ...fieldStyle, borderColor: f.color + '44' }}>
+                          <span style={{ ...labelStyle, color: f.color }}>{f.label}</span>
+                          {isEdit ? (
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              style={{ ...inputStyle, color: f.color }}
+                              value={pendingChanges[f.key] ?? ticket[f.key] ?? ''}
+                              onChange={e => save(f.key, e.target.value === '' ? 0 : Math.max(0, Math.floor(Number(e.target.value))))}
+                            />
+                          ) : (
+                            <span style={{ ...readStyle, color: f.color }}>{f.val}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           ) : (
             <div className="dmd-tab-content dmd-plan-tab">

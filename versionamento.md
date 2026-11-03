@@ -1,5 +1,11 @@
 # Versionamento do Projeto
 
+## [0.1.407] - 2026-11-03
+- **Fix (DemandaDetailsModal — ESTIMATIVA MACRO):** Campo exibe fallback `estimativaMacroJira` quando `estimativaMacro` está vazio.
+- **Feature (DemandaDetailsModal — Aba GERAL):** Campo **% CONCLUSÃO HOMOLOGAÇÃO** adicionado ao lado de % Conclusão e % Conclusão Teste Interno (editável, `percentualConclusaoHomologacao`).
+- **UX (DemandaDetailsModal — Aba GERAL):** Campo **CICLO** movido para Row 2c ao lado de DEMANDA VULNERABILIDADE.
+- **Feature (DemandaDetailsModal — Aba PLANO DE TESTE):** Card **PROGRESSO DO TESTE** com cálculo `(Aprovados + Atenção + Não Aplicável) / Casos de Teste` e barra de progresso com cor adaptativa.
+
 ## [0.1.321] - 2026-10-02
 - **Fix (Firestore Security Rules — journeyPeriods):** Restauradas regras de segurança do Firestore corrigidas. As regras anteriormente eram muito restritivas e bloqueavam a leitura e escrita de dados de usuários, impedindo o salvamento e consulta de `journeyPeriods` (férias) no modal "Controle de Jornada". Novas regras permitem:
   1. Leitura pública para usuários autenticados em todas as coleções
