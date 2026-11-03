@@ -406,6 +406,7 @@ export default function PlanejamentoCiclo() {
   const [dateField, setDateField] = useState('none');
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
+  const [cicloFilter, setCicloFilter] = useState(new Set());
   const [pctConclusaoFilter, setPctConclusaoFilter] = useState(new Set());
   const [pctTesteInternoFilter, setPctTesteInternoFilter] = useState(new Set());
   const [createdAtFrom, setCreatedAtFrom] = useState('');
@@ -648,6 +649,17 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => Number(a) - Number(b)).map(v => `${v}%`);
   }, [enrichedTickets]);
 
+  const cicloOptions = useMemo(
+    () => ciclos.map(c => c.nome).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [ciclos]
+  );
+
+  const cicloKeysMap = useMemo(() => {
+    const m = new Map();
+    ciclos.forEach(c => { if (c.nome) m.set(c.nome, new Set(c.ticketKeys || [])); });
+    return m;
+  }, [ciclos]);
+
   const handleFilaFilterChange = useCallback((newFilaSelection) => {
     setFilaFilter(newFilaSelection);
     const newStatusSelection = new Set();
@@ -721,6 +733,13 @@ export default function PlanejamentoCiclo() {
         if (!isNaN(to) && ts > to) return false;
       }
     }
+    if (cicloFilter.size > 0) {
+      const inAnyCiclo = [...cicloFilter].some(nome => {
+        const keys = cicloKeysMap.get(nome);
+        return keys && keys.has(t.issueKey || t.id);
+      });
+      if (!inAnyCiclo) return false;
+    }
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
     if (search) {
@@ -731,7 +750,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, createdAtFrom, createdAtTo, impedimentoFilter, demandaVulnerabFilter, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, createdAtFrom, createdAtTo, impedimentoFilter, demandaVulnerabFilter, cicloFilter, cicloKeysMap, search]);
 
   // Hierarchy-aware filtered set: includes ancestors of matching tickets
   const filteredTicketsHierarchy = useMemo(
@@ -909,7 +928,7 @@ export default function PlanejamentoCiclo() {
     dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
   ]);
 
-  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter]
+  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, cicloFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0) + (demandaVulnerabFilter ? 1 : 0) + (createdAtFrom || createdAtTo ? 1 : 0);
 
   return (
@@ -1085,6 +1104,8 @@ export default function PlanejamentoCiclo() {
                 getCicloTickets,
                 filteredTickets,
                 backlogTickets,
+                activeTab,
+                escopoFilter,
               });
             }}
             style={{
@@ -1273,7 +1294,7 @@ export default function PlanejamentoCiclo() {
           )}
           {activeFilters > 0 && (
             <button
-              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setPctConclusaoFilter(new Set()); setPctTesteInternoFilter(new Set()); setCreatedAtFrom(''); setCreatedAtTo(''); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setPctConclusaoFilter(new Set()); setPctTesteInternoFilter(new Set()); setCicloFilter(new Set()); setCreatedAtFrom(''); setCreatedAtTo(''); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
               style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
             >
               Limpar filtros
@@ -1292,6 +1313,7 @@ export default function PlanejamentoCiclo() {
           <MultiSelectFilter options={issuetypeOptions} selected={issuetypeFilter} onChange={setIssuetypeFilter} placeholder="Issue Type" maxWidth={160} />
           <MultiSelectFilter options={pctConclusaoOptions} selected={pctConclusaoFilter} onChange={setPctConclusaoFilter} placeholder="% Conclusão" maxWidth={140} />
           <MultiSelectFilter options={pctTesteInternoOptions} selected={pctTesteInternoFilter} onChange={setPctTesteInternoFilter} placeholder="% Conclusão Teste" maxWidth={160} />
+          <MultiSelectFilter options={cicloOptions} selected={cicloFilter} onChange={setCicloFilter} placeholder="Ciclo" maxWidth={160} />
           {/* Data de Criação — range */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             <span style={{ fontSize: 11, color: 'var(--gray-10)', whiteSpace: 'nowrap' }}>Criado:</span>
@@ -1429,7 +1451,7 @@ export default function PlanejamentoCiclo() {
       )}
 
       {/* ── Ciclo sections ───────────────────────────────────────────── */}
-      {!loading && activeTab === 'ciclos' && ciclos.map(ciclo => (
+      {!loading && activeTab === 'ciclos' && ciclos.filter(ciclo => cicloFilter.size === 0 || cicloFilter.has(ciclo.nome)).map(ciclo => (
         <CicloSection
           key={ciclo.id}
           ciclo={ciclo}
