@@ -3,6 +3,7 @@ import { Box, Flex, Text, Select, Button, TextField, Popover, Badge, Callout, Pr
 import { Route, Filter, Layers, Save, Loader2, Trash2, ChevronRight, ChevronDown, Info, Clock, FileText, Flame, ArrowUp, Minus, ArrowDown, AlertCircle, Eye, Pencil, ArrowUpDown } from 'lucide-react';
 import { exportRoadmapGeralPdf } from './RoadmapGeralPdfExport';
 import { MultiSelectFilter } from './PlanejamentoCicloHelpers';
+import { subscribeToCiclos } from '../services/cicloService';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 import { db, auth } from '../firebase';
@@ -36,6 +37,107 @@ import {
   todayPixelOffset,
 } from '../utils/roadmapGeralUtils';
 import './RoadmapGeral.css';
+
+// ── Workflow status ordering (mirrors PlanejamentoCiclo.jsx WORKFLOW_STEPS) ──
+const WORKFLOW_DEMANDA_STATUS_ORDER = [
+  'Aguardando Aprovação Gestor Imediato',
+  'Escrita de Requerimento',
+  'Validação Comitê',
+  'Aguardando Solicitante',
+  'Detalhamento de Requisitos',
+  'Aguardando Profissional de TI',
+  'Aguardando Demanda/Projeto',
+  'Revisão de Requisitos de Projeto',
+  'Análise e T-Shirt',
+  'Aguardando Análise Técnica',
+  'Aguardando Aprovação T-Shirt',
+  'Planejamento',
+  'Aprovação de Planejamento',
+  'Aguardando Planejamento',
+  'Em Execução',
+  'Em Teste',
+  'Em homologação',
+  'Revisão de homologação',
+  'Etapa de KT',
+  'Aguardando Mudança',
+  'Concluída',
+];
+
+const WORKFLOW_DEMANDA_FAST_STATUS_ORDER = [
+  'Aguardando Atendimento',
+  'Em Atendimento',
+  'Resolvido',
+  'Reaberto',
+  'Fechada',
+  'Canceled',
+  'Aprovação Demanda Fast',
+  'Aguardando Aprovação Gestor',
+  'Aguardando Aprovação Tecnica',
+  'Aguardando Aprovação Adicional',
+  'Aprovado',
+  'Reprovado',
+  'Agendado',
+  'Aguardando Compra',
+  'Aguardando Validação',
+  'Aguardando Problema',
+  'Aguardando Mudança',
+  'Aguardando Fornecedor',
+  'Aguardando Solicitante',
+];
+
+const WORKFLOW_PROBLEMAS_STATUS_ORDER = [
+  'Aguardando RCA',
+  'Aguardando Aprovação Líder de Torre',
+  'Aguardando Aprovação Ger. Problema',
+  'Solução Rejeitada',
+  'Aguardando Planejamento',
+  'Aguardando Execução',
+  'Em Execução',
+  'Aguardando Demanda/Projeto',
+  'Em Monitoramento',
+  'Fechado',
+  'Cancelado',
+  'RCA em Desenvolvimento',
+  'Aguardando Aprovação Técnica RCA',
+  'Aguardando Aprovação Governança RCA',
+  'Resolvido',
+  'Em Planejamento',
+  'Aguardando Aprovação Técnica',
+  'Aguardando Aprovação Governança',
+  'Aguardando Demanda',
+];
+
+/**
+ * Returns a Map<statusName, sortIndex> for the selected escopos.
+ * Single escopo → uses that escopo's specific workflow order.
+ * Multiple/none → merges all workflows (DEMANDA first as the most complete).
+ * Statuses not found in the workflow map sort to 9999 (alphabetically after known ones).
+ */
+function getStatusOrderMap(selectedEscopoKeys) {
+  const keys = Array.isArray(selectedEscopoKeys) ? selectedEscopoKeys : [];
+  let orderedList;
+  if (keys.length === 1 && keys[0] === 'DEMANDA') {
+    orderedList = WORKFLOW_DEMANDA_STATUS_ORDER;
+  } else if (keys.length === 1 && keys[0] === 'DEMANDA FAST') {
+    orderedList = WORKFLOW_DEMANDA_FAST_STATUS_ORDER;
+  } else if (keys.length === 1 && keys[0] === 'PROBLEMAS') {
+    orderedList = WORKFLOW_PROBLEMAS_STATUS_ORDER;
+  } else {
+    // Combined order: DEMANDA first, then any additional statuses from FAST and PROBLEMAS
+    const seen = new Set();
+    orderedList = [];
+    for (const s of [
+      ...WORKFLOW_DEMANDA_STATUS_ORDER,
+      ...WORKFLOW_DEMANDA_FAST_STATUS_ORDER,
+      ...WORKFLOW_PROBLEMAS_STATUS_ORDER,
+    ]) {
+      if (!seen.has(s)) { seen.add(s); orderedList.push(s); }
+    }
+  }
+  const map = new Map();
+  orderedList.forEach((status, idx) => map.set(status, idx));
+  return map;
+}
 
 const GROUP_BY_OPTIONS = [
   { value: 'none', label: 'Nenhum' },
@@ -121,7 +223,7 @@ function serializeRoadmapState(filters, groupBy, granularity, dateConfig, scopeC
 }
 
 function createEmptyFilters() {
-  return { escopos: new Set(), squads: new Set(), grupos: new Set(), statuses: new Set(), tickets: new Set(), prioridades: new Set(), sistemas: new Set(), naturezaIniciativa: new Set(), issuetype: new Set(), pctConclusao: new Set(), pctTesteInterno: new Set(), respDev: new Set(), respTeste: new Set() };
+  return { escopos: new Set(), squads: new Set(), grupos: new Set(), statuses: new Set(), tickets: new Set(), prioridades: new Set(), sistemas: new Set(), naturezaIniciativa: new Set(), issuetype: new Set(), pctConclusao: new Set(), pctTesteInterno: new Set(), respDev: new Set(), respTeste: new Set(), ciclos: new Set() };
 }
 
 function ticketGrupoNamesLocal(ticket) {
@@ -215,6 +317,7 @@ const RoadmapGeral = () => {
   const [sortDir, setSortDir] = useState('asc');
   const [includeObservacaoPdf, setIncludeObservacaoPdf] = useState(false);
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
+  const [ciclosData, setCiclosData] = useState([]);
   const [naoImpedidoFilter, setNaoImpedidoFilter] = useState(false);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(
@@ -222,6 +325,19 @@ const RoadmapGeral = () => {
   );
 
   const uid = auth.currentUser?.uid || null;
+
+  useEffect(() => subscribeToCiclos(setCiclosData), []);
+
+  const cicloOptions = useMemo(
+    () => ciclosData.map(c => c.nome).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [ciclosData]
+  );
+
+  const cicloKeysMap = useMemo(() => {
+    const m = new Map();
+    ciclosData.forEach(c => { if (c.nome) m.set(c.nome, new Set(c.ticketKeys || [])); });
+    return m;
+  }, [ciclosData]);
 
   // applyViewState definida antes dos useEffects para poder ser chamada no carregamento inicial
   const applyViewState = (view) => {
@@ -368,12 +484,20 @@ const RoadmapGeral = () => {
       if (filters.pctTesteInterno?.size > 0) { const v = t.percentualConclusaoTesteInterno!=null?`${t.percentualConclusaoTesteInterno}%`:'%'; if (!filters.pctTesteInterno.has(v)) return false; }
       if (filters.respDev?.size > 0) { if (!filters.respDev.has(t.responsavelDesenvolvimento||'')) return false; }
       if (filters.respTeste?.size > 0) { if (!filters.respTeste.has(t.responsavelTesteInterno||'')) return false; }
+      if (filters.ciclos?.size > 0) {
+        const inAnyCiclo = [...filters.ciclos].some(nome => {
+          const keys = cicloKeysMap.get(nome);
+          return (keys && keys.has(String(t.issueKey || '').trim().toUpperCase())) ||
+                 (keys && keys.has(t.issueKey || ''));
+        });
+        if (!inAnyCiclo) return false;
+      }
       if (impedimentoFilter && t.impedimento !== true) return false;
       if (naoImpedidoFilter && t.impedimento === true) return false;
       if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
       return true;
     });
-  }, [ticketsCache, filters, squadGrupoMap, scopeConfig, impedimentoFilter, naoImpedidoFilter, demandaVulnerabFilter]);
+  }, [ticketsCache, filters, squadGrupoMap, scopeConfig, impedimentoFilter, naoImpedidoFilter, demandaVulnerabFilter, cicloKeysMap]);
 
   const ticketsWithRange = useMemo(() => {
     const now = new Date().toISOString();
@@ -503,10 +627,35 @@ const RoadmapGeral = () => {
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(ticket);
     }
-    return [...map.entries()]
-      .map(([key, tickets]) => ({ key, label: key, tickets }))
-      .sort((a, b) => String(a.label).localeCompare(String(b.label), 'pt-BR'));
-  }, [groupBy, ticketsWithRange, groupKeyForTicket, sortTickets]);
+    const groups = [...map.entries()].map(([key, tickets]) => ({ key, label: key, tickets }));
+
+    if (groupBy === 'status') {
+      // Determine active escopos using multiple sources (most specific first):
+      // 1. Explicit escopo filter buttons (filters.escopos)
+      // 2. Scope config used to load data (scopeConfig.escopos)
+      // 3. Inferred from the actual visible tickets
+      let escoposForWorkflow = [...filters.escopos];
+      if (escoposForWorkflow.length === 0 && scopeConfig.escopos.length > 0) {
+        escoposForWorkflow = scopeConfig.escopos;
+      }
+      if (escoposForWorkflow.length === 0 && ticketsWithRange.length > 0) {
+        const inferredEscopos = new Set(
+          ticketsWithRange.map(t => normalizeEscopoKey(t.escopo)).filter(Boolean)
+        );
+        escoposForWorkflow = [...inferredEscopos];
+      }
+      const statusOrderMap = getStatusOrderMap(escoposForWorkflow);
+      return groups.sort((a, b) => {
+        const ia = statusOrderMap.has(a.label) ? statusOrderMap.get(a.label) : 9999;
+        const ib = statusOrderMap.has(b.label) ? statusOrderMap.get(b.label) : 9999;
+        if (ia !== ib) return ia - ib;
+        // Tie-break: alphabetical for statuses not in the workflow
+        return String(a.label).localeCompare(String(b.label), 'pt-BR');
+      });
+    }
+
+    return groups.sort((a, b) => String(a.label).localeCompare(String(b.label), 'pt-BR'));
+  }, [groupBy, ticketsWithRange, groupKeyForTicket, sortTickets, filters.escopos, scopeConfig.escopos]);
 
   const toggleGroupCollapse = (key) => {
     setCollapsedGroups((prev) => {
@@ -1007,6 +1156,7 @@ const RoadmapGeral = () => {
           <MultiSelectFilter options={issuetypeOptions} selected={filters.issuetype||new Set()} onChange={s=>setFilters(p=>({...p,issuetype:s}))} placeholder="Issue Type" maxWidth={145} />
           <MultiSelectFilter options={pctOptions} selected={filters.pctConclusao||new Set()} onChange={s=>setFilters(p=>({...p,pctConclusao:s}))} placeholder="% Conclusão" maxWidth={125} />
           <MultiSelectFilter options={pctTesteOptions} selected={filters.pctTesteInterno||new Set()} onChange={s=>setFilters(p=>({...p,pctTesteInterno:s}))} placeholder="% Conclusão Teste" maxWidth={150} />
+          <MultiSelectFilter options={cicloOptions} selected={filters.ciclos||new Set()} onChange={s=>setFilters(p=>({...p,ciclos:s}))} placeholder="Ciclo" maxWidth={145} />
         </Flex>
 
         {/* Row 2b: Responsáveis + Impedidos + Vulnerabilidade */}
