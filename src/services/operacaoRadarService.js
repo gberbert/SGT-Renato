@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   doc,
   documentId,
@@ -794,6 +795,15 @@ export async function updateTicketRadarFields(issueKey, patch) {
   if ('responsavelTesteInterno' in patch) payload.responsavelTesteInterno = patch.responsavelTesteInterno || null;
   if ('demandaVulnerabilidade' in patch) payload.demandaVulnerabilidade = patch.demandaVulnerabilidade || null;
 
+  // ── Plano de Teste ──
+  const PT_FIELDS = ['ptAprovados','ptReprovados','ptBloqueados','ptAtencao','ptNaoAplicavel','ptNaoExecutado'];
+  for (const f of PT_FIELDS) {
+    if (f in patch) {
+      const n = patch[f] === '' || patch[f] == null ? 0 : Math.max(0, Math.floor(Number(patch[f])));
+      payload[f] = Number.isFinite(n) ? n : 0;
+    }
+  }
+
   const SGT_DATE_FIELDS = [
     'dataFimDesenvolvimento', 'dataFimTesteInterno', 'dataFimTesteQa',
     'dataFimHomologacao', 'dataConclusao',
@@ -804,17 +814,75 @@ export async function updateTicketRadarFields(issueKey, patch) {
 
   payload.radarFieldsUpdatedAt = serverTimestamp();
 
+  // ── Histórico de alterações (statusChangeLog) ──
+  const PT_LABELS = {
+    ptAprovados:    'PT — Aprovados',
+    ptReprovados:   'PT — Reprovados',
+    ptBloqueados:   'PT — Bloqueados',
+    ptAtencao:      'PT — Atenção',
+    ptNaoAplicavel: 'PT — Não Aplicável',
+    ptNaoExecutado: 'PT — Não Executado',
+  };
+  const ALL_TRACKED = {
+    responsavelDesenvolvimento: 'Responsável Desenvolvimento',
+    responsavelTesteInterno: 'Responsável Teste Interno',
+    impedimento: 'Impedido',
+    observacaoAdicional: 'Motivo Impedimento',
+    observacao: 'Observação',
+    squadPrincipal: 'Squad Principal',
+    prioridadeInterna: 'Prioridade Interna',
+    estimativaInterna: 'Estimativa Interna (h)',
+    demandaVulnerabilidade: 'Demanda Vulnerabilidade',
+    percentualConclusao: '% Conclusão',
+    percentualConclusaoTesteInterno: '% Conclusão Teste Interno',
+    dataFimDesenvolvimento: 'Data Fim Desenvolvimento',
+    dataFimTesteInterno: 'Data Fim Teste Interno',
+    dataFimTesteQa: 'Data Fim Teste QA',
+    dataFimHomologacao: 'Data Fim Homologação',
+    dataConclusao: 'Data Conclusão',
+    ...PT_LABELS,
+  };
+
   const ref = doc(db, TICKETS_GLOBAL, issueKey);
+
+  // Read current values to record "from" in the log
+  const snap = await getDoc(ref);
+  const current = snap.exists() ? snap.data() : {};
+
   await setDoc(ref, payload, { merge: true });
+
+  // Write one log entry per tracked changed field
+  const logCol = collection(db, TICKETS_GLOBAL, issueKey, 'statusChangeLog');
+  const logPromises = [];
+  for (const [field, label] of Object.entries(ALL_TRACKED)) {
+    if (!(field in payload)) continue;
+    const oldVal = current[field] ?? null;
+    const newVal = payload[field] ?? null;
+    // Skip if value didn't actually change
+    if (String(oldVal) === String(newVal)) continue;
+    logPromises.push(
+      addDoc(logCol, {
+        field,
+        fieldLabel: label,
+        oldValue: oldVal,
+        newValue: newVal,
+        changedAt: serverTimestamp(),
+        changedBy: null, // caller can enrich; we don't have auth here
+        source: 'usuario',
+      })
+    );
+  }
+  await Promise.all(logPromises);
+
   return payload;
 }
 
 export async function fetchTicketById(issueKey) {
   if (!issueKey) return null;
-  const snap = await getDoc(doc(db, TICKETS_GLOBAL, issueKey));
-  if (!snap.exists()) return null;
-  const mapped = mapFirestoreTicketDoc(snap);
-  const raw = snap.data();
+  const snap2 = await getDoc(doc(db, TICKETS_GLOBAL, issueKey));
+  if (!snap2.exists()) return null;
+  const mapped = mapFirestoreTicketDoc(snap2);
+  const raw = snap2.data();
   return {
     ...mapped,
     estimativaTotal: raw.estimativaTotal ?? null,
@@ -826,6 +894,12 @@ export async function fetchTicketById(issueKey) {
     dataFimTesteQa: raw.dataFimTesteQa || null,
     dataFimHomologacao: raw.dataFimHomologacao || null,
     dataConclusao: raw.dataConclusao || null,
+    ptAprovados:    raw.ptAprovados    ?? 0,
+    ptReprovados:   raw.ptReprovados   ?? 0,
+    ptBloqueados:   raw.ptBloqueados   ?? 0,
+    ptAtencao:      raw.ptAtencao      ?? 0,
+    ptNaoAplicavel: raw.ptNaoAplicavel ?? 0,
+    ptNaoExecutado: raw.ptNaoExecutado ?? 0,
   };
 }
 
