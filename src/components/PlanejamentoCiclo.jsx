@@ -14,6 +14,7 @@ import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 import {
   subscribeToCicloViews,
   saveCicloView,
+  updateCicloView,
   deleteCicloView,
   deserializeFilters,
 } from '../services/cicloViewsService';
@@ -435,6 +436,8 @@ export default function PlanejamentoCiclo() {
   const [newViewName, setNewViewName] = useState('');
   const [newViewIsPrincipal, setNewViewIsPrincipal] = useState(false);
   const [savingView, setSavingView] = useState(false);
+  const [activeViewId, setActiveViewId] = useState(null);
+  const [activeViewName, setActiveViewName] = useState('');
   const principalApplied = useRef(false);
   const viewsPanelRef = useRef(null);
 
@@ -899,8 +902,31 @@ export default function PlanejamentoCiclo() {
     setImpedimentoFilter(f.impedimentoFilter ?? false);
     setDemandaVulnerabFilter(f.demandaVulnerabFilter ?? false);
     setShowEstimativa(f.showEstimativa ?? false);
+    setActiveViewId(view.id);
+    setActiveViewName(view.name);
     setShowViewsPanel(false);
   }, []);
+
+  const handleUpdateView = useCallback(async () => {
+    if (!activeViewId) return;
+    setSavingView(true);
+    try {
+      await updateCicloView(activeViewId, {
+        search, escopoFilter, squadFilter, grupoSolucionadorFilter,
+        filaFilter, statusFilter, prioridadeFilter, respDevFilter,
+        respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
+        dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
+      });
+      setShowViewsPanel(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingView(false);
+    }
+  }, [activeViewId, search, escopoFilter, squadFilter, grupoSolucionadorFilter,
+      filaFilter, statusFilter, prioridadeFilter, respDevFilter,
+      respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
+      dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa]);
 
   const handleSaveView = useCallback(async () => {
     if (!newViewName.trim()) return;
@@ -1030,6 +1056,25 @@ export default function PlanejamentoCiclo() {
                 {savedViews.length > 0 && (
                   <>
                     <div style={{ borderTop: '1px solid var(--gray-5)', margin: '14px 0 10px' }} />
+                    {activeViewId && (
+                      <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--gray-10)', marginBottom: 7 }}>
+                          Visão ativa: <strong style={{ color: 'var(--indigo-11)' }}>{activeViewName}</strong>
+                        </div>
+                        <button
+                          onClick={handleUpdateView}
+                          disabled={savingView}
+                          style={{
+                            width: '100%', padding: '6px 12px', borderRadius: 7,
+                            border: '1px solid rgba(99,102,241,0.5)', background: 'rgba(99,102,241,0.15)',
+                            color: 'var(--indigo-11)', fontSize: 12, fontWeight: 600,
+                            cursor: savingView ? 'wait' : 'pointer', opacity: savingView ? 0.6 : 1,
+                          }}
+                        >
+                          {savingView ? 'Salvando…' : '💾 Salvar alterações na visão atual'}
+                        </button>
+                      </div>
+                    )}
                     <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 700, color: 'var(--gray-12)' }}>
                       Carregar visão
                     </p>
@@ -1047,7 +1092,7 @@ export default function PlanejamentoCiclo() {
                           <input
                             type="checkbox"
                             readOnly
-                            checked={false}
+                            checked={activeViewId === view.id}
                             onClick={e => { e.stopPropagation(); applyView(view); }}
                             style={{ accentColor: 'var(--indigo-9)', width: 13, height: 13, flexShrink: 0 }}
                           />

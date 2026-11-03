@@ -101,6 +101,14 @@ export async function saveCicloView(name, filterState, isPrincipal = false) {
   await batch.commit();
 }
 
+/** Atualiza os filtros de uma visão existente */
+export async function updateCicloView(viewId, filterState) {
+  return updateDoc(doc(db, COL, viewId), {
+    filters: serializeFilters(filterState),
+    updatedAt: serverTimestamp(),
+  });
+}
+
 /** Remove uma visão */
 export async function deleteCicloView(viewId) {
   await deleteDoc(doc(db, COL, viewId));
