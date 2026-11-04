@@ -396,17 +396,17 @@ const COVER_BG_URL  = 'https://sgt-renato.web.app/cover-bg.jpg';
 // ── Cover Page ────────────────────────────────────────────────────────────
 const PAGE_H = Math.round((210 / 297) * PAGE_W); // A4 landscape height ≈ 905px
 
-function CoverPage({ exportedAt }) {
+function CoverPage({ exportedAt, nttUrl, cpflUrl }) {
   const dateStr = new Date().toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
   return (
     <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'#1a2850' }}>
       <img src={COVER_BG_URL} crossOrigin="anonymous" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
       <div style={{ position:'absolute', inset:0, background:'rgba(22,34,72,0.65)' }} />
-      <div style={{ position:'absolute', top:40, left:48 }}>
-        <img src={NTT_LOGO_URL} crossOrigin="anonymous" style={{ height:44, objectFit:'contain' }} />
+      <div style={{ position:'absolute', top:40, left:48, zIndex:10 }}>
+        {nttUrl && <img src={nttUrl} style={{ height:44, objectFit:'contain' }} />}
       </div>
-      <div style={{ position:'absolute', top:32, right:52 }}>
-        <img src={CPFL_LOGO_URL} crossOrigin="anonymous" style={{ height:60, objectFit:'contain' }} />
+      <div style={{ position:'absolute', top:32, right:52, zIndex:10 }}>
+        {cpflUrl && <img src={cpflUrl} style={{ height:60, objectFit:'contain' }} />}
       </div>
       <div style={{ position:'absolute', top:118, left:48, right:48, height:2, background:'rgba(255,255,255,0.22)' }} />
       {/* Main title */}
@@ -423,10 +423,10 @@ function CoverPage({ exportedAt }) {
 }
 
 // ── Back Page ─────────────────────────────────────────────────────────────
-function BackPage() {
+function BackPage({ nttUrl }) {
   return (
     <div style={{ width:PAGE_W, height:PAGE_H, background:'#2d3561', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter,Segoe UI,Arial,sans-serif' }}>
-      <img src={NTT_LOGO_URL} crossOrigin="anonymous" style={{ height:110, objectFit:'contain' }} />
+      {nttUrl && <img src={nttUrl} style={{ height:160, objectFit:'contain' }} />}
     </div>
   );
 }
@@ -463,15 +463,32 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const SCALE = 2;
 
+  async function svgToDataUrl(url) {
+    try {
+      const res = await fetch(url);
+      const text = await res.text();
+      return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(text)));
+    } catch { return url; }
+  }
+
+  // Pre-fetch logos as base64 data URLs so html2canvas can render them
+  const [nttDataUrl, cpflDataUrl] = await Promise.all([
+    svgToDataUrl(NTT_LOGO_URL),
+    svgToDataUrl(CPFL_LOGO_URL),
+  ]);
+
   async function renderPage(component) {
     const el = document.createElement('div');
     el.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:transparent;z-index:-9999;pointer-events:none;`;
     document.body.appendChild(el);
     const r = ReactDOM.createRoot(el);
     r.render(component);
-    await new Promise(res => setTimeout(res, 600));
+    await new Promise(res => setTimeout(res, 800));
+    // Wait for all images to load
+    const imgs = Array.from(el.querySelectorAll('img'));
+    await Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = res; img.onerror = res; })));
     try {
-      return await html2canvas(el, { scale: SCALE, useCORS: true, backgroundColor: null, logging: false, width: PAGE_W });
+      return await html2canvas(el, { scale: SCALE, useCORS: true, allowTaint: true, backgroundColor: null, logging: false, width: PAGE_W });
     } finally {
       r.unmount();
       document.body.removeChild(el);
@@ -487,7 +504,7 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
 
   try {
     // ── Cover page ──────────────────────────────────────────────────────
-    const coverCanvas = await renderPage(<CoverPage exportedAt={exportedAt} />);
+    const coverCanvas = await renderPage(<CoverPage exportedAt={exportedAt} nttUrl={nttDataUrl} cpflUrl={cpflDataUrl} />);
     addCanvasPage(coverCanvas, true);
 
     // ── Content pages ───────────────────────────────────────────────────
@@ -532,7 +549,7 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
     }
 
     // ── Back page ────────────────────────────────────────────────────────
-    const backCanvas = await renderPage(<BackPage />);
+    const backCanvas = await renderPage(<BackPage nttUrl={nttDataUrl} />);
     addCanvasPage(backCanvas, false);
 
     const dateStr = new Date().toISOString().slice(0, 10);
