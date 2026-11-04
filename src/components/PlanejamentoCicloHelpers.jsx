@@ -551,12 +551,14 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       const pctT   = t.percentualConclusaoTesteInterno != null ? `${t.percentualConclusaoTesteInterno}%` : '';
       const imp    = t.impedimento === true ? 'Sim' : 'Não';
       const motivo = t.observacao || t.motivoImpedimento || '';
+      const fmtDt = v => { if (!v) return ''; const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v); };
       const comentario =
         `Ticket: ${t.issueKey || ''}\n` +
         `Resumo: ${t.summary || ''}\n` +
         `Squad: ${squad}\n` +
         `% Conclusão Desenvolvimento: ${pct}\n` +
         `% Teste Interno: ${pctT}\n` +
+        `Data Fim Teste Interno: ${fmtDt(t.dataFimTesteInterno)}\n` +
         `Impedida: ${imp}\n` +
         `Motivo / Observação: ${motivo}`;
       return [t.issueKey || '', t.summary || '', t.status || '', comentario];
