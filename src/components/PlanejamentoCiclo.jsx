@@ -416,6 +416,7 @@ export default function PlanejamentoCiclo() {
     () => localStorage.getItem('ciclo_showEstimativa') === 'true'
   );
   const [includeObservacaoExport, setIncludeObservacaoExport] = useState(false);
+  const [includePlanoTesteExport, setIncludePlanoTesteExport] = useState(false);
 
   const [filtersCollapsed, setFiltersCollapsed] = useState(
     () => localStorage.getItem('ciclo_filtersCollapsed') === 'true'
@@ -1146,6 +1147,10 @@ export default function PlanejamentoCiclo() {
             <input type="checkbox" checked={includeObservacaoExport} onChange={e=>setIncludeObservacaoExport(e.target.checked)} style={{ accentColor:'var(--indigo-9)', width:12, height:12 }} />
             Obs. no PDF
           </label>
+          <label style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--gray-10)', cursor:'pointer', userSelect:'none', padding:'6px 10px', border:'1px solid var(--gray-5)', borderRadius:8, background:'var(--gray-3)' }}>
+            <input type="checkbox" checked={includePlanoTesteExport} onChange={e=>setIncludePlanoTesteExport(e.target.checked)} style={{ accentColor:'var(--indigo-9)', width:12, height:12 }} />
+            Plano de Teste no PDF
+          </label>
           <button
             title="Exportar PDF A4 paisagem da lista de tickets"
             onClick={async () => {
@@ -1157,6 +1162,7 @@ export default function PlanejamentoCiclo() {
                 activeTab,
                 escopoFilter,
                 includeObservacao: includeObservacaoExport,
+                includePlanoTeste: includePlanoTesteExport,
               });
             }}
             style={{

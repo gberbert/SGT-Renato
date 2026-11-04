@@ -29,6 +29,7 @@ const PC_W   = 32;
 const PT_W   = 32;
 const FT_W   = 70;
 const DC_W   = 70;
+const TP_W   = 28; // each Plano de Teste column
 const LEFT_W = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W; // 664
 const MOT_W  = PAGE_W - LEFT_W; // 616 (motivo + flex)
 const ROW_H  = 20;
@@ -86,7 +87,7 @@ function hCell(w, label, sub) {
 }
 
 // ── TicketRow ─────────────────────────────────────────────────────────────
-function TicketRow({ ticket, rowBg, includeObservacao }) {
+function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
   const eb = escopoBadge(ticket.escopo);
   const squad = trunc(resolveSquad(ticket), 9);
   const status = trunc(ticket.status||'', 14);
@@ -137,6 +138,27 @@ function TicketRow({ ticket, rowBg, includeObservacao }) {
       <div style={{ ...cellBase, width:DC_W, padding:'0 2px' }}>
         <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#94a3b8', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fmtDate(ticket.dataConclusao)||'—'}</span>
       </div>
+      {/* Plano de Teste columns */}
+      {includePlanoTeste && (() => {
+        const ap = ticket.ptAprovados||0, rp = ticket.ptReprovados||0, bl = ticket.ptBloqueados||0;
+        const at = ticket.ptAtencao||0, na = ticket.ptNaoAplicavel||0, ne = ticket.ptNaoExecutado||0;
+        const total = ap+rp+bl+at+na+ne;
+        const prog = total > 0 ? Math.round((ap+at+na)/total*100) : 0;
+        const progColor = prog>=100?'#16a34a':prog>=75?'#0891b2':prog>=40?'#ca8a04':'#dc2626';
+        const n = (v,c) => <span style={{ fontSize:7, fontWeight:700, color:v>0?c:'#9ca3af' }}>{v||''}</span>;
+        return (
+          <>
+            <div style={{ ...cellBase, width:TP_W }}>{n(total,'#1e40af')}</div>
+            <div style={{ ...cellBase, width:TP_W }}>{n(ap,'#16a34a')}</div>
+            <div style={{ ...cellBase, width:TP_W }}>{n(rp,'#dc2626')}</div>
+            <div style={{ ...cellBase, width:TP_W }}>{n(bl,'#ea580c')}</div>
+            <div style={{ ...cellBase, width:TP_W }}>{n(at,'#ca8a04')}</div>
+            <div style={{ ...cellBase, width:TP_W }}>{n(na,'#6b7280')}</div>
+            <div style={{ ...cellBase, width:TP_W }}>{n(ne,'#6b7280')}</div>
+            <div style={{ ...cellBase, width:TP_W }}><span style={{ fontSize:7, fontWeight:700, color:progColor }}>{total>0?`${prog}%`:''}</span></div>
+          </>
+        );
+      })()}
       {/* Motivo */}
       <div style={{ flex:1, height:'100%', display:'flex', alignItems:'center', padding:'0 6px', overflow:'hidden', borderRight:includeObservacao?CB:'none' }}>
         <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.3 }}>{motivo}</span>
@@ -208,7 +230,7 @@ function StatsSection({ filteredTickets, escopoFilter }) {
 }
 
 // ── Column headers row ────────────────────────────────────────────────────
-function ColHeaders({ includeObservacao }) {
+function ColHeaders({ includeObservacao, includePlanoTeste }) {
   return (
     <div style={{ display:'flex',borderBottom:'2px solid #cbd5e1',minHeight:36,background:'#f1f5f9' }}>
       {hCell(TIX_W,'Ticket',null)}
@@ -220,6 +242,18 @@ function ColHeaders({ includeObservacao }) {
       {hCell(PT_W,'%T','Teste')}
       {hCell(FT_W,'Fim Teste','Interno')}
       {hCell(DC_W,'Data','Conclusão')}
+      {includePlanoTeste && (
+        <>
+          {hCell(TP_W,'Casos','Total')}
+          {hCell(TP_W,'Aprov.',null)}
+          {hCell(TP_W,'Reprov.',null)}
+          {hCell(TP_W,'Bloq.',null)}
+          {hCell(TP_W,'Atenção',null)}
+          {hCell(TP_W,'N.Apl.',null)}
+          {hCell(TP_W,'N.Exec.',null)}
+          {hCell(TP_W,'Prog.','Teste%')}
+        </>
+      )}
       <div style={{ flex:1,display:'flex',alignItems:'flex-end',padding:'3px 6px',borderRight:includeObservacao?CB:'none' }}>
         <span style={{ fontSize:7.5,fontWeight:800,color:'#475569',letterSpacing:'0.04em',textTransform:'uppercase' }}>Motivo Impedimento</span>
       </div>
@@ -233,7 +267,7 @@ function ColHeaders({ includeObservacao }) {
 }
 
 // ── PdfContent (full document) ────────────────────────────────────────────
-function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilter, includeObservacao }) {
+function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilter, includeObservacao, includePlanoTeste }) {
   return (
     <div style={{ width:PAGE_W,background:'#fff',color:'#111827',fontFamily:'Inter,Segoe UI,Arial,sans-serif',fontSize:10 }}>
       {/* PAGE HEADER */}
@@ -248,7 +282,7 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
       {/* STATS */}
       <StatsSection filteredTickets={filteredTickets} escopoFilter={escopoFilter}/>
       {/* COL HEADERS */}
-      <ColHeaders includeObservacao={includeObservacao}/>
+      <ColHeaders includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste}/>
       {/* GROUPS */}
       {groups.map((group, gi) => (
         <div key={group.key}>
@@ -257,7 +291,7 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
             <span style={{ fontSize:8.5,color:'#3b82f6',marginLeft:8 }}>({group.tickets.length})</span>
           </div>
           {group.tickets.map((ticket, ti) => (
-            <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f8fafc'} includeObservacao={includeObservacao}/>
+            <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f8fafc'} includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste}/>
           ))}
         </div>
       ))}
@@ -292,7 +326,7 @@ function buildGroupsByWorkflow(filteredTickets, escopoFilter) {
 }
 
 // ── Main export function ──────────────────────────────────────────────────
-export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTickets = [], backlogTickets = [], activeTab = 'ciclos', escopoFilter, includeObservacao = false }) {
+export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTickets = [], backlogTickets = [], activeTab = 'ciclos', escopoFilter, includeObservacao = false, includePlanoTeste = false }) {
   const exportedAt = new Date().toLocaleString('pt-BR', { day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit' });
   const groups = activeTab==='workflow'
     ? buildGroupsByWorkflow(filteredTickets, escopoFilter)
@@ -311,6 +345,7 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
       activeTab={activeTab}
       escopoFilter={escopoFilter}
       includeObservacao={includeObservacao}
+      includePlanoTeste={includePlanoTeste}
     />
   );
 
