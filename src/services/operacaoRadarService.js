@@ -746,6 +746,13 @@ const data = d.data();
     motivoImpedimento: data.motivoImpedimento || '',
     fila: data.fila || '',
     planejamentoHorasDemandaFast: data.planejamentoHorasDemandaFast ?? null,
+    // Plano de Teste (campos SGT)
+    ptAprovados:    data.ptAprovados    ?? 0,
+    ptReprovados:   data.ptReprovados   ?? 0,
+    ptBloqueados:   data.ptBloqueados   ?? 0,
+    ptAtencao:      data.ptAtencao      ?? 0,
+    ptNaoAplicavel: data.ptNaoAplicavel  ?? 0,
+    ptNaoExecutado: data.ptNaoExecutado  ?? 0,
   };
 }
 
