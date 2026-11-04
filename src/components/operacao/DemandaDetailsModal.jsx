@@ -1371,7 +1371,20 @@ const handleSave = useCallback(async () => {
                 }
               />
               <PlanRow
-                left={<ReadField label="DATA FIM HML PLAN" value={fmtDate(ticket.dataFimHomologacaoPlanejada)} />}
+                left={(() => {
+                  const _da = ticket.dataInicioHomologacaoPlanejada ? new Date(ticket.dataInicioHomologacaoPlanejada) : null;
+                  const _db = ticket.dataFimHomologacaoPlanejada ? new Date(ticket.dataFimHomologacaoPlanejada) : null;
+                  let _bd = null;
+                  if (_da && _db && _db > _da) {
+                    let n = 0, cur = new Date(_da); cur.setDate(cur.getDate()+1);
+                    while (cur <= _db) { if (cur.getDay()!==0 && cur.getDay()!==6) n++; cur.setDate(cur.getDate()+1); }
+                    _bd = n;
+                  }
+                  return (<div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <ReadField label="DATA FIM HML PLAN" value={fmtDate(ticket.dataFimHomologacaoPlanejada)} />
+                    {_bd!=null && <span title="Dias úteis (Fim HML - Ini HML)" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(251,191,36,0.15)",color:"#fbbf24",border:"1px solid rgba(251,191,36,0.35)",whiteSpace:"nowrap"}}>⏱ {_bd}du</span>}
+                  </div>);
+                })()}
                 right={
                   isEdit ? (
                     <EditDate label="DATA FIM HOMOLOGAÇÃO" fieldKey="dataFimHomologacao" value={ticket.dataFimHomologacao} onSave={save} />
@@ -1381,7 +1394,20 @@ const handleSave = useCallback(async () => {
                 }
               />
               <PlanRow
-                left={<ReadField label="DATA ENTREGA EM PRODUÇÃO PREVISTA" value={fmtDate(ticket.dataEntregaProducaoPrevista)} />}
+                left={(() => {
+                  const _da = ticket.dataFimHomologacaoPlanejada ? new Date(ticket.dataFimHomologacaoPlanejada) : null;
+                  const _db = ticket.dataEntregaProducaoPrevista ? new Date(ticket.dataEntregaProducaoPrevista) : null;
+                  let _bd = null;
+                  if (_da && _db && _db > _da) {
+                    let n = 0, cur = new Date(_da); cur.setDate(cur.getDate()+1);
+                    while (cur <= _db) { if (cur.getDay()!==0 && cur.getDay()!==6) n++; cur.setDate(cur.getDate()+1); }
+                    _bd = n;
+                  }
+                  return (<div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <ReadField label="DATA ENTREGA EM PRODUÇÃO PREVISTA" value={fmtDate(ticket.dataEntregaProducaoPrevista)} />
+                    {_bd!=null && <span title="Dias úteis (Entrega - Fim HML)" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(251,191,36,0.15)",color:"#fbbf24",border:"1px solid rgba(251,191,36,0.35)",whiteSpace:"nowrap"}}>⏱ {_bd}du</span>}
+                  </div>);
+                })()}
                 right={
                   isEdit ? (
                     <EditDate label="DATA CONCLUSÃO" fieldKey="dataConclusao" value={ticket.dataConclusao} onSave={save} />
