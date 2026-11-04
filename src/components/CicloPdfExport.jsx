@@ -86,6 +86,42 @@ function hCell(w, label, sub) {
   );
 }
 
+// ── PlanoTesteColumns ─────────────────────────────────────────────────────
+function PlanoTesteColumns({ ticket, cellBase }) {
+  const ap = Number(ticket.ptAprovados) || 0;
+  const rp = Number(ticket.ptReprovados) || 0;
+  const bl = Number(ticket.ptBloqueados) || 0;
+  const at = Number(ticket.ptAtencao) || 0;
+  const na = Number(ticket.ptNaoAplicavel) || 0;
+  const ne = Number(ticket.ptNaoExecutado) || 0;
+  const total = ap + rp + bl + at + na + ne;
+  const prog = total > 0 ? Math.round((ap + at + na) / total * 100) : 0;
+  const progColor = prog >= 100 ? '#16a34a' : prog >= 75 ? '#0891b2' : prog >= 40 ? '#ca8a04' : '#dc2626';
+  const cell = (val, color) => (
+    <div style={{ ...cellBase, width: TP_W }}>
+      <span style={{ fontSize: 7, fontWeight: 700, color: val > 0 ? color : '#9ca3af' }}>
+        {val > 0 ? val : ''}
+      </span>
+    </div>
+  );
+  return (
+    <>
+      {cell(total, '#1e40af')}
+      {cell(ap, '#16a34a')}
+      {cell(rp, '#dc2626')}
+      {cell(bl, '#ea580c')}
+      {cell(at, '#ca8a04')}
+      {cell(na, '#6b7280')}
+      {cell(ne, '#6b7280')}
+      <div style={{ ...cellBase, width: TP_W }}>
+        <span style={{ fontSize: 7, fontWeight: 700, color: progColor }}>
+          {total > 0 ? `${prog}%` : ''}
+        </span>
+      </div>
+    </>
+  );
+}
+
 // ── TicketRow ─────────────────────────────────────────────────────────────
 function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
   const eb = escopoBadge(ticket.escopo);
@@ -139,26 +175,7 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
         <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#94a3b8', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fmtDate(ticket.dataConclusao)||'—'}</span>
       </div>
       {/* Plano de Teste columns */}
-      {includePlanoTeste && (() => {
-        const ap = ticket.ptAprovados||0, rp = ticket.ptReprovados||0, bl = ticket.ptBloqueados||0;
-        const at = ticket.ptAtencao||0, na = ticket.ptNaoAplicavel||0, ne = ticket.ptNaoExecutado||0;
-        const total = ap+rp+bl+at+na+ne;
-        const prog = total > 0 ? Math.round((ap+at+na)/total*100) : 0;
-        const progColor = prog>=100?'#16a34a':prog>=75?'#0891b2':prog>=40?'#ca8a04':'#dc2626';
-        const n = (v,c) => <span style={{ fontSize:7, fontWeight:700, color:v>0?c:'#9ca3af' }}>{v||''}</span>;
-        return (
-          <>
-            <div style={{ ...cellBase, width:TP_W }}>{n(total,'#1e40af')}</div>
-            <div style={{ ...cellBase, width:TP_W }}>{n(ap,'#16a34a')}</div>
-            <div style={{ ...cellBase, width:TP_W }}>{n(rp,'#dc2626')}</div>
-            <div style={{ ...cellBase, width:TP_W }}>{n(bl,'#ea580c')}</div>
-            <div style={{ ...cellBase, width:TP_W }}>{n(at,'#ca8a04')}</div>
-            <div style={{ ...cellBase, width:TP_W }}>{n(na,'#6b7280')}</div>
-            <div style={{ ...cellBase, width:TP_W }}>{n(ne,'#6b7280')}</div>
-            <div style={{ ...cellBase, width:TP_W }}><span style={{ fontSize:7, fontWeight:700, color:progColor }}>{total>0?`${prog}%`:''}</span></div>
-          </>
-        );
-      })()}
+      {includePlanoTeste && <PlanoTesteColumns ticket={ticket} cellBase={cellBase} />}
       {/* Motivo */}
       <div style={{ flex:1, height:'100%', display:'flex', alignItems:'center', padding:'0 6px', overflow:'hidden', borderRight:includeObservacao?CB:'none' }}>
         <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.3 }}>{motivo}</span>
