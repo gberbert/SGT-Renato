@@ -849,7 +849,13 @@ export default function PlanejamentoCiclo() {
     } finally { setCreating(false); }
   };
 
-  const handleSaveField = useCallback(async (issueKey, field, value) => {
+const handleSaveField = useCallback(async (issueKey, field, value) => {
+    // Atualiza selectedTicket imediatamente para exibição correta ao reabrir
+    setSelectedTicket(prev =>
+      prev && (prev.issueKey === issueKey || prev.id === issueKey)
+        ? { ...prev, [field]: value }
+        : prev
+    );
     const t = tickets.find(x => (x.issueKey || x.id) === issueKey);
     if (!t) return;
     try {
