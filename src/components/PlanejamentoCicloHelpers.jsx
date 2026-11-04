@@ -550,16 +550,17 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       const pct    = t.percentualConclusao != null ? `${t.percentualConclusao}%` : '';
       const pctT   = t.percentualConclusaoTesteInterno != null ? `${t.percentualConclusaoTesteInterno}%` : '';
       const imp    = t.impedimento === true ? 'Sim' : 'Não';
-      const motivo = t.motivoImpedimento || '';
+      const motivo = t.motivoImpedimento || t.observacaoAdicional || t.observacao || '';
       const fmtDt = v => { if (!v) return ''; const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v); };
+      const LB = '\n';
       const comentario =
-        `Ticket: ${t.issueKey || ''}\n` +
-        `Resumo: ${t.summary || ''}\n` +
-        `Squad: ${squad}\n` +
-        `% Conclusão Desenvolvimento: ${pct}\n` +
-        `% Teste Interno: ${pctT}\n` +
-        `Data Fim Teste Interno: ${fmtDt(t.dataFimTesteInterno)}\n` +
-        `Impedida: ${imp}\n` +
+        `Ticket: ${t.issueKey || ''}` + LB +
+        `Resumo: ${t.summary || ''}` + LB +
+        `Squad: ${squad}` + LB +
+        `% Conclusão Desenvolvimento: ${pct}` + LB +
+        `% Teste Interno: ${pctT}` + LB +
+        `Data Fim Teste Interno: ${fmtDt(t.dataFimTesteInterno)}` + LB +
+        `Impedida: ${imp}` + LB +
         `Motivo / Observação: ${motivo}`;
       return [t.issueKey || '', t.summary || '', t.status || '', comentario];
     });
