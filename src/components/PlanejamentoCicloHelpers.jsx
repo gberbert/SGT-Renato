@@ -550,7 +550,7 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       const pct    = t.percentualConclusao != null ? `${t.percentualConclusao}%` : '';
       const pctT   = t.percentualConclusaoTesteInterno != null ? `${t.percentualConclusaoTesteInterno}%` : '';
       const imp    = t.impedimento === true ? 'Sim' : 'Não';
-      const motivo = t.observacao || t.motivoImpedimento || '';
+      const motivo = t.motivoImpedimento || '';
       const fmtDt = v => { if (!v) return ''; const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v); };
       const comentario =
         `Ticket: ${t.issueKey || ''}\n` +
