@@ -1211,10 +1211,57 @@ const handleSave = useCallback(async () => {
 
                 return (
                   <>
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
                     {/* Total — read-only, auto-sum */}
-                    <div style={{ ...fieldStyle, border: '1px solid rgba(99,102,241,.35)', background: 'rgba(99,102,241,.07)', marginBottom: 8 }}>
+                    <div style={{ ...fieldStyle, border: '1px solid rgba(99,102,241,.35)', background: 'rgba(99,102,241,.07)', flex: '0 0 auto', marginBottom: 0 }}>
                       <span style={{ ...labelStyle, color: '#a5b4fc' }}>Casos de Teste (total)</span>
                       <span style={{ fontSize: 28, fontWeight: 800, color: '#a5b4fc' }}>{totalCasos}</span>
+                    </div>
+                    {/* Estimativa de Esforço */}
+                    {(() => {
+                      const esf = Number(pendingChanges?.ptEsforcoPorCenario ?? ticket.ptEsforcoPorCenario ?? 0);
+                      const tot = totalCasos * esf;
+                      const d = tot > 0 ? (tot / 8) : 0;
+                      const f = v => v % 1 === 0 ? v : v.toFixed(1);
+                      return (
+                        <div style={{ flex: 1, border: '1px solid rgba(99,102,241,.35)',
+                          background: 'rgba(99,102,241,.05)', borderRadius: 8, padding: '10px 14px' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc',
+                            textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                            Estimativa de Esforço
+                          </div>
+                          <div style={{ marginBottom: 8 }}>
+                            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--gray-9)',
+                              display: 'block', marginBottom: 4 }}>Esforço (h) / cenário</label>
+                            <input type="number" min="0" step="0.5"
+                              value={pendingChanges?.ptEsforcoPorCenario ?? ticket.ptEsforcoPorCenario ?? ''}
+                              onChange={e => setPendingChanges(p => ({ ...p,
+                                ptEsforcoPorCenario: e.target.value === '' ? null : Number(e.target.value) }))}
+                              style={{ width: 100, padding: '4px 8px', borderRadius: 6,
+                                border: '1px solid rgba(99,102,241,0.4)',
+                                background: 'var(--gray-1)', color: 'var(--gray-12)', fontSize: 13 }}
+                              placeholder="0" />
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                            <div style={{ padding: '5px 10px', borderRadius: 8,
+                              background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)' }}>
+                              <div style={{ fontSize: 18, fontWeight: 900, color: '#6366f1' }}>{f(tot)}</div>
+                              <div style={{ fontSize: 8, color: 'var(--gray-9)' }}>Total (h)</div>
+                              <div style={{ fontSize: 7, color: 'var(--gray-8)' }}>{totalCasos}×{esf}h</div>
+                            </div>
+                            <div style={{ padding: '5px 10px', borderRadius: 8,
+                              background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                              <div style={{ fontSize: 18, fontWeight: 900, color: '#10b981' }}>{f(d)}</div>
+                              <div style={{ fontSize: 8, color: 'var(--gray-9)' }}>Dias</div>
+                              <div style={{ fontSize: 7, color: 'var(--gray-8)' }}>{f(tot)}h÷8</div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 8, color: 'var(--gray-8)', fontStyle: 'italic' }}>
+                            Total=Casos×h/cenário · Dias=Total÷8
+                          </div>
+                        </div>
+                      );
+                    })()}
                     </div>
 
                     {/* Progresso do Teste: (Aprovados + Atenção + Não Aplicável) / Casos de Teste */}
@@ -1371,59 +1418,7 @@ const handleSave = useCallback(async () => {
               }}
             >
               Cancelar
-            </button>
-            {/* Estimativa de Esforço */}
-            {(() => {
-              const t =
-                (Number(pendingChanges?.ptAprovados   ?? ticket.ptAprovados   ?? 0))
-               +(Number(pendingChanges?.ptReprovados  ?? ticket.ptReprovados  ?? 0))
-               +(Number(pendingChanges?.ptBloqueados  ?? ticket.ptBloqueados  ?? 0))
-               +(Number(pendingChanges?.ptAtencao     ?? ticket.ptAtencao     ?? 0))
-               +(Number(pendingChanges?.ptNaoAplicavel  ?? ticket.ptNaoAplicavel  ?? 0))
-               +(Number(pendingChanges?.ptNaoExecutado  ?? ticket.ptNaoExecutado  ?? 0));
-              const esf = Number(pendingChanges?.ptEsforcoPorCenario ?? ticket.ptEsforcoPorCenario ?? 0);
-              const tot = t * esf;
-              const d = tot > 0 ? (tot / 8) : 0;
-              const f = v => v % 1 === 0 ? v : v.toFixed(1);
-              return (
-                <div style={{ marginBottom: 16, padding: 14, borderRadius: 10,
-                  background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.25)' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--indigo-11)',
-                    marginBottom: 10, textTransform: 'uppercase' }}>Estimativa de Esforço</div>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--gray-9)',
-                      display: 'block', marginBottom: 4 }}>Esforço (h) por cenário</label>
-                    <input type="number" min="0" step="0.5"
-                      value={pendingChanges?.ptEsforcoPorCenario ?? ticket.ptEsforcoPorCenario ?? ''}
-                      onChange={e => setPendingChanges(p => ({ ...p,
-                        ptEsforcoPorCenario: e.target.value === '' ? null : Number(e.target.value) }))}
-                      style={{ width: 130, padding: '6px 8px', borderRadius: 6,
-                        border: '1px solid rgba(99,102,241,0.4)',
-                        background: 'var(--gray-1)', color: 'var(--gray-12)', fontSize: 13 }}
-                      placeholder="0" />
-                  </div>
-                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
-                    <div style={{ padding: '8px 14px', borderRadius: 8,
-                      background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', minWidth: 130 }}>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: '#6366f1', lineHeight: 1 }}>{f(tot)}</div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', marginTop: 4 }}>Esforço Total (h)</div>
-                      <div style={{ fontSize: 9, color: 'var(--gray-8)', marginTop: 2 }}>{t} casos × {esf}h</div>
-                    </div>
-                    <div style={{ padding: '8px 14px', borderRadius: 8,
-                      background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', minWidth: 110 }}>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981', lineHeight: 1 }}>{f(d)}</div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-9)', marginTop: 4 }}>Dias</div>
-                      <div style={{ fontSize: 9, color: 'var(--gray-8)', marginTop: 2 }}>{f(tot)}h ÷ 8h/dia</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--gray-8)', fontStyle: 'italic' }}>
-                    Fórmulas: Esforço Total = Casos × Esforço/cenário · Dias = Esforço Total ÷ 8
-                  </div>
-                </div>
-              );
-            })()}
-
-            <button
+            </button>            <button
               type="button"
               onClick={handleSave}
               disabled={saving || !hasPending}
