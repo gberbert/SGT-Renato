@@ -117,6 +117,11 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    match /ciclo_releases/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     match /ciclos_planejamento/{document=**} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();

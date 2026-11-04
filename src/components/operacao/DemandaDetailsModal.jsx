@@ -5,6 +5,7 @@ import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
 import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
 import { getStatusColor } from '../PlanejamentoCicloHelpers';
+import { subscribeToReleases } from '../../services/releaseService';
 
 function useSystems() {
   const [systems, setSystems] = useState([]);
@@ -28,6 +29,14 @@ function useSquads() {
 
 function getUserLabel(u) {
   return u?.displayName || u?.shortName || u?.name || u?.email || u?.id || '';
+}
+
+function useReleases() {
+  const [releases, setReleases] = useState([]);
+  useEffect(() => {
+    return subscribeToReleases(setReleases);
+  }, []);
+  return releases;
 }
 
 function useTeamMembers() {
@@ -620,6 +629,71 @@ function SquadSelect({ label, value, squads, onChange }) {
   );
 }
 
+function PacoteSelect({ value, releases, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        className="dmd-combobox-trigger"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className={value ? 'dmd-combobox-value' : 'dmd-combobox-placeholder'}>
+          {value || '— Nenhum pacote —'}
+        </span>
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div className="dmd-combobox-dropdown">
+          <div className="dmd-combobox-list">
+            <button
+              type="button"
+              className="dmd-combobox-item dmd-combobox-item--clear"
+              onClick={() => { onChange(null); setOpen(false); }}
+            >
+              — Nenhum pacote —
+            </button>
+            {releases.length === 0 && (
+              <span className="dmd-combobox-empty" style={{ fontSize: 11, color: 'var(--gray-9)', padding: '6px 12px', display: 'block' }}>
+                Nenhuma release cadastrada
+              </span>
+            )}
+            {releases.map((rel) => (
+              <button
+                key={rel.id}
+                type="button"
+                className={`dmd-combobox-item${value === rel.nome ? ' dmd-combobox-item--selected' : ''}`}
+                onClick={() => { onChange(rel.nome); setOpen(false); }}
+              >
+                <span style={{ flex: 1 }}>{rel.nome}</span>
+                {rel.ambiente && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 6, marginLeft: 6,
+                    background: rel.ambiente === 'Homologação' ? 'rgba(251,191,36,0.15)' : 'rgba(239,68,68,0.15)',
+                    color: rel.ambiente === 'Homologação' ? '#fbbf24' : '#f87171',
+                  }}>
+                    {rel.ambiente}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PlanRow({ left, right }) {
   return (
     <div className="dmd-plan-row">
@@ -638,6 +712,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
   const teamMembers = useTeamMembers();
   const systems = useSystems();
   const squads = useSquads();
+  const releases = useReleases();
   const hasPending = Object.keys(pendingChanges).length > 0;
 
   useEffect(() => { setActiveTab('geral'); setSquadPrincipal(ticket?.squadPrincipal ?? null); setPendingChanges({}); }, [ticket?.issueKey]);
@@ -979,6 +1054,32 @@ const handleSave = useCallback(async () => {
                     </div>
                   ) : (
                     <span style={{ color: '#6b7280', fontSize: 13 }}>—</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 2d: PACOTE (release) */}
+              <div className="dmd-row">
+                <div className="dmd-field" style={{ position: 'relative' }}>
+                  <FieldLabel>PACOTE (RELEASE)</FieldLabel>
+                  {isEdit ? (
+                    <PacoteSelect
+                      value={pendingChanges.pacote !== undefined ? pendingChanges.pacote : (ticket.pacote ?? null)}
+                      releases={releases}
+                      onChange={(v) => save('pacote', v)}
+                    />
+                  ) : (
+                    <div className="dmd-field-value">
+                      {ticket.pacote ? (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center',
+                          background: 'rgba(99,102,241,0.12)',
+                          border: '1px solid rgba(99,102,241,0.35)',
+                          borderRadius: 6, padding: '3px 10px',
+                          fontSize: 12, fontWeight: 600, color: '#a5b4fc',
+                        }}>{ticket.pacote}</span>
+                      ) : '—'}
+                    </div>
                   )}
                 </div>
               </div>

@@ -1,5 +1,10 @@
 # Versionamento do Projeto
 
+## 0.1.455 - 2026-11-04
+- Planejamento de Ciclos: nova aba **Gestão de Release** com criação de releases (Nome, Ambiente: Homologação/Produção, Tipo: Janela Fixa/Variável, Data Alvo), calendário mensal de janelas de deploy e CABs
+- Detalhe da demanda: novo campo **Pacote (Release)** na aba GERAL — dropdown com releases cadastradas
+- Novo serviço Firestore `ciclo_releases` com regra de segurança adicionada
+
 ## [0.1.407] - 2026-11-03
 - **Fix (DemandaDetailsModal — ESTIMATIVA MACRO):** Campo exibe fallback `estimativaMacroJira` quando `estimativaMacro` está vazio.
 - **Feature (DemandaDetailsModal — Aba GERAL):** Campo **% CONCLUSÃO HOMOLOGAÇÃO** adicionado ao lado de % Conclusão e % Conclusão Teste Interno (editável, `percentualConclusaoHomologacao`).

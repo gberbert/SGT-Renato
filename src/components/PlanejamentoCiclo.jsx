@@ -8,6 +8,7 @@ import { fetchTicketsForRoadmap, PRIORIDADE_INTERNA_OPTIONS } from '../services/
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
 import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock, Save, Trash2, FileText } from 'lucide-react';
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx, WorkflowTab } from './PlanejamentoCicloHelpers';
+import GestaoReleaseTab from './GestaoReleaseTab';
 import { exportCicloPdf } from './CicloPdfExport';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
@@ -56,6 +57,7 @@ const STATUS_FIELDS_TO_LOG = new Set([
   'ptAtencao',
   'ptNaoAplicavel',
   'ptNaoExecutado',
+  'pacote',
 ]);
 
 const STATUS_FIELD_LABELS = {
@@ -77,6 +79,7 @@ const STATUS_FIELD_LABELS = {
   ptAtencao:      'PT — Atenção',
   ptNaoAplicavel: 'PT — Não Aplicável',
   ptNaoExecutado: 'PT — Não Executado',
+  pacote: 'Pacote (Release)',
 };
 
 const sel = {
@@ -433,7 +436,7 @@ export default function PlanejamentoCiclo() {
   const [filtersCollapsed, setFiltersCollapsed] = useState(
     () => localStorage.getItem('ciclo_filtersCollapsed') === 'true'
   );
-  const [activeTab, setActiveTab] = useState('ciclos'); // 'ciclos' | 'workflow'
+  const [activeTab, setActiveTab] = useState('ciclos'); // 'ciclos' | 'workflow' | 'release'
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
   const [showNewCiclo, setShowNewCiclo] = useState(false);
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
@@ -1489,7 +1492,7 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
       {/* ── Tab switcher ────────────────────────────────────────────── */}
       {!loading && (
         <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--gray-4)', marginBottom: 18 }}>
-          {[{ key: 'ciclos', label: 'CICLOS' }, { key: 'workflow', label: 'WORKFLOW' }].map(tab => (
+          {[{ key: 'ciclos', label: 'CICLOS' }, { key: 'workflow', label: 'WORKFLOW' }, { key: 'release', label: 'GESTÃO DE RELEASE' }].map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
@@ -1512,6 +1515,11 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
       {/* ── Loading ──────────────────────────────────────────────────── */}
       {loading && (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--gray-10)' }}>Carregando tickets…</div>
+      )}
+
+      {/* ── Release management tab ──────────────────────────────────── */}
+      {!loading && activeTab === 'release' && (
+        <GestaoReleaseTab />
       )}
 
       {/* ── Workflow tab ─────────────────────────────────────────────── */}
