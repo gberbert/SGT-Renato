@@ -1230,19 +1230,19 @@ const handleSave = useCallback(async () => {
                             textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                             Estimativa de Esforço
                           </div>
-                          <div style={{ marginBottom: 8 }}>
-                            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--gray-9)',
-                              display: 'block', marginBottom: 4 }}>Esforço (h) / cenário</label>
-                            <input type="number" min="0" step="0.5"
-                              value={pendingChanges?.ptEsforcoPorCenario ?? ticket.ptEsforcoPorCenario ?? ''}
-                              onChange={e => setPendingChanges(p => ({ ...p,
-                                ptEsforcoPorCenario: e.target.value === '' ? null : Number(e.target.value) }))}
-                              style={{ width: 100, padding: '4px 8px', borderRadius: 6,
-                                border: '1px solid rgba(99,102,241,0.4)',
-                                background: 'var(--gray-1)', color: 'var(--gray-12)', fontSize: 13 }}
-                              placeholder="0" />
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 6 }}>
+                            <div>
+                              <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--gray-9)',
+                                display: 'block', marginBottom: 4 }}>Esforço (h) / cenário</label>
+                              <input type="number" min="0" step="0.5"
+                                value={pendingChanges?.ptEsforcoPorCenario ?? ticket.ptEsforcoPorCenario ?? ''}
+                                onChange={e => setPendingChanges(p => ({ ...p,
+                                  ptEsforcoPorCenario: e.target.value === '' ? null : Number(e.target.value) }))}
+                                style={{ width: 100, padding: '4px 8px', borderRadius: 6,
+                                  border: '1px solid rgba(99,102,241,0.4)',
+                                  background: 'var(--gray-1)', color: 'var(--gray-12)', fontSize: 13 }}
+                                placeholder="0" />
+                            </div>
                             <div style={{ padding: '5px 10px', borderRadius: 8,
                               background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)' }}>
                               <div style={{ fontSize: 18, fontWeight: 900, color: '#6366f1' }}>{f(tot)}</div>
