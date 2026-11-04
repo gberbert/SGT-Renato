@@ -389,8 +389,8 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
 }
 
 // ── Asset URLs ───────────────────────────────────────────────────────────
-const NTT_LOGO_URL  = 'https://firebasestorage.googleapis.com/v0/b/sgt-renato.firebasestorage.app/o/logos%2Fntt-data-logo.png?alt=media';
-const CPFL_LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/sgt-renato.firebasestorage.app/o/logos%2Fcpfl-energia-logo.png?alt=media';
+const NTT_LOGO_URL  = 'https://firebasestorage.googleapis.com/v0/b/sgt-renato.firebasestorage.app/o/logo_nttdata_white.svg?alt=media&token=99291b43-e7d2-4fe1-8df8-09199afed9fe';
+const CPFL_LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/sgt-renato.firebasestorage.app/o/Logo_CPFL_Energia_white.svg?alt=media&token=3cd91c6a-5bf9-426c-985b-31b09a3b4ab1';
 const COVER_BG_URL  = 'https://sgt-renato.web.app/cover-bg.jpg';
 
 // ── Cover Page ────────────────────────────────────────────────────────────
