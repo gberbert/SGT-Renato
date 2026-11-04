@@ -398,6 +398,58 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
   );
 }
 
+// ── NTT DATA logo SVG ─────────────────────────────────────────────────────
+const NTT_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <circle cx="24" cy="24" r="22" fill="none" stroke="white" stroke-width="3.5"/>
+  <circle cx="24" cy="24" r="12" fill="none" stroke="white" stroke-width="3.5"/>
+  <ellipse cx="24" cy="18" rx="3.5" ry="5" fill="white"/>
+</svg>`;
+
+// ── Cover Page ────────────────────────────────────────────────────────────
+const PAGE_H = Math.round((210 / 297) * PAGE_W); // A4 landscape height ≈ 905px
+
+function CoverPage({ exportedAt }) {
+  const dateStr = new Date().toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
+  return (
+    <div style={{ width:PAGE_W, height:PAGE_H, background:'linear-gradient(140deg,#1a2850 0%,#253668 50%,#1e3060 100%)', position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden' }}>
+      {/* Decorative diagonal stripe */}
+      <div style={{ position:'absolute', top:0, right:0, width:'45%', height:'100%', background:'rgba(255,255,255,0.04)', clipPath:'polygon(30% 0,100% 0,100% 100%,0 100%)' }} />
+      {/* Top logos bar */}
+      <div style={{ position:'absolute', top:44, left:48, display:'flex', alignItems:'center', gap:14 }}>
+        <div dangerouslySetInnerHTML={{ __html:NTT_LOGO_SVG }} />
+        <span style={{ fontSize:26, fontWeight:800, color:'#fff', letterSpacing:'0.04em', fontFamily:'Arial,sans-serif' }}>NTT DATA</span>
+      </div>
+      <div style={{ position:'absolute', top:40, right:52, textAlign:'right' }}>
+        <div style={{ fontSize:20, fontWeight:800, color:'#fff', letterSpacing:'0.12em' }}>CPFL</div>
+        <div style={{ fontSize:13, fontWeight:600, color:'#94b3d4', letterSpacing:'0.18em' }}>ENERGIA</div>
+      </div>
+      {/* Thin accent bar */}
+      <div style={{ position:'absolute', top:110, left:48, right:48, height:2, background:'rgba(255,255,255,0.15)' }} />
+      {/* Main title */}
+      <div style={{ position:'absolute', bottom:180, left:52 }}>
+        <div style={{ fontSize:72, fontWeight:300, color:'#ffffff', lineHeight:1.1, letterSpacing:'-0.01em' }}>Gestão de Demandas</div>
+        <div style={{ fontSize:28, fontWeight:400, color:'#94b3d4', marginTop:18, letterSpacing:'0.01em' }}>Status Report Operacional — Semanal</div>
+        <div style={{ fontSize:20, fontWeight:300, color:'#7a9fc0', marginTop:14 }}>{dateStr}</div>
+      </div>
+      {/* Bottom footer */}
+      <div style={{ position:'absolute', bottom:30, left:52, fontSize:13, color:'#556e94' }}>© 2026 NTT DATA, Inc.</div>
+      <div style={{ position:'absolute', bottom:30, right:52, fontSize:12, color:'#4a6282' }}>Planejamento de Ciclos · {exportedAt}</div>
+    </div>
+  );
+}
+
+// ── Back Page ─────────────────────────────────────────────────────────────
+function BackPage() {
+  return (
+    <div style={{ width:PAGE_W, height:PAGE_H, background:'#2d3561', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter,Segoe UI,Arial,sans-serif' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:28 }}>
+        <div dangerouslySetInnerHTML={{ __html:NTT_LOGO_SVG.replace('width="48" height="48"','width="96" height="96"') }} />
+        <span style={{ fontSize:64, fontWeight:800, color:'#ffffff', letterSpacing:'0.04em', fontFamily:'Arial,sans-serif' }}>NTT DATA</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Group builders ────────────────────────────────────────────────────────
 function buildGroupsByCiclo(ciclos, getCicloTickets, backlogTickets) {
   const groups = [];
@@ -425,57 +477,87 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
     ? buildGroupsByWorkflow(filteredTickets, escopoFilter)
     : buildGroupsByCiclo(ciclos, getCicloTickets, backlogTickets);
 
-  const container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:' + PAGE_W + 'px;background:#fff;z-index:-9999;pointer-events:none;';
-  document.body.appendChild(container);
+  const A4_W = 297;
+  const A4_H = 210;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const SCALE = 2;
 
-  const root = ReactDOM.createRoot(container);
-  root.render(
-    <PdfContent
-      groups={groups}
-      filteredTickets={filteredTickets}
-      exportedAt={exportedAt}
-      activeTab={activeTab}
-      escopoFilter={escopoFilter}
-      includeObservacao={includeObservacao}
-      includePlanoTeste={includePlanoTeste}
-    />
-  );
+  async function renderPage(component) {
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:transparent;z-index:-9999;pointer-events:none;`;
+    document.body.appendChild(el);
+    const r = ReactDOM.createRoot(el);
+    r.render(component);
+    await new Promise(res => setTimeout(res, 600));
+    try {
+      return await html2canvas(el, { scale: SCALE, useCORS: true, backgroundColor: null, logging: false, width: PAGE_W });
+    } finally {
+      r.unmount();
+      document.body.removeChild(el);
+    }
+  }
 
-  await new Promise(r => setTimeout(r, 700));
+  function addCanvasPage(canvas, first = false) {
+    if (!first) pdf.addPage();
+    const imgData = canvas.toDataURL('image/png');
+    const sliceMmH = (canvas.height / canvas.width) * A4_W;
+    pdf.addImage(imgData, 'PNG', 0, 0, A4_W, Math.min(sliceMmH, A4_H));
+  }
 
   try {
-    const canvas = await html2canvas(container, {
-      scale: 2, useCORS: true, backgroundColor: '#fff', logging: false, width: PAGE_W,
-    });
+    // ── Cover page ──────────────────────────────────────────────────────
+    const coverCanvas = await renderPage(<CoverPage exportedAt={exportedAt} />);
+    addCanvasPage(coverCanvas, true);
 
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const A4_W = 297;
-    const A4_H = 210;
-    const pageHeightPx = (A4_H / A4_W) * canvas.width;
-
-    let yOffset = 0, page = 0;
-    while (yOffset < canvas.height) {
-      if (page > 0) pdf.addPage();
-      const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
-      const pageCanvas = document.createElement('canvas');
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = sliceH;
-      const ctx = pageCanvas.getContext('2d');
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-      ctx.drawImage(canvas, 0, -yOffset);
-      const imgData = pageCanvas.toDataURL('image/png');
-      const sliceMmH = (sliceH / canvas.width) * A4_W;
-      pdf.addImage(imgData, 'PNG', 0, 0, A4_W, sliceMmH);
-      yOffset += sliceH;
-      page++;
+    // ── Content pages ───────────────────────────────────────────────────
+    const contentEl = document.createElement('div');
+    contentEl.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:#fff;z-index:-9999;pointer-events:none;`;
+    document.body.appendChild(contentEl);
+    const contentRoot = ReactDOM.createRoot(contentEl);
+    contentRoot.render(
+      <PdfContent
+        groups={groups}
+        filteredTickets={filteredTickets}
+        exportedAt={exportedAt}
+        activeTab={activeTab}
+        escopoFilter={escopoFilter}
+        includeObservacao={includeObservacao}
+        includePlanoTeste={includePlanoTeste}
+      />
+    );
+    await new Promise(r => setTimeout(r, 700));
+    try {
+      const canvas = await html2canvas(contentEl, { scale: SCALE, useCORS: true, backgroundColor: '#fff', logging: false, width: PAGE_W });
+      const pageHeightPx = (A4_H / A4_W) * canvas.width;
+      let yOffset = 0;
+      while (yOffset < canvas.height) {
+        pdf.addPage();
+        const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceH;
+        const ctx = pageCanvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, -yOffset);
+        const imgData = pageCanvas.toDataURL('image/png');
+        const sliceMmH = (sliceH / canvas.width) * A4_W;
+        pdf.addImage(imgData, 'PNG', 0, 0, A4_W, sliceMmH);
+        yOffset += sliceH;
+      }
+    } finally {
+      contentRoot.unmount();
+      document.body.removeChild(contentEl);
     }
+
+    // ── Back page ────────────────────────────────────────────────────────
+    const backCanvas = await renderPage(<BackPage />);
+    addCanvasPage(backCanvas, false);
 
     const dateStr = new Date().toISOString().slice(0, 10);
     pdf.save('planejamento-ciclos-' + dateStr + '.pdf');
-  } finally {
-    root.unmount();
-    document.body.removeChild(container);
+  } catch (e) {
+    console.error('[exportCicloPdf]', e);
+    throw e;
   }
 }
