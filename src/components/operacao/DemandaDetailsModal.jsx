@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { X, ChevronDown, History } from 'lucide-react';
-import { collection, getDocs, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
 import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
@@ -656,11 +656,13 @@ const handleSave = useCallback(async () => {
     setSaving(true);
     try {
       if (Object.keys(pendingChanges).length > 0) {
-        // Salva direto no Firestore (garante persistência de pt* e demais campos SGT)
-        await updateDoc(doc(db, 'tickets_global', ticket.issueKey), {
-          ...pendingChanges,
-          radarFieldsUpdatedAt: serverTimestamp(),
-        });
+        // setDoc com merge:true cria ou atualiza tickets_global/{issueKey}
+        // usando issueKey como docId (mesmo padrão do sync Jira)
+        await setDoc(
+          doc(db, 'tickets_global', ticket.issueKey),
+          { ...pendingChanges, radarFieldsUpdatedAt: serverTimestamp() },
+          { merge: true }
+        );
       }
       // Notifica parent para atualizar estado local
       for (const [field, value] of Object.entries(pendingChanges)) {
