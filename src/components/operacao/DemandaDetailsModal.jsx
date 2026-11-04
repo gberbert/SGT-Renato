@@ -1361,7 +1361,7 @@ const handleSave = useCallback(async () => {
                 }
               />
               <PlanRow
-                left={<ReadField label="DATA INÍCIO HOMOLOGAÇÃO" value={fmtDate(ticket.dataInicioHomologacao)} />}
+                left={<ReadField label="DATA INICIO HML PLAN" value={fmtDate(ticket.dataInicioHomologacaoPlanejada)} />}
                 right={
                   isEdit ? (
                     <EditDate label="DATA INÍCIO HOMOLOGAÇÃO" fieldKey="dataInicioHomologacao" value={ticket.dataInicioHomologacao} onSave={save} />
@@ -1369,10 +1369,6 @@ const handleSave = useCallback(async () => {
                     <ReadField label="DATA INÍCIO HOMOLOGAÇÃO" value={fmtDate(ticket.dataInicioHomologacao)} />
                   )
                 }
-              />
-              <PlanRow
-                left={<ReadField label="DATA INICIO HML PLAN" value={fmtDate(ticket.dataInicioHomologacaoPlanejada)} />}
-                right={null}
               />
               <PlanRow
                 left={<ReadField label="DATA FIM HML PLAN" value={fmtDate(ticket.dataFimHomologacaoPlanejada)} />}
