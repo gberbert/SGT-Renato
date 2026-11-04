@@ -154,7 +154,7 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
   const bg = rowBg || (isImp ? '#fff1f2' : '#ffffff');
 
   return (
-    <div style={{ display:'flex', alignItems:'center', height:ROW_H, borderBottom:'1px solid #f1f5f9', background:bg }}>
+    <div style={{ display:'flex', alignItems:'flex-start', minHeight:ROW_H, borderBottom:'1px solid #e2e8f0', background:bg }}>
       {/* Ticket cell */}
       <div style={{ ...cellBase, width:TIX_W, gap:3, padding:'0 5px', justifyContent:'flex-start' }}>
         <div style={{ background:eb.bg, color:eb.text, fontSize:7, fontWeight:800, padding:'1px 3px', borderRadius:3, flexShrink:0, minWidth:24, textAlign:'center' }}>{eb.short}</div>
@@ -188,9 +188,9 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       <div style={{ ...cellBase, width:PC_W }}>
         <span style={{ fontSize:7.5, fontWeight:700, color:pct==='100%'?'#16a34a':'#374151' }}>{pct}</span>
       </div>
-      {/* % Teste */}
+      {/* % Conclusão Teste Interno */}
       <div style={{ ...cellBase, width:PT_W }}>
-        <span style={{ fontSize:7.5, fontWeight:700, color:pctT==='100%'?'#16a34a':'#374151' }}>{pctT}</span>
+        <span style={{ fontSize:7.5, fontWeight:700, color:pctT==='100%'?'#16a34a':'#374151' }}>{ticket.percentualConclusaoTesteInterno!=null?`${ticket.percentualConclusaoTesteInterno}%`:''}</span>
       </div>
       {/* % Conclusão Homologação */}
       <div style={{ ...cellBase, width:PCH_W }}>
@@ -377,7 +377,7 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
         </div>
       ))}
       {/* FOOTER */}
-      <div style={{ padding:'6px 12px',borderTop:'2px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',gap:4 }}>
+      <div style={{ padding:'8px 12px 10px',borderTop:'3px solid #1e40af',background:'#f8fafc',display:'flex',flexDirection:'column',gap:4,marginTop:4 }}>
         <div style={{ display:'flex',gap:16,alignItems:'center' }}>
           <span style={{ fontSize:7.5,color:'#374151' }}>⚠ Impedido</span>
           <span style={{ fontSize:7.5,color:'#374151' }}>DEM = Demanda · FAST = Demanda Fast · PROB = Problema · Nat. = Natureza da Iniciativa</span>
