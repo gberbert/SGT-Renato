@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Flex, Text, Table, Badge, Button, Card, Tabs, Select, TextField } from '@radix-ui/themes';
 import { ShieldCheck, Activity, RefreshCw, Loader2, Clock, User, Database, CheckCircle2, XCircle, Search, X } from 'lucide-react';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const ACCESS_LOGS = 'system_access_logs';
@@ -43,10 +43,12 @@ const AuditDashboard = ({ userRole }) => {
   const [filterDateStart, setFilterDateStart] = useState('');
   const [filterDateEnd, setFilterDateEnd] = useState('');
 
-  const loadAccessLogs = async () => {
+  const loadAccessLogs = async (userId = null) => {
     setAccessLoading(true);
     try {
-      const q = query(collection(db, ACCESS_LOGS), orderBy('timestamp', 'desc'), limit(pageLimit));
+      const q = userId
+        ? query(collection(db, ACCESS_LOGS), where('userId', '==', userId), orderBy('timestamp', 'desc'))
+        : query(collection(db, ACCESS_LOGS), orderBy('timestamp', 'desc'), limit(pageLimit));
       const snap = await getDocs(q);
       setAccessLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) {
@@ -97,10 +99,16 @@ const AuditDashboard = ({ userRole }) => {
 
   useEffect(() => {
     if (!isAdmin) return;
-    if (activeTab === 'acessos') loadAccessLogs();
+    if (activeTab === 'acessos') loadAccessLogs(filterUser || null);
     else loadSyncLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, pageLimit, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== 'acessos') return;
+    loadAccessLogs(filterUser || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterUser]);
 
   if (!isAdmin) {
     return (
