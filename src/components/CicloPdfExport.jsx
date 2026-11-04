@@ -264,12 +264,15 @@ function StatsSection({ filteredTickets, escopoFilter }) {
       <div style={{ display:'flex',flexDirection:'column' }}>
         {grp('Por Status')}
         <div style={{ display:'flex',gap:5,flexWrap:'wrap',alignItems:'flex-start' }}>
-          {topSt.map(([st,cnt])=>(
-            <div key={st} style={box('#e0f2fe',60)}>
-              <span style={num('#0369a1',22)}>{cnt}</span>
-              <span style={{ fontSize:6.5,fontWeight:700,color:'#0891b2',marginTop:2,textAlign:'center',lineHeight:1.2,maxWidth:70,whiteSpace:'normal',wordBreak:'break-word' }}>{trunc(st,16)}</span>
-            </div>
-          ))}
+          {topSt.map(([st,cnt])=>{
+            const sc = statusColor(st);
+            return (
+              <div key={st} style={{ ...box(`${sc}1a`,60), border:`1px solid ${sc}55` }}>
+                <span style={num(sc,22)}>{cnt}</span>
+                <span style={{ fontSize:6.5,fontWeight:700,color:sc,marginTop:2,textAlign:'center',lineHeight:1.2,maxWidth:70,whiteSpace:'normal',wordBreak:'break-word' }}>{trunc(st,16)}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
       <div style={div}/>
@@ -290,7 +293,8 @@ function StatsSection({ filteredTickets, escopoFilter }) {
 
 // ── Column headers row ────────────────────────────────────────────────────
 function ColHeaders({ includeObservacao, includePlanoTeste }) {
-  const fixedW = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W + NI_W;
+  // Soma de todas as colunas fixas antes das colunas do Plano de Teste
+  const fixedW = TIX_W + SQ_W + PR_W + ST_W + SA_W + PC_W + PT_W + PCH_W + FT_W + DH_W + DC_W + NI_W + IMP_W;
   return (
     <div>
       {/* Group header row — shown only when includePlanoTeste */}
