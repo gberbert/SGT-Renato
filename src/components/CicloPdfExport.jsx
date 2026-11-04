@@ -30,9 +30,10 @@ const PT_W   = 32;
 const FT_W   = 70;
 const DC_W   = 70;
 const TP_W   = 28; // each Plano de Teste column
+const NI_W   = 65; // Natureza da Iniciativa
 const LEFT_W = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W; // 664
 const MOT_W  = PAGE_W - LEFT_W; // 616 (motivo + flex)
-const ROW_H  = 20;
+const ROW_H  = 22;
 const CB     = '1px solid #e2e8f0';
 const cellBase = { flexShrink: 0, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: CB, overflow: 'hidden' };
 
@@ -174,11 +175,15 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       <div style={{ ...cellBase, width:DC_W, padding:'0 2px' }}>
         <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#94a3b8', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fmtDate(ticket.dataConclusao)||'—'}</span>
       </div>
+      {/* Natureza da Iniciativa */}
+      <div style={{ ...cellBase, width:NI_W, padding:'0 3px' }}>
+        <span style={{ fontSize:6.5, color:'#374151', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:NI_W-6 }}>{trunc(ticket.naturezaIniciativa||ticket.naturezaOperacao||'',12)}</span>
+      </div>
       {/* Plano de Teste columns */}
       {includePlanoTeste && <PlanoTesteColumns ticket={ticket} cellBase={cellBase} />}
-      {/* Motivo */}
-      <div style={{ flex:1, height:'100%', display:'flex', alignItems:'center', padding:'0 6px', overflow:'hidden', borderRight:includeObservacao?CB:'none' }}>
-        <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.3 }}>{motivo}</span>
+      {/* Motivo Impedimento / Observação Geral */}
+      <div style={{ flex:1, minHeight:'100%', display:'flex', alignItems:'flex-start', padding:'2px 6px', overflow:'hidden', borderRight:includeObservacao?CB:'none' }}>
+        <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.25, whiteSpace:'normal', wordBreak:'break-word' }}>{motivo}</span>
       </div>
       {includeObservacao && (
         <div style={{ flex:1, height:'100%', display:'flex', alignItems:'center', padding:'0 6px', overflow:'hidden' }}>
@@ -248,37 +253,52 @@ function StatsSection({ filteredTickets, escopoFilter }) {
 
 // ── Column headers row ────────────────────────────────────────────────────
 function ColHeaders({ includeObservacao, includePlanoTeste }) {
+  const fixedW = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W + NI_W;
   return (
-    <div style={{ display:'flex',borderBottom:'2px solid #cbd5e1',minHeight:36,background:'#f1f5f9' }}>
-      {hCell(TIX_W,'Ticket',null)}
-      {hCell(SQ_W,'Squad',null)}
-      {hCell(ST_W,'Status',null)}
-      {hCell(IMP_W,'⚠','Imp')}
-      {hCell(PR_W,'Prio',null)}
-      {hCell(PC_W,'%C','Concl')}
-      {hCell(PT_W,'%T','Teste')}
-      {hCell(FT_W,'Fim Teste','Interno')}
-      {hCell(DC_W,'Data','Conclusão')}
+    <div>
+      {/* Group header row — shown only when includePlanoTeste */}
       {includePlanoTeste && (
-        <>
-          {hCell(TP_W,'Casos','Total')}
-          {hCell(TP_W,'Aprov.',null)}
-          {hCell(TP_W,'Reprov.',null)}
-          {hCell(TP_W,'Bloq.',null)}
-          {hCell(TP_W,'Atenção',null)}
-          {hCell(TP_W,'N.Apl.',null)}
-          {hCell(TP_W,'N.Exec.',null)}
-          {hCell(TP_W,'Prog.','Teste%')}
-        </>
-      )}
-      <div style={{ flex:1,display:'flex',alignItems:'flex-end',padding:'3px 6px',borderRight:includeObservacao?CB:'none' }}>
-        <span style={{ fontSize:7.5,fontWeight:800,color:'#475569',letterSpacing:'0.04em',textTransform:'uppercase' }}>Motivo Impedimento</span>
-      </div>
-      {includeObservacao && (
-        <div style={{ flex:1,display:'flex',alignItems:'flex-end',padding:'3px 6px' }}>
-          <span style={{ fontSize:7.5,fontWeight:800,color:'#1e40af',letterSpacing:'0.04em',textTransform:'uppercase' }}>Observação</span>
+        <div style={{ display:'flex', background:'#e0f2fe', borderBottom:'1px solid #7dd3fc', minHeight:16 }}>
+          <div style={{ width: fixedW, flexShrink:0 }} />
+          <div style={{ width: TP_W * 8, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:'#0891b2', borderLeft:'1px solid #0369a1', borderRight:'1px solid #0369a1' }}>
+            <span style={{ fontSize:7, fontWeight:800, color:'#fff', letterSpacing:'0.1em', textTransform:'uppercase' }}>▶ PLANO DE TESTE</span>
+          </div>
+          <div style={{ flex:1 }} />
         </div>
       )}
+      {/* Main column headers */}
+      <div style={{ display:'flex', borderBottom:'2px solid #cbd5e1', minHeight:36, background:'#f1f5f9' }}>
+        {hCell(TIX_W,'Ticket',null)}
+        {hCell(SQ_W,'Squad',null)}
+        {hCell(ST_W,'Status',null)}
+        {hCell(IMP_W,'⚠','Imp')}
+        {hCell(PR_W,'Prio',null)}
+        {hCell(PC_W,'%C','Concl')}
+        {hCell(PT_W,'%T','Teste')}
+        {hCell(FT_W,'Fim Teste','Interno')}
+        {hCell(DC_W,'Data','Conclusão')}
+        {hCell(NI_W,'Nat.','Iniciativa')}
+        {includePlanoTeste && (
+          <>
+            {hCell(TP_W,'Tot','Casos')}
+            {hCell(TP_W,'Ap',null)}
+            {hCell(TP_W,'Rp',null)}
+            {hCell(TP_W,'Bl',null)}
+            {hCell(TP_W,'At',null)}
+            {hCell(TP_W,'NA',null)}
+            {hCell(TP_W,'NE',null)}
+            {hCell(TP_W,'Pr%','Teste')}
+          </>
+        )}
+        <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px', borderRight: includeObservacao ? CB : 'none' }}>
+          <span style={{ fontSize:7.5, fontWeight:800, color:'#475569', letterSpacing:'0.04em', textTransform:'uppercase', lineHeight:1.2 }}>Motivo Imp. / Obs. Geral</span>
+        </div>
+        {includeObservacao && (
+          <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px' }}>
+            <span style={{ fontSize:7.5, fontWeight:800, color:'#1e40af', letterSpacing:'0.04em', textTransform:'uppercase' }}>Observação</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -313,10 +333,18 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
         </div>
       ))}
       {/* FOOTER */}
-      <div style={{ padding:'6px 12px',borderTop:'2px solid #cbd5e1',background:'#f8fafc',display:'flex',gap:16,alignItems:'center' }}>
-        <span style={{ fontSize:7.5,color:'#374151' }}>⚠ Impedido</span>
-        <span style={{ fontSize:7.5,color:'#374151' }}>DEM = Demanda · FAST = Demanda Fast · PROB = Problema</span>
-        <span style={{ fontSize:7,color:'#9ca3af',marginLeft:'auto' }}>SGT — Planejamento de Ciclos</span>
+      <div style={{ padding:'6px 12px',borderTop:'2px solid #cbd5e1',background:'#f8fafc',display:'flex',flexDirection:'column',gap:4 }}>
+        <div style={{ display:'flex',gap:16,alignItems:'center' }}>
+          <span style={{ fontSize:7.5,color:'#374151' }}>⚠ Impedido</span>
+          <span style={{ fontSize:7.5,color:'#374151' }}>DEM = Demanda · FAST = Demanda Fast · PROB = Problema · Nat. = Natureza da Iniciativa</span>
+          <span style={{ fontSize:7,color:'#9ca3af',marginLeft:'auto' }}>SGT — Planejamento de Ciclos</span>
+        </div>
+        {includePlanoTeste && (
+          <div style={{ display:'flex',alignItems:'center',gap:6,padding:'3px 8px',background:'#e0f2fe',borderRadius:4,border:'1px solid #7dd3fc' }}>
+            <span style={{ fontSize:7,fontWeight:700,color:'#0891b2' }}>PLANO DE TESTE:</span>
+            <span style={{ fontSize:7,color:'#374151' }}>Tot=Total de Casos · Ap=Aprovados · Rp=Reprovados · Bl=Bloqueados · At=Atenção · NA=Não Aplicável · NE=Não Executado · Pr%=Progresso [(Ap+At+NA)/Tot]</span>
+          </div>
+        )}
       </div>
     </div>
   );
