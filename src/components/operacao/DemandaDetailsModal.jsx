@@ -1382,7 +1382,8 @@ const handleSave = useCallback(async () => {
                   }
                   return (<div style={{display:"flex",alignItems:"center",gap:6}}>
                     <ReadField label="DATA FIM HML PLAN" value={fmtDate(ticket.dataFimHomologacaoPlanejada)} />
-                    {_bd!=null && <span title="Dias úteis (Fim HML - Ini HML)" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(251,191,36,0.15)",color:"#fbbf24",border:"1px solid rgba(251,191,36,0.35)",whiteSpace:"nowrap"}}>⏱ {_bd}du</span>}
+                    {_bd!=null && <><span title="Dias úteis (Fim HML - Ini HML)" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(251,191,36,0.15)",color:"#fbbf24",border:"1px solid rgba(251,191,36,0.35)",whiteSpace:"nowrap"}}>⏱ {_bd}du</span><span title="Dias corridos" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(156,163,175,0.15)",color:"#9ca3af",border:"1px solid rgba(156,163,175,0.3)",whiteSpace:"nowrap"}}>📅 {Math.round((_db-_da)/86400000)}dc</span></>
+                    }
                   </div>);
                 })()}
                 right={
@@ -1405,7 +1406,8 @@ const handleSave = useCallback(async () => {
                   }
                   return (<div style={{display:"flex",alignItems:"center",gap:6}}>
                     <ReadField label="DATA ENTREGA EM PRODUÇÃO PREVISTA" value={fmtDate(ticket.dataEntregaProducaoPrevista)} />
-                    {_bd!=null && <span title="Dias úteis (Entrega - Fim HML)" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(251,191,36,0.15)",color:"#fbbf24",border:"1px solid rgba(251,191,36,0.35)",whiteSpace:"nowrap"}}>⏱ {_bd}du</span>}
+                    {_bd!=null && <><span title="Dias úteis (Entrega - Fim HML)" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(251,191,36,0.15)",color:"#fbbf24",border:"1px solid rgba(251,191,36,0.35)",whiteSpace:"nowrap"}}>⏱ {_bd}du</span><span title="Dias corridos" style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(156,163,175,0.15)",color:"#9ca3af",border:"1px solid rgba(156,163,175,0.3)",whiteSpace:"nowrap"}}>📅 {Math.round((_db-_da)/86400000)}dc</span></>
+                    }
                   </div>);
                 })()}
                 right={
