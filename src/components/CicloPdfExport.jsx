@@ -279,12 +279,16 @@ function StatsSection({ filteredTickets, escopoFilter }) {
       <div style={{ display:'flex',flexDirection:'column' }}>
         {grp('Por Squad')}
         <div style={{ display:'flex',gap:5,flexWrap:'wrap',alignItems:'flex-start' }}>
-          {topSq.map(([sq,cnt])=>(
-            <div key={sq} style={box('#f0fdf4',60)}>
-              <span style={num('#16a34a',22)}>{cnt}</span>
-              <span style={{ fontSize:6.5,fontWeight:700,color:'#15803d',marginTop:2,textAlign:'center',lineHeight:1.2,maxWidth:70,whiteSpace:'normal',wordBreak:'break-word' }}>{trunc(sq,12)}</span>
-            </div>
-          ))}
+          {topSq.map(([sq,cnt],i)=>{
+            const SQ_COLORS=['#2563eb','#16a34a','#9333ea','#ea580c','#0891b2','#dc2626','#d97706','#059669'];
+            const c=SQ_COLORS[i%SQ_COLORS.length];
+            return (
+              <div key={sq} style={{ ...box(`${c}1a`,60), border:`1px solid ${c}55` }}>
+                <span style={num(c,22)}>{cnt}</span>
+                <span style={{ fontSize:6.5,fontWeight:700,color:c,marginTop:2,textAlign:'center',lineHeight:1.2,maxWidth:70,whiteSpace:'normal',wordBreak:'break-word' }}>{trunc(sq,12)}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
