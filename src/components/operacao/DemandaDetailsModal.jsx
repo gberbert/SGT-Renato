@@ -1211,7 +1211,7 @@ const handleSave = useCallback(async () => {
 
                 return (
                   <>
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'stretch' }}>
                     {/* Total — read-only, auto-sum */}
                     <div style={{ ...fieldStyle, border: '1px solid rgba(99,102,241,.35)', background: 'rgba(99,102,241,.07)', flex: '0 0 auto', marginBottom: 0 }}>
                       <span style={{ ...labelStyle, color: '#a5b4fc' }}>Casos de Teste (total)</span>
