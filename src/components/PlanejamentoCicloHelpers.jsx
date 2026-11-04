@@ -550,12 +550,12 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       const pct    = t.percentualConclusao != null ? `${t.percentualConclusao}%` : '';
       const pctT   = t.percentualConclusaoTesteInterno != null ? `${t.percentualConclusaoTesteInterno}%` : '';
       const imp    = t.impedimento === true ? 'Sim' : 'Não';
-      const motivo = t.observacaoAdicional || t.motivoImpedimento || t.observacao || '';
+      const motivo = t.motivoImpedimento || '';
       const comentario =
         `Ticket: ${t.issueKey || ''}\n` +
         `Resumo: ${t.summary || ''}\n` +
         `Squad: ${squad}\n` +
-        `% Conclusão: ${pct}\n` +
+        `% Conclusão Desenvolvimento: ${pct}\n` +
         `% Teste Interno: ${pctT}\n` +
         `Impedida: ${imp}\n` +
         `Motivo / Observação: ${motivo}`;
