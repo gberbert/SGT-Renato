@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { X, ChevronDown, History } from 'lucide-react';
 import { collection, getDocs, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
+import { PRIORIDADE_INTERNA_OPTIONS, updateOperacaoTicket } from '../../services/operacaoRadarService';
 import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
 import { getStatusColor } from '../PlanejamentoCicloHelpers';
 
@@ -651,12 +651,17 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
     [ticket]
   );
 
-  const handleSave = useCallback(async () => {
+const handleSave = useCallback(async () => {
     if (!ticket?.issueKey || saving) return;
     setSaving(true);
     try {
+      if (Object.keys(pendingChanges).length > 0) {
+        // Salva direto no Firestore (garante persistência de pt* e demais campos SGT)
+        await updateOperacaoTicket(ticket.issueKey, pendingChanges);
+      }
+      // Notifica parent para atualizar estado local
       for (const [field, value] of Object.entries(pendingChanges)) {
-        await onSave(ticket.issueKey, field, value);
+        try { await onSave(ticket.issueKey, field, value); } catch { /* parent state update only */ }
       }
       setPendingChanges({});
       onClose();
