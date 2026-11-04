@@ -30,7 +30,7 @@ const PT_W   = 32;
 const FT_W   = 70;
 const DC_W   = 70;
 const TP_W   = 28; // each Plano de Teste column
-const NI_W   = 90; // Natureza da Iniciativa (increased)
+const NI_W   = 130; // Natureza da Iniciativa (full value)
 const SA_W   = 68; // Situação Atual
 const DH_W   = 65; // Data Fim Homologação
 const PCH_W  = 30; // % Conclusão Homologação
@@ -184,8 +184,6 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
           </div>
         );
       })()}
-      {/* Imp icon */}
-      <div style={{ ...cellBase, width:IMP_W }}>{isImp && <span style={{ fontSize:11 }}>⚠</span>}</div>
       {/* % Conc */}
       <div style={{ ...cellBase, width:PC_W }}>
         <span style={{ fontSize:7.5, fontWeight:700, color:pct==='100%'?'#16a34a':'#374151' }}>{pct}</span>
@@ -214,8 +212,10 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       </div>
       {/* Natureza da Iniciativa */}
       <div style={{ ...cellBase, width:NI_W, padding:'0 3px' }}>
-        <span style={{ fontSize:6.5, color:'#374151', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:NI_W-6 }}>{trunc(ticket.naturezaIniciativa||ticket.naturezaOperacao||'',12)}</span>
+        <span style={{ fontSize:6.5, color:'#374151', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:NI_W-6 }}>{trunc(ticket.naturezaIniciativa||ticket.naturezaOperacao||'',20)}</span>
       </div>
+      {/* Imp icon — após Natureza da Iniciativa */}
+      <div style={{ ...cellBase, width:IMP_W }}>{isImp && <span style={{ fontSize:11 }}>⚠</span>}</div>
       {/* Plano de Teste columns */}
       {includePlanoTeste && <PlanoTesteColumns ticket={ticket} cellBase={cellBase} />}
       {/* Motivo Impedimento / Observação Geral */}
@@ -310,7 +310,6 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
         {hCell(PR_W,'Prio',null)}
         {hCell(ST_W,'Status',null)}
         {hCell(SA_W,'Situação','Atual')}
-        {hCell(IMP_W,'⚠','Imp')}
         {hCell(PC_W,'%C','Concl')}
         {hCell(PT_W,'%T','Teste')}
         {hCell(PCH_W,'%CH','Homol')}
@@ -318,6 +317,7 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
         {hCell(DH_W,'Fim','Homolog')}
         {hCell(DC_W,'Data','Conclusão')}
         {hCell(NI_W,'Nat.','Iniciativa')}
+        {hCell(IMP_W,'⚠','Imp')}
         {includePlanoTeste && (
           <>
             {hCell(TP_W,'Tot','Casos')}
