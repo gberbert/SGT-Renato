@@ -50,6 +50,12 @@ const STATUS_FIELDS_TO_LOG = new Set([
   'responsavelTesteInterno',
   'observacao',
   'estimativaInterna',
+  'ptAprovados',
+  'ptReprovados',
+  'ptBloqueados',
+  'ptAtencao',
+  'ptNaoAplicavel',
+  'ptNaoExecutado',
 ]);
 
 const STATUS_FIELD_LABELS = {
@@ -65,6 +71,12 @@ const STATUS_FIELD_LABELS = {
   responsavelTesteInterno: 'Resp. Teste Interno',
   observacao: 'Observação',
   estimativaInterna: 'Estimativa Interna (h)',
+  ptAprovados:    'PT — Aprovados',
+  ptReprovados:   'PT — Reprovados',
+  ptBloqueados:   'PT — Bloqueados',
+  ptAtencao:      'PT — Atenção',
+  ptNaoAplicavel: 'PT — Não Aplicável',
+  ptNaoExecutado: 'PT — Não Executado',
 };
 
 const sel = {
