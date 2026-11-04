@@ -398,12 +398,10 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
   );
 }
 
-// ── NTT DATA logo SVG ─────────────────────────────────────────────────────
-const NTT_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <circle cx="24" cy="24" r="22" fill="none" stroke="white" stroke-width="3.5"/>
-  <circle cx="24" cy="24" r="12" fill="none" stroke="white" stroke-width="3.5"/>
-  <ellipse cx="24" cy="18" rx="3.5" ry="5" fill="white"/>
-</svg>`;
+// ── Asset URLs ───────────────────────────────────────────────────────────
+const NTT_LOGO_URL  = 'https://firebasestorage.googleapis.com/v0/b/sgt-renato.firebasestorage.app/o/logos%2Fntt-data-logo.png?alt=media';
+const CPFL_LOGO_URL = 'https://firebasestorage.googleapis.com/v0/b/sgt-renato.firebasestorage.app/o/logos%2Fcpfl-energia-logo.png?alt=media';
+const COVER_BG_URL  = 'https://sgt-renato.web.app/cover-bg.jpg';
 
 // ── Cover Page ────────────────────────────────────────────────────────────
 const PAGE_H = Math.round((210 / 297) * PAGE_W); // A4 landscape height ≈ 905px
@@ -411,20 +409,16 @@ const PAGE_H = Math.round((210 / 297) * PAGE_W); // A4 landscape height ≈ 905p
 function CoverPage({ exportedAt }) {
   const dateStr = new Date().toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
   return (
-    <div style={{ width:PAGE_W, height:PAGE_H, background:'linear-gradient(140deg,#1a2850 0%,#253668 50%,#1e3060 100%)', position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden' }}>
-      {/* Decorative diagonal stripe */}
-      <div style={{ position:'absolute', top:0, right:0, width:'45%', height:'100%', background:'rgba(255,255,255,0.04)', clipPath:'polygon(30% 0,100% 0,100% 100%,0 100%)' }} />
-      {/* Top logos bar */}
-      <div style={{ position:'absolute', top:44, left:48, display:'flex', alignItems:'center', gap:14 }}>
-        <div dangerouslySetInnerHTML={{ __html:NTT_LOGO_SVG }} />
-        <span style={{ fontSize:26, fontWeight:800, color:'#fff', letterSpacing:'0.04em', fontFamily:'Arial,sans-serif' }}>NTT DATA</span>
+    <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'#1a2850' }}>
+      <img src={COVER_BG_URL} crossOrigin="anonymous" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
+      <div style={{ position:'absolute', inset:0, background:'rgba(22,34,72,0.65)' }} />
+      <div style={{ position:'absolute', top:40, left:48 }}>
+        <img src={NTT_LOGO_URL} crossOrigin="anonymous" style={{ height:44, objectFit:'contain' }} />
       </div>
-      <div style={{ position:'absolute', top:40, right:52, textAlign:'right' }}>
-        <div style={{ fontSize:20, fontWeight:800, color:'#fff', letterSpacing:'0.12em' }}>CPFL</div>
-        <div style={{ fontSize:13, fontWeight:600, color:'#94b3d4', letterSpacing:'0.18em' }}>ENERGIA</div>
+      <div style={{ position:'absolute', top:32, right:52 }}>
+        <img src={CPFL_LOGO_URL} crossOrigin="anonymous" style={{ height:60, objectFit:'contain' }} />
       </div>
-      {/* Thin accent bar */}
-      <div style={{ position:'absolute', top:110, left:48, right:48, height:2, background:'rgba(255,255,255,0.15)' }} />
+      <div style={{ position:'absolute', top:118, left:48, right:48, height:2, background:'rgba(255,255,255,0.22)' }} />
       {/* Main title */}
       <div style={{ position:'absolute', bottom:180, left:52 }}>
         <div style={{ fontSize:72, fontWeight:300, color:'#ffffff', lineHeight:1.1, letterSpacing:'-0.01em' }}>Gestão de Demandas</div>
@@ -442,10 +436,7 @@ function CoverPage({ exportedAt }) {
 function BackPage() {
   return (
     <div style={{ width:PAGE_W, height:PAGE_H, background:'#2d3561', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter,Segoe UI,Arial,sans-serif' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:28 }}>
-        <div dangerouslySetInnerHTML={{ __html:NTT_LOGO_SVG.replace('width="48" height="48"','width="96" height="96"') }} />
-        <span style={{ fontSize:64, fontWeight:800, color:'#ffffff', letterSpacing:'0.04em', fontFamily:'Arial,sans-serif' }}>NTT DATA</span>
-      </div>
+      <img src={NTT_LOGO_URL} crossOrigin="anonymous" style={{ height:110, objectFit:'contain' }} />
     </div>
   );
 }
