@@ -543,10 +543,38 @@ export function exportTicketsToXlsx(tickets, filename = 'tickets.xlsx') {
       { wch: 30 }, // Resp. Teste Interno
     ];
 
+    // ── Aba Report ──────────────────────────────────────────────────────────
+    const reportHeader = ['Issue Key', 'Resumo', 'Status', 'Comentário Atual'];
+    const reportRows = tickets.map(t => {
+      const squad  = t.squadPrincipal || t._resolvedSquad || (t.grupoSuporte ? t.grupoSuporte.replace(/^\d+\s*-\s*/, '').trim() : '') || '';
+      const pct    = t.percentualConclusao != null ? `${t.percentualConclusao}%` : '';
+      const pctT   = t.percentualConclusaoTesteInterno != null ? `${t.percentualConclusaoTesteInterno}%` : '';
+      const imp    = t.impedimento === true ? 'Sim' : 'Não';
+      const motivo = t.observacaoAdicional || t.motivoImpedimento || t.observacao || '';
+      const comentario =
+        `Ticket: ${t.issueKey || ''}\n` +
+        `Resumo: ${t.summary || ''}\n` +
+        `Squad: ${squad}\n` +
+        `% Conclusão: ${pct}\n` +
+        `% Teste Interno: ${pctT}\n` +
+        `Impedida: ${imp}\n` +
+        `Motivo / Observação: ${motivo}`;
+      return [t.issueKey || '', t.summary || '', t.status || '', comentario];
+    });
+    const wsReport = XLSXUtils.aoa_to_sheet([reportHeader, ...reportRows]);
+    wsReport['!cols'] = [{ wch: 16 }, { wch: 50 }, { wch: 24 }, { wch: 80 }];
+    // Aplicar wrap text em todas as células da coluna Comentário Atual (col D)
+    const rng = XLSXUtils.decode_range(wsReport['!ref'] || 'A1');
+    for (let R = rng.s.r + 1; R <= rng.e.r; R++) {
+      const addr = XLSXUtils.encode_cell({ r: R, c: 3 });
+      if (wsReport[addr]) wsReport[addr].s = { alignment: { wrapText: true, vertical: 'top' } };
+    }
+
     // Criar workbook
     const wb = XLSXUtils.book_new();
     XLSXUtils.book_append_sheet(wb, ws, 'Tickets');
     XLSXUtils.book_append_sheet(wb, ws2, 'Por Squad');
+    XLSXUtils.book_append_sheet(wb, wsReport, 'Report');
 
     // Exportar arquivo
     writeFile(wb, filename);
