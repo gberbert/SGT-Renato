@@ -30,7 +30,10 @@ const PT_W   = 32;
 const FT_W   = 70;
 const DC_W   = 70;
 const TP_W   = 28; // each Plano de Teste column
-const NI_W   = 65; // Natureza da Iniciativa
+const NI_W   = 90; // Natureza da Iniciativa (increased)
+const SA_W   = 68; // Situação Atual
+const DH_W   = 65; // Data Fim Homologação
+const PCH_W  = 30; // % Conclusão Homologação
 const LEFT_W = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W; // 664
 const MOT_W  = PAGE_W - LEFT_W; // 616 (motivo + flex)
 const ROW_H  = 22;
@@ -76,6 +79,20 @@ function resolveSquad(t) {
   return g ? g.replace(/^\d+\s*-\s*/,'').trim() : '';
 }
 function trunc(str, max) { const s=String(str||''); return s.length>max?s.slice(0,max-1)+'…':s; }
+
+// ── Situação Atual (lógica condicional por status/percentuais) ────────────
+function situacaoAtual(ticket) {
+  const status = String(ticket.status || '').toLowerCase();
+  if (!status.includes('execu')) return '';
+  const pct  = ticket.percentualConclusao != null && ticket.percentualConclusao !== ''
+    ? Number(ticket.percentualConclusao) : 0;
+  const pctT = ticket.percentualConclusaoTesteInterno != null && ticket.percentualConclusaoTesteInterno !== ''
+    ? Number(ticket.percentualConclusaoTesteInterno) : 0;
+  if (pct >= 100 && pctT < 100) return 'Teste Interno';
+  if (pct > 0 && pct < 100)    return 'Desenvolvimento';
+  if (pct === 0)                return 'A Desenvolver';
+  return '';
+}
 
 // ── Column header helper ──────────────────────────────────────────────────
 function hCell(w, label, sub) {
@@ -149,16 +166,26 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       <div style={{ ...cellBase, width:SQ_W, padding:'0 2px' }}>
         {squad && <span style={{ fontSize:7, fontWeight:600, color:'#065f46', background:'#d1fae5', padding:'1px 3px', borderRadius:3, maxWidth:SQ_W-6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{squad}</span>}
       </div>
+      {/* Prioridade — moved after Squad */}
+      <div style={{ ...cellBase, width:PR_W, padding:'0 2px' }}>
+        {pb && <span style={{ fontSize:7, fontWeight:700, background:pb.bg, color:pb.color, padding:'1px 3px', borderRadius:3, whiteSpace:'nowrap' }}>{pb.label}</span>}
+      </div>
       {/* Status */}
       <div style={{ ...cellBase, width:ST_W, padding:'0 2px' }}>
         <span style={{ fontSize:7, fontWeight:600, color:sc, maxWidth:ST_W-4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center' }}>{status}</span>
       </div>
+      {/* Situação Atual */}
+      {(() => {
+        const sa = situacaoAtual(ticket);
+        const saColor = sa==='Teste Interno'?'#0891b2':sa==='Desenvolvimento'?'#d97706':sa==='A Desenvolver'?'#6b7280':'#374151';
+        return (
+          <div style={{ ...cellBase, width:SA_W, padding:'0 2px' }}>
+            {sa && <span style={{ fontSize:6.5, fontWeight:700, color:saColor, textAlign:'center', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:SA_W-4 }}>{sa}</span>}
+          </div>
+        );
+      })()}
       {/* Imp icon */}
       <div style={{ ...cellBase, width:IMP_W }}>{isImp && <span style={{ fontSize:11 }}>⚠</span>}</div>
-      {/* Prioridade */}
-      <div style={{ ...cellBase, width:PR_W, padding:'0 2px' }}>
-        {pb && <span style={{ fontSize:7, fontWeight:700, background:pb.bg, color:pb.color, padding:'1px 3px', borderRadius:3, whiteSpace:'nowrap' }}>{pb.label}</span>}
-      </div>
       {/* % Conc */}
       <div style={{ ...cellBase, width:PC_W }}>
         <span style={{ fontSize:7.5, fontWeight:700, color:pct==='100%'?'#16a34a':'#374151' }}>{pct}</span>
@@ -167,9 +194,19 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       <div style={{ ...cellBase, width:PT_W }}>
         <span style={{ fontSize:7.5, fontWeight:700, color:pctT==='100%'?'#16a34a':'#374151' }}>{pctT}</span>
       </div>
+      {/* % Conclusão Homologação */}
+      <div style={{ ...cellBase, width:PCH_W }}>
+        <span style={{ fontSize:7.5, fontWeight:700, color:ticket.percentualConclusaoHomologacao!=null&&ticket.percentualConclusaoHomologacao!==''?'#7c3aed':'#94a3b8' }}>
+          {ticket.percentualConclusaoHomologacao!=null&&ticket.percentualConclusaoHomologacao!==''?`${ticket.percentualConclusaoHomologacao}%`:''}
+        </span>
+      </div>
       {/* Fim Teste */}
       <div style={{ ...cellBase, width:FT_W, padding:'0 2px' }}>
         <span style={{ fontSize:7.5, color:ticket.dataFimTesteInterno?'#374151':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataFimTesteInterno)||'—'}</span>
+      </div>
+      {/* Data Fim Homologação */}
+      <div style={{ ...cellBase, width:DH_W, padding:'0 2px' }}>
+        <span style={{ fontSize:7.5, color:ticket.dataFimHomologacao?'#7c3aed':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataFimHomologacao)||'—'}</span>
       </div>
       {/* Data Conclusão */}
       <div style={{ ...cellBase, width:DC_W, padding:'0 2px' }}>
@@ -270,12 +307,15 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
       <div style={{ display:'flex', borderBottom:'2px solid #cbd5e1', minHeight:36, background:'#f1f5f9' }}>
         {hCell(TIX_W,'Ticket',null)}
         {hCell(SQ_W,'Squad',null)}
-        {hCell(ST_W,'Status',null)}
-        {hCell(IMP_W,'⚠','Imp')}
         {hCell(PR_W,'Prio',null)}
+        {hCell(ST_W,'Status',null)}
+        {hCell(SA_W,'Situação','Atual')}
+        {hCell(IMP_W,'⚠','Imp')}
         {hCell(PC_W,'%C','Concl')}
         {hCell(PT_W,'%T','Teste')}
+        {hCell(PCH_W,'%CH','Homol')}
         {hCell(FT_W,'Fim Teste','Interno')}
+        {hCell(DH_W,'Fim','Homolog')}
         {hCell(DC_W,'Data','Conclusão')}
         {hCell(NI_W,'Nat.','Iniciativa')}
         {includePlanoTeste && (
