@@ -131,11 +131,6 @@ function PlanoTesteColumns({ ticket, cellBase }) {
       {cell(at, '#ca8a04')}
       {cell(na, '#6b7280')}
       {cell(ne, '#6b7280')}
-      <div style={{ ...cellBase, width: TP_W }}>
-        <span style={{ fontSize: 7, fontWeight: 700, color: progColor }}>
-          {total > 0 ? `${prog}%` : ''}
-        </span>
-      </div>
     </>
   );
 }
@@ -279,16 +274,12 @@ function StatsSection({ filteredTickets, escopoFilter }) {
       <div style={{ display:'flex',flexDirection:'column' }}>
         {grp('Por Squad')}
         <div style={{ display:'flex',gap:5,flexWrap:'wrap',alignItems:'flex-start' }}>
-          {topSq.map(([sq,cnt],i)=>{
-            const SQ_COLORS=['#2563eb','#16a34a','#9333ea','#ea580c','#0891b2','#dc2626','#d97706','#059669'];
-            const c=SQ_COLORS[i%SQ_COLORS.length];
-            return (
-              <div key={sq} style={{ ...box(`${c}1a`,60), border:`1px solid ${c}55` }}>
-                <span style={num(c,22)}>{cnt}</span>
-                <span style={{ fontSize:6.5,fontWeight:700,color:c,marginTop:2,textAlign:'center',lineHeight:1.2,maxWidth:70,whiteSpace:'normal',wordBreak:'break-word' }}>{trunc(sq,12)}</span>
-              </div>
-            );
-          })}
+          {topSq.map(([sq,cnt])=>(
+            <div key={sq} style={{ ...box('#d1fae5',60), border:'1px solid #059669' }}>
+              <span style={num('#065f46',22)}>{cnt}</span>
+              <span style={{ fontSize:6.5,fontWeight:700,color:'#065f46',marginTop:2,textAlign:'center',lineHeight:1.2,maxWidth:70,whiteSpace:'normal',wordBreak:'break-word' }}>{trunc(sq,12)}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -305,7 +296,7 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
       {includePlanoTeste && (
         <div style={{ display:'flex', background:'#e0f2fe', borderBottom:'1px solid #7dd3fc', minHeight:16 }}>
           <div style={{ width: fixedW, flexShrink:0 }} />
-          <div style={{ width: TP_W * 8, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:'#0891b2', borderLeft:'1px solid #0369a1', borderRight:'1px solid #0369a1' }}>
+          <div style={{ width: TP_W * 7, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:'#0891b2', borderLeft:'1px solid #0369a1', borderRight:'1px solid #0369a1' }}>
             <span style={{ fontSize:7, fontWeight:800, color:'#fff', letterSpacing:'0.1em', textTransform:'uppercase' }}>▶ PLANO DE TESTE</span>
           </div>
           <div style={{ flex:1 }} />
@@ -335,7 +326,6 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
             {hCell(TP_W,'At',null)}
             {hCell(TP_W,'NA',null)}
             {hCell(TP_W,'NE',null)}
-            {hCell(TP_W,'Pr%','Teste')}
           </>
         )}
         <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px', borderRight: includeObservacao ? CB : 'none' }}>
@@ -390,7 +380,7 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
         {includePlanoTeste && (
           <div style={{ display:'flex',alignItems:'center',gap:6,padding:'3px 8px',background:'#e0f2fe',borderRadius:4,border:'1px solid #7dd3fc' }}>
             <span style={{ fontSize:7,fontWeight:700,color:'#0891b2' }}>PLANO DE TESTE:</span>
-            <span style={{ fontSize:7,color:'#374151' }}>Tot=Total de Casos · Ap=Aprovados · Rp=Reprovados · Bl=Bloqueados · At=Atenção · NA=Não Aplicável · NE=Não Executado · Pr%=Progresso [(Ap+At+NA)/Tot]</span>
+            <span style={{ fontSize:7,color:'#374151' }}>Tot=Total de Casos · Ap=Aprovados · Rp=Reprovados · Bl=Bloqueados · At=Atenção · NA=Não Aplicável · NE=Não Executado</span>
           </div>
         )}
       </div>
