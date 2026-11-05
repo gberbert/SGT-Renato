@@ -61,9 +61,13 @@ const STATUS_FIELDS_TO_LOG = new Set([
   'adocaoIa',
   'iaStatusAdocao',
   'iaAnaliseIA',
+  'iaAnaliseIAObs',
   'iaAnaliseHumana',
+  'iaAnaliseHumanaObs',
   'iaDeployQa',
+  'iaDeployQaObs',
   'iaDeployPrd',
+  'iaDeployPrdObs',
   'iaEsforcoComIA',
 ]);
 
@@ -90,9 +94,13 @@ const STATUS_FIELD_LABELS = {
   adocaoIa: 'Adoção de IA',
   iaStatusAdocao: 'IA — Status Adoção',
   iaAnaliseIA: 'IA — Análise IA',
+  iaAnaliseIAObs: 'IA — Obs. Análise IA',
   iaAnaliseHumana: 'IA — Análise Humana',
+  iaAnaliseHumanaObs: 'IA — Obs. Análise Humana',
   iaDeployQa: 'IA — Deploy QA',
+  iaDeployQaObs: 'IA — Obs. Deploy QA',
   iaDeployPrd: 'IA — Deploy PRD',
+  iaDeployPrdObs: 'IA — Obs. Deploy PRD',
   iaEsforcoComIA: 'IA — Esforço (h) com IA',
 };
 

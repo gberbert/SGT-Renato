@@ -1463,10 +1463,10 @@ const handleSave = useCallback(async () => {
                       : 'Backlog';
 
                 const iaFields = [
-                  { key: 'iaAnaliseIA',      label: 'Análise IA' },
-                  { key: 'iaAnaliseHumana',  label: 'Análise Humana' },
-                  { key: 'iaDeployQa',       label: 'Deploy QA' },
-                  { key: 'iaDeployPrd',      label: 'Deploy PRD' },
+                  { key: 'iaAnaliseIA',     obsKey: 'iaAnaliseIAObs',     label: 'Análise IA' },
+                  { key: 'iaAnaliseHumana', obsKey: 'iaAnaliseHumanaObs', label: 'Análise Humana' },
+                  { key: 'iaDeployQa',      obsKey: 'iaDeployQaObs',      label: 'Deploy QA' },
+                  { key: 'iaDeployPrd',     obsKey: 'iaDeployPrdObs',     label: 'Deploy PRD' },
                 ];
                 const statusColor = (v) => {
                   if (!v) return '#6b7280';
@@ -1497,31 +1497,47 @@ const handleSave = useCallback(async () => {
                       Rastreamento de Adoção de IA
                     </div>
 
-                    {/* Two-column layout: status fields left, metrics right */}
+                    {/* Two-column layout: status+obs fields left (wide), metrics right */}
                     <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
 
-                      {/* Left column: status fields stacked */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: 220, flexShrink: 0 }}>
+                      {/* Left column: status fields stacked, each row = [status | obs] */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 0 }}>
                         {/* Status Adoção de IA — somente leitura, calculado */}
                         <div style={{ ...cardBase, borderColor: statusColor(computedStatus) + '55', background: statusColor(computedStatus) + '0a' }}>
                           <span style={{ ...lbl, color: statusColor(computedStatus) }}>Status Adoção de IA</span>
-                          <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(computedStatus) }}>{computedStatus}</span>
-                          <span style={{ fontSize: 9, color: 'var(--gray-8)', marginTop: 2 }}>calculado automaticamente</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(computedStatus), flexShrink: 0 }}>{computedStatus}</span>
+                            <span style={{ fontSize: 9, color: 'var(--gray-8)' }}>calculado automaticamente</span>
+                          </div>
                         </div>
                         {iaFields.map(f => {
                           const val = pendingChanges[f.key] !== undefined ? pendingChanges[f.key] : (ticket[f.key] || '');
+                          const obsVal = pendingChanges[f.obsKey] !== undefined ? pendingChanges[f.obsKey] : (ticket[f.obsKey] || '');
                           const sc = statusColor(val);
                           return (
                             <div key={f.key} style={{ ...cardBase, borderColor: val ? sc + '44' : undefined }}>
                               <span style={{ ...lbl, color: val ? sc : undefined }}>{f.label}</span>
-                              {isEdit ? (
-                                <select className="dmd-input" value={val} onChange={e => save(f.key, e.target.value || null)} style={{ cursor: 'pointer', color: sc, fontWeight: 700, fontSize: 13 }}>
-                                  <option value="">— Selecionar —</option>
-                                  {IA_STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                                </select>
-                              ) : (
-                                <span style={{ fontSize: 14, fontWeight: 800, color: sc }}>{val || '—'}</span>
-                              )}
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <div style={{ flexShrink: 0, width: 150 }}>
+                                  {isEdit ? (
+                                    <select className="dmd-input" value={val} onChange={e => save(f.key, e.target.value || null)} style={{ cursor: 'pointer', color: sc, fontWeight: 700, fontSize: 13, width: '100%' }}>
+                                      <option value="">— Selecionar —</option>
+                                      {IA_STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                  ) : (
+                                    <span style={{ fontSize: 14, fontWeight: 800, color: sc }}>{val || '—'}</span>
+                                  )}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  {isEdit ? (
+                                    <input className="dmd-input" placeholder="Observação..." value={obsVal} onChange={e => save(f.obsKey, e.target.value)} style={{ fontSize: 12, width: '100%' }} />
+                                  ) : (
+                                    obsVal
+                                      ? <span style={{ fontSize: 12, color: 'var(--gray-10)', fontStyle: 'italic' }}>{obsVal}</span>
+                                      : <span style={{ fontSize: 11, color: 'var(--gray-7)' }}>—</span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           );
                         })}
