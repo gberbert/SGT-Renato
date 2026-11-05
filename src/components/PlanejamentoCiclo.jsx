@@ -426,7 +426,7 @@ export default function PlanejamentoCiclo() {
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [cicloFilter, setCicloFilter] = useState(new Set());
   const [pacoteFilter, setPacoteFilter] = useState(new Set());
-  const [hideConcluidos, setHideConcluidos] = useState(false);
+  const [hideConcluidos, setHideConcluidos] = useState(true);
   const [pctConclusaoFilter, setPctConclusaoFilter] = useState(new Set());
   const [pctTesteInternoFilter, setPctTesteInternoFilter] = useState(new Set());
   const [createdAtFrom, setCreatedAtFrom] = useState('');
