@@ -12,17 +12,15 @@ AND "grupo solucionador[group picker (single group)]" IN (TI_GED_Perfil, TI_Perf
 AND "demanda fast[dropdown]" = Sim
 
 
-CONSULTA 3 DEMANDAS 
-(issuetype = História
+CONSULTA 3 DEMANDAS
+((issuetype = História
 AND project = SUST
 AND "torre de atuação da demanda[dropdown]" IN ("ADM & LEGADOS", BI, "SISTEMAS WEB", "CANAIS DIGITAIS")
-AND "empresa[dropdown]" = "NTT DATA"
-AND status NOT IN (Cancelada, Concluída))
+AND "empresa[dropdown]" = "NTT DATA")
 OR (project IN (DEMANDA, SUST)
 AND "torre de atuação da demanda[dropdown]" IN ("CANAIS DIGITAIS", "SISTEMAS CORPORATIVOS")
 AND "empresa[dropdown]" IN ("GLOBAL NTT", "NTT DATA", "NTT Ltda", empty)
-AND status NOT IN (Cancelada, Concluída, Fechado, "Não Aplicável")
-AND type = Solicitação)
+AND type = Solicitação))
 
 CONSULTA 4 INCIDENTES
 Project = SERVICE

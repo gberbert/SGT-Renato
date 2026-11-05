@@ -98,15 +98,9 @@ function fixProblemasJql(jql) {
 }
 
 function fixDemandasJql(jql) {
+  // Se já está corretamente envolto em ((...) OR (...)), retorna sem modificar
   if (jql.startsWith('((')) return jql;
-  const match = jql.match(/\)\s*OR\s*\(/i);
-  if (match) {
-    let left = jql.slice(0, match.index + 1).trim();
-    let right = jql.slice(match.index + 1).replace(/^\s*OR\s*/i, '').trim();
-    if (left.startsWith('(')) left = left.slice(1).trim();
-    if (right.startsWith('(') && right.endsWith(')')) right = right.slice(1, -1).trim();
-    return `((${left}) OR (${right}))`;
-  }
+  // Envolve em parênteses externos se ainda não tiver
   if (!jql.startsWith('(')) return `(${jql})`;
   return jql;
 }
