@@ -949,7 +949,7 @@ export async function fetchTicketsForRoadmap({ escopos = [], onProgress } = {}) 
     // (uma query 'in' com 6 escopos × ~3k docs cada = ~18k docs pode ultrapassar 128MB)
     for (const escopo of escopos) {
       const snap = await getDocs(
-        query(collection(db, TICKETS_GLOBAL), where('escopo', '==', escopo), limit(5000))
+        query(collection(db, TICKETS_GLOBAL), where('escopo', '==', escopo), limit(10000))
       );
       snap.docs.forEach((d) => allTickets.push(mapFirestoreTicketDoc(d)));
       onProgress?.(allTickets.length);
