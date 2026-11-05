@@ -433,6 +433,10 @@ const KNOWN_DATE_FIELD_IDS = {
   severidade: "customfield_10882",
   severidade_en: "customfield_10047",
   sistemas_impactados: "customfield_10325",
+  // Natureza da Iniciativa — cascading select (parent - child) obrigatório para DEMANDA
+  natureza_iniciativa: "customfield_15208",
+  // Torre de Atuação da Demanda
+  torre_atuacao: "customfield_10314",
 };
 
 async function resolveTicketFieldIds() {
