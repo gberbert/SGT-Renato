@@ -1532,7 +1532,7 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
 
       {/* ── Release management tab ──────────────────────────────────── */}
       {!loading && activeTab === 'release' && (
-        <GestaoReleaseTab />
+        <GestaoReleaseTab tickets={enrichedTickets} />
       )}
 
       {/* ── Workflow tab ─────────────────────────────────────────────── */}

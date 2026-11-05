@@ -36,7 +36,7 @@ function TipoBadge({ tipo }) {
   );
 }
 
-export default function GestaoReleaseTab() {
+export default function GestaoReleaseTab({ tickets = [] }) {
   const [releases, setReleases] = useState([]);
   const [showNewRelease, setShowNewRelease] = useState(false);
   const [addJanelaFor, setAddJanelaFor] = useState(null); // release object
@@ -61,6 +61,10 @@ export default function GestaoReleaseTab() {
   const selected = releases.find(r => r.id === selectedRelease) || null;
   // For calendar: show all releases (or only selected one)
   const calendarReleases = selected ? [selected] : releases;
+  // Tickets vinculados ao pacote selecionado
+  const releaseTickets = selected
+    ? tickets.filter(t => t.pacote && t.pacote === selected.nome)
+    : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -170,7 +174,7 @@ export default function GestaoReleaseTab() {
         </div>
       )}
 
-      {/* ── Calendar section ── */}
+      {/* ── Calendar + Tickets section ── */}
       {releases.length > 0 && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--gray-5)' }}>
@@ -188,7 +192,66 @@ export default function GestaoReleaseTab() {
               </span>
             )}
           </div>
-          <ReleaseCalendar releases={calendarReleases} />
+
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            {/* Calendar */}
+            <ReleaseCalendar releases={calendarReleases} />
+
+            {/* Tickets do pacote selecionado */}
+            {selected && (
+              <div style={{ flex: 1, minWidth: 280 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', letterSpacing: '0.06em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  TICKETS DO PACOTE
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', color: 'var(--indigo-11)', border: '1px solid rgba(99,102,241,0.3)' }}>
+                    {releaseTickets.length}
+                  </span>
+                </div>
+                {releaseTickets.length === 0 ? (
+                  <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: 12, color: 'var(--gray-9)', background: 'var(--gray-2)', border: '1px solid var(--gray-5)', borderRadius: 10 }}>
+                    Nenhum ticket com pacote <strong>{selected.nome}</strong>.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 460, overflowY: 'auto' }}>
+                    {releaseTickets.map(t => {
+                      const pct = t.percentualConclusao != null ? Number(t.percentualConclusao) : null;
+                      const pctColor = pct == null ? '#6b7280' : pct >= 100 ? '#4ade80' : pct >= 75 ? '#22d3ee' : pct >= 40 ? '#fbbf24' : '#f87171';
+                      return (
+                        <div key={t.issueKey || t.id} style={{
+                          padding: '8px 12px', borderRadius: 8,
+                          background: 'var(--gray-2)', border: '1px solid var(--gray-5)',
+                          display: 'flex', flexDirection: 'column', gap: 4,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--indigo-11)', fontFamily: 'monospace', flexShrink: 0 }}>
+                              {t.issueKey}
+                            </span>
+                            {t.status && (
+                              <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: 'var(--gray-4)', color: 'var(--gray-10)', whiteSpace: 'nowrap' }}>
+                                {t.status}
+                              </span>
+                            )}
+                            {pct != null && (
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: `${pctColor}18`, color: pctColor, border: `1px solid ${pctColor}44`, marginLeft: 'auto', flexShrink: 0 }}>
+                                {pct}%
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--gray-11)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {t.summary}
+                          </div>
+                          {(t._resolvedSquad || t.squadPrincipal) && (
+                            <div style={{ fontSize: 10, color: 'var(--gray-9)' }}>
+                              {t._resolvedSquad || t.squadPrincipal}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
