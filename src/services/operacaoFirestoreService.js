@@ -114,6 +114,15 @@ export async function writeTicketsGlobalBatch(tickets) {
     for (const field of SGT_MANAGED_FIELDS) {
       delete payload[field];
     }
+    // Remove campos com valor null/undefined para preservar valores existentes no Firestore
+    // quando o Jira não retorna dados para o campo (ex: naturezaIniciativa não resolvido).
+    // Campos com null real (ex: resolution) devem ser explicitamente incluídos apenas se
+    // o ticket já foi processado pelo backend (que usa expand:changelog).
+    for (const key of Object.keys(payload)) {
+      if (key !== 'syncedAt' && (payload[key] === null || payload[key] === undefined)) {
+        delete payload[key];
+      }
+    }
 
     batch.set(
       doc(db, TICKETS_GLOBAL, ticket.issueKey),

@@ -1131,6 +1131,13 @@ async function writeTicketsGlobal(tickets) {
       for (const field of SGT_MANAGED_FIELDS) {
         delete payload[field];
       }
+      // Remove campos com valor null/undefined para preservar valores existentes no Firestore
+      // quando o Jira não retorna/resolve o campo (ex: naturezaIniciativa não mapeado).
+      for (const key of Object.keys(payload)) {
+        if (key !== 'syncedAt' && (payload[key] === null || payload[key] === undefined)) {
+          delete payload[key];
+        }
+      }
 
       // Exceção: na PRIMEIRA carga (doc novo), inicializa prioridadeInterna com a
       // prioridade do Jira para que o campo tenha valor ao aparecer na UI.
