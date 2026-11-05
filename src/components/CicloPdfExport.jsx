@@ -30,7 +30,7 @@ const PT_W   = 32;
 const FT_W   = 70;
 const DC_W   = 70;
 const TP_W   = 28; // each Plano de Teste column
-const NI_W   = 130; // Natureza da Iniciativa (full value)
+const NI_W   = 90; // Natureza da Iniciativa (full value)
 const SA_W   = 68; // Situação Atual
 const DIH_W  = 65; // Data Início Homologação
 const DH_W   = 65; // Data Fim Homologação
@@ -311,6 +311,127 @@ function StatsSection({ filteredTickets, escopoFilter }) {
   );
 }
 
+// ── ReleaseCalendar ───────────────────────────────────────────────────────
+function ReleaseCalendar({ tickets }) {
+  const PALETTE = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#3b82f6','#f97316'];
+  const pacoteColors = new Map();
+  const dateMap = new Map(); // 'YYYY-MM-DD' -> first pacote
+  tickets.forEach(t => {
+    if (!t.pacote) return;
+    if (!pacoteColors.has(t.pacote)) pacoteColors.set(t.pacote, PALETTE[pacoteColors.size % PALETTE.length]);
+    const raw = t.dataConclusao || t.dataFimHomologacao || t.dataFimTesteInterno;
+    if (!raw) return;
+    const m = String(raw).match(/^(\d{4}-\d{2}-\d{2})/);
+    if (!m) return;
+    if (!dateMap.has(m[1])) dateMap.set(m[1], t.pacote);
+  });
+  if (pacoteColors.size === 0) return null;
+
+  const allDates = [...dateMap.keys()].sort();
+  const today = new Date();
+  const firstD = allDates[0] ? new Date(allDates[0]+'T12:00:00') : today;
+  const lastD  = allDates[allDates.length-1] ? new Date(allDates[allDates.length-1]+'T12:00:00') : today;
+
+  const months = [];
+  const cur = new Date(firstD.getFullYear(), firstD.getMonth(), 1);
+  const endM = new Date(lastD.getFullYear(), lastD.getMonth(), 1);
+  while (cur <= endM) { months.push(new Date(cur)); cur.setMonth(cur.getMonth()+1); }
+
+  const MNAMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const DLABELS = ['D','S','T','Q','Q','S','S'];
+  const CW = 20; const CH = 16;
+
+  return (
+    <div style={{ padding:'10px 12px 6px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0' }}>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:6 }}>
+        {months.map((md, mi) => {
+          const yr = md.getFullYear(); const mo = md.getMonth();
+          const dim = new Date(yr, mo+1, 0).getDate();
+          const fdow = new Date(yr, mo, 1).getDay();
+          const cells = [];
+          for (let i=0;i<fdow;i++) cells.push(null);
+          for (let d=1;d<=dim;d++) cells.push(d);
+          while (cells.length%7!==0) cells.push(null);
+          return (
+            <div key={mi} style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:5, padding:'5px 6px' }}>
+              <div style={{ textAlign:'center', fontSize:7.5, fontWeight:800, color:'#475569', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3 }}>
+                {MNAMES[mo]} {yr}
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:`repeat(7,${CW}px)`, marginBottom:1 }}>
+                {DLABELS.map((l,i)=><div key={i} style={{ textAlign:'center', fontSize:6, fontWeight:700, color:'#94a3b8' }}>{l}</div>)}
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:`repeat(7,${CW}px)` }}>
+                {cells.map((d,ci) => {
+                  if (!d) return <div key={ci} style={{ width:CW, height:CH }} />;
+                  const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                  const pac = dateMap.get(ds);
+                  const col = pac ? pacoteColors.get(pac) : null;
+                  const isTod = today.getFullYear()===yr && today.getMonth()===mo && today.getDate()===d;
+                  return (
+                    <div key={ci} style={{ width:CW, height:CH, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <div style={{ width:CH-2, height:CH-2, borderRadius:'50%', background:col||( isTod?'#e2e8f0':'transparent'), border:isTod&&!col?'1px solid #93c5fd':'none', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <span style={{ fontSize:6.5, fontWeight:col||isTod?700:400, color:col?'#fff':isTod?'#1e40af':'#475569' }}>{d}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {/* Legend */}
+      <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
+        {[...pacoteColors.entries()].map(([pac,col])=>(
+          <div key={pac} style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <div style={{ width:9, height:9, borderRadius:'50%', background:col, flexShrink:0 }} />
+            <span style={{ fontSize:6.5, fontWeight:700, color:'#475569' }}>{pac}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── ReleasePageContent ────────────────────────────────────────────────────
+function ReleasePageContent({ filteredTickets, includeObservacao, includePlanoTeste }) {
+  const withPacote = filteredTickets.filter(t => t.pacote);
+  const byPacote = new Map();
+  withPacote.forEach(t => {
+    if (!byPacote.has(t.pacote)) byPacote.set(t.pacote, []);
+    byPacote.get(t.pacote).push(t);
+  });
+  if (byPacote.size === 0) return null;
+  return (
+    <div style={{ width:PAGE_W, background:'#fff', color:'#111827', fontFamily:'Inter,Segoe UI,Arial,sans-serif', fontSize:10 }}>
+      {/* Section header */}
+      <div style={{ padding:'10px 12px 8px', background:'rgba(99,102,241,0.10)', borderBottom:'3px solid rgba(99,102,241,0.5)' }}>
+        <div style={{ fontSize:14, fontWeight:800, color:'#6366f1', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+          Gestão de Release — Agrupamento por Pacote
+        </div>
+        <div style={{ fontSize:8, color:'#818cf8', marginTop:2 }}>
+          {withPacote.length} ticket{withPacote.length!==1?'s':''} · {byPacote.size} pacote{byPacote.size!==1?'s':''}
+        </div>
+      </div>
+      {/* Calendar */}
+      <ReleaseCalendar tickets={withPacote} />
+      {/* Table */}
+      <ColHeaders includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true} />
+      {[...byPacote.entries()].sort(([a],[b])=>a.localeCompare(b,'pt-BR')).map(([pacote,tks]) => (
+        <div key={pacote}>
+          <div style={{ display:'flex', alignItems:'center', background:'rgba(99,102,241,0.08)', borderBottom:'1px solid rgba(99,102,241,0.25)', borderTop:'1px solid rgba(99,102,241,0.15)', minHeight:20, padding:'0 6px' }}>
+            <span style={{ fontSize:8.5, fontWeight:800, color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'0.04em' }}>PACOTE: {pacote}</span>
+            <span style={{ fontSize:7.5, color:'#818cf8', marginLeft:8 }}>({tks.length} ticket{tks.length!==1?'s':''})</span>
+          </div>
+          {tks.map((ticket,ti) => (
+            <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f0f4ff'} includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Column headers row ────────────────────────────────────────────────────
 function ColHeaders({ includeObservacao, includePlanoTeste, includeRelease }) {
   // Soma de todas as colunas fixas antes das colunas do Plano de Teste
@@ -398,36 +519,6 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
           ))}
         </div>
       ))}
-      {/* GESTAO DE RELEASE - tabela agrupada por pacote */}
-      {includeRelease && (() => {
-        const withPacote = filteredTickets.filter(t => t.pacote);
-        const byPacote = new Map();
-        withPacote.forEach(t => {
-          if (!byPacote.has(t.pacote)) byPacote.set(t.pacote, []);
-          byPacote.get(t.pacote).push(t);
-        });
-        if (byPacote.size === 0) return null;
-        return (
-          <div style={{ marginTop: 24 }}>
-            <div style={{ padding:'6px 12px', background:'rgba(99,102,241,0.12)', borderTop:'2px solid rgba(99,102,241,0.5)', borderBottom:'2px solid rgba(99,102,241,0.5)', marginBottom:4 }}>
-              <span style={{ fontSize:10, fontWeight:800, color:'#6366f1', textTransform:'uppercase', letterSpacing:'0.06em' }}>GESTAO DE RELEASE &mdash; Agrupamento por Pacote</span>
-            </div>
-            <ColHeaders includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true}/>
-            {[...byPacote.entries()].sort(([a],[b])=>a.localeCompare(b,'pt-BR')).map(([pacote, tks]) => (
-              <div key={pacote}>
-                <div style={{ display:'flex', alignItems:'center', background:'rgba(99,102,241,0.08)', borderBottom:'1px solid rgba(99,102,241,0.25)', borderTop:'1px solid rgba(99,102,241,0.15)', minHeight:20, padding:'0 6px' }}>
-                  <span style={{ fontSize:8.5, fontWeight:800, color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'0.04em' }}>PACOTE: {pacote}</span>
-                  <span style={{ fontSize:7.5, color:'#818cf8', marginLeft:8 }}>({tks.length} ticket{tks.length!==1?'s':''})</span>
-                </div>
-                {tks.map((ticket, ti) => (
-                  <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f0f4ff'} includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true}/>
-                ))}
-              </div>
-            ))}
-          </div>
-        );
-      })()}
-
       {/* FOOTER */}
       <div style={{ padding:'8px 12px 10px',borderTop:'3px solid #1e40af',background:'#f8fafc',display:'flex',flexDirection:'column',gap:4,marginTop:4 }}>
         <div style={{ display:'flex',gap:16,alignItems:'center' }}>
@@ -602,6 +693,48 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
     } finally {
       contentRoot.unmount();
       document.body.removeChild(contentEl);
+    }
+
+    // ── Release pages (separate section, starts on new page) ─────────────
+    if (includeRelease) {
+      const withPacote = filteredTickets.filter(t => t.pacote);
+      if (withPacote.length > 0) {
+        const releaseEl = document.createElement('div');
+        releaseEl.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:#fff;z-index:-9999;pointer-events:none;`;
+        document.body.appendChild(releaseEl);
+        const releaseRoot = ReactDOM.createRoot(releaseEl);
+        releaseRoot.render(
+          <ReleasePageContent
+            filteredTickets={filteredTickets}
+            includeObservacao={includeObservacao}
+            includePlanoTeste={includePlanoTeste}
+          />
+        );
+        await new Promise(r => setTimeout(r, 700));
+        try {
+          const rCanvas = await html2canvas(releaseEl, { scale: SCALE, useCORS: true, backgroundColor: '#fff', logging: false, width: PAGE_W });
+          const pageHeightPx2 = (A4_H / A4_W) * rCanvas.width;
+          let yOffset2 = 0;
+          while (yOffset2 < rCanvas.height) {
+            pdf.addPage();
+            const sliceH2 = Math.min(pageHeightPx2, rCanvas.height - yOffset2);
+            const pageCanvas2 = document.createElement('canvas');
+            pageCanvas2.width = rCanvas.width;
+            pageCanvas2.height = sliceH2;
+            const ctx2 = pageCanvas2.getContext('2d');
+            ctx2.fillStyle = '#fff';
+            ctx2.fillRect(0, 0, pageCanvas2.width, pageCanvas2.height);
+            ctx2.drawImage(rCanvas, 0, -yOffset2);
+            const imgData2 = pageCanvas2.toDataURL('image/png');
+            const sliceMmH2 = (sliceH2 / rCanvas.width) * A4_W;
+            pdf.addImage(imgData2, 'PNG', 0, 0, A4_W, sliceMmH2);
+            yOffset2 += sliceH2;
+          }
+        } finally {
+          releaseRoot.unmount();
+          document.body.removeChild(releaseEl);
+        }
+      }
     }
 
     // ── Back page ────────────────────────────────────────────────────────
