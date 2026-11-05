@@ -35,6 +35,7 @@ const SA_W   = 68; // Situação Atual
 const DIH_W  = 65; // Data Início Homologação
 const DH_W   = 65; // Data Fim Homologação
 const PCH_W  = 30; // % Conclusão Homologação
+const PAC_W  = 90; // Pacote (Release)
 const LEFT_W = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W; // 664 (DIH_W and DH_W are right-side extras)
 const MOT_W  = PAGE_W - LEFT_W; // 616 (motivo + flex)
 const ROW_H  = 22;
@@ -137,7 +138,7 @@ function PlanoTesteColumns({ ticket, cellBase }) {
 }
 
 // ── TicketRow ─────────────────────────────────────────────────────────────
-function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
+function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste, includeRelease }) {
   const eb = escopoBadge(ticket.escopo);
   const squad = trunc(resolveSquad(ticket), 9);
   const status = trunc(ticket.status||'', 14);
@@ -219,6 +220,15 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       <div style={{ ...cellBase, width:DC_W, padding:'0 2px' }}>
         <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#94a3b8', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fmtDate(ticket.dataConclusao)||'—'}</span>
       </div>
+      {/* Pacote (Release) */}
+      {includeRelease && (
+        <div style={{ ...cellBase, width:PAC_W, padding:'0 3px' }}>
+          {ticket.pacote
+            ? <span style={{ fontSize:6.5, fontWeight:700, color:'#a5b4fc', background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.35)', borderRadius:3, padding:'1px 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:PAC_W-8 }}>{trunc(ticket.pacote, 14)}</span>
+            : <span style={{ fontSize:7, color:'#94a3b8' }}>—</span>
+          }
+        </div>
+      )}
       {/* Natureza da Iniciativa */}
       <div style={{ ...cellBase, width:NI_W, padding:'0 3px' }}>
         <span style={{ fontSize:6.5, color:'#374151', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:NI_W-6 }}>{trunc(ticket.naturezaIniciativa||ticket.naturezaOperacao||'',20)}</span>
@@ -301,7 +311,7 @@ function StatsSection({ filteredTickets, escopoFilter }) {
 }
 
 // ── Column headers row ────────────────────────────────────────────────────
-function ColHeaders({ includeObservacao, includePlanoTeste }) {
+function ColHeaders({ includeObservacao, includePlanoTeste, includeRelease }) {
   // Soma de todas as colunas fixas antes das colunas do Plano de Teste
   const fixedW = TIX_W + SQ_W + PR_W + ST_W + SA_W + PC_W + PT_W + PCH_W + FT_W + DH_W + DC_W + NI_W + IMP_W;
   return (
@@ -330,6 +340,7 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
         {hCell(DIH_W,'Ini','Homolog')}
         {hCell(DH_W,'Fim','Homolog')}
         {hCell(DC_W,'Data','Conclusão')}
+        {includeRelease && hCell(PAC_W,'Pacote','Release')}
         {hCell(NI_W,'Nat.','Iniciativa')}
         {hCell(IMP_W,'⚠','Imp')}
         {includePlanoTeste && (
@@ -357,7 +368,7 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
 }
 
 // ── PdfContent (full document) ────────────────────────────────────────────
-function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilter, includeObservacao, includePlanoTeste }) {
+function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilter, includeObservacao, includePlanoTeste, includeRelease }) {
   return (
     <div style={{ width:PAGE_W,background:'#fff',color:'#111827',fontFamily:'Inter,Segoe UI,Arial,sans-serif',fontSize:10 }}>
       {/* PAGE HEADER */}
@@ -372,7 +383,7 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
       {/* STATS */}
       <StatsSection filteredTickets={filteredTickets} escopoFilter={escopoFilter}/>
       {/* COL HEADERS */}
-      <ColHeaders includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste}/>
+      <ColHeaders includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={includeRelease}/>
       {/* GROUPS */}
       {groups.map((group, gi) => (
         <div key={group.key}>
@@ -381,10 +392,40 @@ function PdfContent({ groups, filteredTickets, exportedAt, activeTab, escopoFilt
             <span style={{ fontSize:8.5,color:'#3b82f6',marginLeft:8 }}>({group.tickets.length})</span>
           </div>
           {group.tickets.map((ticket, ti) => (
-            <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f8fafc'} includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste}/>
+            <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f8fafc'} includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={includeRelease}/>
           ))}
         </div>
       ))}
+      {/* GESTAO DE RELEASE - tabela agrupada por pacote */}
+      {includeRelease && (() => {
+        const withPacote = filteredTickets.filter(t => t.pacote);
+        const byPacote = new Map();
+        withPacote.forEach(t => {
+          if (!byPacote.has(t.pacote)) byPacote.set(t.pacote, []);
+          byPacote.get(t.pacote).push(t);
+        });
+        if (byPacote.size === 0) return null;
+        return (
+          <div style={{ marginTop: 24 }}>
+            <div style={{ padding:'6px 12px', background:'rgba(99,102,241,0.12)', borderTop:'2px solid rgba(99,102,241,0.5)', borderBottom:'2px solid rgba(99,102,241,0.5)', marginBottom:4 }}>
+              <span style={{ fontSize:10, fontWeight:800, color:'#6366f1', textTransform:'uppercase', letterSpacing:'0.06em' }}>GESTAO DE RELEASE &mdash; Agrupamento por Pacote</span>
+            </div>
+            <ColHeaders includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true}/>
+            {[...byPacote.entries()].sort(([a],[b])=>a.localeCompare(b,'pt-BR')).map(([pacote, tks]) => (
+              <div key={pacote}>
+                <div style={{ display:'flex', alignItems:'center', background:'rgba(99,102,241,0.08)', borderBottom:'1px solid rgba(99,102,241,0.25)', borderTop:'1px solid rgba(99,102,241,0.15)', minHeight:20, padding:'0 6px' }}>
+                  <span style={{ fontSize:8.5, fontWeight:800, color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'0.04em' }}>PACOTE: {pacote}</span>
+                  <span style={{ fontSize:7.5, color:'#818cf8', marginLeft:8 }}>({tks.length} ticket{tks.length!==1?'s':''})</span>
+                </div>
+                {tks.map((ticket, ti) => (
+                  <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f0f4ff'} includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true}/>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* FOOTER */}
       <div style={{ padding:'8px 12px 10px',borderTop:'3px solid #1e40af',background:'#f8fafc',display:'flex',flexDirection:'column',gap:4,marginTop:4 }}>
         <div style={{ display:'flex',gap:16,alignItems:'center' }}>
@@ -467,7 +508,7 @@ function buildGroupsByWorkflow(filteredTickets, escopoFilter) {
 }
 
 // ── Main export function ──────────────────────────────────────────────────
-export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTickets = [], backlogTickets = [], activeTab = 'ciclos', escopoFilter, includeObservacao = false, includePlanoTeste = false }) {
+export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTickets = [], backlogTickets = [], activeTab = 'ciclos', escopoFilter, includeObservacao = false, includePlanoTeste = false, includeRelease = false }) {
   const exportedAt = new Date().toLocaleString('pt-BR', { day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit' });
   const groups = activeTab==='workflow'
     ? buildGroupsByWorkflow(filteredTickets, escopoFilter)
@@ -533,6 +574,7 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
         escopoFilter={escopoFilter}
         includeObservacao={includeObservacao}
         includePlanoTeste={includePlanoTeste}
+        includeRelease={includeRelease}
       />
     );
     await new Promise(r => setTimeout(r, 700));

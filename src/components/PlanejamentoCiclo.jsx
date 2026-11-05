@@ -456,6 +456,7 @@ export default function PlanejamentoCiclo() {
   );
   const [includeObservacaoExport, setIncludeObservacaoExport] = useState(false);
   const [includePlanoTesteExport, setIncludePlanoTesteExport] = useState(false);
+  const [includeReleaseExport, setIncludeReleaseExport] = useState(false);
 
   const [filtersCollapsed, setFiltersCollapsed] = useState(
     () => localStorage.getItem('ciclo_filtersCollapsed') === 'true'
@@ -1216,6 +1217,10 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
             <input type="checkbox" checked={includePlanoTesteExport} onChange={e=>setIncludePlanoTesteExport(e.target.checked)} style={{ accentColor:'var(--indigo-9)', width:12, height:12 }} />
             Plano de Teste no PDF
           </label>
+          <label style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--gray-10)', cursor:'pointer', userSelect:'none', padding:'6px 10px', border:'1px solid var(--gray-5)', borderRadius:8, background:'var(--gray-3)' }}>
+            <input type="checkbox" checked={includeReleaseExport} onChange={e=>setIncludeReleaseExport(e.target.checked)} style={{ accentColor:'var(--indigo-9)', width:12, height:12 }} />
+            Gestão de Release no PDF
+          </label>
           <button
             title="Exportar PDF A4 paisagem da lista de tickets"
             onClick={async () => {
@@ -1226,8 +1231,9 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
                 backlogTickets,
                 activeTab,
                 escopoFilter,
-                includeObservacao: includeObservacaoExport,
-                includePlanoTeste: includePlanoTesteExport,
+              includeObservacao: includeObservacaoExport,
+              includePlanoTeste: includePlanoTesteExport,
+              includeRelease: includeReleaseExport,
               });
             }}
             style={{
