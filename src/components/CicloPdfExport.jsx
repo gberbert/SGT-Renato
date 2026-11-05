@@ -200,7 +200,10 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       </div>
       {/* Data Início Homologação */}
       <div style={{ ...cellBase, width:DIH_W, padding:'0 2px' }}>
-        <span style={{ fontSize:7.5, color:ticket.dataInicioHomologacaoEfetiva||ticket.dataInicioHomologacaoPlanejada?'#7c3aed':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataInicioHomologacaoEfetiva||ticket.dataInicioHomologacaoPlanejada)||'—'}</span>
+        {(() => {
+          const dih = ticket.dataInicioHomologacao || ticket.dataInicioHomologacaoEfetiva || ticket.dataInicioHomologacaoPlanejada;
+          return <span style={{ fontSize:7.5, color:dih?'#7c3aed':'#94a3b8', textAlign:'center' }}>{fmtDate(dih)||'—'}</span>;
+        })()}
       </div>
       {/* Data Fim Homologação */}
       <div style={{ ...cellBase, width:DH_W, padding:'0 2px' }}>
