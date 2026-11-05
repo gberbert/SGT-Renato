@@ -314,21 +314,50 @@ function StatsSection({ filteredTickets, escopoFilter }) {
 // ── ReleaseCalendar ───────────────────────────────────────────────────────
 function ReleaseCalendar({ tickets }) {
   const PALETTE = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#3b82f6','#f97316'];
-  const pacoteColors = new Map();
-  const dateMap = new Map(); // 'YYYY-MM-DD' -> first pacote
+  const MO_PT = { jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11 };
+
+  // Parse release date embedded in pacote name, e.g. "Pacote Fixo 26-nov" → Date(2026, 10, 26)
+  function parsePacoteDate(name) {
+    const m = String(name||'').toLowerCase().match(/(\d{1,2})[-\/](jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/);
+    if (!m) return null;
+    const day = parseInt(m[1], 10);
+    const mo  = MO_PT[m[2]];
+    const now = new Date();
+    let yr = now.getFullYear();
+    // If parsed date is more than 3 months in the past, assume next year
+    const candidate = new Date(yr, mo, day);
+    if (candidate < new Date(now.getFullYear(), now.getMonth() - 3, 1)) yr++;
+    return new Date(yr, mo, day);
+  }
+
+  // Build per-pacote info: color, release date (parsed from name), ticket count
+  const pacoteInfo = new Map(); // pacote -> { color, date, count }
   tickets.forEach(t => {
     if (!t.pacote) return;
-    if (!pacoteColors.has(t.pacote)) pacoteColors.set(t.pacote, PALETTE[pacoteColors.size % PALETTE.length]);
-    const raw = t.dataConclusao || t.dataFimHomologacao || t.dataFimTesteInterno;
-    if (!raw) return;
-    const m = String(raw).match(/^(\d{4}-\d{2}-\d{2})/);
-    if (!m) return;
-    if (!dateMap.has(m[1])) dateMap.set(m[1], t.pacote);
+    if (!pacoteInfo.has(t.pacote)) {
+      pacoteInfo.set(t.pacote, {
+        color: PALETTE[pacoteInfo.size % PALETTE.length],
+        date: parsePacoteDate(t.pacote),
+        count: 0,
+      });
+    }
+    pacoteInfo.get(t.pacote).count++;
   });
-  if (pacoteColors.size === 0) return null;
 
-  const allDates = [...dateMap.keys()].sort();
+  if (pacoteInfo.size === 0) return null;
+
+  // dateMap: 'YYYY-MM-DD' -> pacote  (one dot per pacote on its release date)
+  const dateMap = new Map();
+  pacoteInfo.forEach((info, pac) => {
+    if (!info.date) return;
+    const d = info.date;
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    dateMap.set(ds, pac);
+  });
+
+  // Determine months range from release dates (or today if none parseable)
   const today = new Date();
+  const allDates = [...dateMap.keys()].sort();
   const firstD = allDates[0] ? new Date(allDates[0]+'T12:00:00') : today;
   const lastD  = allDates[allDates.length-1] ? new Date(allDates[allDates.length-1]+'T12:00:00') : today;
 
@@ -339,55 +368,105 @@ function ReleaseCalendar({ tickets }) {
 
   const MNAMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const DLABELS = ['D','S','T','Q','Q','S','S'];
-  const CW = 20; const CH = 16;
+  const CW = 22; const CH = 18;
+
+  // Sorted pacotes by date for legend + stats
+  const sortedPacotes = [...pacoteInfo.entries()].sort((a, b) => {
+    const ta = a[1].date ? a[1].date.getTime() : Infinity;
+    const tb = b[1].date ? b[1].date.getTime() : Infinity;
+    return ta - tb;
+  });
+
+  // Stats box style (same as StatsSection)
+  const BOX_H = 54;
+  const box = (col) => ({
+    background: `${col}1a`, border: `1px solid ${col}55`,
+    borderRadius: 5, padding: '4px 7px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    minWidth: 72, height: BOX_H,
+  });
 
   return (
-    <div style={{ padding:'10px 12px 6px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0' }}>
-      <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:6 }}>
-        {months.map((md, mi) => {
-          const yr = md.getFullYear(); const mo = md.getMonth();
-          const dim = new Date(yr, mo+1, 0).getDate();
-          const fdow = new Date(yr, mo, 1).getDay();
-          const cells = [];
-          for (let i=0;i<fdow;i++) cells.push(null);
-          for (let d=1;d<=dim;d++) cells.push(d);
-          while (cells.length%7!==0) cells.push(null);
-          return (
-            <div key={mi} style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:5, padding:'5px 6px' }}>
-              <div style={{ textAlign:'center', fontSize:7.5, fontWeight:800, color:'#475569', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3 }}>
-                {MNAMES[mo]} {yr}
-              </div>
-              <div style={{ display:'grid', gridTemplateColumns:`repeat(7,${CW}px)`, marginBottom:1 }}>
-                {DLABELS.map((l,i)=><div key={i} style={{ textAlign:'center', fontSize:6, fontWeight:700, color:'#94a3b8' }}>{l}</div>)}
-              </div>
-              <div style={{ display:'grid', gridTemplateColumns:`repeat(7,${CW}px)` }}>
-                {cells.map((d,ci) => {
-                  if (!d) return <div key={ci} style={{ width:CW, height:CH }} />;
-                  const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                  const pac = dateMap.get(ds);
-                  const col = pac ? pacoteColors.get(pac) : null;
-                  const isTod = today.getFullYear()===yr && today.getMonth()===mo && today.getDate()===d;
-                  return (
-                    <div key={ci} style={{ width:CW, height:CH, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <div style={{ width:CH-2, height:CH-2, borderRadius:'50%', background:col||( isTod?'#e2e8f0':'transparent'), border:isTod&&!col?'1px solid #93c5fd':'none', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <span style={{ fontSize:6.5, fontWeight:col||isTod?700:400, color:col?'#fff':isTod?'#1e40af':'#475569' }}>{d}</span>
+    <div style={{ display:'flex', gap:16, padding:'10px 12px 8px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0', alignItems:'flex-start' }}>
+      {/* LEFT: calendars + legend */}
+      <div style={{ flex:1 }}>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:8 }}>
+          {months.map((md, mi) => {
+            const yr = md.getFullYear(); const mo = md.getMonth();
+            const dim = new Date(yr, mo+1, 0).getDate();
+            const fdow = new Date(yr, mo, 1).getDay();
+            const cells = [];
+            for (let i=0;i<fdow;i++) cells.push(null);
+            for (let d=1;d<=dim;d++) cells.push(d);
+            while (cells.length%7!==0) cells.push(null);
+            return (
+              <div key={mi} style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:6, padding:'6px 8px' }}>
+                <div style={{ textAlign:'center', fontSize:8, fontWeight:800, color:'#475569', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>
+                  {MNAMES[mo]} {yr}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:`repeat(7,${CW}px)`, marginBottom:2 }}>
+                  {DLABELS.map((l,i)=>(
+                    <div key={i} style={{ textAlign:'center', fontSize:6.5, fontWeight:700, color:'#94a3b8' }}>{l}</div>
+                  ))}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:`repeat(7,${CW}px)` }}>
+                  {cells.map((d, ci) => {
+                    if (!d) return <div key={ci} style={{ width:CW, height:CH }} />;
+                    const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    const pac = dateMap.get(ds);
+                    const col = pac ? pacoteInfo.get(pac)?.color : null;
+                    const isTod = today.getFullYear()===yr && today.getMonth()===mo && today.getDate()===d;
+                    const isRelease = !!col;
+                    return (
+                      <div key={ci} style={{ width:CW, height:CH, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <div style={{
+                          width: isRelease ? CH : CH-2,
+                          height: isRelease ? CH : CH-2,
+                          borderRadius: '50%',
+                          background: col || (isTod ? '#e2e8f0' : 'transparent'),
+                          border: isTod && !col ? '1.5px solid #93c5fd' : isRelease ? `2px solid ${col}` : 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: isRelease ? `0 0 0 2px ${col}33` : 'none',
+                        }}>
+                          <span style={{ fontSize:7, fontWeight: col||isTod ? 800 : 400, color: col ? '#fff' : isTod ? '#1e40af' : '#475569', lineHeight:1 }}>{d}</span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
+            );
+          })}
+        </div>
+        {/* Legend */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
+          {sortedPacotes.map(([pac, info]) => (
+            <div key={pac} style={{ display:'flex', alignItems:'center', gap:5 }}>
+              <div style={{ width:10, height:10, borderRadius:'50%', background:info.color, flexShrink:0, boxShadow:`0 0 0 2px ${info.color}33` }} />
+              <span style={{ fontSize:7, fontWeight:700, color:'#475569' }}>{pac}</span>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
-      {/* Legend */}
-      <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
-        {[...pacoteColors.entries()].map(([pac,col])=>(
-          <div key={pac} style={{ display:'flex', alignItems:'center', gap:4 }}>
-            <div style={{ width:9, height:9, borderRadius:'50%', background:col, flexShrink:0 }} />
-            <span style={{ fontSize:6.5, fontWeight:700, color:'#475569' }}>{pac}</span>
-          </div>
-        ))}
+
+      {/* RIGHT: stats boxes — Por Pacote */}
+      <div style={{ flexShrink:0, display:'flex', flexDirection:'column', gap:4, borderLeft:'1px solid #e2e8f0', paddingLeft:14 }}>
+        <div style={{ fontSize:7, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3 }}>Por Pacote</div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+          {sortedPacotes.map(([pac, info]) => {
+            const dateLabel = info.date
+              ? `${String(info.date.getDate()).padStart(2,'0')}/${String(info.date.getMonth()+1).padStart(2,'0')}`
+              : '';
+            return (
+              <div key={pac} style={box(info.color)}>
+                <span style={{ fontSize:26, fontWeight:900, color:info.color, lineHeight:1 }}>{info.count}</span>
+                <span style={{ fontSize:6, fontWeight:700, color:info.color, marginTop:2, textAlign:'center', maxWidth:80, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', letterSpacing:'0.02em' }}>
+                  {dateLabel ? dateLabel+' · ' : ''}{trunc(pac, 10)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
