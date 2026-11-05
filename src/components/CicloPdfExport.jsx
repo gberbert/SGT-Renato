@@ -182,17 +182,23 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       })()}
       {/* % Conc */}
       <div style={{ ...cellBase, width:PC_W }}>
-        <span style={{ fontSize:7.5, fontWeight:700, color:pct==='100%'?'#16a34a':'#374151' }}>{pct}</span>
+        <span style={{ fontSize:7.5, fontWeight:700, color:pct==='100%'?'#16a34a':pct===''?'#94a3b8':'#374151' }}>{pct||'0%'}</span>
       </div>
       {/* % Conclusão Teste Interno */}
       <div style={{ ...cellBase, width:PT_W }}>
-        <span style={{ fontSize:7.5, fontWeight:700, color:pctT==='100%'?'#16a34a':'#374151' }}>{ticket.percentualConclusaoTesteInterno!=null?`${ticket.percentualConclusaoTesteInterno}%`:''}</span>
+        {(() => {
+          const v = ticket.percentualConclusaoTesteInterno;
+          const s = v != null ? `${v}%` : '0%';
+          return <span style={{ fontSize:7.5, fontWeight:700, color:s==='100%'?'#16a34a':v==null?'#94a3b8':'#374151' }}>{s}</span>;
+        })()}
       </div>
       {/* % Conclusão Homologação */}
       <div style={{ ...cellBase, width:PCH_W }}>
-        <span style={{ fontSize:7.5, fontWeight:700, color:ticket.percentualConclusaoHomologacao!=null&&ticket.percentualConclusaoHomologacao!==''?'#7c3aed':'#94a3b8' }}>
-          {ticket.percentualConclusaoHomologacao!=null&&ticket.percentualConclusaoHomologacao!==''?`${ticket.percentualConclusaoHomologacao}%`:''}
-        </span>
+        {(() => {
+          const v = ticket.percentualConclusaoHomologacao;
+          const s = v != null && v !== '' ? `${v}%` : '0%';
+          return <span style={{ fontSize:7.5, fontWeight:700, color:s==='100%'?'#7c3aed':v==null||v===''?'#94a3b8':'#7c3aed' }}>{s}</span>;
+        })()}
       </div>
       {/* Fim Teste */}
       <div style={{ ...cellBase, width:FT_W, padding:'0 2px' }}>
