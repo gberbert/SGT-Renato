@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar, Search, AlertCircle, Link2, Flame, ArrowUp, Minus, ArrowDown } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, Trash2, Calendar, Search, AlertCircle, Link2, Flame, ArrowUp, Minus, ArrowDown, Package } from 'lucide-react';
 import { updateCiclo, deleteCiclo } from '../services/cicloService';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
@@ -676,6 +676,15 @@ export function TicketRow({ ticket, cicloId, ciclos, onMoveToCiclo, onMoveToBack
           style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: 'rgba(6,182,212,0.15)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.4)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }}
         >
           <Link2 size={13} />
+        </span>
+      )}
+      {ticket.pacote && String(ticket.pacote).trim() !== '' && (
+        <span
+          title={`Pacote (Release): ${ticket.pacote}`}
+          style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.4)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}
+        >
+          <Package size={12} style={{ flexShrink: 0 }} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(ticket.pacote).replace(/Pacote\s+/i, '')}</span>
         </span>
       )}
       {(() => {
