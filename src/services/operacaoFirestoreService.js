@@ -66,21 +66,27 @@ export async function resetOperacaoStats() {
 
 // Campos gerenciados internamente pelo SGT — nunca devem ser sobrescritos pelo sync do Jira.
 // Preenchidos manualmente pela equipe via UI; qualquer valor enviado pelo Jira seria incorreto.
+// NOTAS IMPORTANTES:
+// - estimativaMacro → vem do Jira (customfield_10266) — NÃO proteger
+// - estimativaTotal → vem do Jira (customfield_10437) — NÃO proteger
+// - demandaVulnerabilidade → vem do Jira (customfield_19626) — NÃO proteger
+// - sistemasImpactados → vem do Jira (customfield_10325) — NÃO proteger
+// Manter alinhado com SGT_MANAGED_FIELDS em functions/jiraGlobalSync.js
 const SGT_MANAGED_FIELDS = [
   'responsavelAtual',
   'dataPrevisao',
   'observacaoAdicional',
-  'estimativaMacro',
+  // 'estimativaMacro',  // REMOVIDO: vem do Jira customfield_10266 — sempre sincronizar
   'impedimento',
   'impedido',
   'radarFieldsUpdatedAt',
   'prioridadeInterna',
-  'estimativaTotal',
+  // 'estimativaTotal',  // REMOVIDO: vem do Jira customfield_10437 — sempre sincronizar
   'estimativaInterna',
   'squadPrincipal',
   'squad',
-  // 'sistemasImpactados' → REMOVIDO: deve ser sempre atualizado pelo sync do Jira
   'percentualConclusao',
+  'percentualConclusaoTesteInterno',  // campo SGT — não existe no Jira
   'responsavelDesenvolvimento',
   'responsavelTesteInterno',
   'dataFimDesenvolvimento',

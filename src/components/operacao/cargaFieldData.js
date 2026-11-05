@@ -42,7 +42,7 @@ const _raw = [
   ['torreAtuacao','Torre de Atuação','Custom Jira','jira','S','Torre de Atuação da Demanda'],
   ['fornecedoresDropdown','Fornecedores (dropdown)','Custom Jira','jira','S','Fornecedores'],
   ['severidade','Severidade','Custom Jira','jira','S','Severidade[Dropdown]'],
-  ['demandaVulnerabilidade','Demanda Vulnerabilidade','SGT Gerenciado','sgt','N','—'],
+  ['demandaVulnerabilidade','Demanda Vulnerabilidade','Custom Jira','jira','S','customfield_19626'],
   ['sistemasImpactados','Sistemas Impactados','Custom Jira','jira','S','Sistemas Impactados (customfield_10325)'],
   ['responsavelExecucao','Responsável Execução','Custom Jira','jira','S','Responsável pela Execução'],
   ['createdAt','Criado em','Datas Jira','jira','S','created'],
@@ -64,6 +64,8 @@ const _raw = [
   // Calculados pelo sistema
   ['syncedAt','Timestamp do sync','Calculados','calculado','C','—'],
   ['agingDays','Aging em dias','Calculados','calculado','C','—'],
+  ['estimativaMacroJira','Estimativa Macro (texto Jira)','Calculados','calculado','C','—'],
+  ['linkedTicketKeys','Chaves tickets vinculados (alias)','Vínculos','jira','S','Parent Link'],
   // prioridadeInterna: inicializado do Jira no 1º upsert, depois protegido
   ['prioridadeInterna','Prioridade Interna','SGT Gerenciado','sgt','P','priority.name'],
   // Campos SGT - NUNCA sobrescritos pelo sync Jira
@@ -79,6 +81,7 @@ const _raw = [
   ['squadPrincipal','Squad Principal','SGT Gerenciado','sgt','N','—'],
   ['squad','Squad','SGT Gerenciado','sgt','N','—'],
   ['percentualConclusao','% Conclusão','SGT Gerenciado','sgt','N','—'],
+  ['percentualConclusaoTesteInterno','% Conclusão Teste Interno','SGT Gerenciado','sgt','N','—'],
   ['responsavelDesenvolvimento','Resp. Desenvolvimento','SGT Gerenciado','sgt','N','—'],
   ['responsavelTesteInterno','Resp. Teste Interno','SGT Gerenciado','sgt','N','—'],
   ['dataFimDesenvolvimento','Data Fim Desenvolvimento','SGT Gerenciado','sgt','N','—'],
