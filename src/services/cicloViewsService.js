@@ -45,9 +45,15 @@ export function serializeFilters(state) {
     naturezaOperacaoFilter: [...(state.naturezaOperacaoFilter ?? [])],
     naturezaIniciativaFilter: [...(state.naturezaIniciativaFilter ?? [])],
     issuetypeFilter: [...(state.issuetypeFilter ?? [])],
+    pctConclusaoFilter: [...(state.pctConclusaoFilter ?? [])],
+    pctTesteInternoFilter: [...(state.pctTesteInternoFilter ?? [])],
+    cicloFilter: [...(state.cicloFilter ?? [])],
     dateField: state.dateField ?? 'none',
     impedimentoFilter: state.impedimentoFilter ?? false,
-    showEstimativa: state.showEstimativa ?? true,
+    demandaVulnerabFilter: state.demandaVulnerabFilter ?? false,
+    showEstimativa: state.showEstimativa ?? false,
+    createdAtFrom: state.createdAtFrom ?? '',
+    createdAtTo: state.createdAtTo ?? '',
   };
 }
 
@@ -68,9 +74,15 @@ export function deserializeFilters(filters) {
     naturezaOperacaoFilter: new Set(filters.naturezaOperacaoFilter ?? []),
     naturezaIniciativaFilter: new Set(filters.naturezaIniciativaFilter ?? []),
     issuetypeFilter: new Set(filters.issuetypeFilter ?? []),
+    pctConclusaoFilter: new Set(filters.pctConclusaoFilter ?? []),
+    pctTesteInternoFilter: new Set(filters.pctTesteInternoFilter ?? []),
+    cicloFilter: new Set(filters.cicloFilter ?? []),
     dateField: filters.dateField ?? 'none',
     impedimentoFilter: filters.impedimentoFilter ?? false,
-    showEstimativa: filters.showEstimativa ?? true,
+    demandaVulnerabFilter: filters.demandaVulnerabFilter ?? false,
+    showEstimativa: filters.showEstimativa ?? false,
+    createdAtFrom: filters.createdAtFrom ?? '',
+    createdAtTo: filters.createdAtTo ?? '',
   };
 }
 

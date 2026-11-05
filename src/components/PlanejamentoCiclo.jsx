@@ -920,10 +920,15 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
     setSistemasFilter(f.sistemasFilter ?? new Set());
     setNaturezaIniciativaFilter(f.naturezaIniciativaFilter ?? new Set());
     setIssuetypeFilter(f.issuetypeFilter ?? new Set());
+    setPctConclusaoFilter(f.pctConclusaoFilter ?? new Set());
+    setPctTesteInternoFilter(f.pctTesteInternoFilter ?? new Set());
+    setCicloFilter(f.cicloFilter ?? new Set());
     setDateField(f.dateField ?? 'none');
     setImpedimentoFilter(f.impedimentoFilter ?? false);
     setDemandaVulnerabFilter(f.demandaVulnerabFilter ?? false);
     setShowEstimativa(f.showEstimativa ?? false);
+    setCreatedAtFrom(f.createdAtFrom ?? '');
+    setCreatedAtTo(f.createdAtTo ?? '');
     setActiveViewId(view.id);
     setActiveViewName(view.name);
     setShowViewsPanel(false);
@@ -937,7 +942,9 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
         search, escopoFilter, squadFilter, grupoSolucionadorFilter,
         filaFilter, statusFilter, prioridadeFilter, respDevFilter,
         respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
+        pctConclusaoFilter, pctTesteInternoFilter, cicloFilter,
         dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
+        createdAtFrom, createdAtTo,
       });
       setShowViewsPanel(false);
     } catch (e) {
@@ -948,7 +955,9 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
   }, [activeViewId, search, escopoFilter, squadFilter, grupoSolucionadorFilter,
       filaFilter, statusFilter, prioridadeFilter, respDevFilter,
       respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
-      dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa]);
+      pctConclusaoFilter, pctTesteInternoFilter, cicloFilter,
+      dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
+      createdAtFrom, createdAtTo]);
 
   const handleSaveView = useCallback(async () => {
     if (!newViewName.trim()) return;
@@ -960,7 +969,9 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
           search, escopoFilter, squadFilter, grupoSolucionadorFilter,
           filaFilter, statusFilter, prioridadeFilter, respDevFilter,
           respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
+          pctConclusaoFilter, pctTesteInternoFilter, cicloFilter,
           dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
+          createdAtFrom, createdAtTo,
         },
         newViewIsPrincipal,
       );
@@ -974,7 +985,9 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
     search, escopoFilter, squadFilter, grupoSolucionadorFilter,
     filaFilter, statusFilter, prioridadeFilter, respDevFilter,
     respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter,
+    pctConclusaoFilter, pctTesteInternoFilter, cicloFilter,
     dateField, impedimentoFilter, demandaVulnerabFilter, showEstimativa,
+    createdAtFrom, createdAtTo,
   ]);
 
   const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, cicloFilter]
