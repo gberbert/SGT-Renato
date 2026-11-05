@@ -743,6 +743,7 @@ const data = d.data();
     percentualConclusao: data.percentualConclusao ?? null,
     percentualConclusaoTesteInterno: data.percentualConclusaoTesteInterno ?? null,
     ticketsVinculados: data.ticketsVinculados || '',
+    pacote: data.pacote || null,
     motivoImpedimento: data.motivoImpedimento || '',
     fila: data.fila || '',
     planejamentoHorasDemandaFast: data.planejamentoHorasDemandaFast ?? null,
