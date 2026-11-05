@@ -221,13 +221,18 @@ export default function GestaoReleaseTab({ tickets = [] }) {
                           background: 'var(--gray-2)', border: '1px solid var(--gray-5)',
                           display: 'flex', flexDirection: 'column', gap: 4,
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--indigo-11)', fontFamily: 'monospace', flexShrink: 0 }}>
                               {t.issueKey}
                             </span>
                             {t.status && (
                               <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: 'var(--gray-4)', color: 'var(--gray-10)', whiteSpace: 'nowrap' }}>
                                 {t.status}
+                              </span>
+                            )}
+                            {(t._resolvedSquad || t.squadPrincipal) && (
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.3)', whiteSpace: 'nowrap' }}>
+                                {t._resolvedSquad || t.squadPrincipal}
                               </span>
                             )}
                             {pct != null && (
@@ -239,11 +244,6 @@ export default function GestaoReleaseTab({ tickets = [] }) {
                           <div style={{ fontSize: 12, color: 'var(--gray-11)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {t.summary}
                           </div>
-                          {(t._resolvedSquad || t.squadPrincipal) && (
-                            <div style={{ fontSize: 10, color: 'var(--gray-9)' }}>
-                              {t._resolvedSquad || t.squadPrincipal}
-                            </div>
-                          )}
                         </div>
                       );
                     })}
