@@ -785,7 +785,7 @@
 .dmd-modal {
   display: flex;
   flex-direction: column;
-  width: min(820px, 100%);
+  width: min(1000px, 96vw);
   max-height: 90vh;
   border-radius: 16px;
   border: 1px solid var(--glass-border);
