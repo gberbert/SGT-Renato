@@ -718,6 +718,7 @@ const data = d.data();
     dataInicioAtendimento: data.dataInicioAtendimento || data.jiraDatesFlow?.inicioDemanda || null,
     dataAprovacaoQaPlanejada: data.dataAprovacaoQaPlanejada || data.jiraDatesFlow?.dataEntrega || null,
     dataInicioHomologacaoPlanejada: data.dataInicioHomologacaoPlanejada || null,
+    dataInicioHomologacao: data.dataInicioHomologacao || data.dataInicioHomologacaoEfetiva || null,
     dataInicioHomologacaoEfetiva: data.dataInicioHomologacaoEfetiva || null,
     dataFimHomologacaoPlanejada: data.dataFimHomologacaoPlanejada || null,
     dataFimHomologacaoEfetiva: data.dataFimHomologacaoEfetiva || data.jiraDatesFlow?.aprovacaoHomologacao || null,
