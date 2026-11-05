@@ -1448,8 +1448,21 @@ const handleSave = useCallback(async () => {
             <div className="dmd-tab-content">
               {(() => {
                 const IA_STATUS_OPTIONS = ['A fazer', 'Em andamento', 'Concluído', 'Bloqueado'];
+                // Status Adoção de IA = calculado pelos 4 sub-campos
+                // =SE(CONT.SE(E:H;"Em Andamento")>0;"Em Andamento";SE(CONT.SE(E:H;"Concluído")=4;"Concluído";SE(CONT.SE(E:H;"Concluído")>0;"Em Andamento";"Backlog")))
+                const subFields = ['iaAnaliseIA', 'iaAnaliseHumana', 'iaDeployQa', 'iaDeployPrd'];
+                const subValues = subFields.map(k => pendingChanges[k] !== undefined ? pendingChanges[k] : (ticket[k] || ''));
+                const countEmAndamento = subValues.filter(v => v === 'Em andamento').length;
+                const countConcluido = subValues.filter(v => v === 'Concluído').length;
+                const computedStatus = countEmAndamento > 0
+                  ? 'Em Andamento'
+                  : countConcluido === 4
+                    ? 'Concluído'
+                    : countConcluido > 0
+                      ? 'Em Andamento'
+                      : 'Backlog';
+
                 const iaFields = [
-                  { key: 'iaStatusAdocao',  label: 'Status Adoção de IA' },
                   { key: 'iaAnaliseIA',      label: 'Análise IA' },
                   { key: 'iaAnaliseHumana',  label: 'Análise Humana' },
                   { key: 'iaDeployQa',       label: 'Deploy QA' },
@@ -1489,6 +1502,12 @@ const handleSave = useCallback(async () => {
 
                       {/* Left column: status fields stacked */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: 220, flexShrink: 0 }}>
+                        {/* Status Adoção de IA — somente leitura, calculado */}
+                        <div style={{ ...cardBase, borderColor: statusColor(computedStatus) + '55', background: statusColor(computedStatus) + '0a' }}>
+                          <span style={{ ...lbl, color: statusColor(computedStatus) }}>Status Adoção de IA</span>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: statusColor(computedStatus) }}>{computedStatus}</span>
+                          <span style={{ fontSize: 9, color: 'var(--gray-8)', marginTop: 2 }}>calculado automaticamente</span>
+                        </div>
                         {iaFields.map(f => {
                           const val = pendingChanges[f.key] !== undefined ? pendingChanges[f.key] : (ticket[f.key] || '');
                           const sc = statusColor(val);
