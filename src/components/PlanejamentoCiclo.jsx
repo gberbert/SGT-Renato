@@ -58,6 +58,7 @@ const STATUS_FIELDS_TO_LOG = new Set([
   'ptNaoAplicavel',
   'ptNaoExecutado',
   'pacote',
+  'adocaoIa',
 ]);
 
 const STATUS_FIELD_LABELS = {
@@ -80,6 +81,7 @@ const STATUS_FIELD_LABELS = {
   ptNaoAplicavel: 'PT — Não Aplicável',
   ptNaoExecutado: 'PT — Não Executado',
   pacote: 'Pacote (Release)',
+  adocaoIa: 'Adoção de IA',
 };
 
 const sel = {
@@ -423,6 +425,8 @@ export default function PlanejamentoCiclo() {
   const [impedimentoFilter, setImpedimentoFilter] = useState(false);
   const [demandaVulnerabFilter, setDemandaVulnerabFilter] = useState(false);
   const [cicloFilter, setCicloFilter] = useState(new Set());
+  const [pacoteFilter, setPacoteFilter] = useState(new Set());
+  const [hideConcluidos, setHideConcluidos] = useState(false);
   const [pctConclusaoFilter, setPctConclusaoFilter] = useState(new Set());
   const [pctTesteInternoFilter, setPctTesteInternoFilter] = useState(new Set());
   const [createdAtFrom, setCreatedAtFrom] = useState('');
@@ -436,7 +440,7 @@ export default function PlanejamentoCiclo() {
   const [filtersCollapsed, setFiltersCollapsed] = useState(
     () => localStorage.getItem('ciclo_filtersCollapsed') === 'true'
   );
-  const [activeTab, setActiveTab] = useState('ciclos'); // 'ciclos' | 'workflow' | 'release'
+  const [activeTab, setActiveTab] = useState('ciclos'); // 'ciclos' | 'workflow' | 'adocao-ia' | 'release'
   const [backlogCollapsed, setBacklogCollapsed] = useState(false);
   const [showNewCiclo, setShowNewCiclo] = useState(false);
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
@@ -669,6 +673,12 @@ export default function PlanejamentoCiclo() {
     return [...s].sort((a, b) => Number(a) - Number(b)).map(v => `${v}%`);
   }, [enrichedTickets]);
 
+  const pacoteOptions = useMemo(() => {
+    const s = new Set();
+    enrichedTickets.forEach(t => { if (t.pacote) s.add(t.pacote); });
+    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [enrichedTickets]);
+
   const cicloOptions = useMemo(
     () => ciclos.map(c => c.nome).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     [ciclos]
@@ -760,6 +770,7 @@ export default function PlanejamentoCiclo() {
       });
       if (!inAnyCiclo) return false;
     }
+    if (pacoteFilter.size > 0 && !pacoteFilter.has(t.pacote || '')) return false;
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
     if (search) {
@@ -770,7 +781,7 @@ export default function PlanejamentoCiclo() {
       );
     }
     return true;
-  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, createdAtFrom, createdAtTo, impedimentoFilter, demandaVulnerabFilter, cicloFilter, cicloKeysMap, search]);
+  }), [enrichedTickets, escopoFilter, squadFilter, grupoSolucionadorFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, createdAtFrom, createdAtTo, impedimentoFilter, demandaVulnerabFilter, cicloFilter, cicloKeysMap, pacoteFilter, search]);
 
   // Hierarchy-aware filtered set: includes ancestors of matching tickets
   const filteredTicketsHierarchy = useMemo(
@@ -990,7 +1001,7 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
     createdAtFrom, createdAtTo,
   ]);
 
-  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, cicloFilter]
+  const activeFilters = [escopoFilter, squadFilter, grupoSolucionadorFilter, filaFilter, statusFilter, prioridadeFilter, respDevFilter, respTesteFilter, sistemasFilter, naturezaIniciativaFilter, issuetypeFilter, pctConclusaoFilter, pctTesteInternoFilter, cicloFilter, pacoteFilter]
     .filter(s => s.size > 0).length + (search ? 1 : 0) + (impedimentoFilter ? 1 : 0) + (demandaVulnerabFilter ? 1 : 0) + (createdAtFrom || createdAtTo ? 1 : 0);
 
   return (
@@ -1385,7 +1396,7 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
           )}
           {activeFilters > 0 && (
             <button
-              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setPctConclusaoFilter(new Set()); setPctTesteInternoFilter(new Set()); setCicloFilter(new Set()); setCreatedAtFrom(''); setCreatedAtTo(''); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
+              onClick={() => { setEscopoFilter(new Set()); setSquadFilter(new Set()); setGrupoSolucionadorFilter(new Set()); setFilaFilter(new Set()); setStatusFilter(new Set()); setPrioridadeFilter(new Set()); setRespDevFilter(new Set()); setRespTesteFilter(new Set()); setSistemasFilter(new Set()); setNaturezaIniciativaFilter(new Set()); setIssuetypeFilter(new Set()); setPctConclusaoFilter(new Set()); setPctTesteInternoFilter(new Set()); setCicloFilter(new Set()); setPacoteFilter(new Set()); setCreatedAtFrom(''); setCreatedAtTo(''); setImpedimentoFilter(false); setDemandaVulnerabFilter(false); setSearch(''); }}
               style={{ fontSize: 11, padding: '3px 10px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-10)', marginLeft: 'auto' }}
             >
               Limpar filtros
@@ -1405,6 +1416,7 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
           <MultiSelectFilter options={pctConclusaoOptions} selected={pctConclusaoFilter} onChange={setPctConclusaoFilter} placeholder="% Conclusão" maxWidth={140} />
           <MultiSelectFilter options={pctTesteInternoOptions} selected={pctTesteInternoFilter} onChange={setPctTesteInternoFilter} placeholder="% Conclusão Teste" maxWidth={160} />
           <MultiSelectFilter options={cicloOptions} selected={cicloFilter} onChange={setCicloFilter} placeholder="Ciclo" maxWidth={160} />
+          <MultiSelectFilter options={pacoteOptions} selected={pacoteFilter} onChange={setPacoteFilter} placeholder="Pacote (Release)" maxWidth={180} />
           {/* Data de Criação — range */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             <span style={{ fontSize: 11, color: 'var(--gray-10)', whiteSpace: 'nowrap' }}>Criado:</span>
@@ -1504,8 +1516,8 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
 
       {/* ── Tab switcher ────────────────────────────────────────────── */}
       {!loading && (
-        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--gray-4)', marginBottom: 18 }}>
-          {[{ key: 'ciclos', label: 'CICLOS' }, { key: 'workflow', label: 'WORKFLOW' }, { key: 'release', label: 'GESTÃO DE RELEASE' }].map(tab => (
+        <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--gray-4)', marginBottom: 18, alignItems: 'center' }}>
+          {[{ key: 'ciclos', label: 'CICLOS' }, { key: 'workflow', label: 'WORKFLOW' }, { key: 'adocao-ia', label: '🤖 ADOÇÃO DE IA' }, { key: 'release', label: 'GESTÃO DE RELEASE' }].map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
@@ -1522,12 +1534,29 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
               {tab.label}
             </button>
           ))}
+          {activeTab === 'ciclos' && (
+            <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: hideConcluidos ? 'var(--indigo-11)' : 'var(--gray-9)', cursor: 'pointer', userSelect: 'none', padding: '4px 10px', border: `1px solid ${hideConcluidos ? 'var(--indigo-8)' : 'var(--gray-5)'}`, borderRadius: 6, background: hideConcluidos ? 'rgba(99,102,241,0.08)' : 'transparent', whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={hideConcluidos} onChange={e => setHideConcluidos(e.target.checked)} style={{ accentColor: 'var(--indigo-9)', width: 12, height: 12 }} />
+              Ocultar concluídos
+            </label>
+          )}
         </div>
       )}
 
       {/* ── Loading ──────────────────────────────────────────────────── */}
       {loading && (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--gray-10)' }}>Carregando tickets…</div>
+      )}
+
+      {/* ── Adoção de IA tab ─────────────────────────────────────────── */}
+      {!loading && activeTab === 'adocao-ia' && (
+        <WorkflowTab
+          filteredTickets={filteredTickets.filter(t => t.adocaoIa === true)}
+          escopoFilter={escopoFilter}
+          onTicketClick={setSelectedTicket}
+          dateField={dateField}
+          showEstimativa={showEstimativa}
+        />
       )}
 
       {/* ── Release management tab ──────────────────────────────────── */}
@@ -1547,7 +1576,7 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
       )}
 
       {/* ── Ciclo sections ───────────────────────────────────────────── */}
-      {!loading && activeTab === 'ciclos' && ciclos.filter(ciclo => cicloFilter.size === 0 || cicloFilter.has(ciclo.nome)).map(ciclo => (
+      {!loading && activeTab === 'ciclos' && ciclos.filter(ciclo => (cicloFilter.size === 0 || cicloFilter.has(ciclo.nome)) && (!hideConcluidos || ciclo.status !== 'concluido')).map(ciclo => (
         <CicloSection
           key={ciclo.id}
           ciclo={ciclo}

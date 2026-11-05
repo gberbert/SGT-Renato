@@ -1084,6 +1084,26 @@ const handleSave = useCallback(async () => {
                 </div>
               </div>
 
+              {/* Row 2e: ADOÇÃO DE IA */}
+              <div className="dmd-row">
+                <div className="dmd-field">
+                  <FieldLabel>ADOÇÃO DE IA</FieldLabel>
+                  {isEdit ? (
+                    <EditToggle label="" fieldKey="adocaoIa" value={pendingChanges.adocaoIa !== undefined ? pendingChanges.adocaoIa : (ticket.adocaoIa ?? false)} onSave={save} />
+                  ) : (
+                    <div className="dmd-field-value">
+                      {ticket.adocaoIa ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 700, color: '#a5b4fc' }}>
+                          🤖 Sim
+                        </span>
+                      ) : (
+                        <span style={{ color: '#6b7280', fontSize: 13 }}>Não</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Row 3: SISTEMAS IMPACTADOS — tags (somente leitura) */}
               <div className="dmd-row">
                 <div className="dmd-field dmd-field--wide">
