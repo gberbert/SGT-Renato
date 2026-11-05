@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { X, ChevronDown, History } from 'lucide-react';
+import { X, ChevronDown, History, Copy, Check } from 'lucide-react';
 import { collection, getDocs, query, orderBy, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { PRIORIDADE_INTERNA_OPTIONS } from '../../services/operacaoRadarService';
@@ -703,6 +703,139 @@ function PlanRow({ left, right }) {
   );
 }
 
+function PlanoComTabContent({ ticket, fmtDate }) {
+  const [copied, setCopied] = useState(false);
+
+  const resolvedSquad = (() => {
+    if (ticket.squadPrincipal) return ticket.squadPrincipal;
+    const g = ticket.grupoSolucionador || ticket.grupoSuporte || '';
+    return g ? g.replace(/^\d+\s*-\s*/, '').trim() : '—';
+  })();
+
+  const pctDev   = ticket.percentualConclusao        != null ? `${ticket.percentualConclusao}%`              : '';
+  const pctTeste = ticket.percentualConclusaoTesteInterno != null ? `${ticket.percentualConclusaoTesteInterno}%` : '';
+  const impedido = ticket.impedimento ? 'Sim' : 'Não';
+  const motivo   = ticket.observacaoAdicional || ticket.motivoImpedimento || '';
+
+  const dFimTeste    = fmtDate(ticket.dataFimTesteInterno);
+  const dFimTesteQa  = fmtDate(ticket.dataFimTesteQa);
+  const dIniHml      = fmtDate(ticket.dataInicioHomologacao || ticket.dataInicioHomologacaoEfetiva || ticket.dataInicioHomologacaoPlanejada);
+  const dFimHml      = fmtDate(ticket.dataFimHomologacao || ticket.dataFimHomologacaoEfetiva || ticket.dataFimHomologacaoPlanejada);
+  const dConclusao   = fmtDate(ticket.dataConclusao || ticket.dataEntregaProducaoPrevista);
+  const pacote       = ticket.pacote || '';
+
+  const text = [
+    `${ticket.issueKey} / Resumo: ${ticket.summary || ''}`,
+    `*Squad: ${resolvedSquad}*`,
+    '',
+    `*Progresso de execução:*`,
+    `% Conclusão Desenvolvimento: ${pctDev}`,
+    `% Teste Interno: ${pctTeste}`,
+    '',
+    `*Impedida*: ${impedido}`,
+    `*Motivo / Observação*: ${motivo}`,
+    '',
+    `*Plano de entrega por fases :*`,
+    `Data Fim Teste Interno: ${dFimTeste !== '—' ? dFimTeste : ''}`,
+    `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
+    `Data Início Homologação: ${dIniHml !== '—' ? dIniHml : ''}`,
+    `Data Fim Homologação: ${dFimHml !== '—' ? dFimHml : ''}`,
+    `Data Conclusão (Produção)**: ${dConclusao !== '—' ? dConclusao : ''}`,
+    '',
+    `*(Janela Prevista)**:  ${pacote}`,
+    '',
+    `** Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
+  ].join('\n');
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* fallback */ }
+  };
+
+  const lineStyle = { margin: 0, lineHeight: 1.65 };
+  const bold = { fontWeight: 700, color: 'var(--gray-12)' };
+
+  return (
+    <div className="dmd-tab-content">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-10)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Texto padrão para comunicação de andamento
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--gray-8)', marginTop: 3 }}>
+            Copie e cole diretamente como comentário no Jira ou em canais de comunicação.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleCopy}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+            background: copied ? 'rgba(74,222,128,0.2)' : 'var(--indigo-9)',
+            color: copied ? '#4ade80' : '#fff',
+            fontSize: 13, fontWeight: 700, flexShrink: 0,
+            transition: 'all 0.15s',
+          }}
+        >
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+          {copied ? 'Copiado!' : 'Copiar texto'}
+        </button>
+      </div>
+
+      {/* Preview card */}
+      <div style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid var(--gray-5)',
+        borderRadius: 10,
+        padding: '20px 22px',
+        fontFamily: 'var(--font-mono, monospace)',
+        fontSize: 13,
+        color: 'var(--gray-11)',
+        lineHeight: 1.65,
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+      }}>
+        {/* Line 1 — issueKey / Resumo */}
+        <p style={lineStyle}>{ticket.issueKey} / Resumo: {ticket.summary || ''}</p>
+        <p style={{ ...lineStyle, ...bold }}>Squad: {resolvedSquad}</p>
+        <br />
+
+        <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
+        <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev}</p>
+        <p style={lineStyle}>% Teste Interno: {pctTeste}</p>
+        <br />
+
+        <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}</p>
+        <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo}</p>
+        <br />
+
+        <p style={{ ...lineStyle, ...bold }}>Plano de entrega por fases :</p>
+        <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+        <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+        <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+        <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+        <p style={lineStyle}>Data Conclusão (Produção)**: {dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+        <br />
+
+        <p style={lineStyle}><span style={bold}>(Janela Prevista)**</span>:{' '}
+          {pacote
+            ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>
+            : <span style={{ color: 'var(--gray-7)' }}>—</span>}
+        </p>
+        <br />
+
+        <p style={{ ...lineStyle, fontSize: 12, color: 'var(--gray-9)', fontStyle: 'italic', fontFamily: 'inherit' }}>
+          ** Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, ticketDocId: ticketDocIdProp }) {
   const [activeTab, setActiveTab] = useState('geral');
   const [squadPrincipal, setSquadPrincipal] = useState(ticket?.squadPrincipal ?? null);
@@ -925,6 +1058,12 @@ const handleSave = useCallback(async () => {
             onClick={() => setActiveTab('planoTeste')}
           >
             PLANO DE TESTE
+          </button>
+          <button
+            className={`dmd-tab${activeTab === 'planoComunicacao' ? ' dmd-tab--active' : ''}`}
+            onClick={() => setActiveTab('planoComunicacao')}
+          >
+            📢 PLANO DE COMUNICAÇÃO
           </button>
           {(ticket.adocaoIa || pendingChanges.adocaoIa) && (
             <button
@@ -1579,6 +1718,8 @@ const handleSave = useCallback(async () => {
                 );
               })()}
             </div>
+          ) : activeTab === 'planoComunicacao' ? (
+            <PlanoComTabContent ticket={ticket} fmtDate={fmtDate} />
           ) : (
             <div className="dmd-tab-content dmd-plan-tab">
               <div className="dmd-plan-header-row">
