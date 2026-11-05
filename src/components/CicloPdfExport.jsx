@@ -455,7 +455,9 @@ function ReleaseCalendar({ tickets }) {
             <div key={ci} style={{ display:'flex', flexDirection:'column', gap:3, minWidth:COL_W, maxWidth:COL_W }}>
               {ci === 0 && <div style={{ fontSize:7, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:1 }}>Tickets por Pacote · Squad</div>}
               {ci > 0 && <div style={{ height:13 }} />}
-              {colPacotes.map(([pac, info]) => {
+              {(() => {
+                const maxTotal = Math.max(...colPacotes.map(([,i]) => i.count));
+                return colPacotes.map(([pac, info]) => {
           // Count per squad for this pacote
           const sqMap = new Map();
           tickets.filter(t => t.pacote === pac).forEach(t => {
@@ -475,8 +477,9 @@ function ReleaseCalendar({ tickets }) {
                 <div style={{ fontSize:6.5, fontWeight:800, color:info.color, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{trunc(pac, 15)}</div>
                 {dateLabel && <div style={{ fontSize:6, color:'#94a3b8', marginTop:1 }}>{dateLabel} · {total} tickets</div>}
               </div>
-              {/* Stacked bar */}
-              <div style={{ display:'flex', height:16, borderRadius:4, overflow:'hidden', flex:1, background:'#f1f5f9' }}>
+              {/* Stacked bar — proportional width based on maxTotal */}
+              <div style={{ display:'flex', height:16, borderRadius:4, overflow:'hidden', flex:1, background:'#f1f5f9', alignItems:'stretch' }}>
+                <div style={{ display:'flex', width:`${(total / maxTotal) * 100}%`, height:'100%', borderRadius:4, overflow:'hidden', flexShrink:0 }}>
                 {squads.map(([sq, cnt], si) => {
                   const pct = (cnt / total) * 100;
                   const brightness = BRIGHT[si % BRIGHT.length];
@@ -496,10 +499,12 @@ function ReleaseCalendar({ tickets }) {
                     </div>
                   );
                 })}
+                </div>
               </div>
             </div>
           );
-        })}
+        });
+              })()}
             </div>
           ));
         })()}
