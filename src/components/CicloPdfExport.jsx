@@ -388,8 +388,8 @@ function ReleaseCalendar({ tickets }) {
 
   return (
     <div style={{ display:'flex', gap:16, padding:'10px 12px 8px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0', alignItems:'flex-start' }}>
-      {/* LEFT: calendars + legend */}
-      <div style={{ flex:1 }}>
+      {/* LEFT: calendars */}
+      <div style={{ flexShrink:0 }}>
         <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:8 }}>
           {months.map((md, mi) => {
             const yr = md.getFullYear(); const mo = md.getMonth();
@@ -440,10 +440,22 @@ function ReleaseCalendar({ tickets }) {
         </div>
       </div>
 
-      {/* RIGHT: horizontal stacked bar chart — por pacote / squad */}
-      <div style={{ flexShrink:0, display:'flex', flexDirection:'column', gap:3, borderLeft:'1px solid #e2e8f0', paddingLeft:14, minWidth:300 }}>
-        <div style={{ fontSize:7, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>Tickets por Pacote · Squad</div>
-        {sortedPacotes.map(([pac, info]) => {
+      {/* RIGHT: horizontal stacked bar chart — por pacote / squad, colunas adicionais se necessário */}
+      <div style={{ flex:1, display:'flex', flexWrap:'wrap', alignContent:'flex-start', gap:12, borderLeft:'1px solid #e2e8f0', paddingLeft:14 }}>
+        {/* Column of bars — wraps into new columns if many pacotes */}
+        {(() => {
+          const COL_W = 320;
+          // Group pacotes into columns of up to N bars
+          const N_PER_COL = 6;
+          const cols = [];
+          for (let i = 0; i < sortedPacotes.length; i += N_PER_COL) {
+            cols.push(sortedPacotes.slice(i, i + N_PER_COL));
+          }
+          return cols.map((colPacotes, ci) => (
+            <div key={ci} style={{ display:'flex', flexDirection:'column', gap:3, minWidth:COL_W, maxWidth:COL_W }}>
+              {ci === 0 && <div style={{ fontSize:7, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:1 }}>Tickets por Pacote · Squad</div>}
+              {ci > 0 && <div style={{ height:13 }} />}
+              {colPacotes.map(([pac, info]) => {
           // Count per squad for this pacote
           const sqMap = new Map();
           tickets.filter(t => t.pacote === pac).forEach(t => {
@@ -473,10 +485,8 @@ function ReleaseCalendar({ tickets }) {
                       width:`${pct}%`, minWidth: pct > 0 ? 4 : 0,
                       background: info.color,
                       filter: brightness < 1 ? `brightness(${brightness + 0.5})` : 'none',
-                      opacity: brightness < 1 ? undefined : 1,
                       display:'flex', alignItems:'center', justifyContent:'center',
                       overflow:'hidden', borderRight: si < squads.length-1 ? '1px solid rgba(255,255,255,0.4)' : 'none',
-                      position:'relative',
                     }}>
                       {pct >= 12 && (
                         <span style={{ fontSize:6, fontWeight:700, color:'#fff', whiteSpace:'nowrap', paddingInline:2, textShadow:'0 1px 2px rgba(0,0,0,0.3)' }}>{sq}</span>
@@ -488,6 +498,9 @@ function ReleaseCalendar({ tickets }) {
             </div>
           );
         })}
+            </div>
+          ));
+        })()}
       </div>
     </div>
   );
