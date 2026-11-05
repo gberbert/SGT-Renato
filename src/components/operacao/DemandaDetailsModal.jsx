@@ -1460,7 +1460,7 @@ const handleSave = useCallback(async () => {
                     ? 'Concluído'
                     : countConcluido > 0
                       ? 'Em Andamento'
-                      : 'Backlog';
+                      : 'A fazer';
 
                 const iaFields = [
                   { key: 'iaAnaliseIA',     obsKey: 'iaAnaliseIAObs',     label: 'Análise IA' },
