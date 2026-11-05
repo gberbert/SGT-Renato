@@ -438,35 +438,56 @@ function ReleaseCalendar({ tickets }) {
             );
           })}
         </div>
-        {/* Legend */}
-        <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
-          {sortedPacotes.map(([pac, info]) => (
-            <div key={pac} style={{ display:'flex', alignItems:'center', gap:5 }}>
-              <div style={{ width:10, height:10, borderRadius:'50%', background:info.color, flexShrink:0, boxShadow:`0 0 0 2px ${info.color}33` }} />
-              <span style={{ fontSize:7, fontWeight:700, color:'#475569' }}>{pac}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
-      {/* RIGHT: stats boxes — Por Pacote */}
-      <div style={{ flexShrink:0, display:'flex', flexDirection:'column', gap:4, borderLeft:'1px solid #e2e8f0', paddingLeft:14 }}>
-        <div style={{ fontSize:7, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:3 }}>Por Pacote</div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
-          {sortedPacotes.map(([pac, info]) => {
-            const dateLabel = info.date
-              ? `${String(info.date.getDate()).padStart(2,'0')}/${String(info.date.getMonth()+1).padStart(2,'0')}`
-              : '';
-            return (
-              <div key={pac} style={box(info.color)}>
-                <span style={{ fontSize:26, fontWeight:900, color:info.color, lineHeight:1 }}>{info.count}</span>
-                <span style={{ fontSize:6, fontWeight:700, color:info.color, marginTop:2, textAlign:'center', maxWidth:80, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', letterSpacing:'0.02em' }}>
-                  {dateLabel ? dateLabel+' · ' : ''}{trunc(pac, 10)}
-                </span>
+      {/* RIGHT: horizontal stacked bar chart — por pacote / squad */}
+      <div style={{ flexShrink:0, display:'flex', flexDirection:'column', gap:3, borderLeft:'1px solid #e2e8f0', paddingLeft:14, minWidth:300 }}>
+        <div style={{ fontSize:7, fontWeight:800, color:'#64748b', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>Tickets por Pacote · Squad</div>
+        {sortedPacotes.map(([pac, info]) => {
+          // Count per squad for this pacote
+          const sqMap = new Map();
+          tickets.filter(t => t.pacote === pac).forEach(t => {
+            const sq = trunc(resolveSquad(t)||'—', 7);
+            sqMap.set(sq, (sqMap.get(sq)||0)+1);
+          });
+          const squads = [...sqMap.entries()].sort((a,b)=>b[1]-a[1]);
+          const total = info.count;
+          const dateLabel = info.date
+            ? `${String(info.date.getDate()).padStart(2,'0')}/${String(info.date.getMonth()+1).padStart(2,'0')}`
+            : '';
+          const BRIGHT = [1, 0.78, 0.60, 0.44, 0.30];
+          return (
+            <div key={pac} style={{ display:'flex', alignItems:'center', gap:7 }}>
+              {/* Label */}
+              <div style={{ width:108, flexShrink:0, textAlign:'right' }}>
+                <div style={{ fontSize:6.5, fontWeight:800, color:info.color, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{trunc(pac, 15)}</div>
+                {dateLabel && <div style={{ fontSize:6, color:'#94a3b8', marginTop:1 }}>{dateLabel} · {total} tickets</div>}
               </div>
-            );
-          })}
-        </div>
+              {/* Stacked bar */}
+              <div style={{ display:'flex', height:16, borderRadius:4, overflow:'hidden', flex:1, background:'#f1f5f9' }}>
+                {squads.map(([sq, cnt], si) => {
+                  const pct = (cnt / total) * 100;
+                  const brightness = BRIGHT[si % BRIGHT.length];
+                  return (
+                    <div key={sq} style={{
+                      width:`${pct}%`, minWidth: pct > 0 ? 4 : 0,
+                      background: info.color,
+                      filter: brightness < 1 ? `brightness(${brightness + 0.5})` : 'none',
+                      opacity: brightness < 1 ? undefined : 1,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      overflow:'hidden', borderRight: si < squads.length-1 ? '1px solid rgba(255,255,255,0.4)' : 'none',
+                      position:'relative',
+                    }}>
+                      {pct >= 12 && (
+                        <span style={{ fontSize:6, fontWeight:700, color:'#fff', whiteSpace:'nowrap', paddingInline:2, textShadow:'0 1px 2px rgba(0,0,0,0.3)' }}>{sq}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
