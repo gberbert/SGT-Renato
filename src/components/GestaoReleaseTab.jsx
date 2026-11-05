@@ -101,74 +101,69 @@ export default function GestaoReleaseTab() {
                 key={rel.id}
                 onClick={() => setSelectedRelease(isSelected ? null : rel.id)}
                 style={{
-                  display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 14px',
-                  borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px',
+                  borderRadius: 10, cursor: 'pointer', flexWrap: 'wrap',
                   border: isSelected ? '1px solid rgba(99,102,241,0.6)' : '1px solid var(--gray-5)',
                   background: isSelected ? 'rgba(99,102,241,0.07)' : 'var(--gray-2)',
                   transition: 'all 0.12s',
                 }}
               >
-                {/* Main row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Package size={15} color={isSelected ? 'var(--indigo-11)' : 'var(--gray-9)'} />
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--gray-12)' }}>
-                    {rel.nome}
+                <Package size={15} color={isSelected ? 'var(--indigo-11)' : 'var(--gray-9)'} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-12)', marginRight: 4 }}>
+                  {rel.nome}
+                </span>
+                <AmbienteBadge ambiente={rel.ambiente} />
+                <TipoBadge tipo={rel.tipo} />
+                {rel.dataAlvo && (
+                  <span style={{ fontSize: 11, color: 'var(--gray-9)', whiteSpace: 'nowrap' }}>
+                    🎯 {fmtBr(rel.dataAlvo)}
                   </span>
-                  <AmbienteBadge ambiente={rel.ambiente} />
-                  <TipoBadge tipo={rel.tipo} />
-                  {rel.dataAlvo && (
-                    <span style={{ fontSize: 11, color: 'var(--gray-9)', whiteSpace: 'nowrap' }}>
-                      🎯 {fmtBr(rel.dataAlvo)}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    title="Adicionar janela/CAB"
-                    onClick={e => { e.stopPropagation(); setAddJanelaFor(rel); }}
-                    style={{ background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', color: 'var(--gray-10)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, flexShrink: 0 }}
-                  >
-                    <Plus size={11} /> Janela
-                  </button>
-                  <button
-                    type="button"
-                    title="Excluir release"
-                    onClick={e => { e.stopPropagation(); handleDelete(rel.id); }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red-9)', padding: 4, display: 'flex', alignItems: 'center', flexShrink: 0 }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-
-                {/* Janelas chips row */}
-                {janelaCount > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingLeft: 26 }}>
-                    {(rel.janelas || [])
-                      .slice()
-                      .sort((a, b) => (a.data > b.data ? 1 : -1))
-                      .map((j, i) => {
-                        const isDeploy = j.tipo === 'deploy';
-                        const color = isDeploy ? '#22d3ee' : '#fb923c';
-                        const bg = isDeploy ? 'rgba(34,211,238,0.10)' : 'rgba(251,146,60,0.10)';
-                        const border = isDeploy ? 'rgba(34,211,238,0.3)' : 'rgba(251,146,60,0.3)';
-                        const p = j.data ? j.data.split('-') : [];
-                        const dateFmt = p.length === 3 ? `${p[2]}/${p[1]}` : j.data;
-                        return (
-                          <span
-                            key={j.id || i}
-                            title={`${isDeploy ? 'Deploy' : 'CAB'}${j.hora ? ' · ' + j.hora : ''}${j.descricao ? ' — ' + j.descricao : ''}`}
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                              fontSize: 10, fontWeight: 700, padding: '2px 8px',
-                              borderRadius: 8, whiteSpace: 'nowrap',
-                              background: bg, color, border: `1px solid ${border}`,
-                            }}
-                          >
-                            {isDeploy ? '🚀' : '📋'} {dateFmt}{j.hora ? ` ${j.hora}` : ''}
-                          </span>
-                        );
-                      })}
-                  </div>
                 )}
+                {/* Janelas chips — inline with other badges */}
+                {(rel.janelas || [])
+                  .slice()
+                  .sort((a, b) => (a.data > b.data ? 1 : -1))
+                  .map((j, i) => {
+                    const isDeploy = j.tipo === 'deploy';
+                    const color = isDeploy ? '#22d3ee' : '#fb923c';
+                    const bg = isDeploy ? 'rgba(34,211,238,0.10)' : 'rgba(251,146,60,0.10)';
+                    const border = isDeploy ? 'rgba(34,211,238,0.3)' : 'rgba(251,146,60,0.3)';
+                    const p = j.data ? j.data.split('-') : [];
+                    const dateFmt = p.length === 3 ? `${p[2]}/${p[1]}` : j.data;
+                    return (
+                      <span
+                        key={j.id || i}
+                        title={`${isDeploy ? 'Deploy' : 'CAB'}${j.hora ? ' · ' + j.hora : ''}${j.descricao ? ' — ' + j.descricao : ''}`}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 3,
+                          fontSize: 10, fontWeight: 700, padding: '2px 7px',
+                          borderRadius: 8, whiteSpace: 'nowrap',
+                          background: bg, color, border: `1px solid ${border}`,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isDeploy ? '🚀' : '📋'} {dateFmt}{j.hora ? ` ${j.hora}` : ''}
+                      </span>
+                    );
+                  })}
+                {/* Spacer pushes action buttons to the right */}
+                <span style={{ flex: 1 }} />
+                <button
+                  type="button"
+                  title="Adicionar janela/CAB"
+                  onClick={e => { e.stopPropagation(); setAddJanelaFor(rel); }}
+                  style={{ background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', color: 'var(--gray-10)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, flexShrink: 0 }}
+                >
+                  <Plus size={11} /> Janela
+                </button>
+                <button
+                  type="button"
+                  title="Excluir release"
+                  onClick={e => { e.stopPropagation(); handleDelete(rel.id); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red-9)', padding: 4, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             );
           })}
