@@ -167,6 +167,10 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste, includ
       <div style={{ ...cellBase, width:PR_W, padding:'0 2px' }}>
         {pb && <span style={{ fontSize:7, fontWeight:700, background:pb.bg, color:pb.color, padding:'1px 3px', borderRadius:3, whiteSpace:'nowrap' }}>{pb.label}</span>}
       </div>
+      {/* Natureza da Iniciativa */}
+      <div style={{ ...cellBase, width:NI_W, padding:'0 3px' }}>
+        <span style={{ fontSize:6.5, color:'#374151', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:NI_W-6 }}>{trunc(ticket.naturezaIniciativa||ticket.naturezaOperacao||'',20)}</span>
+      </div>
       {/* Status */}
       <div style={{ ...cellBase, width:ST_W, padding:'0 2px' }}>
         <span style={{ fontSize:7, fontWeight:600, color:sc, maxWidth:ST_W-4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center' }}>{status}</span>
@@ -229,10 +233,7 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste, includ
           }
         </div>
       )}
-      {/* Natureza da Iniciativa */}
-      <div style={{ ...cellBase, width:NI_W, padding:'0 3px' }}>
-        <span style={{ fontSize:6.5, color:'#374151', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:NI_W-6 }}>{trunc(ticket.naturezaIniciativa||ticket.naturezaOperacao||'',20)}</span>
-      </div>
+
       {/* Imp icon — após Natureza da Iniciativa */}
       <div style={{ ...cellBase, width:IMP_W }}>{isImp && <span style={{ fontSize:11 }}>⚠</span>}</div>
       {/* Plano de Teste columns */}
@@ -331,6 +332,7 @@ function ColHeaders({ includeObservacao, includePlanoTeste, includeRelease }) {
         {hCell(TIX_W,'Ticket',null)}
         {hCell(SQ_W,'Squad',null)}
         {hCell(PR_W,'Prio',null)}
+        {hCell(NI_W,'Nat.','Iniciativa')}
         {hCell(ST_W,'Status',null)}
         {hCell(SA_W,'Situação','Atual')}
         {hCell(PC_W,'%C','Concl')}
@@ -341,7 +343,7 @@ function ColHeaders({ includeObservacao, includePlanoTeste, includeRelease }) {
         {hCell(DH_W,'Fim','Homolog')}
         {hCell(DC_W,'Data','Conclusão')}
         {includeRelease && hCell(PAC_W,'Pacote','Release')}
-        {hCell(NI_W,'Nat.','Iniciativa')}
+
         {hCell(IMP_W,'⚠','Imp')}
         {includePlanoTeste && (
           <>
