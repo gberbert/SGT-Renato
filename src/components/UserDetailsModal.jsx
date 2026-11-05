@@ -3,7 +3,7 @@ import { Dialog, Avatar, Text } from '@radix-ui/themes';
 import { Camera, Sun, Moon } from 'lucide-react';
 import { storage, db } from '../firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, collectionGroup, getDocs } from 'firebase/firestore';
 import { updateUser } from '../services/settingsService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { userHasFunctionPermission } from '../services/permissionService';
@@ -15,10 +15,10 @@ import {
   CustomSelect, HardSkillsInput, JornadaTab,
 } from './UserDetailsModalParts';
 
-const isSelF = k => Object.prototype.hasOwnProperty.call(SELECT_OPTIONS_BY_KEY, k);
+const isSelF = k => Object.prototype.hasOwnProperty.call(SELECT_OPTIONS_BY_KEY, k) || k === 'projectCode';
 
 /* ── FieldInput ── */
-function FieldInput({ fieldKey, label, value, onChange, readOnly }) {
+function FieldInput({ fieldKey, label, value, onChange, readOnly, optionOverrides }) {
   const isDate = isDateF(fieldKey);
   const isSel  = isSelF(fieldKey);
   const isPhone = fieldKey === "contato";
@@ -33,13 +33,13 @@ function FieldInput({ fieldKey, label, value, onChange, readOnly }) {
     );
   }
   if (isSel) {
-    const opts = (SELECT_OPTIONS_BY_KEY[fieldKey] || []).map(o =>
-      typeof o === "string" ? { value:o, label:o } : o
-    );
+    const override = optionOverrides?.[fieldKey];
+    const rawOpts = override ?? (SELECT_OPTIONS_BY_KEY[fieldKey] || []);
+    const opts = rawOpts.map(o => typeof o === "string" ? { value:o, label:o } : o);
     return (
       <div>
         <span style={S.lbl}>{label}</span>
-        <CustomSelect value={value ?? ""} onChange={v => onChange(fieldKey, v)} options={opts}/>
+        <CustomSelect value={value ?? ""} onChange={v => onChange(fieldKey, v)} options={opts} />
       </div>
     );
   }
@@ -61,16 +61,16 @@ function FieldInput({ fieldKey, label, value, onChange, readOnly }) {
 }
 
 /* ── FieldRow ── */
-function FieldRow({ rowDef, draftUser, onChange, readOnly }) {
+function FieldRow({ rowDef, draftUser, onChange, readOnly, optionOverrides }) {
   if (Array.isArray(rowDef) && typeof rowDef[0] === "string") {
     const [key, label] = rowDef;
-    return <FieldInput fieldKey={key} label={label} value={draftUser?.[key] ?? ""} onChange={onChange} readOnly={readOnly}/>;
+    return <FieldInput fieldKey={key} label={label} value={draftUser?.[key] ?? ""} onChange={onChange} readOnly={readOnly} optionOverrides={optionOverrides}/>;
   }
   const { row, cols } = rowDef;
   return (
     <div style={{ display:"grid", gridTemplateColumns: cols || `repeat(${row.length},1fr)`, gap:12 }}>
       {row.map(([key, label]) => (
-        <FieldInput key={key} fieldKey={key} label={label} value={draftUser?.[key] ?? ""} onChange={onChange} readOnly={readOnly}/>
+        <FieldInput key={key} fieldKey={key} label={label} value={draftUser?.[key] ?? ""} onChange={onChange} readOnly={readOnly} optionOverrides={optionOverrides}/>
       ))}
     </div>
   );
@@ -130,6 +130,7 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
   const [errorMsg, setErrorMsg]     = useState("");
   const [memberChangeLog, setMemberChangeLog] = useState([]);
   const [changeLogOpen, setChangeLogOpen] = useState(false);
+  const [projectCodes, setProjectCodes] = useState([]);
 
   const canEdit = userHasFunctionPermission(currentUser, PermissionFunctionKeys.EDIT_TEAM_MEMBER);
 
@@ -139,6 +140,19 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
       setActiveTab(TABS[0]);
     }
   }, [open, user]);
+
+  useEffect(() => {
+    getDocs(collectionGroup(db, 'codigosProjeto'))
+      .then(snap => {
+        const codes = [];
+        snap.docs.forEach(d => {
+          const v = d.data().projeto;
+          if (v && !codes.includes(v)) codes.push(v);
+        });
+        setProjectCodes(codes.sort((a, b) => a.localeCompare(b, 'pt-BR')));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -283,7 +297,7 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
               {fields.map((fDef, i) => (
-                <FieldRow key={i} rowDef={fDef} draftUser={draftUser} onChange={handleChange} readOnly={readOnly}/>
+                <FieldRow key={i} rowDef={fDef} draftUser={draftUser} onChange={handleChange} readOnly={readOnly} optionOverrides={{ projectCode: projectCodes }}/>
               ))}
               {activeTab === "DADOS PESSOAIS" && (
                 <div>

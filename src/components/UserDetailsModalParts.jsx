@@ -11,7 +11,7 @@ export const S = {
 export const TABS = ["DADOS PESSOAIS","CONTRATAÇÃO","RATECARD","DADOS CLIENTE","CONTROLE DE JORNADA","SISTEMA"];
 export const FIELDS = {
   "DADOS PESSOAIS":[
-    {row:[["status","STATUS"],["sapId","SAP"]],cols:"160px 1fr"},
+    {row:[["status","STATUS"],["sapId","SAP"],["projectCode","PROJETO"]],cols:"160px 1fr 1fr"},
     ["displayName","NOME"],
     {row:[["shortName","NOME RESUMIDO"],["email","EMAIL"],["contato","CONTATO"]],cols:"1fr 1fr 1fr"},
     {row:[["cidade","CIDADE"],["uf","UF"],["dataNascimento","NASCIMENTO"]],cols:"1fr 80px 1fr"},
