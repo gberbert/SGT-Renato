@@ -926,6 +926,14 @@ const handleSave = useCallback(async () => {
           >
             PLANO DE TESTE
           </button>
+          {(ticket.adocaoIa || pendingChanges.adocaoIa) && (
+            <button
+              className={`dmd-tab${activeTab === 'adocaoIa' ? ' dmd-tab--active' : ''}`}
+              onClick={() => setActiveTab('adocaoIa')}
+            >
+              🤖 ADOÇÃO DE IA
+            </button>
+          )}
         </div>
 
         {/* ── BODY ── */}
@@ -1431,6 +1439,93 @@ const handleSave = useCallback(async () => {
                           )}
                         </div>
                       ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          ) : activeTab === 'adocaoIa' ? (
+            <div className="dmd-tab-content">
+              {(() => {
+                const IA_STATUS_OPTIONS = ['A fazer', 'Em andamento', 'Concluído', 'Bloqueado'];
+                const iaFields = [
+                  { key: 'iaStatusAdocao',  label: 'STATUS ADOÇÃO DE IA' },
+                  { key: 'iaAnaliseIA',      label: 'ANÁLISE IA' },
+                  { key: 'iaAnaliseHumana',  label: 'ANÁLISE HUMANA' },
+                  { key: 'iaDeployQa',       label: 'DEPLOY QA' },
+                  { key: 'iaDeployPrd',      label: 'DEPLOY PRD' },
+                ];
+                const statusColor = (v) => {
+                  if (!v) return '#6b7280';
+                  const l = String(v).toLowerCase();
+                  if (l.includes('concluí') || l.includes('concluido')) return '#4ade80';
+                  if (l.includes('andamento')) return '#38bdf8';
+                  if (l.includes('bloqueado')) return '#f87171';
+                  return '#fbbf24';
+                };
+                const esforcoIaVal = pendingChanges.iaEsforcoComIA !== undefined
+                  ? pendingChanges.iaEsforcoComIA
+                  : (ticket.iaEsforcoComIA ?? '');
+                const esforcoManual = ticket.estimativaInterna != null ? Number(ticket.estimativaInterna) : null;
+                const esforcoIaNum = esforcoIaVal !== '' && esforcoIaVal != null ? Number(esforcoIaVal) : null;
+                const eficiencia = (esforcoManual && esforcoManual > 0 && esforcoIaNum != null)
+                  ? ((esforcoManual - esforcoIaNum) / esforcoManual * 100)
+                  : null;
+                const fieldStyle = {
+                  display: 'flex', flexDirection: 'column', gap: 6,
+                  background: 'rgba(255,255,255,.03)',
+                  border: '1px solid rgba(255,255,255,.08)',
+                  borderRadius: 10, padding: '14px 16px',
+                };
+                const lbl = { fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textTransform: 'uppercase', letterSpacing: '0.06em' };
+                return (
+                  <>
+                    <div style={{ padding: '12px 0 4px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid var(--gray-4)', marginBottom: 16 }}>
+                      Rastreamento de Adoção de IA
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
+                      {iaFields.map(f => {
+                        const val = pendingChanges[f.key] !== undefined ? pendingChanges[f.key] : (ticket[f.key] || '');
+                        const sc = statusColor(val);
+                        return (
+                          <div key={f.key} style={{ ...fieldStyle, borderColor: val ? sc + '44' : undefined }}>
+                            <span style={{ ...lbl, color: val ? sc : undefined }}>{f.label}</span>
+                            {isEdit ? (
+                              <select className="dmd-input" value={val} onChange={e => save(f.key, e.target.value || null)} style={{ cursor: 'pointer', color: sc, fontWeight: 600 }}>
+                                <option value="">— Selecionar —</option>
+                                {IA_STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            ) : (
+                              <span style={{ fontSize: 16, fontWeight: 800, color: sc }}>{val || '—'}</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'stretch' }}>
+                      <div style={{ ...fieldStyle, minWidth: 160 }}>
+                        <span style={lbl}>ESTIMATIVA INTERNA (h) — ESFORÇO MANUAL</span>
+                        <span style={{ fontSize: 28, fontWeight: 900, color: 'var(--gray-11)' }}>{esforcoManual != null ? esforcoManual : '—'}</span>
+                      </div>
+                      <div style={{ ...fieldStyle, minWidth: 160 }}>
+                        <span style={lbl}>ESFORÇO (h) COM A IA</span>
+                        {isEdit ? (
+                          <input type="number" min={0} step={0.5} className="dmd-input" style={{ fontSize: 20, fontWeight: 900, color: '#60a5fa' }} value={esforcoIaVal} onChange={e => save('iaEsforcoComIA', e.target.value === '' ? null : Number(e.target.value))} />
+                        ) : (
+                          <span style={{ fontSize: 28, fontWeight: 900, color: '#60a5fa' }}>{esforcoIaNum != null ? esforcoIaNum : '—'}</span>
+                        )}
+                      </div>
+                      <div style={{ ...fieldStyle, minWidth: 160, border: '1px solid rgba(74,222,128,.35)', background: 'rgba(74,222,128,.05)' }}>
+                        <span style={{ ...lbl, color: '#4ade80' }}>EFICIÊNCIA %</span>
+                        <span style={{ fontSize: 28, fontWeight: 900, color: eficiencia != null ? '#4ade80' : '#6b7280' }}>
+                          {eficiencia != null ? `${eficiencia.toFixed(2).replace('.', ',')}%` : '—'}
+                        </span>
+                        {esforcoManual != null && esforcoIaNum != null && (
+                          <div style={{ fontSize: 9, color: 'var(--gray-8)', marginTop: 4 }}>
+                            ({esforcoManual} - {esforcoIaNum}) / {esforcoManual}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </>
                 );

@@ -59,6 +59,12 @@ const STATUS_FIELDS_TO_LOG = new Set([
   'ptNaoExecutado',
   'pacote',
   'adocaoIa',
+  'iaStatusAdocao',
+  'iaAnaliseIA',
+  'iaAnaliseHumana',
+  'iaDeployQa',
+  'iaDeployPrd',
+  'iaEsforcoComIA',
 ]);
 
 const STATUS_FIELD_LABELS = {
@@ -82,6 +88,12 @@ const STATUS_FIELD_LABELS = {
   ptNaoExecutado: 'PT — Não Executado',
   pacote: 'Pacote (Release)',
   adocaoIa: 'Adoção de IA',
+  iaStatusAdocao: 'IA — Status Adoção',
+  iaAnaliseIA: 'IA — Análise IA',
+  iaAnaliseHumana: 'IA — Análise Humana',
+  iaDeployQa: 'IA — Deploy QA',
+  iaDeployPrd: 'IA — Deploy PRD',
+  iaEsforcoComIA: 'IA — Esforço (h) com IA',
 };
 
 const sel = {
