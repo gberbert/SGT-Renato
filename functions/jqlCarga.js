@@ -152,7 +152,9 @@ const JQLS_DEFAULT = [
     escopoId: "demanda",
     escopo:   "DEMANDA",
     label:    "DEMANDA",
-    jql: "((issuetype = História AND project = SUST AND \"torre de atuação da demanda[dropdown]\" IN (\"ADM & LEGADOS\", BI, \"SISTEMAS WEB\", \"CANAIS DIGITAIS\") AND \"empresa[dropdown]\" = \"NTT DATA\" AND status NOT IN (Cancelada, Concluída)) OR (project IN (DEMANDA, SUST) AND \"torre de atuação da demanda[dropdown]\" IN (\"CANAIS DIGITAIS\", \"SISTEMAS CORPORATIVOS\") AND \"empresa[dropdown]\" IN (\"GLOBAL NTT\", \"NTT DATA\", \"NTT Ltda\", empty) AND status NOT IN (Cancelada, Concluída, Fechado, \"Não Aplicável\") AND type = Solicitação))",
+    // status NOT IN removido para que tickets que mudaram para Concluída/Cancelada
+    // continuem sendo sincronizados e tenham seus status atualizados no Firestore.
+    jql: "((issuetype = História AND project = SUST AND \"torre de atuação da demanda[dropdown]\" IN (\"ADM & LEGADOS\", BI, \"SISTEMAS WEB\", \"CANAIS DIGITAIS\") AND \"empresa[dropdown]\" = \"NTT DATA\") OR (project IN (DEMANDA, SUST) AND \"torre de atuação da demanda[dropdown]\" IN (\"CANAIS DIGITAIS\", \"SISTEMAS CORPORATIVOS\") AND \"empresa[dropdown]\" IN (\"GLOBAL NTT\", \"NTT DATA\", \"NTT Ltda\", empty) AND type = Solicitação))",
   },
   {
     escopoId: "incidente",
