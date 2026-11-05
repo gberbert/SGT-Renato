@@ -697,7 +697,7 @@ export default function PlanejamentoCiclo() {
   const pacoteOptions = useMemo(() => {
     const s = new Set();
     enrichedTickets.forEach(t => { if (t.pacote) s.add(t.pacote); });
-    return [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return ['(Sem pacote)', ...[...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))];
   }, [enrichedTickets]);
 
   const cicloOptions = useMemo(
@@ -791,7 +791,15 @@ export default function PlanejamentoCiclo() {
       });
       if (!inAnyCiclo) return false;
     }
-    if (pacoteFilter.size > 0 && !pacoteFilter.has(t.pacote || '')) return false;
+    if (pacoteFilter.size > 0) {
+      const hasPacote = t.pacote && String(t.pacote).trim();
+      const semPacoteSel = pacoteFilter.has('(Sem pacote)');
+      if (hasPacote) {
+        if (!pacoteFilter.has(t.pacote)) return false;
+      } else {
+        if (!semPacoteSel) return false;
+      }
+    }
     if (impedimentoFilter && t.impedimento !== true) return false;
     if (demandaVulnerabFilter && t.demandaVulnerabilidade !== 'Sim') return false;
     if (search) {
