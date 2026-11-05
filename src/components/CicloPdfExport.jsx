@@ -32,9 +32,10 @@ const DC_W   = 70;
 const TP_W   = 28; // each Plano de Teste column
 const NI_W   = 130; // Natureza da Iniciativa (full value)
 const SA_W   = 68; // Situação Atual
+const DIH_W  = 65; // Data Início Homologação
 const DH_W   = 65; // Data Fim Homologação
 const PCH_W  = 30; // % Conclusão Homologação
-const LEFT_W = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W; // 664
+const LEFT_W = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W; // 664 (DIH_W and DH_W are right-side extras)
 const MOT_W  = PAGE_W - LEFT_W; // 616 (motivo + flex)
 const ROW_H  = 22;
 const CB     = '1px solid #e2e8f0';
@@ -197,6 +198,10 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste }) {
       <div style={{ ...cellBase, width:FT_W, padding:'0 2px' }}>
         <span style={{ fontSize:7.5, color:ticket.dataFimTesteInterno?'#374151':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataFimTesteInterno)||'—'}</span>
       </div>
+      {/* Data Início Homologação */}
+      <div style={{ ...cellBase, width:DIH_W, padding:'0 2px' }}>
+        <span style={{ fontSize:7.5, color:ticket.dataInicioHomologacaoEfetiva||ticket.dataInicioHomologacaoPlanejada?'#7c3aed':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataInicioHomologacaoEfetiva||ticket.dataInicioHomologacaoPlanejada)||'—'}</span>
+      </div>
       {/* Data Fim Homologação */}
       <div style={{ ...cellBase, width:DH_W, padding:'0 2px' }}>
         <span style={{ fontSize:7.5, color:ticket.dataFimHomologacao?'#7c3aed':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataFimHomologacao)||'—'}</span>
@@ -313,6 +318,7 @@ function ColHeaders({ includeObservacao, includePlanoTeste }) {
         {hCell(PT_W,'%T','Teste')}
         {hCell(PCH_W,'%CH','Homol')}
         {hCell(FT_W,'Fim Teste','Interno')}
+        {hCell(DIH_W,'Ini','Homolog')}
         {hCell(DH_W,'Fim','Homolog')}
         {hCell(DC_W,'Data','Conclusão')}
         {hCell(NI_W,'Nat.','Iniciativa')}
