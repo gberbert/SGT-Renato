@@ -488,8 +488,10 @@ function ReleaseCalendar({ tickets }) {
                       display:'flex', alignItems:'center', justifyContent:'center',
                       overflow:'hidden', borderRight: si < squads.length-1 ? '1px solid rgba(255,255,255,0.4)' : 'none',
                     }}>
-                      {pct >= 12 && (
-                        <span style={{ fontSize:6, fontWeight:700, color:'#fff', whiteSpace:'nowrap', paddingInline:2, textShadow:'0 1px 2px rgba(0,0,0,0.3)' }}>{sq}</span>
+                      {pct > 4 && (
+                        <span style={{ fontSize:6, fontWeight:700, color:'#fff', whiteSpace:'nowrap', paddingInline:2, textShadow:'0 1px 2px rgba(0,0,0,0.3)', display:'flex', alignItems:'center', gap:2 }}>
+                          {pct >= 14 ? `${sq} · ${cnt}` : `${cnt}`}
+                        </span>
                       )}
                     </div>
                   );
