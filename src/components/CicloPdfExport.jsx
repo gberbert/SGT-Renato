@@ -311,24 +311,24 @@ function StatsSection({ filteredTickets, escopoFilter }) {
   );
 }
 
+// ── parsePacoteDate (module-level, shared by ReleaseCalendar and ReleasePageContent) ──
+const _MO_PT = { jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11 };
+function parsePacoteDate(name) {
+  const m = String(name||'').toLowerCase().match(/(\d{1,2})[-\/](jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/);
+  if (!m) return null;
+  const day = parseInt(m[1], 10);
+  const mo  = _MO_PT[m[2]];
+  const now = new Date();
+  let yr = now.getFullYear();
+  const candidate = new Date(yr, mo, day);
+  if (candidate < new Date(now.getFullYear(), now.getMonth() - 3, 1)) yr++;
+  return new Date(yr, mo, day);
+}
+
 // ── ReleaseCalendar ───────────────────────────────────────────────────────
 function ReleaseCalendar({ tickets }) {
   const PALETTE = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#3b82f6','#f97316'];
-  const MO_PT = { jan:0,fev:1,mar:2,abr:3,mai:4,jun:5,jul:6,ago:7,set:8,out:9,nov:10,dez:11 };
-
-  // Parse release date embedded in pacote name, e.g. "Pacote Fixo 26-nov" → Date(2026, 10, 26)
-  function parsePacoteDate(name) {
-    const m = String(name||'').toLowerCase().match(/(\d{1,2})[-\/](jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/);
-    if (!m) return null;
-    const day = parseInt(m[1], 10);
-    const mo  = MO_PT[m[2]];
-    const now = new Date();
-    let yr = now.getFullYear();
-    // If parsed date is more than 3 months in the past, assume next year
-    const candidate = new Date(yr, mo, day);
-    if (candidate < new Date(now.getFullYear(), now.getMonth() - 3, 1)) yr++;
-    return new Date(yr, mo, day);
-  }
+  const MO_PT = _MO_PT;
 
   // Build per-pacote info: color, release date (parsed from name), ticket count
   const pacoteInfo = new Map(); // pacote -> { color, date, count }
@@ -345,6 +345,8 @@ function ReleaseCalendar({ tickets }) {
   });
 
   if (pacoteInfo.size === 0) return null;
+
+  // parsePacoteDate is now module-level — MO_PT alias kept for local uses above
 
   // dateMap: 'YYYY-MM-DD' -> pacote  (one dot per pacote on its release date)
   const dateMap = new Map();
@@ -537,17 +539,35 @@ function ReleasePageContent({ filteredTickets, includeObservacao, includePlanoTe
       <ReleaseCalendar tickets={withPacote} />
       {/* Table */}
       <ColHeaders includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true} />
-      {[...byPacote.entries()].sort(([a],[b])=>a.localeCompare(b,'pt-BR')).map(([pacote,tks]) => (
+      {[...byPacote.entries()]
+        .sort(([a],[b])=>{
+          const da = parsePacoteDate(a); const db = parsePacoteDate(b);
+          if (da && db) return da.getTime() - db.getTime();
+          if (da) return -1; if (db) return 1;
+          return a.localeCompare(b,'pt-BR');
+        })
+        .map(([pacote,tks]) => {
+          const pd = parsePacoteDate(pacote);
+          const dateLabel = pd
+            ? `${String(pd.getDate()).padStart(2,'0')}/${String(pd.getMonth()+1).padStart(2,'0')}/${pd.getFullYear()}`
+            : null;
+          return (
         <div key={pacote}>
-          <div style={{ display:'flex', alignItems:'center', background:'rgba(99,102,241,0.08)', borderBottom:'1px solid rgba(99,102,241,0.25)', borderTop:'1px solid rgba(99,102,241,0.15)', minHeight:20, padding:'0 6px' }}>
-            <span style={{ fontSize:8.5, fontWeight:800, color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'0.04em' }}>PACOTE: {pacote}</span>
-            <span style={{ fontSize:7.5, color:'#818cf8', marginLeft:8 }}>({tks.length} ticket{tks.length!==1?'s':''})</span>
+          <div style={{ display:'flex', alignItems:'center', background:'rgba(99,102,241,0.12)', borderBottom:'1px solid rgba(99,102,241,0.35)', borderTop:'2px solid rgba(99,102,241,0.3)', minHeight:22, padding:'0 6px', gap:8 }}>
+            <span style={{ fontSize:9, fontWeight:900, color:'#312e81', textTransform:'uppercase', letterSpacing:'0.05em' }}>PACOTE: {pacote}</span>
+            {dateLabel && (
+              <span style={{ fontSize:8, fontWeight:700, color:'#4338ca', background:'rgba(99,102,241,0.15)', border:'1px solid rgba(99,102,241,0.4)', borderRadius:4, padding:'1px 6px', whiteSpace:'nowrap' }}>
+                📅 {dateLabel}
+              </span>
+            )}
+            <span style={{ fontSize:7.5, color:'#4338ca', marginLeft:4 }}>({tks.length} ticket{tks.length!==1?'s':''})</span>
           </div>
           {tks.map((ticket,ti) => (
             <TicketRow key={ticket.issueKey||ticket.id||ti} ticket={ticket} rowBg={ti%2===0?'#ffffff':'#f0f4ff'} includeObservacao={includeObservacao} includePlanoTeste={includePlanoTeste} includeRelease={true} />
           ))}
         </div>
-      ))}
+          );
+        })}
     </div>
   );
 }
