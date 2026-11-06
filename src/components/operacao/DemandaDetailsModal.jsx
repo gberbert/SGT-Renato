@@ -858,6 +858,8 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
   const [squadPrincipal, setSquadPrincipal] = useState(ticket?.squadPrincipal ?? null);
   const [pendingChanges, setPendingChanges] = useState({});
   const [saving, setSaving] = useState(false);
+  // Fresh ticket data from Firestore (merges with in-memory ticket prop)
+  const [freshData, setFreshData] = useState({});
   const isEdit = mode === 'edit';
   const teamMembers = useTeamMembers();
   const systems = useSystems();
@@ -865,7 +867,17 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
   const releases = useReleases();
   const hasPending = Object.keys(pendingChanges).length > 0;
 
-  useEffect(() => { setActiveTab('geral'); setSquadPrincipal(ticket?.squadPrincipal ?? null); setPendingChanges({}); }, [ticket?.issueKey]);
+  // Subscribe to live Firestore data so fields saved externally (e.g. dataEntregaRca) are always visible
+  useEffect(() => {
+    const docId = ticketDocIdProp || ticket?.id || ticket?.issueKey;
+    if (!docId) return;
+    const unsub = onSnapshot(doc(db, 'tickets_global', docId), snap => {
+      if (snap.exists()) setFreshData(snap.data());
+    }, () => {});
+    return unsub;
+  }, [ticket?.issueKey, ticketDocIdProp, ticket?.id]);
+
+  useEffect(() => { setActiveTab('geral'); setSquadPrincipal(ticket?.squadPrincipal ?? null); setPendingChanges({}); setFreshData({}); }, [ticket?.issueKey]);
 
   // Buffer edits locally — nothing goes to Firestore until SALVAR
   const save = useCallback(
@@ -905,6 +917,8 @@ const handleSave = useCallback(async () => {
     onClose();
   }, [onClose]);
 
+  // Merge: in-memory ticket + fresh Firestore data + pending local changes
+  const merged = { ...ticket, ...freshData };
   if (!ticket) return null;
 
   const prioLabel = (() => {
@@ -1747,10 +1761,10 @@ const handleSave = useCallback(async () => {
               <PlanRow
                 left={<ReadField label="DATA APROVACAO EF SR" value={fmtDate(ticket.dataAprovacaoEfsr)} />}
                 right={
-                  String(ticket.escopo||'').trim().toUpperCase().replace(/\s+/g,' ') === 'PROBLEMAS'
+                  String(merged.escopo||ticket.escopo||'').trim().toUpperCase().replace(/\s+/g,' ') === 'PROBLEMAS'
                     ? (isEdit
-                        ? <EditDate label="DATA ENTREGA RCA" fieldKey="dataEntregaRca" value={ticket.dataEntregaRca} onSave={save} />
-                        : <ReadField label="DATA ENTREGA RCA" value={fmtDate(ticket.dataEntregaRca)} />)
+                        ? <EditDate label="DATA ENTREGA RCA" fieldKey="dataEntregaRca" value={merged.dataEntregaRca} onSave={save} />
+                        : <ReadField label="DATA ENTREGA RCA" value={fmtDate(merged.dataEntregaRca)} />)
                     : null
                 }
               />
