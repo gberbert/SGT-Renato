@@ -163,9 +163,9 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste, includ
       <div style={{ ...cellBase, width:SQ_W, padding:'0 2px' }}>
         {squad && <span style={{ fontSize:7, fontWeight:600, color:'#065f46', background:'#d1fae5', padding:'1px 3px', borderRadius:3, maxWidth:SQ_W-6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{squad}</span>}
       </div>
-      {/* Prioridade — moved after Squad */}
+      {/* Prioridade — plain label, no colored badge (simplify for JPEG compression) */}
       <div style={{ ...cellBase, width:PR_W, padding:'0 2px' }}>
-        {pb && <span style={{ fontSize:7, fontWeight:700, background:pb.bg, color:pb.color, padding:'1px 3px', borderRadius:3, whiteSpace:'nowrap' }}>{pb.label}</span>}
+        {pb && <span style={{ fontSize:7, fontWeight:600, color:'#374151', whiteSpace:'nowrap' }}>{pb.label}</span>}
       </div>
       {/* Natureza da Iniciativa */}
       <div style={{ ...cellBase, width:NI_W, padding:'0 3px' }}>
@@ -207,28 +207,28 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste, includ
       </div>
       {/* Fim Teste */}
       <div style={{ ...cellBase, width:FT_W, padding:'0 2px' }}>
-        <span style={{ fontSize:7.5, color:ticket.dataFimTesteInterno?'#374151':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataFimTesteInterno)||'—'}</span>
+        <span style={{ fontSize:7.5, color:'#374151', textAlign:'center' }}>{fmtDate(ticket.dataFimTesteInterno)||'—'}</span>
       </div>
       {/* Data Início Homologação */}
       <div style={{ ...cellBase, width:DIH_W, padding:'0 2px' }}>
         {(() => {
           const dih = ticket.dataInicioHomologacao || ticket.dataInicioHomologacaoEfetiva || ticket.dataInicioHomologacaoPlanejada;
-          return <span style={{ fontSize:7.5, color:dih?'#7c3aed':'#94a3b8', textAlign:'center' }}>{fmtDate(dih)||'—'}</span>;
+          return <span style={{ fontSize:7.5, color:'#374151', textAlign:'center' }}>{fmtDate(dih)||'—'}</span>;
         })()}
       </div>
       {/* Data Fim Homologação */}
       <div style={{ ...cellBase, width:DH_W, padding:'0 2px' }}>
-        <span style={{ fontSize:7.5, color:ticket.dataFimHomologacao?'#7c3aed':'#94a3b8', textAlign:'center' }}>{fmtDate(ticket.dataFimHomologacao)||'—'}</span>
+        <span style={{ fontSize:7.5, color:'#374151', textAlign:'center' }}>{fmtDate(ticket.dataFimHomologacao)||'—'}</span>
       </div>
       {/* Data Conclusão */}
       <div style={{ ...cellBase, width:DC_W, padding:'0 2px' }}>
-        <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#94a3b8', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fmtDate(ticket.dataConclusao)||'—'}</span>
+        <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#374151', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fmtDate(ticket.dataConclusao)||'—'}</span>
       </div>
       {/* Pacote (Release) */}
       {includeRelease && (
         <div style={{ ...cellBase, width:PAC_W, padding:'0 3px' }}>
           {ticket.pacote
-            ? <span style={{ fontSize:6.5, fontWeight:700, color:'#312e81', background:'rgba(99,102,241,0.18)', border:'1px solid rgba(99,102,241,0.5)', borderRadius:3, padding:'1px 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:PAC_W-8 }}>{trunc(ticket.pacote, 22)}</span>
+            ? <span style={{ fontSize:6.5, fontWeight:600, color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:PAC_W-8 }}>{trunc(ticket.pacote, 22)}</span>
             : <span style={{ fontSize:7, color:'#94a3b8' }}>—</span>
           }
         </div>
@@ -748,7 +748,7 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
   const A4_W = 297;
   const A4_H = 210;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const SCALE = 2;
+  const SCALE = 1.5;
 
   async function svgToDataUrl(url) {
     try {
@@ -823,9 +823,9 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
         ctx.drawImage(canvas, 0, -yOffset);
-        const imgData = pageCanvas.toDataURL('image/png');
+        const imgData = pageCanvas.toDataURL('image/jpeg', 0.82);
         const sliceMmH = (sliceH / canvas.width) * A4_W;
-        pdf.addImage(imgData, 'PNG', 0, 0, A4_W, sliceMmH);
+        pdf.addImage(imgData, 'JPEG', 0, 0, A4_W, sliceMmH);
         yOffset += sliceH;
       }
     } finally {
@@ -863,9 +863,9 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
             ctx2.fillStyle = '#fff';
             ctx2.fillRect(0, 0, pageCanvas2.width, pageCanvas2.height);
             ctx2.drawImage(rCanvas, 0, -yOffset2);
-            const imgData2 = pageCanvas2.toDataURL('image/png');
+            const imgData2 = pageCanvas2.toDataURL('image/jpeg', 0.82);
             const sliceMmH2 = (sliceH2 / rCanvas.width) * A4_W;
-            pdf.addImage(imgData2, 'PNG', 0, 0, A4_W, sliceMmH2);
+            pdf.addImage(imgData2, 'JPEG', 0, 0, A4_W, sliceMmH2);
             yOffset2 += sliceH2;
           }
         } finally {
