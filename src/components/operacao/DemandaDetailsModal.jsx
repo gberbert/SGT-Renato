@@ -732,7 +732,7 @@ function PlanoComTabContent({ ticket, fmtDate }) {
     `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
     `Data Início Homologação: ${dIniHml !== '—' ? dIniHml : ''}`,
     `Data Fim Homologação: ${dFimHml !== '—' ? dFimHml : ''}`,
-    `Data Conclusão (Produção)**(*):\n${dConclusao !== '—' ? dConclusao : ''}`,
+    `Data Conclusão (Produção)(*): ${dConclusao !== '—' ? dConclusao : ''}`,
     '',
     `**Janela Prevista**(*):  ${pacote}`,
     '',
@@ -824,7 +824,7 @@ function PlanoComTabContent({ ticket, fmtDate }) {
         <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-        <p style={lineStyle}>Data Conclusão (Produção)**(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+        <p style={lineStyle}>Data Conclusão (Produção)(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <br />
 
         <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
