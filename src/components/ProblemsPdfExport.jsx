@@ -91,7 +91,16 @@ function pb(v) {
 }
 function fd(v) {
   if (!v) return '';
-  const m = String(v).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  // Handle Firestore Timestamp objects
+  let s = v;
+  if (typeof v === 'object' && typeof v.toDate === 'function') {
+    s = v.toDate().toISOString();
+  } else if (typeof v === 'object' && v.seconds != null) {
+    s = new Date(v.seconds * 1000).toISOString();
+  } else if (typeof v === 'number') {
+    s = new Date(v).toISOString();
+  }
+  const m = String(s).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? m[3]+'/'+m[2]+'/'+m[1] : '';
 }
 function sqd(t) {
