@@ -724,6 +724,21 @@ function PlanoComTabContent({ ticket, fmtDate }) {
   const dConclusao   = fmtDate(ticket.dataConclusao || ticket.dataEntregaProducaoPrevista);
   const pacote       = ticket.pacote || '';
 
+  // Se impedido, omite a seção de datas/janela prevista
+  const entregaLines = !ticket.impedimento ? [
+    '',
+    `**Plano de entrega por fases :**`,
+    `Data Fim Teste Interno: ${dFimTeste !== '—' ? dFimTeste : ''}`,
+    `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
+    `Data Início Homologação: ${dIniHml !== '—' ? dIniHml : ''}`,
+    `Data Fim Homologação: ${dFimHml !== '—' ? dFimHml : ''}`,
+    `Data Conclusão (Produção)**(*):\n${dConclusao !== '—' ? dConclusao : ''}`,
+    '',
+    `**Janela Prevista**(*):  ${pacote}`,
+    '',
+    `(*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
+  ] : [];
+
   const text = [
     `${ticket.issueKey} / Resumo: ${ticket.summary || ''}`,
     `**Squad: ${resolvedSquad}**`,
@@ -734,17 +749,7 @@ function PlanoComTabContent({ ticket, fmtDate }) {
     '',
     `**Impedida**: ${impedido}`,
     `**Motivo / Observação**: ${motivo}`,
-    '',
-    `**Plano de entrega por fases :**`,
-    `Data Fim Teste Interno: ${dFimTeste !== '—' ? dFimTeste : ''}`,
-    `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
-    `Data Início Homologação: ${dIniHml !== '—' ? dIniHml : ''}`,
-    `Data Fim Homologação: ${dFimHml !== '—' ? dFimHml : ''}`,
-    `Data Conclusão (Produção)**: ${dConclusao !== '—' ? dConclusao : ''}`,
-    '',
-    `**Janela Prevista**:  ${pacote}`,
-    '',
-    `** Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
+    ...entregaLines,
   ].join('\n');
 
   const handleCopy = async () => {
@@ -813,15 +818,16 @@ function PlanoComTabContent({ ticket, fmtDate }) {
         <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo}</p>
         <br />
 
+        {!ticket.impedimento && (<>
         <p style={{ ...lineStyle, ...bold }}>Plano de entrega por fases :</p>
         <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-        <p style={lineStyle}>Data Conclusão (Produção)**: {dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+        <p style={lineStyle}>Data Conclusão (Produção)**(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <br />
 
-        <p style={lineStyle}><span style={bold}>Janela Prevista</span>**:{' '}
+        <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
           {pacote
             ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>
             : <span style={{ color: 'var(--gray-7)' }}>—</span>}
@@ -829,8 +835,9 @@ function PlanoComTabContent({ ticket, fmtDate }) {
         <br />
 
         <p style={{ ...lineStyle, fontSize: 12, color: 'var(--gray-9)', fontStyle: 'italic', fontFamily: 'inherit' }}>
-          ** Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
+          (*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
         </p>
+        </>)}
       </div>
     </div>
   );
