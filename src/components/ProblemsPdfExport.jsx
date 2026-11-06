@@ -3,7 +3,53 @@ import ReactDOM from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
-const WF_PROB = ['Aguardando RCA','Aguardando Aprovacao Lider de Torre','Aguardando Aprovacao Ger. Problema','Solucao Rejeitada','Aguardando Planejamento','Aguardando Execucao','Em Execucao','Aguardando Demanda/Projeto','Em Monitoramento','Fechado','Cancelado','RCA em Desenvolvimento','Aguardando Aprovacao Tecnica RCA','Aguardando Aprovacao Governanca RCA','Resolvido','Em Planejamento','Aguardando Aprovacao Tecnica','Aguardando Aprovacao Governanca','Aguardando Demanda'];
+// Workflow order from PROBLEMA workflow (image: 11 steps Problema + RCA + Planejamento + Execução)
+const WF_PROB = [
+  // Problema
+  'Aguardando RCA',
+  'Aguardando Aprovação Líder de Torre',
+  'Aguardando Aprovação Ger. Problema',
+  'Solução Rejeitada',
+  'Aguardando Planejamento',
+  'Aguardando Execução',
+  'Em Execução',
+  'Aguardando Demanda/Projeto',
+  'Em Monitoramento',
+  'Fechado',
+  'Cancelado',
+  // RCA
+  'RCA em Desenvolvimento',
+  'Aguardando Aprovação Técnica RCA',
+  'Aguardando Aprovação Governança RCA',
+  'Resolvido',
+  // Planejamento / Execução
+  'Em Planejamento',
+  'Aguardando Aprovação Técnica',
+  'Aguardando Aprovação Governança',
+  'Aguardando Demanda',
+  'Aguardando Mudança',
+  // Fallback non-accented variants (legacy data)
+  'Aguardando Aprovacao Lider de Torre',
+  'Aguardando Aprovacao Ger. Problema',
+  'Solucao Rejeitada',
+  'Aguardando Execucao',
+  'Em Execucao',
+  'Aguardando Aprovacao Tecnica RCA',
+  'Aguardando Aprovacao Governanca RCA',
+  'Aguardando Aprovacao Tecnica',
+  'Aguardando Aprovacao Governanca',
+];
+
+// Normalize string for accent-insensitive comparison
+function normWF(s) {
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+const WF_PROB_NORM = WF_PROB.map(normWF);
+function wfIndex(s) {
+  const n = normWF(s);
+  const i = WF_PROB_NORM.indexOf(n);
+  return i === -1 ? WF_PROB.length : i;
+}
 
 const PAGE_W = 1500;
 const TIX_W  = 290;
@@ -176,8 +222,7 @@ function Stats({ tickets }) {
   const total = tickets.length;
   const imped = tickets.filter(t => t.impedimento === true).length;
   const stMap = {}; tickets.forEach(t => { if (t.status) stMap[t.status]=(stMap[t.status]||0)+1; });
-  const wfIdx = {}; WF_PROB.forEach((s,i) => { wfIdx[s]=i; });
-  const topSt = Object.entries(stMap).sort((a,b) => { const ia=wfIdx[a[0]]??WF_PROB.length; const ib=wfIdx[b[0]]??WF_PROB.length; return ia!==ib?ia-ib:b[1]-a[1]; }).slice(0,10);
+  const topSt = Object.entries(stMap).sort((a,b) => { const ia=wfIndex(a[0]); const ib=wfIndex(b[0]); return ia!==ib?ia-ib:b[1]-a[1]; }).slice(0,10);
   const sqMap = {}; tickets.forEach(t => { const s=tr(sqd(t)||'Sem squad',10); sqMap[s]=(sqMap[s]||0)+1; });
   const topSq = Object.entries(sqMap).sort((a,b) => b[1]-a[1]).slice(0,8);
   const H=54;
@@ -282,12 +327,11 @@ export async function exportProblemsPdf({ filteredTickets = [], allTickets = [],
     return e === 'PROBLEMAS' || e === 'PROBLEMA';
   });
 
-  // Group by workflow status
-  const wfIdx = {}; WF_PROB.forEach((s,i) => { wfIdx[s]=i; });
+  // Group by workflow status — use accent-insensitive wfIndex
   const map = new Map();
   tickets.forEach(t => { const s=t.status||'(sem status)'; if(!map.has(s))map.set(s,[]); map.get(s).push(t); });
   const groups = [...map.entries()]
-    .sort(([a],[b]) => { const ia=wfIdx[a]??WF_PROB.length; const ib=wfIdx[b]??WF_PROB.length; return ia!==ib?ia-ib:a.localeCompare(b,'pt-BR'); })
+    .sort(([a],[b]) => { const ia=wfIndex(a); const ib=wfIndex(b); return ia!==ib?ia-ib:a.localeCompare(b,'pt-BR'); })
     .map(([label,tks]) => ({ key:label, label, tickets:tks }));
 
   const A4_W = 297;
