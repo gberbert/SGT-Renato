@@ -308,7 +308,7 @@ function GroupedContent({ groups, tickets, exportedAt, ticketMap }) {
 function CoverPage({ exportedAt, nttUrl, cpflUrl }) {
   const dateStr = new Date().toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
   return (
-    <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'linear-gradient(135deg, #071640 0%, #0f2152 45%, #091a4a 100%)' }}>
+    <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'linear-gradient(135deg, #020b1f 0%, #061535 45%, #030e28 100%)' }}>
       <div style={{ position:'absolute', top:40, left:48, zIndex:10 }}>
         {nttUrl && <img src={nttUrl} style={{ height:44, objectFit:'contain' }} />}
       </div>
