@@ -15,8 +15,8 @@ const DC_W   = 75;
 const IMP_W  = 18;
 const TV_W   = 85;   // Ticket Vinculado key
 const TVI_W  = 20;   // Impedimento do TV (icon)
-const TVS_W  = 105;  // Status do TV
-const TVP_W  = 95;   // Pacote do TV
+const TVS_W  = 80;   // Status do TV
+const TVP_W  = 130;  // Pacote do TV
 const ROW_H  = 22;
 const CB     = '1px solid #e2e8f0';
 const PAGE_H = Math.round((210 / 297) * PAGE_W);
@@ -156,10 +156,10 @@ function ColHdr() {
         <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px', borderRight:CB }}>
           <span style={{ fontSize:7.5, fontWeight:800, color:'#475569', letterSpacing:'0.04em', textTransform:'uppercase', lineHeight:1.2 }}>Motivo / Observação</span>
         </div>
-        {hC(TV_W,'Ticket','Vinc.')}
-        {hC(TVI_W,'⚠','TV')}
-        {hC(TVS_W,'Status','TV')}
-        {hC(TVP_W,'Pacote','TV')}
+        {hC(TV_W,'Ticket','Vinculado')}
+        {hC(TVI_W,'⚠','Vinc.')}
+        {hC(TVS_W,'Status','Ticket Vinc.')}
+        {hC(TVP_W,'Pacote','Ticket Vinc.')}
       </div>
     </div>
   );
