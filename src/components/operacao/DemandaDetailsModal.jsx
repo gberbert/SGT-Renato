@@ -739,6 +739,12 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
     return g ? g.replace(/^\d+\s*-\s*/, '').trim() : '—';
   })();
 
+  // Detect PROBLEMAS escopo — removes % Teste Interno, Data Fim Teste Interno, Data Fim Teste (QA)
+  const isProblema = (() => {
+    const e = String(ticket.escopo || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    return e === 'PROBLEMAS' || e === 'PROBLEMA';
+  })();
+
   const pctDev   = ticket.percentualConclusao        != null ? `${ticket.percentualConclusao}%`              : '';
   const pctTeste = ticket.percentualConclusaoTesteInterno != null ? `${ticket.percentualConclusaoTesteInterno}%` : '';
   const impedido = ticket.impedimento ? 'Sim' : 'Não';
@@ -752,7 +758,15 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
   const pacote       = ticket.pacote || '';
 
   // ── Texto SIMPLIFICADO ──────────────────────────────────────
-  const textSimplified = [
+  // PROBLEMA: remove % Teste Interno
+  const textSimplified = isProblema ? [
+    `**Progresso de execução:**`,
+    `% Conclusão Desenvolvimento: ${pctDev}`,
+    '',
+    `**Impedida**: ${impedido}`,
+    `**Motivo / Observação**: ${motivo}`,
+    ...(pacote ? ['', `**Janela Prevista**(**): ${pacote}`] : []),
+  ].join('\n') : [
     `**Progresso de execução:**`,
     `% Conclusão Desenvolvimento: ${pctDev}`,
     `% Teste Interno: ${pctTeste}`,
@@ -763,27 +777,31 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
   ].join('\n');
 
   // ── Texto COMPLETO ──────────────────────────────────────────
+  // PROBLEMA: remove Data Fim Teste Interno e Data Fim Teste (QA) CPFL
   const entregaLines = !ticket.impedimento ? [
     '',
     `**Plano de entrega por fases :**`,
-    `Data Fim Teste Interno: ${dFimTeste !== '—' ? dFimTeste : ''}`,
-    `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
+    ...(!isProblema ? [
+      `Data Fim Teste Interno: ${dFimTeste !== '—' ? dFimTeste : ''}`,
+      `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
+    ] : []),
     `Data Início Homologação: ${dIniHml !== '—' ? dIniHml : ''}`,
     `Data Fim Homologação: ${dFimHml !== '—' ? dFimHml : ''}`,
     `Data Conclusão (Produção)(*): ${dConclusao !== '—' ? dConclusao : ''}`,
     '',
     `**Janela Prevista**(*):  ${pacote}`,
     '',
-    `(*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
+    `(*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas ${isProblema ? 'de Homologação, da fila CPFL, precisam' : 'de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam'} ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
   ] : [];
 
+  // PROBLEMA: remove % Teste Interno no texto completo
   const textFull = [
     `${ticket.issueKey} / Resumo: ${ticket.summary || ''}`,
     `**Squad: ${resolvedSquad}**`,
     '',
     `**Progresso de execução:**`,
     `% Conclusão Desenvolvimento: ${pctDev}`,
-    `% Teste Interno: ${pctTeste}`,
+    ...(!isProblema ? [`% Teste Interno: ${pctTeste}`] : []),
     '',
     `**Impedida**: ${impedido}`,
     `**Motivo / Observação**: ${motivo}`,
@@ -820,7 +838,7 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
         <>
           <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
           <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev || <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('percentualConclusao') && <AltBadge />}</p>
-          <p style={lineStyle}>% Teste Interno: {pctTeste || <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('percentualConclusaoTesteInterno') && <AltBadge />}</p>
+          {!isProblema && <p style={lineStyle}>% Teste Interno: {pctTeste || <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('percentualConclusaoTesteInterno') && <AltBadge />}</p>}
           <br />
           <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}{isAltered('impedimento') && <AltBadge />}</p>
           <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo || <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('observacaoAdicional') && <AltBadge />}</p>
@@ -838,15 +856,15 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
           <br />
           <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
           <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev}{isAltered('percentualConclusao') && <AltBadge />}</p>
-          <p style={lineStyle}>% Teste Interno: {pctTeste}{isAltered('percentualConclusaoTesteInterno') && <AltBadge />}</p>
+          {!isProblema && <p style={lineStyle}>% Teste Interno: {pctTeste}{isAltered('percentualConclusaoTesteInterno') && <AltBadge />}</p>}
           <br />
           <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}{isAltered('impedimento') && <AltBadge />}</p>
           <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo}{isAltered('observacaoAdicional') && <AltBadge />}</p>
           <br />
           {!ticket.impedimento && (<>
             <p style={{ ...lineStyle, ...bold }}>Plano de entrega por fases :</p>
-            <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteInterno') && <AltBadge />}</p>
-            <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteQa') && <AltBadge />}</p>
+            {!isProblema && <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteInterno') && <AltBadge />}</p>}
+            {!isProblema && <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteQa') && <AltBadge />}</p>}
             <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataInicioHomologacao') && <AltBadge />}</p>
             <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimHomologacao') && <AltBadge />}</p>
             <p style={lineStyle}>Data Conclusão (Produção)(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataConclusao') && <AltBadge />}</p>
@@ -856,7 +874,7 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
             </p>
             <br />
             <p style={{ ...lineStyle, fontSize: 12, color: 'var(--gray-9)', fontStyle: 'italic', fontFamily: 'inherit' }}>
-              (*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
+              (*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas {isProblema ? 'de Homologação, da fila CPFL, precisam' : 'de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam'} ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
             </p>
           </>)}
         </>
