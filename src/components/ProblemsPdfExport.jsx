@@ -65,7 +65,8 @@ function hC(w, l, s) {
 }
 
 function PRow({ ticket, rowBg, ticketMap }) {
-  const grupo = tr((ticket.grupoSuporte||'').replace(/^\d+\s*-\s*/,'').trim(), 20);
+  const grupoRaw = ticket.grupoSuporte || ticket.grupoSolucionador || '';
+  const grupo = tr(grupoRaw.replace(/^\d+\s*-\s*/,'').trim(), 20);
   const squad = tr(sqd(ticket), 10);
   const status = tr(ticket.status||'', 20);
   const col = sc(ticket.status);
