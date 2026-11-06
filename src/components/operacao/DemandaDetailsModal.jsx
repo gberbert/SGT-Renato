@@ -56,9 +56,18 @@ function useTeamMembers() {
   return members;
 }
 
+// Convert any date value (string, Firestore Timestamp, epoch ms) to ISO string "yyyy-mm-dd"
+function toISODateStr(v) {
+  if (!v) return '';
+  if (typeof v === 'object' && typeof v.toDate === 'function') return v.toDate().toISOString().slice(0, 10);
+  if (typeof v === 'object' && v.seconds != null) return new Date(v.seconds * 1000).toISOString().slice(0, 10);
+  if (typeof v === 'number') return new Date(v).toISOString().slice(0, 10);
+  return String(v).trim();
+}
+
 const fmtDate = (v) => {
-  if (!v) return '—';
-  const s = String(v).trim();
+if (!v) return '—';
+  const s = toISODateStr(v);
   // Full ISO: yyyy-mm-dd (optionally followed by time)
   const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
@@ -208,8 +217,8 @@ function EditToggle({ label, fieldKey, value, onSave }) {
 }
 
 function EditDate({ label, fieldKey, value, onSave }) {
-  const [local, setLocal] = useState(value ? String(value).slice(0, 10) : '');
-  useEffect(() => { setLocal(value ? String(value).slice(0, 10) : ''); }, [value]);
+const [local, setLocal] = useState(value ? toISODateStr(value).slice(0, 10) : '');
+  useEffect(() => { setLocal(value ? toISODateStr(value).slice(0, 10) : ''); }, [value]);
   return (
     <div className="dmd-field">
       <FieldLabel>{label}</FieldLabel>
