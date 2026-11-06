@@ -688,9 +688,7 @@ const PAGE_H = Math.round((210 / 297) * PAGE_W); // A4 landscape height ≈ 905p
 function CoverPage({ exportedAt, nttUrl, cpflUrl }) {
   const dateStr = new Date().toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
   return (
-    <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'#1a2850' }}>
-      <img src={COVER_BG_URL} crossOrigin="anonymous" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
-      <div style={{ position:'absolute', inset:0, background:'rgba(22,34,72,0.65)' }} />
+    <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'linear-gradient(135deg, #0f2152 0%, #1a3a7a 45%, #0d2d6b 100%)' }}>
       <div style={{ position:'absolute', top:40, left:48, zIndex:10 }}>
         {nttUrl && <img src={nttUrl} style={{ height:44, objectFit:'contain' }} />}
       </div>
