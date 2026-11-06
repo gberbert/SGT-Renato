@@ -28,6 +28,7 @@ const DATE_FIELDS_TO_LOG = new Set([
   'dataFimTesteQa',
   'dataFimHomologacao',
   'dataConclusao',
+  'dataEntregaRca',
 ]);
 
 const DATE_FIELD_LABELS = {
@@ -36,6 +37,7 @@ const DATE_FIELD_LABELS = {
   dataFimTesteQa: 'Fim Teste (QA)',
   dataFimHomologacao: 'Fim Homologação',
   dataConclusao: 'Conclusão',
+  dataEntregaRca: 'Data Entrega RCA',
 };
 
 // Status/operational fields that generate a statusChangeLog entry on change
