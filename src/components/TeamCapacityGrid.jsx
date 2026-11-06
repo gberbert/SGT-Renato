@@ -59,13 +59,29 @@ function computeJourneyBreakdown(journeyPeriods, periodStart, periodEnd) {
   return { ferias, folga, atestado, horaExtra };
 }
 
-/* count Mon–Fri days in a given year/month (0-based month) */
+/* Feriados nacionais de data fixa (MM-DD) — Lei 14.759/2023 inclui 20/11 */
+const NATIONAL_FIXED = new Set([
+  '01-01', // Confraternização Universal
+  '04-21', // Tiradentes
+  '05-01', // Dia do Trabalho
+  '09-07', // Independência do Brasil
+  '10-12', // N. Sra. Aparecida
+  '11-02', // Finados
+  '11-15', // Proclamação da República
+  '11-20', // Consciência Negra (Lei 14.759/2023)
+  '12-25', // Natal
+]);
+
+/* count Mon–Fri days in a given year/month (0-based month), excluindo feriados nacionais fixos */
 function countWeekdays(year, month) {
   const last = new Date(year, month + 1, 0).getDate();
   let count = 0;
   for (let d = 1; d <= last; d++) {
     const dow = new Date(year, month, d).getDay();
-    if (dow !== 0 && dow !== 6) count++;
+    if (dow === 0 || dow === 6) continue; // fim de semana
+    const mmdd = `${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    if (NATIONAL_FIXED.has(mmdd)) continue; // feriado nacional
+    count++;
   }
   return count;
 }
