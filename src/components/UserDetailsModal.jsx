@@ -3,7 +3,7 @@ import { Dialog, Avatar, Text } from '@radix-ui/themes';
 import { Camera, Sun, Moon } from 'lucide-react';
 import { storage, db } from '../firebase';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, collectionGroup, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { updateUser } from '../services/settingsService';
 import { subscribeToProjectSquads } from '../services/squadService';
 import { userHasFunctionPermission } from '../services/permissionService';
@@ -142,14 +142,18 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
   }, [open, user]);
 
   useEffect(() => {
-    getDocs(collectionGroup(db, 'codigosProjeto'))
-      .then(snap => {
-        const codes = [];
-        snap.docs.forEach(d => {
-          const v = d.data().projeto;
-          if (v && !codes.includes(v)) codes.push(v);
-        });
-        setProjectCodes(codes.sort((a, b) => a.localeCompare(b, 'pt-BR')));
+    // collectionGroup requer regra específica; iteramos os projetos diretamente
+    getDocs(collection(db, 'projects'))
+      .then(async projectsSnap => {
+        const codeSet = new Set();
+        await Promise.all(
+          projectsSnap.docs.map(pd =>
+            getDocs(collection(db, 'projects', pd.id, 'codigosProjeto'))
+              .then(snap => snap.docs.forEach(d => { const v = d.data().projeto; if (v) codeSet.add(v); }))
+              .catch(() => {})
+          )
+        );
+        setProjectCodes([...codeSet].sort((a, b) => a.localeCompare(b, 'pt-BR')));
       })
       .catch(() => {});
   }, []);
