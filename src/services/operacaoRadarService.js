@@ -722,6 +722,7 @@ const data = d.data();
     dataInicioHomologacaoEfetiva: data.dataInicioHomologacaoEfetiva || null,
     dataFimHomologacaoPlanejada: data.dataFimHomologacaoPlanejada || null,
     dataFimHomologacaoEfetiva: data.dataFimHomologacaoEfetiva || data.jiraDatesFlow?.aprovacaoHomologacao || null,
+    dataEntregaRca: data.dataEntregaRca || null,
     dataEntregaProducaoPrevista: data.dataEntregaProducaoPrevista || null,
     estimativaHoras: data.estimativaHoras ?? null,
     dataFimPlanejado: data.dataFimPlanejado || null,
