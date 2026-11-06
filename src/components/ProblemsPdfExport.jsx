@@ -16,7 +16,7 @@ const IMP_W  = 18;
 const TV_W   = 85;   // Ticket Vinculado key
 const TVI_W  = 20;   // Impedimento do TV (icon)
 const TVS_W  = 80;   // Status do TV
-const TVP_W  = 130;  // Pacote do TV
+const TVP_W  = 190;  // Pacote do TV
 const ROW_H  = 22;
 const CB     = '1px solid #e2e8f0';
 const PAGE_H = Math.round((210 / 297) * PAGE_W);
@@ -84,7 +84,7 @@ function PRow({ ticket, rowBg, ticketMap }) {
   const tvStatus = tvTicket ? tr(tvTicket.status||'', 18) : '';
   const tvStatusCol = tvTicket ? sc(tvTicket.status) : '#6b7280';
   const tvImp = tvTicket ? tvTicket.impedimento === true : false;
-  const tvPacote = tvTicket ? tr(tvTicket.pacote||'', 14) : '';
+  const tvPacote = tvTicket ? tr(tvTicket.pacote||'', 28) : '';
 
   return (
     <div style={{ display:'flex', alignItems:'flex-start', minHeight:ROW_H, borderBottom:'1px solid #e2e8f0', background:bg }}>
