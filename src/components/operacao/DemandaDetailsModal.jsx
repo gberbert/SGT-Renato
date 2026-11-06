@@ -715,6 +715,23 @@ function PlanRow({ left, right }) {
 function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = {} }) {
   const [copied, setCopied] = useState(false);
   const [simplified, setSimplified] = useState(false);
+  const [linkedTickets, setLinkedTickets] = useState([]);
+
+  // Fetch linked tickets from Firestore by docId (issueKey is the docId in tickets_global)
+  useEffect(() => {
+    const rawKeys = ticket.ticketsVinculados;
+    if (!rawKeys) { setLinkedTickets([]); return; }
+    const keys = String(rawKeys).split(',').map(k => k.trim()).filter(Boolean);
+    if (!keys.length) { setLinkedTickets([]); return; }
+    Promise.all(
+      keys.map(k =>
+        import('firebase/firestore')
+          .then(({ getDoc, doc: firestoreDoc }) => getDoc(firestoreDoc(db, 'tickets_global', k)))
+          .then(snap => snap.exists() ? { id: snap.id, ...snap.data() } : { issueKey: k })
+          .catch(() => ({ issueKey: k }))
+      )
+    ).then(setLinkedTickets).catch(() => {});
+  }, [ticket.ticketsVinculados]);
 
   // Returns true if the field was altered from the original Jira-synced value
   const isAltered = (fieldKey) => {
@@ -756,6 +773,7 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
   const dFimHml    = fmtDate(ticket.dataFimHomologacao);
   const dConclusao = fmtDate(ticket.dataConclusao);
   const pacote       = ticket.pacote || '';
+  const dEntregaRca  = fmtDate(freshData.dataEntregaRca || ticket.dataEntregaRca);
 
   // ── Texto SIMPLIFICADO ──────────────────────────────────────
   // PROBLEMA: remove % Teste Interno
@@ -777,10 +795,23 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
   ].join('\n');
 
   // ── Texto COMPLETO ──────────────────────────────────────────
-  // PROBLEMA: remove Data Fim Teste Interno e Data Fim Teste (QA) CPFL
+  // PROBLEMA: remove Data Fim Teste Interno e Data Fim Teste (QA) CPFL; adds Data Entrega RCA + Ticket Vinculado
+  const linkedTicketLines = isProblema && linkedTickets.length > 0 ? [
+    '',
+    `**Tickets Vinculados:**`,
+    ...linkedTickets.map(tv => {
+      const parts = [tv.issueKey || ''];
+      if (tv.impedimento) parts.push('⚠ Impedido');
+      if (tv.status) parts.push(tv.status);
+      if (tv.pacote) parts.push(tv.pacote);
+      return parts.filter(Boolean).join(' | ');
+    }),
+  ] : [];
+
   const entregaLines = !ticket.impedimento ? [
     '',
     `**Plano de entrega por fases :**`,
+    ...(isProblema && dEntregaRca !== '—' ? [`Data Entrega RCA: ${dEntregaRca}`] : []),
     ...(!isProblema ? [
       `Data Fim Teste Interno: ${dFimTeste !== '—' ? dFimTeste : ''}`,
       `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
@@ -794,7 +825,7 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
     `(*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas ${isProblema ? 'de Homologação, da fila CPFL, precisam' : 'de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam'} ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
   ] : [];
 
-  // PROBLEMA: remove % Teste Interno no texto completo
+  // PROBLEMA: remove % Teste Interno no texto completo; adds linked tickets
   const textFull = [
     `${ticket.issueKey} / Resumo: ${ticket.summary || ''}`,
     `**Squad: ${resolvedSquad}**`,
@@ -806,6 +837,7 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
     `**Impedida**: ${impedido}`,
     `**Motivo / Observação**: ${motivo}`,
     ...entregaLines,
+    ...linkedTicketLines,
   ].join('\n');
 
   const text = simplified ? textSimplified : textFull;
@@ -863,6 +895,7 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
           <br />
           {!ticket.impedimento && (<>
             <p style={{ ...lineStyle, ...bold }}>Plano de entrega por fases :</p>
+            {isProblema && <p style={lineStyle}>Data Entrega RCA: {dEntregaRca !== '—' ? dEntregaRca : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataEntregaRca') && <AltBadge />}</p>}
             {!isProblema && <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteInterno') && <AltBadge />}</p>}
             {!isProblema && <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteQa') && <AltBadge />}</p>}
             <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataInicioHomologacao') && <AltBadge />}</p>
@@ -876,6 +909,18 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
             <p style={{ ...lineStyle, fontSize: 12, color: 'var(--gray-9)', fontStyle: 'italic', fontFamily: 'inherit' }}>
               (*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas {isProblema ? 'de Homologação, da fila CPFL, precisam' : 'de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam'} ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
             </p>
+          </>)}
+          {isProblema && linkedTickets.length > 0 && (<>
+            <br />
+            <p style={{ ...lineStyle, ...bold }}>Tickets Vinculados:</p>
+            {linkedTickets.map((tv, i) => (
+              <p key={i} style={{ ...lineStyle, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', whiteSpace: 'normal' }}>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#22d3ee' }}>{tv.issueKey}</span>
+                {tv.impedimento && <span style={{ fontSize: 11 }}>⚠</span>}
+                {tv.status && <span style={{ color: '#fbbf24', fontWeight: 600 }}>{tv.status}</span>}
+                {tv.pacote && <span style={{ color: '#a5b4fc' }}>{tv.pacote}</span>}
+              </p>
+            ))}
           </>)}
         </>
       )}
