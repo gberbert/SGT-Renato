@@ -877,10 +877,6 @@ export async function exportCicloPdf({ ciclos = [], getCicloTickets, filteredTic
       }
     }
 
-    // ── Back page ────────────────────────────────────────────────────────
-    const backCanvas = await renderPage(<BackPage nttUrl={nttDataUrl} />);
-    addCanvasPage(backCanvas, false);
-
     const dateStr = new Date().toISOString().slice(0, 10);
     pdf.save('planejamento-ciclos-' + dateStr + '.pdf');
   } catch (e) {
