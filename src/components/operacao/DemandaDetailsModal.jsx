@@ -719,10 +719,10 @@ function PlanoComTabContent({ ticket, fmtDate }) {
 
   const dFimTeste    = fmtDate(ticket.dataFimTesteInterno);
   const dFimTesteQa  = fmtDate(ticket.dataFimTesteQa);
-  // Datas do Plano de Comunicação — usam o campo interno (direito) com fallback para o campo Jira planejado (esquerdo)
-  const dIniHml    = fmtDate(ticket.dataInicioHomologacao || ticket.dataInicioHomologacaoPlanejada);
-  const dFimHml    = fmtDate(ticket.dataFimHomologacao    || ticket.dataFimHomologacaoPlanejada);
-  const dConclusao = fmtDate(ticket.dataConclusao         || ticket.dataEntregaProducaoPrevista);
+  // Datas do Plano de Comunicação — usam SOMENTE o campo interno (direito do PLANEJAMENTO); sem fallback
+  const dIniHml    = fmtDate(ticket.dataInicioHomologacao);
+  const dFimHml    = fmtDate(ticket.dataFimHomologacao);
+  const dConclusao = fmtDate(ticket.dataConclusao);
   const pacote       = ticket.pacote || '';
 
   // Se impedido, omite a seção de datas/janela prevista
