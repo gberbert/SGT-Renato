@@ -769,10 +769,12 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
 
   const dFimTeste    = fmtDate(ticket.dataFimTesteInterno);
   const dFimTesteQa  = fmtDate(ticket.dataFimTesteQa);
-  const dIniHml    = fmtDate(ticket.dataInicioHomologacao);
-  const dFimHml    = fmtDate(ticket.dataFimHomologacao);
-  const dConclusao = fmtDate(ticket.dataConclusao);
-  const pacote       = ticket.pacote || '';
+  // Para PROBLEMA: usa datas/pacote do ticket vinculado como fallback quando o próprio ticket não tem
+  const tvRef = isProblema && linkedTickets.length > 0 ? linkedTickets[0] : null;
+  const dIniHml    = fmtDate(ticket.dataInicioHomologacao    || tvRef?.dataInicioHomologacao);
+  const dFimHml    = fmtDate(ticket.dataFimHomologacao       || tvRef?.dataFimHomologacao);
+  const dConclusao = fmtDate(ticket.dataConclusao            || tvRef?.dataConclusao);
+  const pacote       = ticket.pacote || (isProblema ? tvRef?.pacote : '') || '';
   const dEntregaRca  = fmtDate(freshData.dataEntregaRca || ticket.dataEntregaRca);
 
   // ── Linked ticket lines (shared by both Simplificado and Completo) ──
