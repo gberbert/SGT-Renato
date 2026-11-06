@@ -775,8 +775,21 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
   const pacote       = ticket.pacote || '';
   const dEntregaRca  = fmtDate(freshData.dataEntregaRca || ticket.dataEntregaRca);
 
+  // ── Linked ticket lines (shared by both Simplificado and Completo) ──
+  const linkedTicketLines = isProblema && linkedTickets.length > 0 ? [
+    '',
+    `**Tickets Vinculados:**`,
+    ...linkedTickets.map(tv => {
+      const parts = [tv.issueKey || ''];
+      if (tv.impedimento) parts.push('⚠ Impedido');
+      if (tv.status) parts.push(tv.status);
+      if (tv.pacote) parts.push(tv.pacote);
+      return parts.filter(Boolean).join(' | ');
+    }),
+  ] : [];
+
   // ── Texto SIMPLIFICADO ──────────────────────────────────────
-  // PROBLEMA: remove % Teste Interno
+  // PROBLEMA: remove % Teste Interno; adds linked tickets
   const textSimplified = isProblema ? [
     `**Progresso de execução:**`,
     `% Conclusão Desenvolvimento: ${pctDev}`,
@@ -784,6 +797,7 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
     `**Impedida**: ${impedido}`,
     `**Motivo / Observação**: ${motivo}`,
     ...(pacote ? ['', `**Janela Prevista**(**): ${pacote}`] : []),
+    ...linkedTicketLines,
   ].join('\n') : [
     `**Progresso de execução:**`,
     `% Conclusão Desenvolvimento: ${pctDev}`,
@@ -796,17 +810,6 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
 
   // ── Texto COMPLETO ──────────────────────────────────────────
   // PROBLEMA: remove Data Fim Teste Interno e Data Fim Teste (QA) CPFL; adds Data Entrega RCA + Ticket Vinculado
-  const linkedTicketLines = isProblema && linkedTickets.length > 0 ? [
-    '',
-    `**Tickets Vinculados:**`,
-    ...linkedTickets.map(tv => {
-      const parts = [tv.issueKey || ''];
-      if (tv.impedimento) parts.push('⚠ Impedido');
-      if (tv.status) parts.push(tv.status);
-      if (tv.pacote) parts.push(tv.pacote);
-      return parts.filter(Boolean).join(' | ');
-    }),
-  ] : [];
 
   const entregaLines = !ticket.impedimento ? [
     '',
@@ -879,6 +882,18 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
             <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
               <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>{isAltered('pacote') && <AltBadge />}
             </p>
+          </>)}
+          {isProblema && linkedTickets.length > 0 && (<>
+            <br />
+            <p style={{ ...lineStyle, ...bold }}>Tickets Vinculados:</p>
+            {linkedTickets.map((tv, i) => (
+              <p key={i} style={{ ...lineStyle, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', whiteSpace: 'normal' }}>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#22d3ee' }}>{tv.issueKey}</span>
+                {tv.impedimento && <span style={{ fontSize: 11 }}>⚠</span>}
+                {tv.status && <span style={{ color: '#fbbf24', fontWeight: 600 }}>{tv.status}</span>}
+                {tv.pacote && <span style={{ color: '#a5b4fc' }}>{tv.pacote}</span>}
+              </p>
+            ))}
           </>)}
         </>
       ) : (
