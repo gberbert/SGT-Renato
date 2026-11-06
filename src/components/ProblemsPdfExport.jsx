@@ -7,6 +7,7 @@ const WF_PROB = ['Aguardando RCA','Aguardando Aprovacao Lider de Torre','Aguarda
 
 const PAGE_W = 1500;
 const TIX_W  = 290;
+const GA_W   = 115;  // Grupo Atendimento
 const SQ_W   = 65;
 const PR_W   = 55;
 const ST_W   = 115;
@@ -64,6 +65,7 @@ function hC(w, l, s) {
 }
 
 function PRow({ ticket, rowBg, ticketMap }) {
+  const grupo = tr((ticket.grupoSuporte||'').replace(/^\d+\s*-\s*/,'').trim(), 20);
   const squad = tr(sqd(ticket), 10);
   const status = tr(ticket.status||'', 20);
   const col = sc(ticket.status);
@@ -93,6 +95,9 @@ function PRow({ ticket, rowBg, ticketMap }) {
         {isImp && <span style={{ fontSize:8, flexShrink:0 }}>⚠</span>}
         <span style={{ fontSize:7.5, fontWeight:700, color:isImp?'#dc2626':'#1d4ed8', fontFamily:'monospace', flexShrink:0 }}>{ticket.issueKey||ticket.id||''}</span>
         <span style={{ fontSize:7.5, color:isImp?'#b91c1c':'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>{ticket.summary||''}</span>
+      </div>
+      <div style={{ ...cellBase, width:GA_W, padding:'0 3px' }}>
+        {grupo && <span style={{ fontSize:6.5, color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:GA_W-6 }}>{grupo}</span>}
       </div>
       <div style={{ ...cellBase, width:SQ_W, padding:'0 2px' }}>
         {squad && <span style={{ fontSize:7, fontWeight:600, color:'#065f46', background:'#d1fae5', padding:'1px 3px', borderRadius:3, maxWidth:SQ_W-6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{squad}</span>}
@@ -133,7 +138,7 @@ function PRow({ ticket, rowBg, ticketMap }) {
 
 function ColHdr() {
   const tvTotal = TV_W + TVI_W + TVS_W + TVP_W;
-  const fixedW = TIX_W + SQ_W + PR_W + ST_W + DRCA_W + DC_W + IMP_W;
+  const fixedW = TIX_W + GA_W + SQ_W + PR_W + ST_W + DRCA_W + DC_W + IMP_W;
   return (
     <div>
       {/* Group header row for TV */}
@@ -147,6 +152,7 @@ function ColHdr() {
       {/* Main column headers */}
       <div style={{ display:'flex', borderBottom:'2px solid #cbd5e1', minHeight:36, background:'#f1f5f9' }}>
         {hC(TIX_W,'Ticket',null)}
+        {hC(GA_W,'Grupo','Atendimento')}
         {hC(SQ_W,'Squad',null)}
         {hC(PR_W,'Prio',null)}
         {hC(ST_W,'Status',null)}
