@@ -5,17 +5,21 @@ import jsPDF from 'jspdf';
 
 const WF_PROB = ['Aguardando RCA','Aguardando Aprovacao Lider de Torre','Aguardando Aprovacao Ger. Problema','Solucao Rejeitada','Aguardando Planejamento','Aguardando Execucao','Em Execucao','Aguardando Demanda/Projeto','Em Monitoramento','Fechado','Cancelado','RCA em Desenvolvimento','Aguardando Aprovacao Tecnica RCA','Aguardando Aprovacao Governanca RCA','Resolvido','Em Planejamento','Aguardando Aprovacao Tecnica','Aguardando Aprovacao Governanca','Aguardando Demanda'];
 
-const PAGE_W = 1280;
-const TIX_W  = 300;
-const SQ_W   = 65;
-const PR_W   = 55;
-const NI_W   = 100;
-const ST_W   = 120;
-const FT_W   = 75;
-const DIH_W  = 75;
-const DH_W   = 75;
-const DC_W   = 75;
-const IMP_W  = 20;
+const PAGE_W = 1500;
+const TIX_W  = 280;
+const SQ_W   = 60;
+const PR_W   = 50;
+const NI_W   = 90;
+const ST_W   = 110;
+const FT_W   = 70;
+const DIH_W  = 70;
+const DH_W   = 70;
+const DC_W   = 70;
+const IMP_W  = 18;
+const TV_W   = 80;   // Ticket Vinculado key
+const TVI_W  = 20;   // Impedimento do TV (icon)
+const TVS_W  = 100;  // Status do TV
+const TVP_W  = 90;   // Pacote do TV
 const ROW_H  = 22;
 const CB     = '1px solid #e2e8f0';
 const PAGE_H = Math.round((210 / 297) * PAGE_W);
@@ -62,14 +66,28 @@ function hC(w, l, s) {
   );
 }
 
-function PRow({ ticket, rowBg }) {
+function PRow({ ticket, rowBg, ticketMap }) {
   const squad = tr(sqd(ticket), 10);
   const status = tr(ticket.status||'', 20);
   const col = sc(ticket.status);
   const prio = pb(ticket.prioridadeInterna);
   const isImp = ticket.impedimento === true;
-  const motivo = tr(ticket.observacaoAdicional || ticket.motivoImpedimento || ticket.observacao || '', 110);
+  const motivo = tr(ticket.observacaoAdicional || ticket.motivoImpedimento || ticket.observacao || '', 90);
   const bg = rowBg || (isImp ? '#fff1f2' : '#ffffff');
+
+  // Linked ticket lookup
+  const tvKey = (() => {
+    const v = ticket.ticketsVinculados;
+    if (!v) return null;
+    const keys = String(v).split(',').map(k => k.trim()).filter(Boolean);
+    return keys[0] || null;
+  })();
+  const tvTicket = tvKey && ticketMap ? ticketMap.get(tvKey) : null;
+  const tvStatus = tvTicket ? tr(tvTicket.status||'', 18) : '';
+  const tvStatusCol = tvTicket ? sc(tvTicket.status) : '#6b7280';
+  const tvImp = tvTicket ? tvTicket.impedimento === true : false;
+  const tvPacote = tvTicket ? tr(tvTicket.pacote||'', 14) : '';
+
   return (
     <div style={{ display:'flex', alignItems:'flex-start', minHeight:ROW_H, borderBottom:'1px solid #e2e8f0', background:bg }}>
       <div style={{ ...cellBase, width:TIX_W, gap:3, padding:'0 5px', justifyContent:'flex-start' }}>
@@ -103,6 +121,19 @@ function PRow({ ticket, rowBg }) {
         <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#374151', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fd(ticket.dataConclusao)||'—'}</span>
       </div>
       <div style={{ ...cellBase, width:IMP_W }}>{isImp && <span style={{ fontSize:11 }}>⚠</span>}</div>
+      {/* Linked ticket columns */}
+      <div style={{ ...cellBase, width:TV_W, padding:'0 2px' }}>
+        {tvKey && <span style={{ fontSize:7, fontWeight:700, color:'#374151', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tvKey}</span>}
+      </div>
+      <div style={{ ...cellBase, width:TVI_W }}>
+        {tvImp && <span style={{ fontSize:11 }}>⚠</span>}
+      </div>
+      <div style={{ ...cellBase, width:TVS_W, padding:'0 2px' }}>
+        {tvStatus && <span style={{ fontSize:6.5, fontWeight:600, color:tvStatusCol, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center', maxWidth:TVS_W-4 }}>{tvStatus}</span>}
+      </div>
+      <div style={{ ...cellBase, width:TVP_W, padding:'0 2px' }}>
+        {tvPacote && <span style={{ fontSize:6.5, fontWeight:600, color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:TVP_W-4 }}>{tvPacote}</span>}
+      </div>
       <div style={{ flex:1, minHeight:'100%', display:'flex', alignItems:'flex-start', padding:'2px 6px', overflow:'hidden' }}>
         <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.25, whiteSpace:'normal', wordBreak:'break-word' }}>{motivo}</span>
       </div>
@@ -123,6 +154,10 @@ function ColHdr() {
       {hC(DH_W,'Fim','Homolog')}
       {hC(DC_W,'Data','Conclusão')}
       {hC(IMP_W,'⚠','Imp')}
+      {hC(TV_W,'Ticket','Vinculado')}
+      {hC(TVI_W,'⚠','TV')}
+      {hC(TVS_W,'Status','TV')}
+      {hC(TVP_W,'Pacote','TV')}
       <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px' }}>
         <span style={{ fontSize:7.5, fontWeight:800, color:'#475569', letterSpacing:'0.04em', textTransform:'uppercase', lineHeight:1.2 }}>Motivo / Observação</span>
       </div>
@@ -180,7 +215,7 @@ function Stats({ tickets }) {
   );
 }
 
-function GroupedContent({ groups, tickets, exportedAt }) {
+function GroupedContent({ groups, tickets, exportedAt, ticketMap }) {
   return (
     <div style={{ width:PAGE_W, background:'#fff', color:'#111827', fontFamily:'Inter,Segoe UI,Arial,sans-serif', fontSize:10 }}>
       <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px 6px',borderBottom:'2px solid #dc2626',background:'#f8fafc' }}>
@@ -198,7 +233,7 @@ function GroupedContent({ groups, tickets, exportedAt }) {
             <span style={{ fontSize:8.5,color:'#dc2626',marginLeft:8 }}>({g.tickets.length})</span>
           </div>
           {g.tickets.map((t,ti) => (
-            <PRow key={t.issueKey||t.id||ti} ticket={t} rowBg={ti%2===0?'#ffffff':'#f8fafc'} />
+            <PRow key={t.issueKey||t.id||ti} ticket={t} rowBg={ti%2===0?'#ffffff':'#f8fafc'} ticketMap={ticketMap} />
           ))}
         </div>
       ))}
@@ -278,7 +313,8 @@ export async function exportProblemsPdf({ filteredTickets = [], activeTab = 'wor
     contentEl.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:#fff;z-index:-9999;pointer-events:none;`;
     document.body.appendChild(contentEl);
     const contentRoot = ReactDOM.createRoot(contentEl);
-    contentRoot.render(<GroupedContent groups={groups} tickets={tickets} exportedAt={exportedAt} />);
+    const ticketMap = new Map(filteredTickets.map(t => [t.issueKey||t.id, t]));
+    contentRoot.render(<GroupedContent groups={groups} tickets={tickets} exportedAt={exportedAt} ticketMap={ticketMap} />);
     await new Promise(r => setTimeout(r, 700));
     try {
       const canvas = await html2canvas(contentEl, { scale: SCALE, useCORS: true, backgroundColor: '#fff', logging: false, width: PAGE_W });
