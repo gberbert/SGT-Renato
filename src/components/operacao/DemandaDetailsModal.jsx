@@ -714,6 +714,7 @@ function PlanRow({ left, right }) {
 
 function PlanoComTabContent({ ticket, fmtDate }) {
   const [copied, setCopied] = useState(false);
+  const [simplified, setSimplified] = useState(false);
 
   const resolvedSquad = (() => {
     if (ticket.squadPrincipal) return ticket.squadPrincipal;
@@ -728,13 +729,23 @@ function PlanoComTabContent({ ticket, fmtDate }) {
 
   const dFimTeste    = fmtDate(ticket.dataFimTesteInterno);
   const dFimTesteQa  = fmtDate(ticket.dataFimTesteQa);
-  // Datas do Plano de Comunicação — usam SOMENTE o campo interno (direito do PLANEJAMENTO); sem fallback
   const dIniHml    = fmtDate(ticket.dataInicioHomologacao);
   const dFimHml    = fmtDate(ticket.dataFimHomologacao);
   const dConclusao = fmtDate(ticket.dataConclusao);
   const pacote       = ticket.pacote || '';
 
-  // Se impedido, omite a seção de datas/janela prevista
+  // ── Texto SIMPLIFICADO ──────────────────────────────────────
+  const textSimplified = [
+    `**Progresso de execução:**`,
+    `% Conclusão Desenvolvimento: ${pctDev}`,
+    `% Teste Interno: ${pctTeste}`,
+    '',
+    `**Impedida**: ${impedido}`,
+    `**Motivo / Observação**: ${motivo}`,
+    ...(pacote ? ['', `**Janela Prevista**(**): ${pacote}`] : []),
+  ].join('\n');
+
+  // ── Texto COMPLETO ──────────────────────────────────────────
   const entregaLines = !ticket.impedimento ? [
     '',
     `**Plano de entrega por fases :**`,
@@ -749,7 +760,7 @@ function PlanoComTabContent({ ticket, fmtDate }) {
     `(*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
   ] : [];
 
-  const text = [
+  const textFull = [
     `${ticket.issueKey} / Resumo: ${ticket.summary || ''}`,
     `**Squad: ${resolvedSquad}**`,
     '',
@@ -762,6 +773,8 @@ function PlanoComTabContent({ ticket, fmtDate }) {
     ...entregaLines,
   ].join('\n');
 
+  const text = simplified ? textSimplified : textFull;
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
@@ -773,8 +786,70 @@ function PlanoComTabContent({ ticket, fmtDate }) {
   const lineStyle = { margin: 0, lineHeight: 1.65 };
   const bold = { fontWeight: 700, color: 'var(--gray-12)' };
 
+  const previewCard = (
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid var(--gray-5)',
+      borderRadius: 10,
+      padding: '20px 22px',
+      fontFamily: 'var(--font-mono, monospace)',
+      fontSize: 13,
+      color: 'var(--gray-11)',
+      lineHeight: 1.65,
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+    }}>
+      {simplified ? (
+        <>
+          <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
+          <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev || <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+          <p style={lineStyle}>% Teste Interno: {pctTeste || <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+          <br />
+          <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}</p>
+          <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo || <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+          {pacote && (<>
+            <br />
+            <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
+              <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>
+            </p>
+          </>)}
+        </>
+      ) : (
+        <>
+          <p style={lineStyle}>{ticket.issueKey} / Resumo: {ticket.summary || ''}</p>
+          <p style={{ ...lineStyle, ...bold }}>Squad: {resolvedSquad}</p>
+          <br />
+          <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
+          <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev}</p>
+          <p style={lineStyle}>% Teste Interno: {pctTeste}</p>
+          <br />
+          <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}</p>
+          <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo}</p>
+          <br />
+          {!ticket.impedimento && (<>
+            <p style={{ ...lineStyle, ...bold }}>Plano de entrega por fases :</p>
+            <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+            <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+            <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+            <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+            <p style={lineStyle}>Data Conclusão (Produção)(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+            <br />
+            <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
+              {pacote ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span> : <span style={{ color: 'var(--gray-7)' }}>—</span>}
+            </p>
+            <br />
+            <p style={{ ...lineStyle, fontSize: 12, color: 'var(--gray-9)', fontStyle: 'italic', fontFamily: 'inherit' }}>
+              (*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
+            </p>
+          </>)}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="dmd-tab-content">
+      {/* Header row: title + toggle + copy button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-10)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -784,71 +859,54 @@ function PlanoComTabContent({ ticket, fmtDate }) {
             Copie e cole diretamente como comentário no Jira ou em canais de comunicação.
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleCopy}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: copied ? 'rgba(74,222,128,0.2)' : 'var(--indigo-9)',
-            color: copied ? '#4ade80' : '#fff',
-            fontSize: 13, fontWeight: 700, flexShrink: 0,
-            transition: 'all 0.15s',
-          }}
-        >
-          {copied ? <Check size={15} /> : <Copy size={15} />}
-          {copied ? 'Copiado!' : 'Copiar texto'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {/* Simplified / Full toggle */}
+          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--gray-6)' }}>
+            <button
+              type="button"
+              onClick={() => setSimplified(false)}
+              style={{
+                padding: '7px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                background: !simplified ? 'var(--indigo-9)' : 'var(--gray-3)',
+                color: !simplified ? '#fff' : 'var(--gray-10)',
+                transition: 'all 0.15s',
+              }}
+            >
+              Completo
+            </button>
+            <button
+              type="button"
+              onClick={() => setSimplified(true)}
+              style={{
+                padding: '7px 14px', border: 'none', borderLeft: '1px solid var(--gray-6)', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                background: simplified ? 'var(--indigo-9)' : 'var(--gray-3)',
+                color: simplified ? '#fff' : 'var(--gray-10)',
+                transition: 'all 0.15s',
+              }}
+            >
+              Simplificado
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: copied ? 'rgba(74,222,128,0.2)' : 'var(--indigo-9)',
+              color: copied ? '#4ade80' : '#fff',
+              fontSize: 13, fontWeight: 700,
+              transition: 'all 0.15s',
+            }}
+          >
+            {copied ? <Check size={15} /> : <Copy size={15} />}
+            {copied ? 'Copiado!' : 'Copiar texto'}
+          </button>
+        </div>
       </div>
 
       {/* Preview card */}
-      <div style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid var(--gray-5)',
-        borderRadius: 10,
-        padding: '20px 22px',
-        fontFamily: 'var(--font-mono, monospace)',
-        fontSize: 13,
-        color: 'var(--gray-11)',
-        lineHeight: 1.65,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-      }}>
-        {/* Line 1 — issueKey / Resumo */}
-        <p style={lineStyle}>{ticket.issueKey} / Resumo: {ticket.summary || ''}</p>
-        <p style={{ ...lineStyle, ...bold }}>Squad: {resolvedSquad}</p>
-        <br />
-
-        <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
-        <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev}</p>
-        <p style={lineStyle}>% Teste Interno: {pctTeste}</p>
-        <br />
-
-        <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}</p>
-        <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo}</p>
-        <br />
-
-        {!ticket.impedimento && (<>
-        <p style={{ ...lineStyle, ...bold }}>Plano de entrega por fases :</p>
-        <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-        <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-        <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-        <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-        <p style={lineStyle}>Data Conclusão (Produção)(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-        <br />
-
-        <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
-          {pacote
-            ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>
-            : <span style={{ color: 'var(--gray-7)' }}>—</span>}
-        </p>
-        <br />
-
-        <p style={{ ...lineStyle, fontSize: 12, color: 'var(--gray-9)', fontStyle: 'italic', fontFamily: 'inherit' }}>
-          (*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.
-        </p>
-        </>)}
-      </div>
+      {previewCard}
     </div>
   );
 }
