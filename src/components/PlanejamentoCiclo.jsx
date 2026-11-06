@@ -1264,7 +1264,7 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
           <button
             title="Exportar PDF de Gestão de Problemas (filtra PROBLEMAS automaticamente)"
             onClick={async () => {
-              await exportProblemsPdf({ filteredTickets, activeTab, escopoFilter });
+              await exportProblemsPdf({ filteredTickets, allTickets: enrichedTickets, activeTab, escopoFilter });
             }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,

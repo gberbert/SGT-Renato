@@ -132,22 +132,35 @@ function PRow({ ticket, rowBg, ticketMap }) {
 }
 
 function ColHdr() {
+  const tvTotal = TV_W + TVI_W + TVS_W + TVP_W;
+  const fixedW = TIX_W + SQ_W + PR_W + ST_W + DRCA_W + DC_W + IMP_W;
   return (
-    <div style={{ display:'flex', borderBottom:'2px solid #cbd5e1', minHeight:36, background:'#f1f5f9' }}>
-      {hC(TIX_W,'Ticket',null)}
-      {hC(SQ_W,'Squad',null)}
-      {hC(PR_W,'Prio',null)}
-      {hC(ST_W,'Status',null)}
-      {hC(DRCA_W,'Data','Entrega RCA')}
-      {hC(DC_W,'Data','Conclusão')}
-      {hC(IMP_W,'⚠','Imp')}
-      <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px', borderRight:CB }}>
-        <span style={{ fontSize:7.5, fontWeight:800, color:'#475569', letterSpacing:'0.04em', textTransform:'uppercase', lineHeight:1.2 }}>Motivo / Observação</span>
+    <div>
+      {/* Group header row for TV */}
+      <div style={{ display:'flex', background:'#f1f5f9', borderBottom:'1px solid #cbd5e1', minHeight:16 }}>
+        <div style={{ width:fixedW, flexShrink:0 }} />
+        <div style={{ flex:1 }} />
+        <div style={{ width:tvTotal, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(220,38,38,0.12)', borderLeft:'2px solid rgba(220,38,38,0.5)', borderRight:'2px solid rgba(220,38,38,0.5)' }}>
+          <span style={{ fontSize:7, fontWeight:800, color:'#991b1b', letterSpacing:'0.1em', textTransform:'uppercase' }}>▶ TICKET VINCULADO</span>
+        </div>
       </div>
-      {hC(TV_W,'Ticket','Vinculado')}
-      {hC(TVI_W,'⚠','TV')}
-      {hC(TVS_W,'Status','TV')}
-      {hC(TVP_W,'Pacote','TV')}
+      {/* Main column headers */}
+      <div style={{ display:'flex', borderBottom:'2px solid #cbd5e1', minHeight:36, background:'#f1f5f9' }}>
+        {hC(TIX_W,'Ticket',null)}
+        {hC(SQ_W,'Squad',null)}
+        {hC(PR_W,'Prio',null)}
+        {hC(ST_W,'Status',null)}
+        {hC(DRCA_W,'Data','Entrega RCA')}
+        {hC(DC_W,'Data','Conclusão')}
+        {hC(IMP_W,'⚠','Imp')}
+        <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px', borderRight:CB }}>
+          <span style={{ fontSize:7.5, fontWeight:800, color:'#475569', letterSpacing:'0.04em', textTransform:'uppercase', lineHeight:1.2 }}>Motivo / Observação</span>
+        </div>
+        {hC(TV_W,'Ticket','Vinc.')}
+        {hC(TVI_W,'⚠','TV')}
+        {hC(TVS_W,'Status','TV')}
+        {hC(TVP_W,'Pacote','TV')}
+      </div>
     </div>
   );
 }
@@ -253,7 +266,7 @@ function CoverPage({ exportedAt, nttUrl, cpflUrl }) {
   );
 }
 
-export async function exportProblemsPdf({ filteredTickets = [], activeTab = 'workflow', escopoFilter }) {
+export async function exportProblemsPdf({ filteredTickets = [], allTickets = [], activeTab = 'workflow', escopoFilter }) {
   const exportedAt = new Date().toLocaleString('pt-BR', { day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit' });
 
   // Filter to PROBLEMAS only
@@ -300,7 +313,9 @@ export async function exportProblemsPdf({ filteredTickets = [], activeTab = 'wor
     contentEl.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:#fff;z-index:-9999;pointer-events:none;`;
     document.body.appendChild(contentEl);
     const contentRoot = ReactDOM.createRoot(contentEl);
-    const ticketMap = new Map(filteredTickets.map(t => [t.issueKey||t.id, t]));
+    // Use allTickets for lookup so linked tickets of other escopos (SUST, DEM) are found
+    const sourceForMap = allTickets.length > 0 ? allTickets : filteredTickets;
+    const ticketMap = new Map(sourceForMap.map(t => [t.issueKey||t.id, t]));
     contentRoot.render(<GroupedContent groups={groups} tickets={tickets} exportedAt={exportedAt} ticketMap={ticketMap} />);
     await new Promise(r => setTimeout(r, 700));
     try {
