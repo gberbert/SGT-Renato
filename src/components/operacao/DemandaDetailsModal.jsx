@@ -719,9 +719,9 @@ function PlanoComTabContent({ ticket, fmtDate }) {
 
   const dFimTeste    = fmtDate(ticket.dataFimTesteInterno);
   const dFimTesteQa  = fmtDate(ticket.dataFimTesteQa);
-  const dIniHml      = fmtDate(ticket.dataInicioHomologacao || ticket.dataInicioHomologacaoEfetiva || ticket.dataInicioHomologacaoPlanejada);
-  const dFimHml      = fmtDate(ticket.dataFimHomologacao || ticket.dataFimHomologacaoEfetiva || ticket.dataFimHomologacaoPlanejada);
-  const dConclusao   = fmtDate(ticket.dataConclusao || ticket.dataEntregaProducaoPrevista);
+  const dIniHml      = fmtDate(ticket.dataInicioHomologacao);
+  const dFimHml      = fmtDate(ticket.dataFimHomologacao);
+  const dConclusao   = fmtDate(ticket.dataConclusao);
   const pacote       = ticket.pacote || '';
 
   // Se impedido, omite a seção de datas/janela prevista
