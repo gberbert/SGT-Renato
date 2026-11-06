@@ -308,7 +308,7 @@ function GroupedContent({ groups, tickets, exportedAt, ticketMap }) {
 function CoverPage({ exportedAt, nttUrl, cpflUrl }) {
   const dateStr = new Date().toLocaleDateString('pt-BR', { day:'numeric', month:'long', year:'numeric' });
   return (
-    <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'linear-gradient(135deg, #450a0a 0%, #7f1d1d 45%, #3b0d0d 100%)' }}>
+    <div style={{ width:PAGE_W, height:PAGE_H, position:'relative', fontFamily:'Inter,Segoe UI,Arial,sans-serif', overflow:'hidden', background:'linear-gradient(135deg, #071640 0%, #0f2152 45%, #091a4a 100%)' }}>
       <div style={{ position:'absolute', top:40, left:48, zIndex:10 }}>
         {nttUrl && <img src={nttUrl} style={{ height:44, objectFit:'contain' }} />}
       </div>
@@ -318,11 +318,11 @@ function CoverPage({ exportedAt, nttUrl, cpflUrl }) {
       <div style={{ position:'absolute', top:118, left:48, right:48, height:2, background:'rgba(255,255,255,0.22)' }} />
       <div style={{ position:'absolute', bottom:180, left:52 }}>
         <div style={{ fontSize:72, fontWeight:300, color:'#ffffff', lineHeight:1.1, letterSpacing:'-0.01em' }}>Gestão de Problemas</div>
-        <div style={{ fontSize:28, fontWeight:400, color:'#fca5a5', marginTop:18, letterSpacing:'0.01em' }}>Status Report Operacional — Semanal</div>
-        <div style={{ fontSize:20, fontWeight:300, color:'#f87171', marginTop:14 }}>{dateStr}</div>
+        <div style={{ fontSize:28, fontWeight:400, color:'#93c5fd', marginTop:18, letterSpacing:'0.01em' }}>Status Report Operacional — Semanal</div>
+        <div style={{ fontSize:20, fontWeight:300, color:'#bfdbfe', marginTop:14 }}>{dateStr}</div>
       </div>
-      <div style={{ position:'absolute', bottom:30, left:52, fontSize:13, color:'#7f1d1d' }}>© 2026 NTT DATA, Inc.</div>
-      <div style={{ position:'absolute', bottom:30, right:52, fontSize:12, color:'#991b1b' }}>SGT · {exportedAt}</div>
+      <div style={{ position:'absolute', bottom:30, left:52, fontSize:13, color:'#1a3a7a' }}>© 2026 NTT DATA, Inc.</div>
+      <div style={{ position:'absolute', bottom:30, right:52, fontSize:12, color:'#2a4a8a' }}>SGT · {exportedAt}</div>
     </div>
   );
 }
