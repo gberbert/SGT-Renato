@@ -1737,7 +1737,13 @@ const handleSave = useCallback(async () => {
 
               <PlanRow
                 left={<ReadField label="DATA APROVACAO EF SR" value={fmtDate(ticket.dataAprovacaoEfsr)} />}
-                right={null}
+                right={
+                  String(ticket.escopo||'').trim().toUpperCase().replace(/\s+/g,' ') === 'PROBLEMAS'
+                    ? (isEdit
+                        ? <EditDate label="DATA ENTREGA RCA" fieldKey="dataEntregaRca" value={ticket.dataEntregaRca} onSave={save} />
+                        : <ReadField label="DATA ENTREGA RCA" value={fmtDate(ticket.dataEntregaRca)} />)
+                    : null
+                }
               />
               <PlanRow
                 left={<ReadField label="DATA INICIO ATEND PLAN" value={fmtDate(ticket.dataInicioAtendimentoPlanejada)} />}
@@ -1807,20 +1813,6 @@ const handleSave = useCallback(async () => {
                   )
                 }
               />
-              {/* ── Data Entrega RCA — apenas para PROBLEMAS ── */}
-              {String(ticket.escopo||'').trim().toUpperCase().replace(/\s+/g,' ') === 'PROBLEMAS' && (
-                <PlanRow
-                  left={
-                    isEdit ? (
-                      <EditDate label="DATA ENTREGA RCA" fieldKey="dataEntregaRca" value={ticket.dataEntregaRca} onSave={save} />
-                    ) : (
-                      <ReadField label="DATA ENTREGA RCA" value={fmtDate(ticket.dataEntregaRca)} />
-                    )
-                  }
-                  right={null}
-                />
-              )}
-
               <PlanRow
                 left={(() => {
                   const _da = ticket.dataFimHomologacaoPlanejada ? new Date(ticket.dataFimHomologacaoPlanejada) : null;
