@@ -6,20 +6,17 @@ import jsPDF from 'jspdf';
 const WF_PROB = ['Aguardando RCA','Aguardando Aprovacao Lider de Torre','Aguardando Aprovacao Ger. Problema','Solucao Rejeitada','Aguardando Planejamento','Aguardando Execucao','Em Execucao','Aguardando Demanda/Projeto','Em Monitoramento','Fechado','Cancelado','RCA em Desenvolvimento','Aguardando Aprovacao Tecnica RCA','Aguardando Aprovacao Governanca RCA','Resolvido','Em Planejamento','Aguardando Aprovacao Tecnica','Aguardando Aprovacao Governanca','Aguardando Demanda'];
 
 const PAGE_W = 1500;
-const TIX_W  = 280;
-const SQ_W   = 60;
-const PR_W   = 50;
-const NI_W   = 90;
-const ST_W   = 110;
-const FT_W   = 70;
-const DIH_W  = 70;
-const DH_W   = 70;
-const DC_W   = 70;
+const TIX_W  = 290;
+const SQ_W   = 65;
+const PR_W   = 55;
+const ST_W   = 115;
+const DRCA_W = 78;   // Data Entrega RCA
+const DC_W   = 75;
 const IMP_W  = 18;
-const TV_W   = 80;   // Ticket Vinculado key
+const TV_W   = 85;   // Ticket Vinculado key
 const TVI_W  = 20;   // Impedimento do TV (icon)
-const TVS_W  = 100;  // Status do TV
-const TVP_W  = 90;   // Pacote do TV
+const TVS_W  = 105;  // Status do TV
+const TVP_W  = 95;   // Pacote do TV
 const ROW_H  = 22;
 const CB     = '1px solid #e2e8f0';
 const PAGE_H = Math.round((210 / 297) * PAGE_W);
@@ -72,7 +69,8 @@ function PRow({ ticket, rowBg, ticketMap }) {
   const col = sc(ticket.status);
   const prio = pb(ticket.prioridadeInterna);
   const isImp = ticket.impedimento === true;
-  const motivo = tr(ticket.observacaoAdicional || ticket.motivoImpedimento || ticket.observacao || '', 90);
+  const motivo = tr(ticket.observacaoAdicional || ticket.motivoImpedimento || ticket.observacao || '', 120);
+  const drca = fd(ticket.dataEntregaRca);
   const bg = rowBg || (isImp ? '#fff1f2' : '#ffffff');
 
   // Linked ticket lookup
@@ -102,25 +100,20 @@ function PRow({ ticket, rowBg, ticketMap }) {
       <div style={{ ...cellBase, width:PR_W, padding:'0 2px' }}>
         {prio && <span style={{ fontSize:7, fontWeight:600, color:'#374151', whiteSpace:'nowrap' }}>{prio}</span>}
       </div>
-      <div style={{ ...cellBase, width:NI_W, padding:'0 3px' }}>
-        <span style={{ fontSize:6.5, color:'#374151', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:NI_W-6 }}>{tr(ticket.naturezaIniciativa||ticket.naturezaOperacao||'',22)}</span>
-      </div>
       <div style={{ ...cellBase, width:ST_W, padding:'0 2px' }}>
         <span style={{ fontSize:7, fontWeight:600, color:col, maxWidth:ST_W-4, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center' }}>{status}</span>
       </div>
-      <div style={{ ...cellBase, width:FT_W, padding:'0 2px' }}>
-        <span style={{ fontSize:7.5, color:'#374151', textAlign:'center' }}>{fd(ticket.dataFimTesteInterno)||'—'}</span>
-      </div>
-      <div style={{ ...cellBase, width:DIH_W, padding:'0 2px' }}>
-        <span style={{ fontSize:7.5, color:'#374151', textAlign:'center' }}>{fd(ticket.dataInicioHomologacao||ticket.dataInicioHomologacaoEfetiva||ticket.dataInicioHomologacaoPlanejada)||'—'}</span>
-      </div>
-      <div style={{ ...cellBase, width:DH_W, padding:'0 2px' }}>
-        <span style={{ fontSize:7.5, color:'#374151', textAlign:'center' }}>{fd(ticket.dataFimHomologacao)||'—'}</span>
+      <div style={{ ...cellBase, width:DRCA_W, padding:'0 2px' }}>
+        <span style={{ fontSize:7.5, color:drca?'#dc2626':'#374151', textAlign:'center', fontWeight:drca?700:400 }}>{drca||'—'}</span>
       </div>
       <div style={{ ...cellBase, width:DC_W, padding:'0 2px' }}>
         <span style={{ fontSize:7.5, color:ticket.dataConclusao?'#16a34a':'#374151', textAlign:'center', fontWeight:ticket.dataConclusao?700:400 }}>{fd(ticket.dataConclusao)||'—'}</span>
       </div>
       <div style={{ ...cellBase, width:IMP_W }}>{isImp && <span style={{ fontSize:11 }}>⚠</span>}</div>
+      {/* Motivo / Observação — before linked ticket */}
+      <div style={{ flex:1, minHeight:'100%', display:'flex', alignItems:'flex-start', padding:'2px 6px', overflow:'hidden', borderRight:CB }}>
+        <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.25, whiteSpace:'normal', wordBreak:'break-word' }}>{motivo}</span>
+      </div>
       {/* Linked ticket columns */}
       <div style={{ ...cellBase, width:TV_W, padding:'0 2px' }}>
         {tvKey && <span style={{ fontSize:7, fontWeight:700, color:'#374151', fontFamily:'monospace', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tvKey}</span>}
@@ -131,11 +124,8 @@ function PRow({ ticket, rowBg, ticketMap }) {
       <div style={{ ...cellBase, width:TVS_W, padding:'0 2px' }}>
         {tvStatus && <span style={{ fontSize:6.5, fontWeight:600, color:tvStatusCol, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center', maxWidth:TVS_W-4 }}>{tvStatus}</span>}
       </div>
-      <div style={{ ...cellBase, width:TVP_W, padding:'0 2px' }}>
+      <div style={{ ...cellBase, width:TVP_W, padding:'0 2px', borderRight:'none' }}>
         {tvPacote && <span style={{ fontSize:6.5, fontWeight:600, color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:TVP_W-4 }}>{tvPacote}</span>}
-      </div>
-      <div style={{ flex:1, minHeight:'100%', display:'flex', alignItems:'flex-start', padding:'2px 6px', overflow:'hidden' }}>
-        <span style={{ fontSize:7.5, color:isImp?'#7f1d1d':'#6b7280', lineHeight:1.25, whiteSpace:'normal', wordBreak:'break-word' }}>{motivo}</span>
       </div>
     </div>
   );
@@ -147,20 +137,17 @@ function ColHdr() {
       {hC(TIX_W,'Ticket',null)}
       {hC(SQ_W,'Squad',null)}
       {hC(PR_W,'Prio',null)}
-      {hC(NI_W,'Nat.','Iniciativa')}
       {hC(ST_W,'Status',null)}
-      {hC(FT_W,'Fim Teste','Interno')}
-      {hC(DIH_W,'Ini','Homolog')}
-      {hC(DH_W,'Fim','Homolog')}
+      {hC(DRCA_W,'Data','Entrega RCA')}
       {hC(DC_W,'Data','Conclusão')}
       {hC(IMP_W,'⚠','Imp')}
+      <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px', borderRight:CB }}>
+        <span style={{ fontSize:7.5, fontWeight:800, color:'#475569', letterSpacing:'0.04em', textTransform:'uppercase', lineHeight:1.2 }}>Motivo / Observação</span>
+      </div>
       {hC(TV_W,'Ticket','Vinculado')}
       {hC(TVI_W,'⚠','TV')}
       {hC(TVS_W,'Status','TV')}
       {hC(TVP_W,'Pacote','TV')}
-      <div style={{ flex:1, display:'flex', alignItems:'flex-end', padding:'3px 6px' }}>
-        <span style={{ fontSize:7.5, fontWeight:800, color:'#475569', letterSpacing:'0.04em', textTransform:'uppercase', lineHeight:1.2 }}>Motivo / Observação</span>
-      </div>
     </div>
   );
 }
