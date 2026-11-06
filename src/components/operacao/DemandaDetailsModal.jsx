@@ -762,15 +762,18 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
     return e === 'PROBLEMAS' || e === 'PROBLEMA';
   })();
 
-  const pctDev   = ticket.percentualConclusao        != null ? `${ticket.percentualConclusao}%`              : '';
+  // Para PROBLEMA: usa campos do ticket vinculado como fallback quando o próprio ticket não tem
+  const tvRef = isProblema && linkedTickets.length > 0 ? linkedTickets[0] : null;
+  const pctDev   = (() => {
+    const val = ticket.percentualConclusao ?? (isProblema ? tvRef?.percentualConclusao : null);
+    return val != null ? `${val}%` : '';
+  })();
   const pctTeste = ticket.percentualConclusaoTesteInterno != null ? `${ticket.percentualConclusaoTesteInterno}%` : '';
   const impedido = ticket.impedimento ? 'Sim' : 'Não';
   const motivo   = ticket.observacaoAdicional || ticket.motivoImpedimento || '';
 
   const dFimTeste    = fmtDate(ticket.dataFimTesteInterno);
   const dFimTesteQa  = fmtDate(ticket.dataFimTesteQa);
-  // Para PROBLEMA: usa datas/pacote do ticket vinculado como fallback quando o próprio ticket não tem
-  const tvRef = isProblema && linkedTickets.length > 0 ? linkedTickets[0] : null;
   const dIniHml    = fmtDate(ticket.dataInicioHomologacao    || tvRef?.dataInicioHomologacao);
   const dFimHml    = fmtDate(ticket.dataFimHomologacao       || tvRef?.dataFimHomologacao);
   const dConclusao = fmtDate(ticket.dataConclusao            || tvRef?.dataConclusao);
