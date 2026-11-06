@@ -726,25 +726,25 @@ function PlanoComTabContent({ ticket, fmtDate }) {
 
   const text = [
     `${ticket.issueKey} / Resumo: ${ticket.summary || ''}`,
-    `*Squad: ${resolvedSquad}*`,
+    `**Squad: ${resolvedSquad}**`,
     '',
-    `*Progresso de execução:*`,
+    `**Progresso de execução:**`,
     `% Conclusão Desenvolvimento: ${pctDev}`,
     `% Teste Interno: ${pctTeste}`,
     '',
-    `*Impedida*: ${impedido}`,
-    `*Motivo / Observação*: ${motivo}`,
+    `**Impedida**: ${impedido}`,
+    `**Motivo / Observação**: ${motivo}`,
     '',
-    `*Plano de entrega por fases :*`,
+    `**Plano de entrega por fases :**`,
     `Data Fim Teste Interno: ${dFimTeste !== '—' ? dFimTeste : ''}`,
     `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
     `Data Início Homologação: ${dIniHml !== '—' ? dIniHml : ''}`,
     `Data Fim Homologação: ${dFimHml !== '—' ? dFimHml : ''}`,
-    `Data Conclusão (Produção)**: ${dConclusao !== '—' ? dConclusao : ''}`,
+    `Data Conclusão (Produção)(*): ${dConclusao !== '—' ? dConclusao : ''}`,
     '',
-    `*(Janela Prevista)**:  ${pacote}`,
+    `**(Janela Prevista)(*):**  ${pacote}`,
     '',
-    `** Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
+    `(*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
   ].join('\n');
 
   const handleCopy = async () => {
