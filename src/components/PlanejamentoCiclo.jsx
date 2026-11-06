@@ -10,6 +10,7 @@ import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx, WorkflowTab } from './PlanejamentoCicloHelpers';
 import GestaoReleaseTab from './GestaoReleaseTab';
 import { exportCicloPdf } from './CicloPdfExport';
+import { exportProblemsPdf } from './ProblemsPdfExport';
 import DemandaDetailsModal from './operacao/DemandaDetailsModal';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 import {
@@ -1257,6 +1258,25 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'; }}
           >
             <FileText size={15} /> Exportar PDF
+          </button>
+          <button
+            title="Exportar PDF de Gestão de Problemas (filtra PROBLEMAS automaticamente)"
+            onClick={async () => {
+              await exportProblemsPdf({ filteredTickets, activeTab, escopoFilter });
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+              fontSize: 13, fontWeight: 600,
+              background: 'rgba(220,38,38,0.12)',
+              color: '#dc2626',
+              border: '1px solid rgba(220,38,38,0.35)',
+              transition: 'background 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.22)'; e.currentTarget.style.borderColor = 'rgba(220,38,38,0.6)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.12)'; e.currentTarget.style.borderColor = 'rgba(220,38,38,0.35)'; }}
+          >
+            <FileText size={15} /> Problemas PDF
           </button>
           <button
             onClick={() => setShowWorkflowModal(true)}
