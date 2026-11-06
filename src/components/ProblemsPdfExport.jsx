@@ -328,18 +328,48 @@ export async function exportProblemsPdf({ filteredTickets = [], allTickets = [],
     try {
       const canvas = await html2canvas(contentEl, { scale: SCALE, useCORS: true, backgroundColor: '#fff', logging: false, width: PAGE_W });
       const pageHeightPx = (A4_H / A4_W) * canvas.width;
+      const imgData2d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+
+      // Find nearest safe row-break below targetY by scanning for a white/separator row
+      function findSafeCut(targetY) {
+        const remaining = canvas.height - targetY;
+        if (remaining <= 0) return canvas.height;
+        const maxScan = Math.min(Math.round(SCALE * 50), remaining); // scan up to 50px back
+        const w = canvas.width;
+        // Scan backward from targetY; a "safe" row is one where most pixels are white/light
+        for (let dy = 0; dy < maxScan; dy++) {
+          const y = Math.floor(targetY) - dy;
+          if (y <= 0) break;
+          let lightCount = 0;
+          const step = Math.max(1, Math.floor(w / 60));
+          let samples = 0;
+          for (let x = 0; x < w; x += step) {
+            const idx = (y * w + x) * 4;
+            const r = imgData2d.data[idx], g = imgData2d.data[idx+1], b = imgData2d.data[idx+2];
+            if (r >= 220 && g >= 220 && b >= 220) lightCount++;
+            samples++;
+          }
+          if (lightCount / samples >= 0.90) return y;
+        }
+        return Math.floor(targetY);
+      }
+
       let yOffset = 0;
       while (yOffset < canvas.height) {
         pdf.addPage();
-        const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+        const rawSliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+        const sliceH = (rawSliceH >= canvas.height - yOffset)
+          ? rawSliceH
+          : findSafeCut(yOffset + rawSliceH) - yOffset;
+        const safeSliceH = Math.max(sliceH, Math.round(SCALE * 20)); // prevent zero-height
         const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width; pageCanvas.height = sliceH;
+        pageCanvas.width = canvas.width; pageCanvas.height = safeSliceH;
         const ctx = pageCanvas.getContext('2d');
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
         ctx.drawImage(canvas, 0, -yOffset);
-        const imgData = pageCanvas.toDataURL('image/jpeg', 0.82);
-        pdf.addImage(imgData, 'JPEG', 0, 0, A4_W, (sliceH/canvas.width)*A4_W);
-        yOffset += sliceH;
+        const imgDataUrl = pageCanvas.toDataURL('image/jpeg', 0.82);
+        pdf.addImage(imgDataUrl, 'JPEG', 0, 0, A4_W, (safeSliceH/canvas.width)*A4_W);
+        yOffset += safeSliceH;
       }
     } finally { contentRoot.unmount(); document.body.removeChild(contentEl); }
 
