@@ -712,9 +712,26 @@ function PlanRow({ left, right }) {
   );
 }
 
-function PlanoComTabContent({ ticket, fmtDate }) {
+function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = {} }) {
   const [copied, setCopied] = useState(false);
   const [simplified, setSimplified] = useState(false);
+
+  // Returns true if the field was altered from the original Jira-synced value
+  const isAltered = (fieldKey) => {
+    if (pendingChanges[fieldKey] !== undefined) return true;
+    if (freshData[fieldKey] !== undefined && freshData[fieldKey] !== ticket[fieldKey]) return true;
+    return false;
+  };
+
+  const AltBadge = () => (
+    <span style={{
+      fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
+      padding: '1px 5px', borderRadius: 5, marginLeft: 5,
+      background: 'rgba(251,191,36,0.18)', color: '#fbbf24',
+      border: '1px solid rgba(251,191,36,0.4)',
+      verticalAlign: 'middle', whiteSpace: 'nowrap',
+    }}>alterado</span>
+  );
 
   const resolvedSquad = (() => {
     if (ticket.squadPrincipal) return ticket.squadPrincipal;
@@ -802,15 +819,15 @@ function PlanoComTabContent({ ticket, fmtDate }) {
       {simplified ? (
         <>
           <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
-          <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev || <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-          <p style={lineStyle}>% Teste Interno: {pctTeste || <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+          <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev || <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('percentualConclusao') && <AltBadge />}</p>
+          <p style={lineStyle}>% Teste Interno: {pctTeste || <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('percentualConclusaoTesteInterno') && <AltBadge />}</p>
           <br />
-          <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}</p>
-          <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo || <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+          <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}{isAltered('impedimento') && <AltBadge />}</p>
+          <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo || <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('observacaoAdicional') && <AltBadge />}</p>
           {pacote && (<>
             <br />
             <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
-              <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>
+              <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>{isAltered('pacote') && <AltBadge />}
             </p>
           </>)}
         </>
@@ -820,22 +837,22 @@ function PlanoComTabContent({ ticket, fmtDate }) {
           <p style={{ ...lineStyle, ...bold }}>Squad: {resolvedSquad}</p>
           <br />
           <p style={{ ...lineStyle, ...bold }}>Progresso de execução:</p>
-          <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev}</p>
-          <p style={lineStyle}>% Teste Interno: {pctTeste}</p>
+          <p style={lineStyle}>% Conclusão Desenvolvimento: {pctDev}{isAltered('percentualConclusao') && <AltBadge />}</p>
+          <p style={lineStyle}>% Teste Interno: {pctTeste}{isAltered('percentualConclusaoTesteInterno') && <AltBadge />}</p>
           <br />
-          <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}</p>
-          <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo}</p>
+          <p style={lineStyle}><span style={bold}>Impedida</span>: {impedido}{isAltered('impedimento') && <AltBadge />}</p>
+          <p style={lineStyle}><span style={bold}>Motivo / Observação</span>: {motivo}{isAltered('observacaoAdicional') && <AltBadge />}</p>
           <br />
           {!ticket.impedimento && (<>
             <p style={{ ...lineStyle, ...bold }}>Plano de entrega por fases :</p>
-            <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-            <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-            <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-            <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
-            <p style={lineStyle}>Data Conclusão (Produção)(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
+            <p style={lineStyle}>Data Fim Teste Interno: {dFimTeste !== '—' ? dFimTeste : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteInterno') && <AltBadge />}</p>
+            <p style={lineStyle}>Data Fim Teste (QA) CPFL: {dFimTesteQa !== '—' ? dFimTesteQa : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimTesteQa') && <AltBadge />}</p>
+            <p style={lineStyle}>Data Início Homologação: {dIniHml !== '—' ? dIniHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataInicioHomologacao') && <AltBadge />}</p>
+            <p style={lineStyle}>Data Fim Homologação: {dFimHml !== '—' ? dFimHml : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataFimHomologacao') && <AltBadge />}</p>
+            <p style={lineStyle}>Data Conclusão (Produção)(*):{' '}{dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('dataConclusao') && <AltBadge />}</p>
             <br />
             <p style={lineStyle}><span style={bold}>Janela Prevista</span>(**):{' '}
-              {pacote ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span> : <span style={{ color: 'var(--gray-7)' }}>—</span>}
+              {pacote ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span> : <span style={{ color: 'var(--gray-7)' }}>—</span>}{isAltered('pacote') && <AltBadge />}
             </p>
             <br />
             <p style={{ ...lineStyle, fontSize: 12, color: 'var(--gray-9)', fontStyle: 'italic', fontFamily: 'inherit' }}>
@@ -1808,7 +1825,7 @@ const handleSave = useCallback(async () => {
               })()}
             </div>
           ) : activeTab === 'planoComunicacao' ? (
-            <PlanoComTabContent ticket={ticket} fmtDate={fmtDate} />
+            <PlanoComTabContent ticket={ticket} fmtDate={fmtDate} freshData={freshData} pendingChanges={pendingChanges} />
           ) : (
             <div className="dmd-tab-content dmd-plan-tab">
               <div className="dmd-plan-header-row">
