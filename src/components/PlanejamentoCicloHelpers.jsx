@@ -897,15 +897,21 @@ const WORKFLOW_STATUS_ORDER_PROBLEMAS = [
   'Aguardando Demanda',
 ];
 
+// Normalize status for accent-insensitive matching
+function normStatus(s) {
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
 function getWorkflowStatusOrder(escopos) {
   // Build a merged ordered list based on selected escopos
   const seen = new Set();
   const order = [];
-  const addList = (list) => { list.forEach(s => { if (!seen.has(s)) { seen.add(s); order.push(s); } }); };
+  const addList = (list) => { list.forEach(s => { const n = normStatus(s); if (!seen.has(n)) { seen.add(n); order.push(s); } }); };
   if (!escopos || escopos.size === 0) return [];
   if (escopos.has('DEMANDA')) addList(WORKFLOW_STATUS_ORDER_DEMANDA);
   if (escopos.has('DEMANDA FAST')) addList(WORKFLOW_STATUS_ORDER_FAST);
   if (escopos.has('PROBLEMAS')) addList(WORKFLOW_STATUS_ORDER_PROBLEMAS);
+  if (escopos.has('INCIDENTE')) addList(WORKFLOW_STATUS_ORDER_FAST); // INCIDENTE shares FAST order
   return order;
 }
 
@@ -988,8 +994,9 @@ export function WorkflowTab({ filteredTickets, escopoFilter, onTicketClick, date
       return [{ statusName: 'BACKLOG', tickets: filteredTickets }];
     }
     const order = getWorkflowStatusOrder(escopoFilter);
+    // Build accent-insensitive index
     const orderIndex = {};
-    order.forEach((s, i) => { orderIndex[s] = i; });
+    order.forEach((s, i) => { orderIndex[normStatus(s)] = i; });
 
     // Group tickets by status
     const map = new Map();
@@ -999,11 +1006,11 @@ export function WorkflowTab({ filteredTickets, escopoFilter, onTicketClick, date
       map.get(s).push(t);
     });
 
-    // Sort groups: known statuses first (by workflow order), unknown after
+    // Sort groups: known statuses first (by workflow order, accent-insensitive), unknown after
     const entries = [...map.entries()];
     entries.sort(([a], [b]) => {
-      const ia = orderIndex[a] ?? order.length;
-      const ib = orderIndex[b] ?? order.length;
+      const ia = orderIndex[normStatus(a)] ?? order.length;
+      const ib = orderIndex[normStatus(b)] ?? order.length;
       if (ia !== ib) return ia - ib;
       return a.localeCompare(b, 'pt-BR');
     });
