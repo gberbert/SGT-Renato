@@ -740,11 +740,11 @@ function PlanoComTabContent({ ticket, fmtDate }) {
     `Data Fim Teste (QA) CPFL: ${dFimTesteQa !== '—' ? dFimTesteQa : ''}`,
     `Data Início Homologação: ${dIniHml !== '—' ? dIniHml : ''}`,
     `Data Fim Homologação: ${dFimHml !== '—' ? dFimHml : ''}`,
-    `Data Conclusão (Produção)(*): ${dConclusao !== '—' ? dConclusao : ''}`,
+    `Data Conclusão (Produção)**: ${dConclusao !== '—' ? dConclusao : ''}`,
     '',
-    `**(Janela Prevista)(*):**  ${pacote}`,
+    `**Janela Prevista**:  ${pacote}`,
     '',
-    `(*) Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
+    `** Para que a previsão de subida para produção seja atingida, as datas sugeridas para os fins das etapas de Teste (QA) e Fim Homologação, ambas da fila CPFL, precisam ser atingidas. Eventuais impedimentos ou repriorizações serão sinalizadas e podem impactar este planejamento.`,
   ].join('\n');
 
   const handleCopy = async () => {
@@ -821,7 +821,7 @@ function PlanoComTabContent({ ticket, fmtDate }) {
         <p style={lineStyle}>Data Conclusão (Produção)**: {dConclusao !== '—' ? dConclusao : <span style={{ color: 'var(--gray-7)' }}>—</span>}</p>
         <br />
 
-        <p style={lineStyle}><span style={bold}>(Janela Prevista)**</span>:{' '}
+        <p style={lineStyle}><span style={bold}>Janela Prevista</span>**:{' '}
           {pacote
             ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{pacote}</span>
             : <span style={{ color: 'var(--gray-7)' }}>—</span>}
