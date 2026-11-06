@@ -35,7 +35,7 @@ const SA_W   = 68; // Situação Atual
 const DIH_W  = 65; // Data Início Homologação
 const DH_W   = 65; // Data Fim Homologação
 const PCH_W  = 30; // % Conclusão Homologação
-const PAC_W  = 90; // Pacote (Release)
+const PAC_W  = 130; // Pacote (Release)
 const LEFT_W = TIX_W + SQ_W + ST_W + IMP_W + PR_W + PC_W + PT_W + FT_W + DC_W; // 664 (DIH_W and DH_W are right-side extras)
 const MOT_W  = PAGE_W - LEFT_W; // 616 (motivo + flex)
 const ROW_H  = 22;
@@ -228,7 +228,7 @@ function TicketRow({ ticket, rowBg, includeObservacao, includePlanoTeste, includ
       {includeRelease && (
         <div style={{ ...cellBase, width:PAC_W, padding:'0 3px' }}>
           {ticket.pacote
-            ? <span style={{ fontSize:6.5, fontWeight:700, color:'#a5b4fc', background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.35)', borderRadius:3, padding:'1px 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:PAC_W-8 }}>{trunc(ticket.pacote, 14)}</span>
+            ? <span style={{ fontSize:6.5, fontWeight:700, color:'#312e81', background:'rgba(99,102,241,0.18)', border:'1px solid rgba(99,102,241,0.5)', borderRadius:3, padding:'1px 4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:PAC_W-8 }}>{trunc(ticket.pacote, 22)}</span>
             : <span style={{ fontSize:7, color:'#94a3b8' }}>—</span>
           }
         </div>
