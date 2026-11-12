@@ -124,6 +124,11 @@ const TICKET_FIELD_DEFINITIONS = {
     "Data Encerramento",
     "Closing Date",
   ],
+  grupo_aprovador_horas: [
+    "Grupo Aprovador Horas",
+    "grupo aprovador horas",
+    "Grupo Aprovador Horas[Dropdown]",
+  ],
 };
 
 const ESCOPO_SEED = [

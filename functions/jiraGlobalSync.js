@@ -467,6 +467,8 @@ const KNOWN_DATE_FIELD_IDS = {
   // Data de encerramento — campo datetime customizado (customfield_10887)
   // NÃO é o mesmo que resolutiondate (data de resolução do workflow Jira)
   data_encerramento: "customfield_10887",
+  // Grupo Aprovador Horas — Dropdown/Select (customfield_14746)
+  grupo_aprovador_horas: "customfield_14746",
 };
 
 async function resolveTicketFieldIds() {
@@ -582,6 +584,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     naturezaIniciativa: extracted.natureza_iniciativa || null,
     grupoSuporte: extracted.grupo_suporte || null,
     grupoSolucionador: extracted.grupo_solucionador || null,
+    grupoAprovadorHoras: extracted.grupo_aprovador_horas || null,
     fornecedorTi: extracted.fornecedor_ti || null,
     demandaFast: extracted.demanda_fast || null,
     torreAtuacao: extracted.torre_atuacao || null,
