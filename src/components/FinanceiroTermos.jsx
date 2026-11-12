@@ -215,9 +215,9 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   useEffect(() => {
     return onSnapshot(query(collection(db, "financeiro_alocacoes")), snap => {
       setAlocacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .filter(a => a.termoId === termo.id && a.mesReferencia === termo.mesReferencia));
+        .filter(a => a.termoId === termo.id));
     }, () => {});
-  }, [termo.id, termo.mesReferencia]);
+  }, [termo.id]);
 
   useEffect(() => { return subscribeToUsers(d => setAllUsers(d || [])); }, []);
 
