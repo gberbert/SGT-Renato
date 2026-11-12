@@ -464,6 +464,9 @@ const KNOWN_DATE_FIELD_IDS = {
   torre_atuacao: "customfield_10314",
   // Tempo de Esforço (Horas) — campo numérico preenchido pela equipe no Jira
   tempo_esforco_horas: "customfield_14752",
+  // Data de encerramento — campo datetime customizado (customfield_10887)
+  // NÃO é o mesmo que resolutiondate (data de resolução do workflow Jira)
+  data_encerramento: "customfield_10887",
 };
 
 async function resolveTicketFieldIds() {
@@ -589,7 +592,7 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     // estimativaMacroJira = valor textual do dropdown de estimativa macro do Jira (ex: "P", "M", "G", "GG")
     estimativaMacroJira: extracted.estimativa_macro || null,
     dataAtividade: normalizeJiraDate(extracted.data_atividade),
-    dataEncerramento: normalizeJiraDate(extracted.data_encerramento || fields.resolutiondate),
+    dataEncerramento: normalizeJiraDate(extracted.data_encerramento) || null,
     dataFimPlanejado: extracted.data_fim_planejado || null,
     planejamentoHorasDemandaFast: extracted.planejamento_horas_demanda_fast != null ? Number(extracted.planejamento_horas_demanda_fast) : null,
     demandaVulnerabilidade: extracted.demanda_vulnerabilidade || null,

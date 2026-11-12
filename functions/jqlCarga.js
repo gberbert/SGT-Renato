@@ -118,13 +118,11 @@ const TICKET_FIELD_DEFINITIONS = {
     "Data Atividade",
   ],
   data_encerramento: [
+    "Data de encerramento",
     "Data de Encerramento",
     "data de encerramento",
     "Data Encerramento",
     "Closing Date",
-    "Data de Encerramento Planejada",
-    "Data Encerramento Planejado",
-    "Encerramento",
   ],
 };
 
