@@ -728,7 +728,31 @@ export default function Financeiro() {
           {/* Sub-tab content */}
           {termosSubTab === "gerenciar"  && <FinanceiroTermos />}
           {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" colOrder={["status","resolution","avanco","dataEncerramento","estimativaTotal","termoFaturamento"]} />}
-          {termosSubTab === "fast"       && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA FAST" hideIssueType={true} hideFilters={["dataAtividade"]} showContratoFilter={true} showStatusFilter={true} excludeIssueTypes={["[System] Incidente", "Incidente", "[System] Incident"]} colOrder={["status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador","contrato","termoFaturamento"]} />}
+          {termosSubTab === "fast"       && (() => {
+            const now = new Date();
+            const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+            const py = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+            const pad = n => String(n).padStart(2, "0");
+            const pFirst = `${py}-${pad(pm + 1)}-01`;
+            const pLast  = `${py}-${pad(pm + 1)}-${pad(new Date(py, pm + 1, 0).getDate())}`;
+            return (
+              <FinanceiroHorasEvolutivos
+                escopoFilter="DEMANDA FAST"
+                hideIssueType={true}
+                hideFilters={["dataAtividade"]}
+                showContratoFilter={true}
+                showStatusFilter={true}
+                excludeIssueTypes={["[System] Incidente", "Incidente", "[System] Incident"]}
+                defaultFilters={{
+                  encerrDe: pFirst,
+                  encerrAte: pLast,
+                  statusFilter: ["Fechado"],
+                  excludeResolutions: ["Cancelado pelo Solicitante"],
+                }}
+                colOrder={["status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador","contrato","termoFaturamento"]}
+              />
+            );
+          })()}
           {termosSubTab === "catalogo"   && <FinanceiroHorasEvolutivos escopoFilter="CATALOGO" />}
           {termosSubTab === "alocacoes"  && <FinanceiroAlocacoes />}
         </div>

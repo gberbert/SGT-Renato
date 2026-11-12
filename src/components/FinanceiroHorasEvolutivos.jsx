@@ -133,7 +133,18 @@ const COL_DEFS = {
 };
 const DEFAULT_COL_ORDER = ["status","squad","avanco","estimativaTotal","plHrsFast","tempoEsforco","termoFaturamento","dataAtividade","dataEncerramento","resolution"];
 
-export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, excludeIssueTypes = [] } = {}) {
+function prevMonthRange() {
+  const now = new Date();
+  const m = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+  const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const pad = n => String(n).padStart(2, "0");
+  return {
+    first: `${y}-${pad(m + 1)}-01`,
+    last:  `${y}-${pad(m + 1)}-${pad(new Date(y, m + 1, 0).getDate())}`,
+  };
+}
+
+export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, excludeIssueTypes = [], defaultFilters = {} } = {}) {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termos, setTermos] = useState([]);
@@ -141,17 +152,22 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [selEscopo, setSelEscopo] = useState(escopoFilter ? new Set([String(escopoFilter).trim().toUpperCase()]) : new Set());
   const [ativDe, setAtivDe] = useState("");
   const [ativAte, setAtivAte] = useState("");
-  const [encerrDe, setEncerrDe] = useState("");
-  const [encerrAte, setEncerrAte] = useState("");
+  const [encerrDe, setEncerrDe] = useState(() => defaultFilters.encerrDe || "");
+  const [encerrAte, setEncerrAte] = useState(() => defaultFilters.encerrAte || "");
   const [selResolutions, setSelResolutions] = useState(new Set());
   const [resDropOpen, setResDropOpen] = useState(false);
   const resDropRef = useRef(null);
-  const [selStatusFilter, setSelStatusFilter] = useState(new Set());
+  const [selStatusFilter, setSelStatusFilter] = useState(() => new Set(defaultFilters.statusFilter || []));
   const [statusDropOpen, setStatusDropOpen] = useState(false);
   const statusDropRef = useRef(null);
   const [termoFilter, setTermoFilter] = useState("");
   const [sistemas, setSistemas] = useState([]);
   const [contratoFilter, setContratoFilter] = useState("");
+  // Always-on resolution exclusion (from defaultFilters, not user-controlled)
+  const excludeResolutions = useMemo(
+    () => new Set((defaultFilters.excludeResolutions || []).map(s => String(s).trim().toLowerCase())),
+    []
+  );
 
   useEffect(() => {
     if (!resDropOpen) return;
@@ -209,6 +225,9 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     if (excludeIssueTypes.length > 0) {
       const excluded = new Set(excludeIssueTypes.map(s => String(s).trim().toLowerCase()));
       list = list.filter(t => !excluded.has(String(t.issueType || "").trim().toLowerCase()));
+    }
+    if (excludeResolutions.size > 0) {
+      list = list.filter(t => !excludeResolutions.has(String(t.resolution || "").trim().toLowerCase()));
     }
     if (selStatusFilter.size > 0) list = list.filter(t => selStatusFilter.has(t.status || ""));
     if (termoFilter) {
