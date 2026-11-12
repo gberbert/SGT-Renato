@@ -6,6 +6,16 @@ import { subscribeToUsers, subscribeToSystems } from '../services/settingsServic
 import { subscribeToSquadRoles } from '../services/settingsService';
 import { SQUAD_ROLE_OPTIONS } from '../utils/userFieldOptions';
 
+const ESCOPO_PRINCIPAL_OPTIONS = [
+  'Sust Web',
+  'Dem Web',
+  'Sust + Dem Web',
+  'Sust BI',
+  'Sust Perfil',
+  'Sust RPA',
+  'Dem RPA',
+];
+
 const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
   const [users, setUsers] = useState([]);
   const [systems, setSystems] = useState([]);
@@ -55,7 +65,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
 
   const handleToggleUser = (userId, checked) => {
     if (checked) {
-      setSquadUsers(prev => [...prev, { id: userId, role: 'Developer' }]);
+      setSquadUsers(prev => [...prev, { id: userId, role: 'Developer', escopoPrincipal: '' }]);
     } else {
       setSquadUsers(prev => prev.filter(su => su.id !== userId));
     }
@@ -63,6 +73,10 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
 
   const handleRoleChange = (userId, newRole) => {
     setSquadUsers(prev => prev.map(su => su.id === userId ? { ...su, role: newRole } : su));
+  };
+
+  const handleEscopoChange = (userId, newEscopo) => {
+    setSquadUsers(prev => prev.map(su => su.id === userId ? { ...su, escopoPrincipal: newEscopo } : su));
   };
 
   const handleSave = async () => {
@@ -208,6 +222,7 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
                     <Table.ColumnHeaderCell>Nome</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell>E-mail</Table.ColumnHeaderCell>
                     <Table.ColumnHeaderCell>Papel (Role)</Table.ColumnHeaderCell>
+                    <Table.ColumnHeaderCell>Escopo Principal</Table.ColumnHeaderCell>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
@@ -247,6 +262,25 @@ const SquadDetailsModal = ({ isOpen, onClose, squad, userRole }) => {
                                     <Select.Item key={role} value={role}>{role}</Select.Item>
                                   ))
                                 )}
+                              </Select.Content>
+                            </Select.Root>
+                          ) : (
+                            <Text size="1" color="gray">-</Text>
+                          )}
+                        </Table.Cell>
+                        <Table.Cell>
+                          {isMember ? (
+                            <Select.Root
+                              value={memberObj.escopoPrincipal || ''}
+                              onValueChange={(val) => handleEscopoChange(u.id, val)}
+                              disabled={userRole !== 'admin'}
+                            >
+                              <Select.Trigger style={{ width: '150px' }} placeholder="Selecionar..." />
+                              <Select.Content>
+                                <Select.Item value="">—</Select.Item>
+                                {ESCOPO_PRINCIPAL_OPTIONS.map(opt => (
+                                  <Select.Item key={opt} value={opt}>{opt}</Select.Item>
+                                ))}
                               </Select.Content>
                             </Select.Root>
                           ) : (

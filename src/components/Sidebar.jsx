@@ -21,6 +21,7 @@ import {
   Radar,
   Users,
   Network,
+  DollarSign,
 } from 'lucide-react';
 import { IconButton, Dialog, Button, Flex, Text } from '@radix-ui/themes';
 import { auth } from '../firebase';
@@ -141,6 +142,7 @@ const Sidebar = ({ isOpen, toggleSidebar, userRole, user, theme, toggleTheme }) 
     { name: 'Minhas Atividades', icon: <ListChecks size={20} />, path: '/minhas-atividades', requiredFn: PermissionFunctionKeys.MINHAS_ATIVIDADES_VIEW },
     { name: 'Team', icon: <Users size={20} />, path: '/team', requiredFn: PermissionFunctionKeys.TEAM_VIEW },
     { name: 'Organograma', icon: <Network size={20} />, path: '/organograma', requiredFn: PermissionFunctionKeys.TEAM_VIEW },
+    { name: 'Financeiro', icon: <DollarSign size={20} />, path: '/financeiro', requiredFn: PermissionFunctionKeys.FINANCEIRO_VIEW },
     { name: 'Demandas', icon: <KanbanSquare size={20} />, path: '/demandas', isDemandasParent: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
     { name: 'Roadmap', icon: <Route size={20} />, path: '/roadmap', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },
     { name: 'T-Shirt', icon: <Shirt size={20} />, path: '/t-shirt', isChild: true, requiredFn: PermissionFunctionKeys.DEMANDAS_VIEW },

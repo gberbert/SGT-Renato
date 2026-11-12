@@ -222,6 +222,42 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    match /financeiro_expenses/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /financeiro_receita/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /financeiro_snapshots/{document=**} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    match /financeiro_termos/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /financeiro_emissao_termos/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /financeiro_alocacoes/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // settings — includes financeiro_control, permission_profiles, etc.
+    match /settings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     // Catch-all: deny by default
     match /{document=**} {
       allow read, write: if false;

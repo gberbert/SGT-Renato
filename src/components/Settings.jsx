@@ -45,7 +45,7 @@ import OperacaoCarga from './operacao/OperacaoCarga';
 import AuditDashboard from './AuditDashboard';
 import { db, auth, createAuthUser } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { writeBatch, doc } from 'firebase/firestore';
+import { writeBatch, doc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { subscribeToProjects, updateProjectMembers } from '../services/projectService';
 import { subscribeToProjectSquads } from '../services/squadService';
 
@@ -70,6 +70,7 @@ const Settings = ({ userRole = 'admin' }) => {
   const [systemNameFilter, setSystemNameFilter] = useState('');
   const [systemSquadFilter, setSystemSquadFilter] = useState('');
   const [systemNaturezaFilter, setSystemNaturezaFilter] = useState('');
+  const [systemContratoFilter, setSystemContratoFilter] = useState(new Set());
 
   const [gruposAtendimento, setGruposAtendimento] = useState([]);
   const [loadingGrupos, setLoadingGrupos] = useState(true);
@@ -115,6 +116,7 @@ const Settings = ({ userRole = 'admin' }) => {
   // System Modal State
   const [isSystemModalOpen, setIsSystemModalOpen] = useState(false);
   const [systemData, setSystemData] = useState({ name: '' });
+  const [projectContratos, setProjectContratos] = useState([]);
   const [savingSystem, setSavingSystem] = useState(false);
 
   // Grupo Atendimento Modal State
@@ -450,14 +452,22 @@ const Settings = ({ userRole = 'admin' }) => {
   };
 
   const openNewSystemModal = () => {
-    setSystemData({ name: '', projectId: '', grupoSuporte: '', squadId: '' });
+    setSystemData({ name: '', projectId: '', grupoSuporte: '', squadId: '', contratoId: '', contratoNome: '' });
+    setProjectContratos([]);
     setIsSystemModalOpen(true);
   };
 
   const openEditSystemModal = (sys) => {
-    setSystemData({ grupoSuporte: '', squadId: '', ...sys });
+    setSystemData({ grupoSuporte: '', squadId: '', contratoId: '', contratoNome: '', ...sys });
     setIsSystemModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!systemData.projectId || !isSystemModalOpen) { setProjectContratos([]); return; }
+    getDocs(query(collection(db, 'projects', systemData.projectId, 'contratos'), orderBy('createdAt', 'asc')))
+      .then(snap => setProjectContratos(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+      .catch(() => setProjectContratos([]));
+  }, [systemData.projectId, isSystemModalOpen]);
 
   const handleSaveSystem = async (e) => {
     e.preventDefault();
@@ -478,6 +488,8 @@ const Settings = ({ userRole = 'admin' }) => {
             projectId: systemData.projectId,
             grupoSuporte: systemData.grupoSuporte || '',
             squadId: systemData.squadId || '',
+            contratoId: systemData.contratoId || '',
+            contratoNome: systemData.contratoNome || '',
           });
         }
       }
@@ -506,7 +518,10 @@ const Settings = ({ userRole = 'admin' }) => {
       const matchNatureza = systemNaturezaFilter
         ? (sys.naturezaIniciativa || sys.naturezaOperacao || '') === systemNaturezaFilter
         : true;
-      return matchName && matchSquad && matchNatureza;
+      const matchContrato = systemContratoFilter.size === 0 ? true :
+        (systemContratoFilter.has('__none__') && !sys.contratoNome) ||
+        (sys.contratoNome && systemContratoFilter.has(sys.contratoNome));
+      return matchName && matchSquad && matchNatureza && matchContrato;
     });
 
     if (filtered.length === 0) {
@@ -1137,6 +1152,75 @@ const Settings = ({ userRole = 'admin' }) => {
                 </Box>
               )}
 
+              {/* Filtro por Contrato — multi-seleção com opção "em branco" */}
+              {(() => {
+                const contratoValues = Array.from(new Set(
+                  systems.map(s => s.contratoNome || '').filter(v => v)
+                )).sort();
+                const hasBlanks = systems.some(s => !s.contratoNome);
+                return (contratoValues.length > 0 || hasBlanks) ? (
+                  <Box mb="4">
+                    <Text size="1" weight="bold" color="gray" mb="2" style={{ display: 'block', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                      Filtrar por Contrato
+                    </Text>
+                    <Flex gap="2" wrap="wrap">
+                      {hasBlanks && (() => {
+                        const isActive = systemContratoFilter.has('__none__');
+                        return (
+                          <button
+                            key="__none__"
+                            type="button"
+                            onClick={() => setSystemContratoFilter(prev => {
+                              const n = new Set(prev); isActive ? n.delete('__none__') : n.add('__none__'); return n;
+                            })}
+                            style={{
+                              padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              border: isActive ? '1.5px solid var(--orange-9)' : '1.5px solid var(--gray-6)',
+                              background: isActive ? 'var(--orange-3)' : 'var(--gray-2)',
+                              color: isActive ? 'var(--orange-11)' : 'var(--gray-11)', transition: 'all 0.15s',
+                            }}
+                          >
+                            — Sem Contrato
+                          </button>
+                        );
+                      })()}
+                      {contratoValues.map(contrato => {
+                        const isActive = systemContratoFilter.has(contrato);
+                        return (
+                          <button
+                            key={contrato}
+                            type="button"
+                            onClick={() => setSystemContratoFilter(prev => {
+                              const n = new Set(prev); isActive ? n.delete(contrato) : n.add(contrato); return n;
+                            })}
+                            style={{
+                              padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              border: isActive ? '1.5px solid var(--indigo-9)' : '1.5px solid var(--gray-6)',
+                              background: isActive ? 'var(--indigo-3)' : 'var(--gray-2)',
+                              color: isActive ? 'var(--indigo-11)' : 'var(--gray-11)', transition: 'all 0.15s',
+                            }}
+                          >
+                            {contrato}
+                          </button>
+                        );
+                      })}
+                      {systemContratoFilter.size > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSystemContratoFilter(new Set())}
+                          style={{
+                            padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                            border: '1.5px solid var(--gray-5)', background: 'transparent', color: 'var(--gray-9)', transition: 'all 0.15s',
+                          }}
+                        >
+                          × Limpar contrato
+                        </button>
+                      )}
+                    </Flex>
+                  </Box>
+                ) : null;
+              })()}
+
               {loadingSystems ? <Loader2 className="spinner-icon" /> : (
                   <>
                     {(() => {
@@ -1152,7 +1236,10 @@ const Settings = ({ userRole = 'admin' }) => {
                         const matchNatureza = systemNaturezaFilter
                           ? (sys.naturezaIniciativa || sys.naturezaOperacao || '') === systemNaturezaFilter
                           : true;
-                        return matchName && matchSquad && matchNatureza;
+                        const matchContrato = systemContratoFilter.size === 0 ? true :
+                          (systemContratoFilter.has('__none__') && !sys.contratoNome) ||
+                          (sys.contratoNome && systemContratoFilter.has(sys.contratoNome));
+                        return matchName && matchSquad && matchNatureza && matchContrato;
                       });
                     return (
                       <>
@@ -1166,6 +1253,7 @@ const Settings = ({ userRole = 'admin' }) => {
                               <Table.ColumnHeaderCell>Projeto</Table.ColumnHeaderCell>
                               <Table.ColumnHeaderCell>Grupo de Suporte</Table.ColumnHeaderCell>
                               <Table.ColumnHeaderCell>Squad</Table.ColumnHeaderCell>
+                              <Table.ColumnHeaderCell>Contrato</Table.ColumnHeaderCell>
                               <Table.ColumnHeaderCell align="right">Ações</Table.ColumnHeaderCell>
                             </Table.Row>
                           </Table.Header>
@@ -1190,6 +1278,7 @@ const Settings = ({ userRole = 'admin' }) => {
                                   <Table.Cell>{proj ? proj.name : '-'}</Table.Cell>
                                   <Table.Cell>{sys.grupoSuporte || <Text color="gray">-</Text>}</Table.Cell>
                                   <Table.Cell>{squad ? squad.name : <Text color="gray">-</Text>}</Table.Cell>
+                                  <Table.Cell>{sys.contratoNome ? <Badge color="indigo" variant="soft">{sys.contratoNome}</Badge> : <Text color="gray">-</Text>}</Table.Cell>
                                   <Table.Cell justify="end">
                                     <Flex gap="2" justify="end">
                                       <Button size="1" variant="soft" onClick={() => openEditSystemModal(sys)}>
@@ -1981,6 +2070,24 @@ const Settings = ({ userRole = 'admin' }) => {
                       : squads
                     ).map(s => (
                       <Select.Item key={s.id} value={s.id}>{s.name}</Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+              </label>
+              <label>
+                <Text as="div" size="2" mb="1" weight="bold">Contrato</Text>
+                <Select.Root
+                  value={systemData.contratoId || ''}
+                  onValueChange={(val) => {
+                    const c = projectContratos.find(x => x.id === val);
+                    setSystemData({...systemData, contratoId: val, contratoNome: c ? (c.nome || c.name || c.numero || val) : ''});
+                  }}
+                >
+                  <Select.Trigger placeholder={systemData.projectId ? (projectContratos.length ? "Selecione um contrato" : "Nenhum contrato no projeto") : "Selecione um projeto primeiro"} style={{ width: '100%' }} />
+                  <Select.Content>
+                    <Select.Item value="">Nenhum</Select.Item>
+                    {projectContratos.map(c => (
+                      <Select.Item key={c.id} value={c.id}>{c.nome || c.name || c.numero || c.id}</Select.Item>
                     ))}
                   </Select.Content>
                 </Select.Root>

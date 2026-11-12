@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Save, Download } from "lucide-react";
+import { Save, Download, Eye, Edit2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
   subscribeToCapacityConfig, saveCapacityConfig, loadCapacityConfig,
@@ -106,7 +106,7 @@ const TFR = { ...F, textAlign:"right" };
 
 /* ─── component ───────────────────────────────────── */
 export default function TeamCapacityGrid({
-  usersFiltered, workingDays, periodStart, periodEnd, squadById, membership, membershipRoles,
+  usersFiltered, workingDays, periodStart, periodEnd, squadById, membership, membershipRoles, onUserClick,
 }) {
   const users = usersFiltered || [];
   const [config,    setConfig] = useState(null);
@@ -321,7 +321,9 @@ export default function TeamCapacityGrid({
         <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
           <thead>
             <tr>
+              <th style={{ ...B, textAlign:"center" }}>AÇÕES</th>
               <th style={THL}>MEMBRO</th>
+              <th style={THL}>CÓD. PROJETO</th>
               <th style={THL}>SQUAD</th>
               <th style={THL}>PAPEL NA SQUAD</th>
               <th style={THC}>ALOCAÇÃO (%)</th>
@@ -335,7 +337,7 @@ export default function TeamCapacityGrid({
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={10} style={{ ...TDC, padding:32, color:"var(--gray-8)" }}>
+              <tr><td colSpan={12} style={{ ...TDC, padding:32, color:"var(--gray-8)" }}>
                 Nenhum membro encontrado.
               </td></tr>
             )}
@@ -343,7 +345,26 @@ export default function TeamCapacityGrid({
               const name = r.user?.displayName || r.user?.shortName || r.user?.name || r.user?.email || r.uid;
               return (
                 <tr key={r.uid} style={{ background: i%2===0 ? undefined : "var(--gray-1)" }}>
+                  <td style={{ ...TDC }}>
+                    <div style={{ display:"flex", gap:2, justifyContent:"center" }}>
+                      <button type="button" title="Visualizar"
+                        style={{ background:"none", border:"none", cursor:"pointer", color:"var(--gray-9)", padding:4 }}
+                        onClick={() => onUserClick?.(r.user)}>
+                        <Eye size={14} />
+                      </button>
+                      <button type="button" title="Editar"
+                        style={{ background:"none", border:"none", cursor:"pointer", color:"var(--gray-9)", padding:4 }}
+                        onClick={() => onUserClick?.(r.user)}>
+                        <Edit2 size={14} />
+                      </button>
+                    </div>
+                  </td>
                   <td style={TDL}><span style={{ fontWeight:600, color:"var(--gray-12)" }}>{name}</span></td>
+                  <td style={TDL}>
+                    {r.user?.projectCode
+                      ? <span style={{ fontSize:11, fontWeight:700, color:"var(--amber-11)", background:"var(--amber-3)", border:"1px solid var(--amber-7)", borderRadius:6, padding:"2px 8px", letterSpacing:"0.04em", whiteSpace:"nowrap" }}>{r.user.projectCode}</span>
+                      : <span style={{ color:"var(--gray-7)", fontSize:11 }}>—</span>}
+                  </td>
                   <td style={TDL}>
                     <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
                       {r.squads.length > 0
@@ -394,7 +415,7 @@ export default function TeamCapacityGrid({
           {rows.length > 0 && (
             <tfoot>
               <tr>
-                <td colSpan={4} style={{ ...TFL }}>TOTAL ({rows.length} membros)</td>
+                <td colSpan={6} style={{ ...TFL }}>TOTAL ({rows.length} membros)</td>
                 <td style={TFR}>{tot.bruto}h</td>
                 <td style={TFR}>{tot.ferias > 0 ? tot.ferias+"h" : "—"}</td>
                 <td style={TFR}>{tot.folga > 0 ? tot.folga+"h" : "—"}</td>

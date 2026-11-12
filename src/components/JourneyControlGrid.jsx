@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Eye, Edit2 } from "lucide-react";
 
 /** Normalize any date value → JS Date (local midnight) */
 function toDate(v) {
@@ -85,9 +86,15 @@ const TD_CENTER = { ...TD, textAlign: "center" };
 
 const TIPO_OPTIONS = ["Férias", "Folga", "Atestado", "Hora Extra"];
 
-export default function JourneyControlGrid({ usersFiltered, squadById, membership }) {
+export default function JourneyControlGrid({ usersFiltered, squadById, membership, onUserClick }) {
   const [filterTipo, setFilterTipo] = useState(new Set());
   const [filterName, setFilterName] = useState("");
+
+  const userByUid = useMemo(() => {
+    const map = new Map();
+    for (const u of (usersFiltered || [])) map.set(u.id || u.uid, u);
+    return map;
+  }, [usersFiltered]);
 
   const rows = useMemo(() => {
     const list = [];
@@ -204,6 +211,7 @@ export default function JourneyControlGrid({ usersFiltered, squadById, membershi
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
           <thead>
             <tr>
+              <th style={{ ...TH, textAlign: "center" }}>AÇÕES</th>
               <th style={TH_LEFT}>NOME</th>
               <th style={TH_LEFT}>SQUAD</th>
               <th style={{ ...TH, textAlign: "center" }}>TIPO</th>
@@ -216,7 +224,7 @@ export default function JourneyControlGrid({ usersFiltered, squadById, membershi
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ ...TD_CENTER, padding: 32, color: "var(--gray-8)" }}>
+                <td colSpan={8} style={{ ...TD_CENTER, padding: 32, color: "var(--gray-8)" }}>
                   Nenhum registro de jornada encontrado.
                 </td>
               </tr>
@@ -230,6 +238,20 @@ export default function JourneyControlGrid({ usersFiltered, squadById, membershi
                   onMouseEnter={(e) => (e.currentTarget.style.background = "var(--gray-2)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "" : "var(--gray-1)")}
                 >
+                  <td style={TD_CENTER}>
+                    <div style={{ display: "flex", gap: 2, justifyContent: "center" }}>
+                      <button type="button" title="Visualizar"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-9)", padding: 4 }}
+                        onClick={() => { const u = userByUid.get(r.uid); if (u) onUserClick?.(u); }}>
+                        <Eye size={14} />
+                      </button>
+                      <button type="button" title="Editar"
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-9)", padding: 4 }}
+                        onClick={() => { const u = userByUid.get(r.uid); if (u) onUserClick?.(u); }}>
+                        <Edit2 size={14} />
+                      </button>
+                    </div>
+                  </td>
                   <td style={TD_LEFT}>
                     <span style={{ fontWeight: 600, color: "var(--gray-12)" }}>{r.name}</span>
                   </td>
@@ -273,7 +295,7 @@ export default function JourneyControlGrid({ usersFiltered, squadById, membershi
             <tfoot>
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   style={{
                     ...TD_LEFT,
                     fontWeight: 700,

@@ -21,6 +21,7 @@ import OperacaoHome from '../components/operacao/OperacaoHome';
 import RoadmapGeral from '../components/RoadmapGeral';
 import Team from '../components/Team';
 import Organograma from '../components/Organograma';
+import Financeiro from '../components/Financeiro';
 import SecopsPermissionsLayout from './SecopsPermissionsLayout';
 import { getTicketById } from '../services/ticketService';
 import { logUserAccess } from '../services/auditService';
@@ -115,6 +116,7 @@ const DemandasLayout = ({
             <Route path="/secops/permissions" element={<SecopsPermissionsLayout userRole={userRole} />} />
             <Route path="/team" element={<Team userRole={userRole} />} />
             <Route path="/organograma" element={<Organograma userRole={userRole} />} />
+            <Route path="/financeiro" element={<Financeiro currentUser={user} />} />
             <Route path="/minhas-atividades" element={<MyActivities userRole={userRole} user={user} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

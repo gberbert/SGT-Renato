@@ -338,6 +338,31 @@ function truncateText(text, max = 2000) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+/**
+ * Normalizes a Jira date value to full ISO format "yyyy-mm-dd".
+ * Jira date custom fields sometimes return partial dates like "10-30" (mm-dd)
+ * without the year. This function prepends the current year in that case.
+ */
+function normalizeJiraDate(val) {
+  if (!val) return null;
+  const s = String(val).trim();
+  // Already full ISO date: yyyy-mm-dd or yyyy-mm-ddTHH:...
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s;
+  // Partial Jira format: mm-dd (no year) — prepend current year
+  const mmdd = s.match(/^(\d{2})-(\d{2})$/);
+  if (mmdd) {
+    const year = new Date().getFullYear();
+    return `${year}-${mmdd[1]}-${mmdd[2]}`;
+  }
+  // Partial with time: mm-ddTHH:mm:ss
+  const mmddT = s.match(/^(\d{2})-(\d{2})T/);
+  if (mmddT) {
+    const year = new Date().getFullYear();
+    return `${year}-${mmddT[1]}-${mmddT[2]}${s.slice(5)}`;
+  }
+  return s;
+}
+
 function computeAgingDays(createdAt) {
   if (!createdAt) return null;
   const created = new Date(createdAt);
@@ -437,6 +462,8 @@ const KNOWN_DATE_FIELD_IDS = {
   natureza_iniciativa: "customfield_15208",
   // Torre de Atuação da Demanda
   torre_atuacao: "customfield_10314",
+  // Tempo de Esforço (Horas) — campo numérico preenchido pela equipe no Jira
+  tempo_esforco_horas: "customfield_14752",
 };
 
 async function resolveTicketFieldIds() {
@@ -558,8 +585,11 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
     // estimativaMacro (customfield_10266) é Dropdown/Select — armazenar como string (ex: "P", "M", "G", "GG")
     estimativaMacro: extracted.estimativa_macro || null,
     estimativaTotal: (() => { if (extracted.estimativa_total == null) return null; const n = Number(extracted.estimativa_total); return Number.isFinite(n) ? n : null; })(),
+    tempoEsforcoHoras: (() => { if (extracted.tempo_esforco_horas == null) return null; const n = Number(extracted.tempo_esforco_horas); return Number.isFinite(n) ? n : null; })(),
     // estimativaMacroJira = valor textual do dropdown de estimativa macro do Jira (ex: "P", "M", "G", "GG")
     estimativaMacroJira: extracted.estimativa_macro || null,
+    dataAtividade: normalizeJiraDate(extracted.data_atividade),
+    dataEncerramento: normalizeJiraDate(extracted.data_encerramento || fields.resolutiondate),
     dataFimPlanejado: extracted.data_fim_planejado || null,
     planejamentoHorasDemandaFast: extracted.planejamento_horas_demanda_fast != null ? Number(extracted.planejamento_horas_demanda_fast) : null,
     demandaVulnerabilidade: extracted.demanda_vulnerabilidade || null,
@@ -1091,6 +1121,8 @@ const SGT_MANAGED_FIELDS = [
   "observacao",
   "cicloId",
   "ticketsVinculados",
+  "termoFaturamento",
+  "termoFaturamentoUpdatedAt",
 ];
 
 /**

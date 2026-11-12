@@ -103,6 +103,29 @@ const TICKET_FIELD_DEFINITIONS = {
     "estimativa total",
     "Estimativa Total[Number]",
   ],
+  tempo_esforco_horas: [
+    "Tempo de Esforço (Horas)",
+    "tempo de esforço (horas)",
+    "Tempo de Esforço (Horas)[Number]",
+    "Tempo de Esforo (Horas)",
+  ],
+  data_atividade: [
+    "Data da Atividade",
+    "data da atividade",
+    "Data de Atividade",
+    "Activity Date",
+    "Start Date",
+    "Data Atividade",
+  ],
+  data_encerramento: [
+    "Data de Encerramento",
+    "data de encerramento",
+    "Data Encerramento",
+    "Closing Date",
+    "Data de Encerramento Planejada",
+    "Data Encerramento Planejado",
+    "Encerramento",
+  ],
 };
 
 const ESCOPO_SEED = [

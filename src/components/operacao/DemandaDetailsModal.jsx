@@ -757,10 +757,9 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
   })();
 
   // Detect PROBLEMAS escopo — removes % Teste Interno, Data Fim Teste Interno, Data Fim Teste (QA)
-  const isProblema = (() => {
-    const e = String(ticket.escopo || '').trim().toUpperCase().replace(/\s+/g, ' ');
-    return e === 'PROBLEMAS' || e === 'PROBLEMA';
-  })();
+  const _escopoKey = String(ticket.escopo || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  const isProblema = _escopoKey === 'PROBLEMAS' || _escopoKey === 'PROBLEMA';
+  const isIncidenteOrFast = _escopoKey === 'INCIDENTE' || _escopoKey === 'DEMANDA FAST';
 
   // Para PROBLEMA: usa campos do ticket vinculado como fallback quando o próprio ticket não tem
   const tvRef = isProblema && linkedTickets.length > 0 ? linkedTickets[0] : null;
@@ -1093,6 +1092,8 @@ const handleSave = useCallback(async () => {
   const squadLabel = stripNumericPrefix(ticket.grupoSolucionador || ticket.grupoSuporte) || ticket.squad || '—';
   const statusLabel = ticket.status || '—';
   const statusColor = getStatusColor(ticket.status);
+  const _dmdEscopoKey = String(ticket.escopo || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  const isIncidenteOrFast = _dmdEscopoKey === 'INCIDENTE' || _dmdEscopoKey === 'DEMANDA FAST';
 
   return (
     <div className="dmd-overlay">
@@ -1112,7 +1113,37 @@ const handleSave = useCallback(async () => {
                 'PRECIFICACAO DEMANDAS': '#f472b6',
               };
               const key = String(ticket.escopo).trim().toUpperCase().replace(/_/g, ' ');
-              const c = ESCOPO_COLORS[key] || '#6b7280';
+              const currentEscopo = (pendingChanges.escopo || ticket.escopo || '').toUpperCase().replace(/_/g, ' ');
+              const c = ESCOPO_COLORS[currentEscopo] || ESCOPO_COLORS[key] || '#6b7280';
+              const ESCOPO_TOGGLE_OPTIONS = ['SOLICITACAO', 'INCIDENTE', 'DEMANDA FAST'];
+              const canToggleEscopo = ESCOPO_TOGGLE_OPTIONS.includes(key);
+              if (canToggleEscopo && isEdit) {
+                return (
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <select
+                      value={currentEscopo}
+                      onChange={(e) => save('escopo', e.target.value)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        background: c + '22', border: '1px solid ' + c + '88',
+                        borderRadius: 999, padding: '3px 12px',
+                        fontSize: 11, fontWeight: 700, color: c,
+                        letterSpacing: '0.07em', textTransform: 'uppercase',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                        cursor: 'pointer', outline: 'none',
+                        WebkitAppearance: 'none', appearance: 'none',
+                        paddingRight: 24,
+                      }}
+                      title="Trocar escopo"
+                    >
+                      {ESCOPO_TOGGLE_OPTIONS.map(opt => (
+                        <option key={opt} value={opt} style={{ background: '#1a1a2e', color: '#fff', textTransform: 'uppercase' }}>{opt}</option>
+                      ))}
+                    </select>
+                    <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 8, pointerEvents: 'none', color: c, opacity: 0.8 }}>▼</span>
+                  </div>
+                );
+              }
               return (
                 <span
                   style={{
@@ -1327,7 +1358,10 @@ const handleSave = useCallback(async () => {
                   const dev = ticket.percentualConclusao != null ? Number(ticket.percentualConclusao) : null;
                   const teste = ticket.percentualConclusaoTesteInterno != null ? Number(ticket.percentualConclusaoTesteInterno) : null;
                   if (dev == null && teste == null) return null;
-                  const avg = Math.round(((dev ?? 0) * 0.7 + (teste ?? 0) * 0.3) * 10) / 10;
+                  // INCIDENTE / DEMANDA FAST: sem teste interno — avanço = % conclusão
+                  const avg = isIncidenteOrFast
+                    ? Math.round((dev ?? 0) * 10) / 10
+                    : Math.round(((dev ?? 0) * 0.7 + (teste ?? 0) * 0.3) * 10) / 10;
                   const color = avg >= 75 ? '#4ade80' : avg >= 40 ? '#fbbf24' : '#f87171';
                   return (
                     <div className="dmd-field">
@@ -1343,7 +1377,7 @@ const handleSave = useCallback(async () => {
                           </span>
                         </div>
                         <div style={{ fontSize: 10, color: 'var(--gray-8)', marginTop: 3 }}>
-                          {dev ?? '—'} × 0,7 + {teste ?? '—'} × 0,3
+                          {isIncidenteOrFast ? `${dev ?? '—'} (sem teste interno)` : `${dev ?? '—'} × 0,7 + ${teste ?? '—'} × 0,3`}
                         </div>
                       </div>
                     </div>

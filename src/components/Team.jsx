@@ -130,6 +130,7 @@ export default function Team({ currentUser }) {
   const [selectedStatuses, setSelectedStatuses] = useState(new Set());
   const [selectedContracts, setSelectedContracts] = useState(new Set());
   const [selectedFoundations, setSelectedFoundations] = useState(new Set());
+  const [selectedProjectCodes, setSelectedProjectCodes] = useState(new Set());
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
@@ -242,6 +243,14 @@ export default function Team({ currentUser }) {
       getUserLabel(a).toUpperCase().localeCompare(getUserLabel(b).toUpperCase(), "pt-BR")
     ), [users]);
 
+  const projectCodeOptions = useMemo(() => {
+    const codes = new Set();
+    for (const u of usersSorted) {
+      if (u?.projectCode) codes.add(u.projectCode);
+    }
+    return [...codes].sort();
+  }, [usersSorted]);
+
   const toggleSquad = (id) => setSelectedSquads((prev) => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
@@ -263,8 +272,14 @@ export default function Team({ currentUser }) {
     if (selectedStatuses.size > 0 && !selectedStatuses.has(u?.status || "")) return false;
     if (selectedContracts.size > 0 && !selectedContracts.has(u?.contract || "")) return false;
     if (selectedFoundations.size > 0 && !selectedFoundations.has(u?.foundation || "")) return false;
+    if (selectedProjectCodes.size > 0) {
+      const code = u?.projectCode || "";
+      const matchSemCodigo = selectedProjectCodes.has("__SEM_CODIGO__") && !code;
+      const matchCode = code && selectedProjectCodes.has(code);
+      if (!matchSemCodigo && !matchCode) return false;
+    }
     return true;
-  }), [userSearchTerm, usersSorted, selectedSquads, membership, selectedStatuses, selectedContracts, selectedFoundations]);
+  }), [userSearchTerm, usersSorted, selectedSquads, membership, selectedStatuses, selectedContracts, selectedFoundations, selectedProjectCodes]);
 
   // Breakdown for stat cards: use all filters EXCEPT contract so cards always stay visible
   const usersFilteredNoContract = useMemo(() => usersSorted.filter((u) => {
@@ -280,8 +295,14 @@ export default function Team({ currentUser }) {
     }
     if (selectedStatuses.size > 0 && !selectedStatuses.has(u?.status || "")) return false;
     if (selectedFoundations.size > 0 && !selectedFoundations.has(u?.foundation || "")) return false;
+    if (selectedProjectCodes.size > 0) {
+      const code = u?.projectCode || "";
+      const matchSemCodigo = selectedProjectCodes.has("__SEM_CODIGO__") && !code;
+      const matchCode = code && selectedProjectCodes.has(code);
+      if (!matchSemCodigo && !matchCode) return false;
+    }
     return true;
-  }), [userSearchTerm, usersSorted, selectedSquads, membership, selectedStatuses, selectedFoundations]);
+  }), [userSearchTerm, usersSorted, selectedSquads, membership, selectedStatuses, selectedFoundations, selectedProjectCodes]);
 
   const contratoBreakdown = useMemo(() => {
     const map = {};
@@ -438,7 +459,7 @@ export default function Team({ currentUser }) {
                 {filtersCollapsed ? "Filtros" : "Recolher"}
               </button>
 
-              {(userSearchTerm || selectedStatuses.size > 0 || selectedSquads.size > 0 || selectedContracts.size > 0 || selectedFoundations.size > 0) && (
+              {(userSearchTerm || selectedStatuses.size > 0 || selectedSquads.size > 0 || selectedContracts.size > 0 || selectedFoundations.size > 0 || selectedProjectCodes.size > 0) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -447,6 +468,7 @@ export default function Team({ currentUser }) {
                     setSelectedSquads(new Set());
                     setSelectedContracts(new Set());
                     setSelectedFoundations(new Set());
+                    setSelectedProjectCodes(new Set());
                   }}
                   style={{
                     padding: "5px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700,
@@ -463,7 +485,7 @@ export default function Team({ currentUser }) {
             {/* Collapsible filter rows */}
             <div style={{
               overflow: "hidden",
-              maxHeight: filtersCollapsed ? "0" : "200px",
+              maxHeight: filtersCollapsed ? "0" : "600px",
               opacity: filtersCollapsed ? 0 : 1,
               transition: "max-height 0.25s ease, opacity 0.2s ease",
               pointerEvents: filtersCollapsed ? "none" : undefined,
@@ -527,6 +549,26 @@ export default function Team({ currentUser }) {
               {selectedFoundations.size > 0 && (
                 <button type="button" onClick={() => setSelectedFoundations(new Set())} style={clearStyle}>✕</button>
               )}
+            </Flex>
+
+            {/* Row 3: CÓD. PROJETO */}
+            <Flex mb="1" align="center" gap="3" wrap="wrap">
+              <Flex align="center" gap="2" wrap="wrap">
+                <Text size="1" weight="bold" style={{ textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--gray-10)" }}>CÓD. PROJETO</Text>
+                <button type="button" onClick={() => makeToggle(setSelectedProjectCodes)("__SEM_CODIGO__")}
+                  style={tagStyle(selectedProjectCodes.has("__SEM_CODIGO__"), "tomato")}>
+                  SEM CÓDIGO
+                </button>
+                {projectCodeOptions.map((code) => (
+                  <button key={code} type="button" onClick={() => makeToggle(setSelectedProjectCodes)(code)}
+                    style={tagStyle(selectedProjectCodes.has(code), "amber")}>
+                    {code.toUpperCase()}
+                  </button>
+                ))}
+                {selectedProjectCodes.size > 0 && (
+                  <button type="button" onClick={() => setSelectedProjectCodes(new Set())} style={clearStyle}>✕</button>
+                )}
+              </Flex>
             </Flex>
 
             </div>{/* end collapsible */}
@@ -610,7 +652,9 @@ export default function Team({ currentUser }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
+                  <th style={{ ...TH, textAlign: "center" }}>Ações</th>
                   <th style={TH}>Nome</th>
+                  <th style={TH}>Cód. Projeto</th>
                   <th style={TH}>Status</th>
                   <th style={TH}>Squad</th>
                   <th style={TH}>Papel na Squad</th>
@@ -618,13 +662,12 @@ export default function Team({ currentUser }) {
                   <th style={TH}>Foundation</th>
                   <th style={TH}>Nascimento</th>
                   <th style={TH}>Email</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {usersFiltered.length === 0 && (
                   <tr>
-                    <td colSpan={9} style={{ ...TD, textAlign: "center", color: "var(--gray-8)", padding: "32px" }}>
+                    <td colSpan={10} style={{ ...TD, textAlign: "center", color: "var(--gray-8)", padding: "32px" }}>
                       Nenhum membro encontrado.
                     </td>
                   </tr>
@@ -635,8 +678,27 @@ export default function Team({ currentUser }) {
                     <tr key={u.id} style={{ cursor: "pointer" }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                      <td style={{ ...TD, textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                          <button type="button" title="Visualizar"
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-9)", padding: 4 }}
+                            onClick={() => { setSelectedUser(u); setUserModalOpen(true); }}>
+                            <Eye size={15} />
+                          </button>
+                          <button type="button" title="Editar"
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-9)", padding: 4 }}
+                            onClick={() => { setSelectedUser(u); setUserModalOpen(true); }}>
+                            <Edit2 size={15} />
+                          </button>
+                        </div>
+                      </td>
                       <td style={TD}>
                         <div style={{ fontWeight: 600, color: "var(--gray-12)" }}>{getUserLabel(u)}</div>
+                      </td>
+                      <td style={TD}>
+                        {u?.projectCode
+                          ? <span style={{ fontSize: 12, fontWeight: 700, color: "var(--amber-11)", background: "var(--amber-3)", border: "1px solid var(--amber-7)", borderRadius: 6, padding: "2px 8px", letterSpacing: "0.04em" }}>{u.projectCode}</span>
+                          : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                       </td>
                       <td style={TD}><Badge label={u?.status || "—"} color={statusColor(u?.status)} /></td>
                       <td style={TD}>
@@ -667,20 +729,6 @@ export default function Team({ currentUser }) {
                       <td style={TD}><Badge label={u?.foundation || "—"} color="violet" /></td>
                       <td style={TD}><span style={{ fontSize: 12, color: "var(--gray-10)" }}>{formatDate(u?.dataNascimento)}</span></td>
                       <td style={TD}><span style={{ fontSize: 12, color: "var(--gray-10)" }}>{u?.email || "—"}</span></td>
-                      <td style={{ ...TD, textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                          <button type="button" title="Visualizar"
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-9)", padding: 4 }}
-                            onClick={() => { setSelectedUser(u); setUserModalOpen(true); }}>
-                            <Eye size={15} />
-                          </button>
-                          <button type="button" title="Editar"
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-9)", padding: 4 }}
-                            onClick={() => { setSelectedUser(u); setUserModalOpen(true); }}>
-                            <Edit2 size={15} />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}
@@ -697,6 +745,7 @@ export default function Team({ currentUser }) {
               usersFiltered={usersFiltered}
               squadById={squadById}
               membership={membership}
+              onUserClick={(u) => { setSelectedUser(u); setUserModalOpen(true); }}
             />
           </div>
         )}
@@ -895,6 +944,7 @@ export default function Team({ currentUser }) {
                 periodStart={configPeriodStart}
                 periodEnd={configPeriodEnd}
                 currentUser={currentUser}
+                onUserClick={(u) => { setSelectedUser(u); setUserModalOpen(true); }}
               />
             </div>
           </div>

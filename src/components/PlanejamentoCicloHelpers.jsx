@@ -3,11 +3,13 @@ import { ChevronDown, ChevronRight, MoveRight, MoveLeft, CalendarDays, Pencil, T
 import { updateCiclo, deleteCiclo } from '../services/cicloService';
 import { stripNumericPrefix } from '../utils/stripNumericPrefix';
 
-export const ESCOPOS_ALVO = ['DEMANDA', 'DEMANDA FAST', 'PROBLEMAS', 'INCIDENTE'];
+export const ESCOPOS_ALVO = ['DEMANDA', 'DEMANDA FAST', 'PROBLEMAS', 'INCIDENTE', 'SOLICITACAO', 'CATALOGO'];
 export const ESCOPO_META = {
   DEMANDA: { color: '#3b82f6', short: 'DEM' },
   'DEMANDA FAST': { color: '#f59e0b', short: 'FAST' },
   PROBLEMAS: { color: '#ef4444', short: 'PROB' },
+  SOLICITACAO: { color: '#00c2ff', short: 'SOL' },
+  CATALOGO: { color: '#a855f7', short: 'CAT' },
   INCIDENTE: { color: '#4ade80', short: 'INC' },
 };
 export const CICLO_STATUS_META = {

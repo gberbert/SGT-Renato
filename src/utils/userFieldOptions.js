@@ -2,7 +2,7 @@ const sortAlpha = (arr) => [...arr].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
 export const STATUS_OPTIONS = sortAlpha(['Ativo', 'Inativo']);
 
-export const FOUNDATION_OPTIONS = sortAlpha(['EAPPS', 'MAPPS', 'QS', 'DX', 'GLOBALITY', 'CFLOW']);
+export const FOUNDATION_OPTIONS = sortAlpha(['EAPPS', 'MAPPS', 'QS', 'DX', 'GLOBALITY', 'CFLOW', 'LIC', 'Arpha', 'PJ Independente', '4Solutions']);
 
 export const UF_OPTIONS = sortAlpha([
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',

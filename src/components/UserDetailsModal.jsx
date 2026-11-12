@@ -168,11 +168,26 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
   }, [user?.id]);
 
   useEffect(() => {
-    const unsub = subscribeToProjectSquads('all', all => {
-      setSquads(all);
-      if (user?.id) setUserSquads(all.filter(s => (s.members||[]).includes(user.id)));
-    });
-    return () => typeof unsub === "function" && unsub();
+    if (!user?.id) { setUserSquads([]); return; }
+    const uid = user.id;
+    const unsub = onSnapshot(
+      query(collection(db, 'squads')),
+      (snap) => {
+        const matched = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(s => {
+            const members = Array.isArray(s.users) ? s.users : [];
+            return members.some(m => {
+              if (!m) return false;
+              if (typeof m === 'string') return m === uid;
+              return m?.id === uid;
+            });
+          });
+        setUserSquads(matched);
+      },
+      () => {}
+    );
+    return () => unsub();
   }, [user?.id]);
 
   const handleChange = (key, value) => {
@@ -259,20 +274,34 @@ export default function UserDetailsModal({ open, onOpenChange, user, currentUser
         }}>
           <AvatarUploader draftUser={draftUser} setDraftUser={setDraftUser} userId={draftUser.id || draftUser.uid} readOnly={readOnly}/>
           <div style={{ flex:1, minWidth:0 }}>
-            <Text size="5" weight="bold" style={{ display:"block", marginBottom:2 }}>
-              {draftUser.displayName || "—"}
-            </Text>
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+              <Text size="5" weight="bold" style={{ lineHeight:1.2 }}>
+                {draftUser.displayName || "—"}
+              </Text>
+              {userSquads.map(s => {
+                const memberEntry = Array.isArray(s.users)
+                  ? s.users.find(m => (typeof m === 'string' ? m : m?.id) === (user?.id))
+                  : null;
+                const escopo = memberEntry?.escopoPrincipal || '';
+                return (
+                  <div key={s.id} style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", gap:2 }}>
+                    <span style={{
+                      fontSize:11, fontWeight:700, padding:"2px 9px", borderRadius:999,
+                      background:"var(--cyan-3)", border:"1px solid var(--cyan-7)", color:"var(--cyan-11)",
+                      letterSpacing:"0.04em", whiteSpace:"nowrap",
+                    }}>{s.name.toUpperCase()}</span>
+                    {escopo && (
+                      <span style={{
+                        fontSize:10, fontWeight:600, color:"var(--indigo-11)",
+                        background:"var(--indigo-2)", border:"1px solid var(--indigo-5)",
+                        borderRadius:4, padding:"1px 6px", letterSpacing:"0.03em", whiteSpace:"nowrap",
+                      }}>{escopo}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
             <Text size="2" style={{ color:"var(--gray-9)" }}>{draftUser.email || ""}</Text>
-            {userSquads.length > 0 && (
-              <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:6 }}>
-                {userSquads.map(s => (
-                  <span key={s.id} style={{
-                    fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:999,
-                    background:"var(--indigo-3)", border:"1px solid var(--indigo-6)", color:"var(--indigo-11)",
-                  }}>{s.name}</span>
-                ))}
-              </div>
-            )}
           </div>
           <Dialog.Close asChild>
             <button style={{ background:"none", border:"none", cursor:"pointer", color:"var(--gray-9)", fontSize:20, lineHeight:1, padding:4 }}>×</button>

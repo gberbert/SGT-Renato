@@ -35,6 +35,9 @@ export const PermissionFunctionKeys = {
   PLANEJAMENTO_VIEW: "PLANEJAMENTO_VIEW",
   CONFIGURACOES_VIEW: "CONFIGURACOES_VIEW",
 
+  // Financeiro
+  FINANCEIRO_VIEW: "FINANCEIRO_VIEW",
+
   // Administração
   ADMIN_ALL: "ADMIN_ALL",
 };

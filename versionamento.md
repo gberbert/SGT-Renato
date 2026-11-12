@@ -1,5 +1,16 @@
 # Versionamento do Projeto
 
+## 0.1.489 - 2026-11-12
+- **Feature (Financeiro — Termos — Demandas Fast):** Coluna "AVANÇO" removida da tabela do botão "⚡ DEMANDAS FAST"; filtro multi-seleção de **Status** adicionado à barra de filtros (`FinanceiroHorasEvolutivos`, prop `showStatusFilter`), com dropdown estilo amber e opção "— Todos —".
+- **Feature (Configurações — Sistemas):** Novo filtro multi-seleção **CONTRATO** na aba Sistemas, com opção **— Sem Contrato** (laranja) para sistemas sem contrato e um pill por contrato distinto (índigo). Filtro aplicado tanto na tabela exibida quanto na exportação XLSX.
+- **Feature (Financeiro — Exportar XLSX):** Coluna **Cód. SAP** (`sapId`) incluída nas duas exportações XLSX do Financeiro: "Exportar Excel" (aba HORA) e "⬇ Exportar Relatório Completo" (sheet HORA), posicionada após "Membro".
+
+## 0.1.456 - 2026-11-07
+- **Feature (Team — Filtro Cód. Projeto):** Novo filtro multiselect **CÓD. PROJETO** na área de filtros colapsável do Team (Row 3), com opção **SEM CÓDIGO** (tomato) para membros sem código cadastrado e um botão amber por código único encontrado. Filtro aplicado em `usersFiltered` e `usersFilteredNoContract`, integrado ao botão "Limpar filtros".
+- **Feature (Team — Coluna Cód. Projeto):** Coluna **Cód. Projeto** adicionada à tabela do TEAM tab (badge amber) e ao grid do TEAM CAPACITY tab, com exibição "—" para membros sem código.
+- **UX (Team — Ícones de Ação no início):** Coluna **Ações** (Eye/Edit) movida para a primeira posição nas três abas: TEAM, TEAM CAPACITY e CONTROLE DE JORNADA. Clique em qualquer aba abre o `UserDetailsModal` do membro.
+- **UX (UserDetailsModal — Squad inline):** Badges de squad do membro exibidos inline ao lado do nome no cabeçalho do modal (estilo cyan, uppercase), removidos do rodapé abaixo do e-mail.
+
 ## 0.1.455 - 2026-11-04
 - Planejamento de Ciclos: nova aba **Gestão de Release** com criação de releases (Nome, Ambiente: Homologação/Produção, Tipo: Janela Fixa/Variável, Data Alvo), calendário mensal de janelas de deploy e CABs
 - Detalhe da demanda: novo campo **Pacote (Release)** na aba GERAL — dropdown com releases cadastradas
