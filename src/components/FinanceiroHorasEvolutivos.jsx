@@ -132,7 +132,7 @@ const COL_DEFS = {
 };
 const DEFAULT_COL_ORDER = ["status","squad","avanco","estimativaTotal","plHrsFast","tempoEsforco","termoFaturamento","dataAtividade","dataEncerramento","resolution"];
 
-export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false } = {}) {
+export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, excludeIssueTypes = [] } = {}) {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termos, setTermos] = useState([]);
@@ -205,6 +205,10 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     if (encerrDe) list = list.filter(t => { const v = t.dataEncerramento || t.resolvedAt; return v && v.slice(0,10) >= encerrDe; });
     if (encerrAte) list = list.filter(t => { const v = t.dataEncerramento || t.resolvedAt; return v && v.slice(0,10) <= encerrAte; });
     if (selResolutions.size > 0) list = list.filter(t => selResolutions.has(t.resolution || ""));
+    if (excludeIssueTypes.length > 0) {
+      const excluded = new Set(excludeIssueTypes.map(s => String(s).trim().toLowerCase()));
+      list = list.filter(t => !excluded.has(String(t.issueType || "").trim().toLowerCase()));
+    }
     if (selStatusFilter.size > 0) list = list.filter(t => selStatusFilter.has(t.status || ""));
     if (termoFilter) {
       list = list.filter(t => {
