@@ -163,11 +163,8 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [termoFilter, setTermoFilter] = useState("");
   const [sistemas, setSistemas] = useState([]);
   const [contratoFilter, setContratoFilter] = useState("");
-  // Always-on resolution exclusion (from defaultFilters, not user-controlled)
-  const excludeResolutions = useMemo(
-    () => new Set((defaultFilters.excludeResolutions || []).map(s => String(s).trim().toLowerCase())),
-    []
-  );
+  // Track if resolution has been initialized from defaultFilters
+  const resInitialized = useRef(false);
 
   useEffect(() => {
     if (!resDropOpen) return;
@@ -207,6 +204,19 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     return [...s].sort();
   }, [tickets]);
 
+  // Auto-initialize selResolutions: select all EXCEPT excludeResolutions, once tickets load
+  useEffect(() => {
+    if (resInitialized.current) return;
+    if (!defaultFilters.excludeResolutions?.length) return;
+    if (resolutionOptions.length === 0) return;
+    const excluded = new Set(defaultFilters.excludeResolutions.map(s => String(s).trim().toLowerCase()));
+    const initial = new Set(resolutionOptions.filter(r => !excluded.has(String(r).trim().toLowerCase())));
+    if (initial.size > 0) {
+      setSelResolutions(initial);
+      resInitialized.current = true;
+    }
+  }, [resolutionOptions]);
+
   const statusFilterOptions = useMemo(() => {
     const s = new Set();
     tickets.forEach(t => { if (t.status) s.add(t.status); });
@@ -225,9 +235,6 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     if (excludeIssueTypes.length > 0) {
       const excluded = new Set(excludeIssueTypes.map(s => String(s).trim().toLowerCase()));
       list = list.filter(t => !excluded.has(String(t.issueType || "").trim().toLowerCase()));
-    }
-    if (excludeResolutions.size > 0) {
-      list = list.filter(t => !excludeResolutions.has(String(t.resolution || "").trim().toLowerCase()));
     }
     if (selStatusFilter.size > 0) list = list.filter(t => selStatusFilter.has(t.status || ""));
     if (termoFilter) {

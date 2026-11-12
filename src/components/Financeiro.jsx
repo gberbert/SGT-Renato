@@ -746,7 +746,7 @@ export default function Financeiro() {
                 defaultFilters={{
                   encerrDe: pFirst,
                   encerrAte: pLast,
-                  statusFilter: ["Fechado"],
+                  statusFilter: ["Fechada"],
                   excludeResolutions: ["Cancelado pelo Solicitante"],
                 }}
                 colOrder={["status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador","contrato","termoFaturamento"]}
