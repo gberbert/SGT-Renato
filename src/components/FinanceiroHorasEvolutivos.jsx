@@ -74,7 +74,13 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
     } catch { } finally { setSaving(false); }
     if (!isDemanda) setOpen(false);
   };
-  const labels = selected.map(id => { const t = termos.find(x => x.id === id); return t ? (t.contratoNome || t.id) : id; });
+  const labels = selected.map(id => {
+    const t = termos.find(x => x.id === id);
+    if (!t) return id;
+    const mes = t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+    const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
+    return mes ? `${mes} · ${short}` : short;
+  });
   return (
     <div ref={ref} style={{ position: "relative", minWidth: 140 }}>
       <button type="button" onClick={() => setOpen(v => !v)}
@@ -95,6 +101,8 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
           </button>
           {termos.map(t => {
             const isSel = selected.includes(t.id);
+            const mes = t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+            const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
             return (
               <button key={t.id} type="button" onClick={() => toggle(t.id)}
                 style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", background: isSel ? "var(--indigo-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7 }}>
@@ -102,8 +110,9 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
                   {isSel && <span style={{ fontSize: 8, color: "#fff", fontWeight: 900 }}>✓</span>}
                 </span>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 11 }}>{t.contratoNome || "—"}</div>
-                  <div style={{ fontSize: 9, color: "var(--gray-9)" }}>{t.codigoProjeto ? `${t.codigoProjeto} · ` : ""}{t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "numeric" }) : ""}</div>
+                  {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 4 }}>{mes}</span>}
+                  <span style={{ fontWeight: 600, fontSize: 11 }}>{short}</span>
+                  {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", marginTop: 1 }}>{t.codigoProjeto}</div>}
                 </div>
               </button>
             );
@@ -300,7 +309,11 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
           <select value={termoFilter} onChange={e => setTermoFilter(e.target.value)}
             style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${termoFilter ? "var(--indigo-6)" : "var(--gray-6)"}`, background: termoFilter ? "var(--indigo-2)" : "var(--gray-2)", color: termoFilter ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", maxWidth: 200 }}>
             <option value="">— Todos —</option>
-            {termos.map(t => <option key={t.id} value={t.id}>{t.contratoNome || t.id}{t.mesReferencia ? ` · ${new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" })}` : ""}</option>)}
+            {termos.map(t => {
+              const mes = t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+              const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
+              return <option key={t.id} value={t.id}>{mes ? `${mes} · ${short}` : short}</option>;
+            })}
           </select>
           {termoFilter && <button type="button" onClick={() => setTermoFilter("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
         </div>

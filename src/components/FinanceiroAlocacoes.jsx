@@ -69,7 +69,12 @@ function TermoPickerAlocacao({ userId, mesRef, currentTermoId, termos }) {
 
   const current = currentTermoId || null;
   const termo = termos.find(t => t.id === current);
-  const label = current ? (termo?.contratoNome || current) : "— Selecionar —";
+  const label = (() => {
+    if (!current || !termo) return "— Selecionar —";
+    const mes = termo.mesReferencia ? new Date(termo.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+    const short = (termo.contratoNome || termo.id || "").split("-").slice(-1)[0].trim() || (termo.contratoNome || termo.id);
+    return mes ? `${mes} · ${short}` : short;
+  })();
 
   // Position the dropdown using fixed positioning
   const positionDrop = () => {
@@ -93,18 +98,23 @@ function TermoPickerAlocacao({ userId, mesRef, currentTermoId, termos }) {
             style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: "none", cursor: "pointer", color: "var(--gray-9)", borderBottom: "1px solid var(--gray-4)" }}>
             — Nenhum —
           </button>
-          {termos.map(t => (
-            <button key={t.id} type="button" onMouseDown={e => { e.preventDefault(); e.stopPropagation(); select(t.id); }}
-              style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: t.id === current ? "var(--indigo-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 14, height: 14, borderRadius: 999, border: `2px solid ${t.id === current ? "var(--indigo-9)" : "var(--gray-6)"}`, background: t.id === current ? "var(--indigo-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {t.id === current && <span style={{ fontSize: 7, color: "#fff", fontWeight: 900 }}>✓</span>}
-              </span>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 11 }}>{t.contratoNome || "—"}</div>
-                <div style={{ fontSize: 9, color: "var(--gray-9)" }}>{t.codigoProjeto ? `${t.codigoProjeto} · ` : ""}{t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "numeric" }) : ""}</div>
-              </div>
-            </button>
-          ))}
+          {termos.map(t => {
+            const mes = t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+            const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
+            return (
+              <button key={t.id} type="button" onMouseDown={e => { e.preventDefault(); e.stopPropagation(); select(t.id); }}
+                style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: t.id === current ? "var(--indigo-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 14, height: 14, borderRadius: 999, border: `2px solid ${t.id === current ? "var(--indigo-9)" : "var(--gray-6)"}`, background: t.id === current ? "var(--indigo-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {t.id === current && <span style={{ fontSize: 7, color: "#fff", fontWeight: 900 }}>✓</span>}
+                </span>
+                <div>
+                  {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 4 }}>{mes}</span>}
+                  <span style={{ fontWeight: 600, fontSize: 11 }}>{short}</span>
+                  {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", marginTop: 1 }}>{t.codigoProjeto}</div>}
+                </div>
+              </button>
+            );
+          })}
           {termos.length === 0 && <div style={{ padding: "10px", fontSize: 11, color: "var(--gray-8)" }}>Nenhum termo emitido.</div>}
         </div>
       )}
@@ -210,7 +220,11 @@ export default function FinanceiroAlocacoes() {
           <select value={termoFiltro} onChange={e => setTermoFiltro(e.target.value)}
             style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${termoFiltro ? "var(--indigo-6)" : "var(--gray-6)"}`, background: termoFiltro ? "var(--indigo-2)" : "var(--gray-1)", color: termoFiltro ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", maxWidth: 220 }}>
             <option value="">— Todos —</option>
-            {termos.map(t => <option key={t.id} value={t.id}>{t.contratoNome || t.id}{t.mesReferencia ? ` · ${new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" })}` : ""}</option>)}
+            {termos.map(t => {
+              const mes = t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+              const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
+              return <option key={t.id} value={t.id}>{mes ? `${mes} · ${short}` : short}</option>;
+            })}
           </select>
           {termoFiltro && <button type="button" onClick={() => setTermoFiltro("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
         </div>

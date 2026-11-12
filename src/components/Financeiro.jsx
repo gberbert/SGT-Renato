@@ -769,7 +769,7 @@ export default function Financeiro() {
                   statusFilter: ["Fechada"],
                   excludeResolutions: ["Cancelado pelo Solicitante"],
                 }}
-                colOrder={["status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador","contrato","termoFaturamento"]}
+                colOrder={["status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador","termoFaturamento"]}
               />
             );
           })()}
