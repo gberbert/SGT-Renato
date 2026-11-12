@@ -753,7 +753,7 @@ export default function Financeiro() {
               />
             );
           })()}
-          {termosSubTab === "catalogo"   && <FinanceiroHorasEvolutivos escopoFilter="CATALOGO" />}
+          {termosSubTab === "catalogo"   && <FinanceiroHorasEvolutivos escopoFilter="CATALOGO" hideIssueType={true} colOrder={["status","resolution","dataAtividade","tempoEsforco","reporter","termoFaturamento"]} />}
           {termosSubTab === "alocacoes"  && <FinanceiroAlocacoes />}
         </div>
       )}

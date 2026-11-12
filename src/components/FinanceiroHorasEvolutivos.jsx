@@ -126,6 +126,7 @@ const COL_DEFS = {
   tempoEsforco:      { header: "TEMPO ESFORÇO (H)",  align: "right" },
   grupoSolucionador: { header: "GRUPO SOLUCIONADOR", align: "left" },
   contrato:          { header: "CONTRATO",           align: "left" },
+  reporter:          { header: "RELATOR",            align: "left" },
   termoFaturamento:  { header: "TERMO FATURAMENTO",  align: "left" },
   dataAtividade:     { header: "DATA ATIVIDADE",     align: "left" },
   dataEncerramento:  { header: "DATA ENCERRAMENTO",  align: "left" },
@@ -490,6 +491,13 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                         <td key={id} style={{ ...D, textAlign: "right" }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: t.tempoEsforcoHoras != null ? "#34d399" : "var(--gray-7)", fontVariantNumeric: "tabular-nums" }}>
                             {t.tempoEsforcoHoras != null ? t.tempoEsforcoHoras : "—"}
+                          </span>
+                        </td>
+                      );
+                      case "reporter": return (
+                        <td key={id} style={{ ...D, maxWidth: 140, overflow: "hidden" }}>
+                          <span style={{ fontSize: 11, color: "var(--gray-11)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130 }} title={t.reporter || ""}>
+                            {t.reporter || <span style={{ color: "var(--gray-7)" }}>—</span>}
                           </span>
                         </td>
                       );
