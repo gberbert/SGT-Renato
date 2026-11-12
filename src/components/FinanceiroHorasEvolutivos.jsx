@@ -128,7 +128,7 @@ function getEstTotal(t) {
 const COL_DEFS = {
   status:            { header: "STATUS",             align: "left",  maxWidth: 110 },
   squad:             { header: "SQUAD",              align: "left" },
-  avanco:            { header: "AVANÇO",             align: "center" },
+  avanco:            { header: "AVANÇO",             align: "center", maxWidth: 90 },
   demandaFast:       { header: "DM FAST",            align: "center", maxWidth: 80 },
   estimativaTotal:   { header: "EST. TOTAL",         align: "right" },
   fat30:             { header: "30% (H)",             align: "right" },
@@ -343,7 +343,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
         </div>
         <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
         </>}
-        <div ref={resDropRef} style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexShrink: 0 }}>
+        {!hideFilters.includes("resolution") && <div ref={resDropRef} style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Resolution</span>
           <button type="button" onClick={() => setResDropOpen(v => !v)}
             style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${selResolutions.size > 0 ? "var(--indigo-7)" : "var(--gray-6)"}`, background: selResolutions.size > 0 ? "var(--indigo-2)" : "var(--gray-1)", color: selResolutions.size > 0 ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
@@ -378,7 +378,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
             </div>
           )}
           {selResolutions.size > 0 && <button type="button" onClick={() => setSelResolutions(new Set())} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
-        </div>
+        </div>}
         {showStatusFilter && statusFilterOptions.length > 0 && (
           <>
             <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
@@ -483,21 +483,27 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
 
       {(() => {
         const totalHoras = filtered.reduce((s, t) => s + (Number(t.tempoEsforcoHoras) || 0), 0);
-        const totalHorasR = Math.round(totalHoras * 10) / 10;
+        const totalEst = filtered.reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? v : 0); }, 0);
+        const total30 = filtered.filter(t => STATUS_30PCT.has(t.status)).reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? Math.round(v * 0.3 * 10) / 10 : 0); }, 0);
+        const total60 = filtered.filter(t => STATUS_60PCT.has(t.status)).reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? Math.round(v * 0.6 * 10) / 10 : 0); }, 0);
+        const total10 = filtered.filter(t => STATUS_10PCT.has(t.status)).reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? Math.round(v * 0.1 * 10) / 10 : 0); }, 0);
+        const showFat = visibleCols.includes("fat30") || visibleCols.includes("fat60") || visibleCols.includes("fat10");
+        const showFast = visibleCols.includes("plHrsFast");
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "8px 14px", background: "var(--gray-3)", borderRadius: 8, border: "1px solid var(--gray-4)", fontSize: 12 }}>
-            <span style={{ fontWeight: 700, color: "var(--gray-12)" }}>{filtered.length} <span style={{ fontWeight: 400, color: "var(--gray-9)" }}>ticket{filtered.length !== 1 ? "s" : ""}</span></span>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 14px", background: "var(--gray-3)", borderRadius: 8, border: "1px solid var(--gray-4)", fontSize: 12, flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 700, color: "var(--gray-12)" }}>{filtered.length} <span style={{ fontWeight: 400, color: "var(--gray-9)" }}>tickets</span></span>
             <span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, color: "#34d399" }}>{totalHorasR}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Tempo Esforço</span></span>
-            {visibleCols.includes("plHrsFast") && (() => {
+            <span style={{ fontWeight: 700, color: "#34d399" }}>{Math.round(totalHoras * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Tempo Esforço</span></span>
+            {visibleCols.includes("estimativaTotal") && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "var(--gray-11)" }}>{Math.round(totalEst * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Est. Total</span></span></>}
+            {showFat && total30 > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#fb923c" }}>{Math.round(total30 * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>30%</span></span></>}
+            {showFat && total60 > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#38bdf8" }}>{Math.round(total60 * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>60%</span></span></>}
+            {showFat && total10 > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#4ade80" }}>{Math.round(total10 * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>10%</span></span></>}
+            {showFast && (() => {
               const totalFast = filtered.reduce((s, t) => {
                 const h = t.planejamentoHorasDemandaFast != null ? Number(t.planejamentoHorasDemandaFast) : (t.tempoEsforcoHoras != null ? Number(t.tempoEsforcoHoras) : 0);
                 return s + (Number.isFinite(h) ? h : 0);
               }, 0);
-              return <>
-                <span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} />
-                <span style={{ fontWeight: 700, color: "#fbbf24" }}>{Math.round(totalFast * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Pl. Hrs Fast</span></span>
-              </>;
+              return <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#fbbf24" }}>{Math.round(totalFast * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Pl. Hrs Fast</span></span></>;
             })()}
           </div>
         );
