@@ -753,7 +753,28 @@ export default function Financeiro() {
               />
             );
           })()}
-          {termosSubTab === "catalogo"   && <FinanceiroHorasEvolutivos escopoFilter="CATALOGO" hideIssueType={true} colOrder={["status","resolution","dataAtividade","tempoEsforco","reporter","termoFaturamento"]} />}
+          {termosSubTab === "catalogo"   && (() => {
+            const now = new Date();
+            const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+            const py = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+            const pad = n => String(n).padStart(2, "0");
+            const pFirst = `${py}-${pad(pm + 1)}-01`;
+            const pLast  = `${py}-${pad(pm + 1)}-${pad(new Date(py, pm + 1, 0).getDate())}`;
+            return (
+              <FinanceiroHorasEvolutivos
+                escopoFilter="CATALOGO"
+                hideIssueType={true}
+                hideFilters={["dataEncerramento"]}
+                showStatusFilter={true}
+                defaultFilters={{
+                  ativDe: pFirst,
+                  ativAte: pLast,
+                  statusFilter: ["Aguardando Revisão Horas", "Horas Reprovadas", "Aguardando Aprovação Horas", "Horas Aprovadas"],
+                }}
+                colOrder={["status","resolution","dataAtividade","tempoEsforco","reporter","squad","termoFaturamento"]}
+              />
+            );
+          })()}
           {termosSubTab === "alocacoes"  && <FinanceiroAlocacoes />}
         </div>
       )}

@@ -151,8 +151,8 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [termos, setTermos] = useState([]);
   const [search, setSearch] = useState("");
   const [selEscopo, setSelEscopo] = useState(escopoFilter ? new Set([String(escopoFilter).trim().toUpperCase()]) : new Set());
-  const [ativDe, setAtivDe] = useState("");
-  const [ativAte, setAtivAte] = useState("");
+  const [ativDe, setAtivDe] = useState(() => defaultFilters.ativDe || "");
+  const [ativAte, setAtivAte] = useState(() => defaultFilters.ativAte || "");
   const [encerrDe, setEncerrDe] = useState(() => defaultFilters.encerrDe || "");
   const [encerrAte, setEncerrAte] = useState(() => defaultFilters.encerrAte || "");
   const [selResolutions, setSelResolutions] = useState(new Set());
@@ -309,6 +309,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
         </div>
         <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
         </>}
+        {!hideFilters.includes("dataEncerramento") && <>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Data Encerramento</span>
           <input type="date" value={encerrDe} onChange={e => setEncerrDe(e.target.value)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none" }} />
@@ -317,6 +318,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
           {(encerrDe || encerrAte) && <button type="button" onClick={() => { setEncerrDe(""); setEncerrAte(""); }} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
         </div>
         <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
+        </>}
         <div ref={resDropRef} style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Resolution</span>
           <button type="button" onClick={() => setResDropOpen(v => !v)}
