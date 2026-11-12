@@ -770,7 +770,9 @@ export default function Financeiro() {
                   ativDe: pFirst,
                   ativAte: pLast,
                   statusFilter: ["Aguardando Revisão Horas", "Horas Reprovadas", "Aguardando Aprovação Horas", "Horas Aprovadas"],
+                  grupoAprovFilter: ["Aprovador Horas - EIC", "Aprovador Horas - ETS", "Aprovador Horas - EITS", "Aprovador Horas - EII"],
                 }}
+                showGrupoAprovFilter={true}
                 colOrder={["status","resolution","dataAtividade","tempoEsforco","reporter","squad","termoFaturamento"]}
               />
             );

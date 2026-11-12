@@ -145,7 +145,7 @@ function prevMonthRange() {
   };
 }
 
-export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, excludeIssueTypes = [], defaultFilters = {} } = {}) {
+export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, showGrupoAprovFilter = false, excludeIssueTypes = [], defaultFilters = {} } = {}) {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termos, setTermos] = useState([]);
@@ -164,6 +164,9 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [termoFilter, setTermoFilter] = useState("");
   const [sistemas, setSistemas] = useState([]);
   const [contratoFilter, setContratoFilter] = useState("");
+  const [selGrupoAprov, setSelGrupoAprov] = useState(() => new Set(defaultFilters.grupoAprovFilter || []));
+  const [grupoAprovDropOpen, setGrupoAprovDropOpen] = useState(false);
+  const grupoAprovDropRef = useRef(null);
   // Track if resolution has been initialized from defaultFilters
   const resInitialized = useRef(false);
 
@@ -180,6 +183,13 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [statusDropOpen]);
+
+  useEffect(() => {
+    if (!grupoAprovDropOpen) return;
+    const h = (e) => { if (grupoAprovDropRef.current && !grupoAprovDropRef.current.contains(e.target)) setGrupoAprovDropOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [grupoAprovDropOpen]);
 
   useEffect(() => {
     setLoading(true);
@@ -237,7 +247,9 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
       const excluded = new Set(excludeIssueTypes.map(s => String(s).trim().toLowerCase()));
       list = list.filter(t => !excluded.has(String(t.issueType || "").trim().toLowerCase()));
     }
+    if (selGrupoAprov.size > 0) list = list.filter(t => selGrupoAprov.has(t.grupoAprovadorHoras || ""));
     if (selStatusFilter.size > 0) list = list.filter(t => selStatusFilter.has(t.status || ""));
+  // Note: selGrupoAprov added to deps below
     if (termoFilter) {
       list = list.filter(t => {
         const tf = t.termoFaturamento;
@@ -254,7 +266,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
       });
     }
     return list;
-  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selStatusFilter, termoFilter, contratoFilter, sistemas]);
+  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selGrupoAprov, selStatusFilter, termoFilter, contratoFilter, sistemas]);
 
   // Compute visible columns in order
   const visibleCols = useMemo(() => {
@@ -393,6 +405,47 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                 </div>
               )}
               {selStatusFilter.size > 0 && <button type="button" onClick={() => setSelStatusFilter(new Set())} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
+            </div>
+          </>
+        )}
+        {showGrupoAprovFilter && (
+          <>
+            <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
+            <div ref={grupoAprovDropRef} style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Grupo Aprov.</span>
+              <button type="button" onClick={() => setGrupoAprovDropOpen(v => !v)}
+                style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${selGrupoAprov.size > 0 ? "var(--violet-7)" : "var(--gray-6)"}`, background: selGrupoAprov.size > 0 ? "var(--violet-2)" : "var(--gray-1)", color: selGrupoAprov.size > 0 ? "var(--violet-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {selGrupoAprov.size === 0 ? "— Todos —" : selGrupoAprov.size === 1 ? [...selGrupoAprov][0].replace("Aprovador Horas - ", "") : `${selGrupoAprov.size} selecionados`}
+                </span>
+                <span style={{ fontSize: 9, opacity: 0.6, flexShrink: 0 }}>▼</span>
+              </button>
+              {grupoAprovDropOpen && (
+                <div style={{ position: "fixed", zIndex: 9000, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,.45)", minWidth: 280, maxHeight: 320, overflowY: "auto", marginTop: 4 }}
+                  ref={el => { if (el && grupoAprovDropRef.current) { const r = grupoAprovDropRef.current.getBoundingClientRect(); el.style.top = (r.bottom + 4) + "px"; el.style.left = Math.max(8, r.right - 280) + "px"; } }}>
+                  <div style={{ padding: "8px 12px", fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: "1px solid var(--gray-4)", background: "var(--gray-3)" }}>Grupo Aprovador Horas</div>
+                  <button type="button" onClick={() => { setSelGrupoAprov(new Set()); setGrupoAprovDropOpen(false); }}
+                    style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: selGrupoAprov.size === 0 ? "var(--violet-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-4)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 15, height: 15, borderRadius: 3, border: `2px solid ${selGrupoAprov.size === 0 ? "var(--violet-9)" : "var(--gray-6)"}`, background: selGrupoAprov.size === 0 ? "var(--violet-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {selGrupoAprov.size === 0 && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
+                    </span>
+                    — Todos —
+                  </button>
+                  {(defaultFilters.grupoAprovFilter?.length ? defaultFilters.grupoAprovFilter : [...selGrupoAprov]).map(g => {
+                    const on = selGrupoAprov.has(g);
+                    return (
+                      <button key={g} type="button" onClick={() => setSelGrupoAprov(p => { const n = new Set(p); on ? n.delete(g) : n.add(g); return n; })}
+                        style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: on ? "var(--violet-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ width: 15, height: 15, borderRadius: 3, border: `2px solid ${on ? "var(--violet-9)" : "var(--gray-6)"}`, background: on ? "var(--violet-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {on && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
+                        </span>
+                        {g}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {selGrupoAprov.size > 0 && <button type="button" onClick={() => setSelGrupoAprov(new Set())} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
             </div>
           </>
         )}
