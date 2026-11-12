@@ -732,21 +732,13 @@ export default function Financeiro() {
               return (
                 <button key={sub.id} type="button" onClick={() => setTermosSubTab(sub.id)}
                   style={{
-                    padding: "6px 16px 8px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.05em", cursor: "pointer", transition: "all 0.15s",
                     border: active ? `1.5px solid ${sub.color}` : "1.5px solid var(--gray-5)",
                     background: active ? `${sub.color}22` : "var(--gray-2)",
                     color: active ? sub.color : "var(--gray-10)",
                     boxShadow: active ? `0 0 0 2px ${sub.color}33` : "none",
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                   }}>
-                  {sub.escopoKey && termosStats[sub.escopoKey] ? (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: active ? sub.color : "var(--gray-9)", opacity: 0.8, letterSpacing: "0.04em", lineHeight: 1 }}>
-                      {termosStats[sub.escopoKey].count} tickets · {termosStats[sub.escopoKey].horas}h
-                    </span>
-                  ) : sub.escopoKey ? (
-                    <span style={{ fontSize: 9, color: "var(--gray-7)", lineHeight: 1 }}>—</span>
-                  ) : null}
                   {sub.label}
                 </button>
               );
@@ -755,7 +747,7 @@ export default function Financeiro() {
 
           {/* Sub-tab content */}
           {termosSubTab === "gerenciar"  && <FinanceiroTermos />}
-          {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" colOrder={["status","resolution","avanco","dataEncerramento","estimativaTotal","termoFaturamento"]} />}
+          {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" colOrder={["status","resolution","avanco","estimativaTotal","fat30","fat60","fat10","termoFaturamento"]} />}
           {termosSubTab === "fast"       && (() => {
             const now = new Date();
             const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;

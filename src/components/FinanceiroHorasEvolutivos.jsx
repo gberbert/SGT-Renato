@@ -116,12 +116,24 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
 }
 
 // Column definitions for reordering
+const STATUS_30PCT = new Set(["Aprovação de Planejamento", "Execução"]);
+const STATUS_60PCT = new Set(["Em Teste", "Em homologação", "Revisão de homologação", "Etapa de KT", "Aguardando Mudança"]);
+const STATUS_10PCT = new Set(["Concluída"]);
+
+function getEstTotal(t) {
+  const v = t.estimativaTotal != null ? Number(t.estimativaTotal) : (t.estimativaMacroJira != null ? Number(t.estimativaMacroJira) : null);
+  return (v != null && Number.isFinite(v)) ? v : null;
+}
+
 const COL_DEFS = {
   status:            { header: "STATUS",             align: "left",  maxWidth: 110 },
   squad:             { header: "SQUAD",              align: "left" },
   avanco:            { header: "AVANÇO",             align: "center" },
   demandaFast:       { header: "DM FAST",            align: "center", maxWidth: 80 },
   estimativaTotal:   { header: "EST. TOTAL",         align: "right" },
+  fat30:             { header: "30% (H)",             align: "right" },
+  fat60:             { header: "60% (H)",             align: "right" },
+  fat10:             { header: "10% (H)",             align: "right" },
   plHrsFast:         { header: "PL. HRS FAST",       align: "right" },
   tempoEsforco:      { header: "TEMPO ESFORÇO (H)",  align: "right" },
   grupoSolucionador: { header: "GRUPO SOLUCIONADOR", align: "left" },
@@ -555,6 +567,27 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-11)", fontVariantNumeric: "tabular-nums" }}>
                             {t.estimativaTotal != null ? t.estimativaTotal : (t.estimativaMacroJira != null ? t.estimativaMacroJira : "—")}
                           </span>
+                        </td>
+                      );
+                      case "fat30": return (
+                        <td key={id} style={{ ...D, textAlign: "right" }}>
+                          {STATUS_30PCT.has(t.status) && getEstTotal(t) != null
+                            ? <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c", fontVariantNumeric: "tabular-nums" }}>{Math.round(getEstTotal(t) * 0.3 * 10) / 10}</span>
+                            : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
+                        </td>
+                      );
+                      case "fat60": return (
+                        <td key={id} style={{ ...D, textAlign: "right" }}>
+                          {STATUS_60PCT.has(t.status) && getEstTotal(t) != null
+                            ? <span style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8", fontVariantNumeric: "tabular-nums" }}>{Math.round(getEstTotal(t) * 0.6 * 10) / 10}</span>
+                            : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
+                        </td>
+                      );
+                      case "fat10": return (
+                        <td key={id} style={{ ...D, textAlign: "right" }}>
+                          {STATUS_10PCT.has(t.status) && getEstTotal(t) != null
+                            ? <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>{Math.round(getEstTotal(t) * 0.1 * 10) / 10}</span>
+                            : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
                         </td>
                       );
                       case "plHrsFast": return (
