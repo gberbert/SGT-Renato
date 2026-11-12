@@ -469,6 +469,28 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
         })()}
       </div>
 
+      {(() => {
+        const totalHoras = filtered.reduce((s, t) => s + (Number(t.tempoEsforcoHoras) || 0), 0);
+        const totalHorasR = Math.round(totalHoras * 10) / 10;
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "8px 14px", background: "var(--gray-3)", borderRadius: 8, border: "1px solid var(--gray-4)", fontSize: 12 }}>
+            <span style={{ fontWeight: 700, color: "var(--gray-12)" }}>{filtered.length} <span style={{ fontWeight: 400, color: "var(--gray-9)" }}>ticket{filtered.length !== 1 ? "s" : ""}</span></span>
+            <span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, color: "#34d399" }}>{totalHorasR}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Tempo Esforço</span></span>
+            {visibleCols.includes("plHrsFast") && (() => {
+              const totalFast = filtered.reduce((s, t) => {
+                const h = t.planejamentoHorasDemandaFast != null ? Number(t.planejamentoHorasDemandaFast) : (t.tempoEsforcoHoras != null ? Number(t.tempoEsforcoHoras) : 0);
+                return s + (Number.isFinite(h) ? h : 0);
+              }, 0);
+              return <>
+                <span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} />
+                <span style={{ fontWeight: 700, color: "#fbbf24" }}>{Math.round(totalFast * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Pl. Hrs Fast</span></span>
+              </>;
+            })()}
+          </div>
+        );
+      })()}
+
       <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--gray-4)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
           <thead>
