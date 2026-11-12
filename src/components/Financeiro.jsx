@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { collection, query, onSnapshot } from "firebase/firestore";
+import { collection, query, onSnapshot, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { subscribeToUsers } from "../services/settingsService";
 import { Card, Flex, Text, TextField } from "@radix-ui/themes";
@@ -162,6 +162,7 @@ export default function Financeiro() {
   const [viewMode, setViewMode] = useState("horas"); // "horas" | "valor"
   const [activeTab, setActiveTab] = useState("custo");
   const [termosSubTab, setTermosSubTab] = useState("gerenciar");
+  const [termosStats, setTermosStats] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filterRef = useRef(null);
   const [exportExpenses, setExportExpenses] = useState({});
@@ -190,6 +191,25 @@ export default function Financeiro() {
       setClosedMeta(data.isClosed ? { closedBy: data.closedBy, closedAt: data.closedAt } : null);
     });
   }, []);
+
+  /* load termos ticket stats (count + total hours per escopo) */
+  useEffect(() => {
+    if (activeTab !== "termos") return;
+    const q = query(collection(db, "tickets_global"), where("escopo", "in", ["DEMANDA", "DEMANDA FAST", "CATALOGO"]));
+    const unsub = onSnapshot(q, snap => {
+      const stats = {};
+      snap.docs.forEach(d => {
+        const data = d.data();
+        const esc = String(data.escopo || "").trim().toUpperCase();
+        if (!stats[esc]) stats[esc] = { count: 0, horas: 0 };
+        stats[esc].count += 1;
+        const h = Number(data.tempoEsforcoHoras) || 0;
+        stats[esc].horas = Math.round((stats[esc].horas + h) * 10) / 10;
+      });
+      setTermosStats(stats);
+    }, () => {});
+    return unsub;
+  }, [activeTab]);
 
   /* load capacity configs for all 6 months */
   useEffect(() => {
@@ -702,23 +722,31 @@ export default function Financeiro() {
           {/* Sub-tab bar */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {[
-              { id: "gerenciar",  label: "📋 GERENCIAR TERMOS", color: "var(--indigo-9)" },
-              { id: "demanda",    label: "DEMANDAS",             color: "#3b82f6" },
-              { id: "fast",       label: "⚡ DEMANDAS FAST",      color: "#f59e0b" },
-              { id: "catalogo",   label: "CATÁLOGO",             color: "#a855f7" },
-              { id: "alocacoes",  label: "👥 ALOCAÇÕES",         color: "#10b981" },
+              { id: "gerenciar",  label: "📋 GERENCIAR TERMOS", color: "var(--indigo-9)", escopoKey: null },
+              { id: "demanda",    label: "DEMANDAS",             color: "#3b82f6",          escopoKey: "DEMANDA" },
+              { id: "fast",       label: "⚡ DEMANDAS FAST",      color: "#f59e0b",          escopoKey: "DEMANDA FAST" },
+              { id: "catalogo",   label: "CATÁLOGO",             color: "#a855f7",          escopoKey: "CATALOGO" },
+              { id: "alocacoes",  label: "👥 ALOCAÇÕES",         color: "#10b981",          escopoKey: null },
             ].map(sub => {
               const active = termosSubTab === sub.id;
               return (
                 <button key={sub.id} type="button" onClick={() => setTermosSubTab(sub.id)}
                   style={{
-                    padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                    padding: "6px 16px 8px", borderRadius: 8, fontSize: 12, fontWeight: 700,
                     letterSpacing: "0.05em", cursor: "pointer", transition: "all 0.15s",
                     border: active ? `1.5px solid ${sub.color}` : "1.5px solid var(--gray-5)",
                     background: active ? `${sub.color}22` : "var(--gray-2)",
                     color: active ? sub.color : "var(--gray-10)",
                     boxShadow: active ? `0 0 0 2px ${sub.color}33` : "none",
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                   }}>
+                  {sub.escopoKey && termosStats[sub.escopoKey] ? (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: active ? sub.color : "var(--gray-9)", opacity: 0.8, letterSpacing: "0.04em", lineHeight: 1 }}>
+                      {termosStats[sub.escopoKey].count} tickets · {termosStats[sub.escopoKey].horas}h
+                    </span>
+                  ) : sub.escopoKey ? (
+                    <span style={{ fontSize: 9, color: "var(--gray-7)", lineHeight: 1 }}>—</span>
+                  ) : null}
                   {sub.label}
                 </button>
               );
