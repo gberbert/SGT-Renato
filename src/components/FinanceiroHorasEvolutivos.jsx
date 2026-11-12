@@ -116,7 +116,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
 }
 
 // Column definitions for reordering
-const STATUS_30PCT = new Set(["Aprovação de Planejamento", "Execução"]);
+const STATUS_30PCT = new Set(["Planejamento", "Aprovação de Planejamento", "Aguardando Planejamento", "Em Execução", "Execução"]);
 const STATUS_60PCT = new Set(["Em Teste", "Em homologação", "Revisão de homologação", "Etapa de KT", "Aguardando Mudança"]);
 const STATUS_10PCT = new Set(["Concluída"]);
 
@@ -575,27 +575,44 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                           </span>
                         </td>
                       );
-                      case "fat30": return (
-                        <td key={id} style={{ ...D, textAlign: "right" }}>
-                          {STATUS_30PCT.has(t.status) && getEstTotal(t) != null
-                            ? <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c", fontVariantNumeric: "tabular-nums" }}>{Math.round(getEstTotal(t) * 0.3 * 10) / 10}</span>
-                            : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
-                        </td>
-                      );
-                      case "fat60": return (
-                        <td key={id} style={{ ...D, textAlign: "right" }}>
-                          {STATUS_60PCT.has(t.status) && getEstTotal(t) != null
-                            ? <span style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8", fontVariantNumeric: "tabular-nums" }}>{Math.round(getEstTotal(t) * 0.6 * 10) / 10}</span>
-                            : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
-                        </td>
-                      );
-                      case "fat10": return (
-                        <td key={id} style={{ ...D, textAlign: "right" }}>
-                          {STATUS_10PCT.has(t.status) && getEstTotal(t) != null
-                            ? <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", fontVariantNumeric: "tabular-nums" }}>{Math.round(getEstTotal(t) * 0.1 * 10) / 10}</span>
-                            : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
-                        </td>
-                      );
+                      case "fat30": {
+                        const est = getEstTotal(t);
+                        const val = est != null ? Math.round(est * 0.3 * 10) / 10 : null;
+                        const isCurrent = STATUS_30PCT.has(t.status);
+                        const isPast = STATUS_60PCT.has(t.status) || STATUS_10PCT.has(t.status);
+                        return (
+                          <td key={id} style={{ ...D, textAlign: "right", background: isCurrent ? "rgba(251,146,60,0.12)" : undefined, borderLeft: isCurrent ? "2px solid #fb923c" : undefined }}>
+                            {val != null
+                              ? <span style={{ fontSize: 12, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? "#fb923c" : isPast ? "var(--gray-6)" : "rgba(251,146,60,0.35)", fontVariantNumeric: "tabular-nums" }}>{val}</span>
+                              : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
+                          </td>
+                        );
+                      }
+                      case "fat60": {
+                        const est = getEstTotal(t);
+                        const val = est != null ? Math.round(est * 0.6 * 10) / 10 : null;
+                        const isCurrent = STATUS_60PCT.has(t.status);
+                        const isPast = STATUS_10PCT.has(t.status);
+                        return (
+                          <td key={id} style={{ ...D, textAlign: "right", background: isCurrent ? "rgba(56,189,248,0.12)" : undefined, borderLeft: isCurrent ? "2px solid #38bdf8" : undefined }}>
+                            {val != null
+                              ? <span style={{ fontSize: 12, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? "#38bdf8" : isPast ? "var(--gray-6)" : "rgba(56,189,248,0.3)", fontVariantNumeric: "tabular-nums" }}>{val}</span>
+                              : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
+                          </td>
+                        );
+                      }
+                      case "fat10": {
+                        const est = getEstTotal(t);
+                        const val = est != null ? Math.round(est * 0.1 * 10) / 10 : null;
+                        const isCurrent = STATUS_10PCT.has(t.status);
+                        return (
+                          <td key={id} style={{ ...D, textAlign: "right", background: isCurrent ? "rgba(74,222,128,0.12)" : undefined, borderLeft: isCurrent ? "2px solid #4ade80" : undefined }}>
+                            {val != null
+                              ? <span style={{ fontSize: 12, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? "#4ade80" : "rgba(74,222,128,0.3)", fontVariantNumeric: "tabular-nums" }}>{val}</span>
+                              : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
+                          </td>
+                        );
+                      }
                       case "plHrsFast": return (
                         <td key={id} style={{ ...D, textAlign: "right" }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: isFast ? "#fbbf24" : "var(--gray-9)", fontVariantNumeric: "tabular-nums" }}>
