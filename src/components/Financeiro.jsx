@@ -728,7 +728,7 @@ export default function Financeiro() {
           {/* Sub-tab content */}
           {termosSubTab === "gerenciar"  && <FinanceiroTermos />}
           {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" colOrder={["status","resolution","avanco","dataEncerramento","estimativaTotal","termoFaturamento"]} />}
-          {termosSubTab === "fast"       && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA FAST" hideIssueType={true} hideFilters={["dataAtividade"]} showContratoFilter={true} showStatusFilter={true} excludeIssueTypes={["[System] Incidente", "Incidente", "[System] Incident"]} colOrder={["status","resolution","dataEncerramento","plHrsFast","grupoSolucionador","contrato","termoFaturamento"]} />}
+          {termosSubTab === "fast"       && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA FAST" hideIssueType={true} hideFilters={["dataAtividade"]} showContratoFilter={true} showStatusFilter={true} excludeIssueTypes={["[System] Incidente", "Incidente", "[System] Incident"]} colOrder={["status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador","contrato","termoFaturamento"]} />}
           {termosSubTab === "catalogo"   && <FinanceiroHorasEvolutivos escopoFilter="CATALOGO" />}
           {termosSubTab === "alocacoes"  && <FinanceiroAlocacoes />}
         </div>

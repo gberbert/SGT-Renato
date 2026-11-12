@@ -120,6 +120,7 @@ const COL_DEFS = {
   status:            { header: "STATUS",             align: "left",  maxWidth: 110 },
   squad:             { header: "SQUAD",              align: "left" },
   avanco:            { header: "AVANÇO",             align: "center" },
+  demandaFast:       { header: "DM FAST",            align: "center", maxWidth: 80 },
   estimativaTotal:   { header: "EST. TOTAL",         align: "right" },
   plHrsFast:         { header: "PL. HRS FAST",       align: "right" },
   tempoEsforco:      { header: "TEMPO ESFORÇO (H)",  align: "right" },
@@ -424,6 +425,15 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                       case "status": return (
                         <td key={id} style={{ ...D, maxWidth: 110, overflow: "hidden" }}>
                           <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: sc + "22", color: sc, border: `1px solid ${sc}55`, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }} title={t.status || ""}>{t.status || "—"}</span>
+                        </td>
+                      );
+                      case "demandaFast": return (
+                        <td key={id} style={{ ...D, textAlign: "center", maxWidth: 80 }}>
+                          {t.demandaFast && String(t.demandaFast).toLowerCase() === "sim"
+                            ? <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.5)", color: "#f59e0b", whiteSpace: "nowrap" }}>Sim</span>
+                            : t.demandaFast
+                              ? <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "rgba(107,114,128,0.12)", border: "1px solid rgba(107,114,128,0.3)", color: "var(--gray-10)", whiteSpace: "nowrap" }}>{t.demandaFast}</span>
+                              : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                         </td>
                       );
                       case "squad": return (
