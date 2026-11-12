@@ -508,6 +508,15 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
   const reporter = extractUser(fields, "reporter");
   const creator = extractUser(fields, "creator");
 
+  // Campos de data/datetime — NÃO aplicar stripNumericPrefix pois isso corta o ano
+  // Ex: "2024-10-01T17:25:14.527-0300" → stripNumericPrefix → "10-01T17:25:..." → ano errado
+  const DATE_COLS = new Set([
+    "data_aprovacao_efsr", "data_inicio_atendimento_planejada", "data_inicio_atendimento",
+    "data_aprovacao_qa_planejada", "data_inicio_homologacao_planejada", "data_inicio_homologacao_efetiva",
+    "data_fim_homologacao_planejada", "data_fim_homologacao_efetiva", "data_entrega_producao_prevista",
+    "data_fim_planejado", "data_atividade", "data_encerramento",
+  ]);
+
   const extracted = {};
   for (const col of Object.keys(TICKET_FIELD_DEFINITIONS)) {
     const fid = fieldIds[col];
@@ -515,8 +524,11 @@ function parseJiraIssueForGlobal(issue, { escopo, syncBatch, fieldIds, baseUrl }
       extracted[col] = null;
       continue;
     }
-    // natureza_iniciativa deve preservar o valor completo (com prefixo numérico)
-    if (col === "natureza_iniciativa") {
+    if (DATE_COLS.has(col)) {
+      // Extração raw: preserva a string ISO completa sem remover prefixos numéricos
+      const raw = fields[fid];
+      extracted[col] = typeof raw === "string" ? raw.trim() || null : null;
+    } else if (col === "natureza_iniciativa") {
       extracted[col] = extractFieldValueFull(fields[fid]);
     } else {
       extracted[col] = extractFieldValue(fields[fid]);
