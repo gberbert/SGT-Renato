@@ -581,21 +581,19 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
       </div>
 
       {(() => {
-        const totalHoras = filtered.reduce((s, t) => s + (Number(t.tempoEsforcoHoras) || 0), 0);
         const totalEst = filtered.reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? v : 0); }, 0);
-        const total30 = filtered.filter(t => STATUS_30PCT.has(t.status)).reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? Math.round(v * 0.3 * 10) / 10 : 0); }, 0);
-        const total60 = filtered.filter(t => STATUS_60PCT.has(t.status)).reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? Math.round(v * 0.6 * 10) / 10 : 0); }, 0);
-        const total10 = filtered.filter(t => STATUS_10PCT.has(t.status)).reduce((s, t) => { const v = getEstTotal(t); return s + (v != null ? Math.round(v * 0.1 * 10) / 10 : 0); }, 0);
-        const showFat = visibleCols.includes("fat30") || visibleCols.includes("fat60") || visibleCols.includes("fat10");
+        const showTempoEsforco = visibleCols.includes("tempoEsforco");
+        const totalHoras = showTempoEsforco ? filtered.reduce((s, t) => s + (Number(t.tempoEsforcoHoras) || 0), 0) : 0;
         const showFast = visibleCols.includes("plHrsFast");
+        const totalFaturadas = filtered.reduce((s, t) => { const f = getFaturadas(t); return s + (f != null ? f : 0); }, 0);
+        const totalAFaturar = filtered.reduce((s, t) => { const est = getEstTotal(t); const fat = getFaturadas(t); return s + (est != null && fat != null ? Math.max(0, est - fat) : 0); }, 0);
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "8px 14px", background: "var(--gray-3)", borderRadius: 8, border: "1px solid var(--gray-4)", fontSize: 12, flexWrap: "wrap" }}>
             <span style={{ fontWeight: 700, color: "var(--gray-12)" }}>{filtered.length} <span style={{ fontWeight: 400, color: "var(--gray-9)" }}>tickets</span></span>
-            <span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, color: "#34d399" }}>{Math.round(totalHoras * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Tempo Esforço</span></span>
-        {visibleCols.includes("estimativaTotal") && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "var(--gray-11)" }}>{Math.round(totalEst * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Est. Total</span></span></>}
-        {visibleCols.includes("fatFaturadas") && (() => { const v = filtered.reduce((s, t) => { const f = getFaturadas(t); return s + (f != null ? f : 0); }, 0); return v > 0 ? <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#a78bfa" }}>{Math.round(v * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Faturadas</span></span></> : null; })()}
-        {visibleCols.includes("fatAFaturar") && (() => { const v = filtered.reduce((s, t) => { const est = getEstTotal(t); const fat = getFaturadas(t); return s + (est != null && fat != null ? Math.max(0, est - fat) : 0); }, 0); return v > 0 ? <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#fb923c" }}>{Math.round(v * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>A Faturar</span></span></> : null; })()}
+            {showTempoEsforco && totalHoras > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#34d399" }}>{Math.round(totalHoras * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Tempo Esforço</span></span></>}
+            {visibleCols.includes("estimativaTotal") && totalEst > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "var(--gray-11)" }}>{Math.round(totalEst * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Est. Total</span></span></>}
+            {visibleCols.includes("fatFaturadas") && totalFaturadas > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#a78bfa" }}>{Math.round(totalFaturadas * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Faturadas</span></span></>}
+            {visibleCols.includes("fatAFaturar") && totalAFaturar > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#fb923c" }}>{Math.round(totalAFaturar * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>A Faturar</span></span></>}
             {showFast && (() => {
               const totalFast = filtered.reduce((s, t) => {
                 const h = t.planejamentoHorasDemandaFast != null ? Number(t.planejamentoHorasDemandaFast) : (t.tempoEsforcoHoras != null ? Number(t.tempoEsforcoHoras) : 0);
@@ -676,10 +674,14 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                       case "fatFaturadas": {
                         const fat = getFaturadas(t);
                         const isAny = STATUS_30PCT.has(t.status) || STATUS_60PCT.has(t.status) || STATUS_10PCT.has(t.status);
+                        const pctLabel = STATUS_10PCT.has(t.status) ? "100%" : STATUS_60PCT.has(t.status) ? "90%" : STATUS_30PCT.has(t.status) ? "30%" : null;
                         return (
                           <td key={id} style={{ ...D, textAlign: "right", background: isAny ? "rgba(167,139,250,0.08)" : undefined }}>
                             {fat != null && fat > 0
-                              ? <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontVariantNumeric: "tabular-nums" }}>{fat}</span>
+                              ? <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontVariantNumeric: "tabular-nums" }}>{fat}</span>
+                                  {pctLabel && <span style={{ fontSize: 9, fontWeight: 700, color: "#a78bfa", opacity: 0.7, letterSpacing: "0.04em" }}>{pctLabel}</span>}
+                                </div>
                               : fat === 0 && getEstTotal(t) != null
                                 ? <span style={{ fontSize: 11, color: "var(--gray-6)" }}>0</span>
                                 : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
