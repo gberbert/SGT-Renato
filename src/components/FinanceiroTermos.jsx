@@ -329,6 +329,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   const BH  = { background: "var(--gray-3)", padding: "9px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" };
   const BHL = { fontSize: 12, fontWeight: 800, color: "var(--gray-12)", textTransform: "uppercase", letterSpacing: "0.06em" };
   const BHR = { fontSize: 12, fontWeight: 800, color: "var(--indigo-11)" };
+  const HRS_W = 100; const VAL_W = 160;
   const TH  = { padding: "6px 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--gray-9)", borderBottom: "1px solid var(--gray-4)", background: "var(--gray-2)", textAlign: "left" };
   const TD  = { padding: "7px 10px", fontSize: 12, borderBottom: "1px solid var(--gray-3)", color: "var(--gray-12)", verticalAlign: "middle" };
   const TDR = { ...TD, textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600 };
@@ -483,7 +484,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
               <button type="button" onClick={() => toggle("arc")} style={{ width: "100%", border: "none", background: "none", cursor: "pointer", padding: 0, display: "block" }}>
                 <div style={{ ...BH, background: "rgba(56,189,248,0.1)" }}>
                   <span style={{ ...BHL, color: "#38bdf8" }}>1 · Tabela ARC — Baseline Demand {collapsed.arc ? "▶" : "▼"}</span>
-                  <span style={{ ...BHR, color: "#38bdf8" }}>{fmtCurrency(arcTotal)}</span>
+                  <div style={{ display: "flex" }}><div style={{ width: HRS_W }} /><div style={{ width: VAL_W, textAlign: "right" }}><span style={{ ...BHR, color: "#38bdf8" }}>{fmtCurrency(arcTotal)}</span></div></div>
                 </div>
               </button>
               {!collapsed.arc && <div style={BLK}>
@@ -518,10 +519,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
               <button type="button" onClick={() => toggle("aloc")} style={{ width: "100%", border: "none", background: "none", cursor: "pointer", padding: 0, display: "block" }}>
                 <div style={{ ...BH, background: "rgba(167,139,250,0.1)" }}>
                   <span style={{ ...BHL, color: "#a78bfa" }}>2 · Horas Alocações — Ratecard {collapsed.aloc ? "▶" : "▼"}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    {alocHrsTotal > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", opacity: 0.7 }}>{alocHrsTotal}h</span>}
-                    <span style={{ ...BHR, color: "#a78bfa" }}>{fmtCurrency(alocTotal)}</span>
-                  </div>
+                  <div style={{ display: "flex" }}><div style={{ width: HRS_W, textAlign: "right", paddingRight: 8 }}>{alocHrsTotal > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", opacity: 0.75 }}>{alocHrsTotal}h</span>}</div><div style={{ width: VAL_W, textAlign: "right" }}><span style={{ ...BHR, color: "#a78bfa" }}>{fmtCurrency(alocTotal)}</span></div></div>
                 </div>
               </button>
               {!collapsed.aloc && <div style={BLK}>
@@ -564,10 +562,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                 <button type="button" onClick={() => toggle(key)} style={{ width: "100%", border: "none", background: "none", cursor: "pointer", padding: 0, display: "block" }}>
                   <div style={{ ...BH, background: `${color}10` }}>
                     <span style={{ ...BHL, color }}>{label} {collapsed[key] ? "▶" : "▼"}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      {hrsTotal > 0 && <span style={{ fontSize: 11, fontWeight: 700, color, opacity: 0.7 }}>{hrsTotal}h</span>}
-                      <span style={{ ...BHR, color }}>{fmtCurrency(total)}</span>
-                    </div>
+                    <div style={{ display: "flex" }}><div style={{ width: HRS_W, textAlign: "right", paddingRight: 8 }}>{hrsTotal > 0 && <span style={{ fontSize: 11, fontWeight: 700, color, opacity: 0.75 }}>{hrsTotal}h</span>}</div><div style={{ width: VAL_W, textAlign: "right" }}><span style={{ ...BHR, color }}>{fmtCurrency(total)}</span></div></div>
                   </div>
                 </button>
                 {!collapsed[key] && <div style={BLK}>
