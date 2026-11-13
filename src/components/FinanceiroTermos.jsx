@@ -269,11 +269,29 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   const arcItems  = (config?.tabelaArc?.length ? config.tabelaArc : DEFAULT_ARC_FALLBACK);
   const valorBase = config?.valorHoraBase || 0;
 
-  const getTicketH = t => {
+  // Milestone factors per slot: slot 0 = 30%, slot 1 = 60%, slot 2 = 10%
+  const MILESTONE_FACTORS = [0.30, 0.60, 0.10];
+
+  const getTicketFullH = t => {
     if (String(t.escopo || "").toUpperCase().includes("FAST")) {
       return t.planejamentoHorasDemandaFast != null ? Number(t.planejamentoHorasDemandaFast) : (t.tempoEsforcoHoras != null ? Number(t.tempoEsforcoHoras) : 0);
     }
     return t.tempoEsforcoHoras != null ? Number(t.tempoEsforcoHoras) : (t.estimativaTotal != null ? Number(t.estimativaTotal) : (t.estimativaMacroJira != null ? Number(t.estimativaMacroJira) : 0));
+  };
+
+  const getTicketH = t => {
+    const fullH = getTicketFullH(t);
+    // For DEMANDA tickets with multi-term billing, apply milestone factor
+    if (String(t.escopo || "").toUpperCase().trim() === "DEMANDA") {
+      const tf = t.termoFaturamento;
+      if (Array.isArray(tf) && tf.length > 1) {
+        const slotIdx = tf.indexOf(termo.id);
+        if (slotIdx >= 0 && slotIdx < MILESTONE_FACTORS.length) {
+          return Math.round(fullH * MILESTONE_FACTORS[slotIdx] * 10) / 10;
+        }
+      }
+    }
+    return fullH;
   };
 
   // ARC editable overrides (per termo) — must come before arcTotal
