@@ -62,6 +62,8 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
     if (open) document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
+  const MILESTONE_LABELS = ["30%", "60%", "10%"];
+  const MILESTONE_COLORS = ["#fb923c", "#38bdf8", "#4ade80"];
   const MAX_TERMOS = isDemanda ? 3 : 1;
   const toggle = async (termoId) => {
     if (saving) return;
@@ -88,7 +90,15 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
       <button type="button" onClick={() => setOpen(v => !v)}
         style={{ width: "100%", padding: "4px 8px", borderRadius: 6, border: `1px solid ${selected.length > 0 ? "var(--indigo-7)" : "var(--gray-6)"}`, background: selected.length > 0 ? "var(--indigo-2)" : "var(--gray-2)", color: selected.length > 0 ? "var(--indigo-11)" : "var(--gray-9)", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, outline: "none" }}>
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, textAlign: "left" }}>
-          {selected.length === 0 ? "— Selecionar —" : labels.length === 1 ? labels[0] : `${labels.length} termos`}
+          {selected.length === 0 ? "— Selecionar —"
+            : isDemanda && selected.length > 0
+              ? selected.map((id, i) => {
+                  const tFound = termos.find(x => x.id === id);
+                  const mes = tFound?.mesReferencia ? (() => { const [y,m] = tFound.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
+                  const short = ((tFound?.contratoNome || id || "").split("-").slice(-1)[0].trim() || (tFound?.contratoNome || id));
+                  return `${MILESTONE_LABELS[i] || ""}·${mes ? mes + "·" : ""}${short}`;
+                }).join(" | ")
+              : labels.length === 1 ? labels[0] : `${labels.length} termos`}
         </span>
         <span style={{ fontSize: 9, opacity: 0.6, flexShrink: 0 }}>▼</span>
       </button>
@@ -103,17 +113,26 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
           </button>
           {termos.map(t => {
             const isSel = selected.includes(t.id);
+            const selIdx = selected.indexOf(t.id);
+            const nextSlot = selected.length < MAX_TERMOS ? selected.length : -1;
             const mes = t.mesReferencia ? (() => { const [y,m] = t.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
             const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
+            const milestoneIdx = isSel ? selIdx : nextSlot;
+            const milestonePct = isDemanda && milestoneIdx >= 0 ? MILESTONE_LABELS[milestoneIdx] : null;
+            const milestoneColor = isDemanda && milestoneIdx >= 0 ? MILESTONE_COLORS[milestoneIdx] : "var(--indigo-9)";
+            const disabled = isDemanda && !isSel && selected.length >= MAX_TERMOS;
             return (
-              <button key={t.id} type="button" onClick={() => toggle(t.id)}
-                style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", background: isSel ? "var(--indigo-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7 }}>
-                <span style={{ width: 14, height: 14, borderRadius: isDemanda ? 3 : 999, border: `2px solid ${isSel ? "var(--indigo-9)" : "var(--gray-6)"}`, background: isSel ? "var(--indigo-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button key={t.id} type="button" onClick={() => !disabled && toggle(t.id)}
+                style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", background: isSel ? "var(--indigo-2)" : "none", cursor: disabled ? "not-allowed" : "pointer", color: disabled ? "var(--gray-7)" : "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7, opacity: disabled ? 0.5 : 1 }}>
+                <span style={{ width: 14, height: 14, borderRadius: isDemanda ? 3 : 999, border: `2px solid ${isSel ? milestoneColor : "var(--gray-6)"}`, background: isSel ? milestoneColor : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {isSel && <span style={{ fontSize: 8, color: "#fff", fontWeight: 900 }}>✓</span>}
                 </span>
-                <div>
-                  {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 4 }}>{mes}</span>}
-                  <span style={{ fontWeight: 600, fontSize: 11 }}>{short}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    {milestonePct && <span style={{ fontSize: 9, fontWeight: 900, color: milestoneColor, padding: "1px 5px", borderRadius: 4, background: `${milestoneColor}18`, border: `1px solid ${milestoneColor}44`, flexShrink: 0 }}>{milestonePct}</span>}
+                    {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)" }}>{mes}</span>}
+                    <span style={{ fontWeight: 600, fontSize: 11 }}>{short}</span>
+                  </div>
                   {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", marginTop: 1 }}>{t.codigoProjeto}</div>}
                 </div>
               </button>
@@ -127,7 +146,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
 }
 
 // Column definitions for reordering
-const STATUS_30PCT = new Set(["Aprovação de Planejamento", "Execução"]);
+const STATUS_30PCT = new Set(["Aprovação de Planejamento", "Execução", "Em Execução"]);
 const STATUS_60PCT = new Set(["Em Teste", "Em homologação", "Revisão de homologação", "Etapa de KT", "Aguardando Mudança"]);
 const STATUS_10PCT = new Set(["Concluída"]);
 
