@@ -201,6 +201,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [selCiclo, setSelCiclo] = useState(new Set());
   const [cicloDropOpen, setCicloDropOpen] = useState(false);
   const cicloDropRef = useRef(null);
+  const [faturamentoFilter, setFaturamentoFilter] = useState(""); // "" | "faturadas" | "afaturar"
   // Track if resolution has been initialized from defaultFilters
   const resInitialized = useRef(false);
 
@@ -295,6 +296,11 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     }
     if (selGrupoAprov.size > 0) list = list.filter(t => selGrupoAprov.has(t.grupoAprovadorHoras || ""));
     if (selStatusFilter.size > 0) list = list.filter(t => selStatusFilter.has(t.status || ""));
+    if (faturamentoFilter === "faturadas") {
+      list = list.filter(t => { const f = getFaturadas(t); return f != null && f > 0; });
+    } else if (faturamentoFilter === "afaturar") {
+      list = list.filter(t => { const est = getEstTotal(t); const fat = getFaturadas(t); return est != null && fat != null && est - fat > 0; });
+    }
     if (selCiclo.size > 0) {
       const cicloKeysMap = new Map();
       ciclos.forEach(c => { if (c.nome) cicloKeysMap.set(c.nome, new Set((c.ticketKeys || []).map(k => String(k).trim().toUpperCase()))); });
@@ -325,7 +331,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
       });
     }
     return list;
-  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selGrupoAprov, selStatusFilter, selCiclo, ciclos, termoFilter, contratoFilter, sistemas]);
+  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selGrupoAprov, selStatusFilter, faturamentoFilter, selCiclo, ciclos, termoFilter, contratoFilter, sistemas]);
 
   // Compute visible columns in order
   const visibleCols = useMemo(() => {
@@ -512,6 +518,20 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
             </div>
           </>
         )}
+        {(visibleCols.includes("fatFaturadas") || visibleCols.includes("fatAFaturar")) && (
+          <>
+            <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Faturamento</span>
+              {[{ val: "", label: "Todos" }, { val: "faturadas", label: "Faturadas" }, { val: "afaturar", label: "A Faturar" }].map(opt => (
+                <button key={opt.val} type="button" onClick={() => setFaturamentoFilter(opt.val)}
+                  style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${faturamentoFilter === opt.val ? "var(--violet-7)" : "var(--gray-6)"}`, background: faturamentoFilter === opt.val ? "var(--violet-2)" : "transparent", color: faturamentoFilter === opt.val ? "var(--violet-11)" : "var(--gray-11)", whiteSpace: "nowrap" }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         {showCicloFilter && ciclos.length > 0 && (
           <>
             <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
@@ -678,9 +698,9 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                         return (
                           <td key={id} style={{ ...D, textAlign: "right", background: isAny ? "rgba(167,139,250,0.08)" : undefined }}>
                             {fat != null && fat > 0
-                              ? <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
+                              ? <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
+                                  {pctLabel && <span style={{ fontSize: 9, fontWeight: 800, color: "#a78bfa", opacity: 0.75, letterSpacing: "0.04em", flexShrink: 0 }}>{pctLabel}</span>}
                                   <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontVariantNumeric: "tabular-nums" }}>{fat}</span>
-                                  {pctLabel && <span style={{ fontSize: 9, fontWeight: 700, color: "#a78bfa", opacity: 0.7, letterSpacing: "0.04em" }}>{pctLabel}</span>}
                                 </div>
                               : fat === 0 && getEstTotal(t) != null
                                 ? <span style={{ fontSize: 11, color: "var(--gray-6)" }}>0</span>
@@ -692,11 +712,18 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                         const est = getEstTotal(t);
                         const fat = getFaturadas(t);
                         const aFaturar = est != null && fat != null ? Math.round(Math.max(0, est - fat) * 10) / 10 : null;
+                        const aFaturarPct = STATUS_10PCT.has(t.status) ? null
+                          : STATUS_60PCT.has(t.status) ? "10%"
+                          : STATUS_30PCT.has(t.status) ? "70%"
+                          : est != null ? "100%" : null;
                         return (
                           <td key={id} style={{ ...D, textAlign: "right", background: aFaturar != null && aFaturar > 0 ? "rgba(251,146,60,0.08)" : undefined }}>
                             {aFaturar != null
                               ? aFaturar > 0
-                                ? <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c", fontVariantNumeric: "tabular-nums" }}>{aFaturar}</span>
+                                ? <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
+                                    {aFaturarPct && <span style={{ fontSize: 9, fontWeight: 800, color: "#fb923c", opacity: 0.75, letterSpacing: "0.04em", flexShrink: 0 }}>{aFaturarPct}</span>}
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c", fontVariantNumeric: "tabular-nums" }}>{aFaturar}</span>
+                                  </div>
                                 : <span style={{ fontSize: 11, color: "var(--gray-6)" }}>0</span>
                               : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
                           </td>
