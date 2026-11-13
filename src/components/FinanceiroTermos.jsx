@@ -304,9 +304,13 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   };
 
   const arcTotal   = arcDisplay.reduce((s, x) => s + numVal(String(x.valorBase || 0)), 0);
+  const alocHrsTotal = r1t(alocacoes.reduce((s, a) => s + calcHoras(a.userId), 0));
   const alocTotal  = alocacoes.reduce((s, a) => { const u = allUsers.find(x => x.id === a.userId); const rc = parseFloat(String(u?.rc || "0").replace(",", ".")) || 0; return s + calcHoras(a.userId) * rc; }, 0);
+  const demHrsTotal = r1t(ticketsDemanda.reduce((s, t) => s + getTicketH(t), 0));
   const demTotal   = ticketsDemanda.reduce((s, t) => s + getTicketH(t) * valorBase, 0);
+  const fastHrsTotal = r1t(ticketsFast.reduce((s, t) => s + getTicketH(t), 0));
   const fastTotal  = ticketsFast.reduce((s, t) => s + getTicketH(t) * valorBase, 0);
+  const catHrsTotal = r1t(ticketsCatalogo.reduce((s, t) => s + getTicketH(t), 0));
   const catTotal   = ticketsCatalogo.reduce((s, t) => s + getTicketH(t) * valorBase, 0);
   const grandTotal = arcTotal + alocTotal + demTotal + fastTotal + catTotal;
 
@@ -514,7 +518,10 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
               <button type="button" onClick={() => toggle("aloc")} style={{ width: "100%", border: "none", background: "none", cursor: "pointer", padding: 0, display: "block" }}>
                 <div style={{ ...BH, background: "rgba(167,139,250,0.1)" }}>
                   <span style={{ ...BHL, color: "#a78bfa" }}>2 · Horas Alocações — Ratecard {collapsed.aloc ? "▶" : "▼"}</span>
-                  <span style={{ ...BHR, color: "#a78bfa" }}>{fmtCurrency(alocTotal)}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    {alocHrsTotal > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", opacity: 0.7 }}>{alocHrsTotal}h</span>}
+                    <span style={{ ...BHR, color: "#a78bfa" }}>{fmtCurrency(alocTotal)}</span>
+                  </div>
                 </div>
               </button>
               {!collapsed.aloc && <div style={BLK}>
@@ -549,15 +556,18 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
 
             {/* Blocks 3-5: Demandas, Fast, Catálogo */}
             {[
-              { key: "dem", label: "3 · Horas Demandas — Baseline Demand", tickets: ticketsDemanda, total: demTotal, color: "#3b82f6" },
-              { key: "fast", label: "4 · Horas Demandas Fast — Baseline Demand", tickets: ticketsFast, total: fastTotal, color: "#f59e0b" },
-              { key: "cat", label: "5 · Horas Catálogo — Apontamento Horas", tickets: ticketsCatalogo, total: catTotal, color: "#a855f7" },
-            ].map(({ key, label, tickets, total, color }) => (
+              { key: "dem", label: "3 · Horas Demandas — Baseline Demand", tickets: ticketsDemanda, total: demTotal, hrsTotal: demHrsTotal, color: "#3b82f6" },
+              { key: "fast", label: "4 · Horas Demandas Fast — Baseline Demand", tickets: ticketsFast, total: fastTotal, hrsTotal: fastHrsTotal, color: "#f59e0b" },
+              { key: "cat", label: "5 · Horas Catálogo — Apontamento Horas", tickets: ticketsCatalogo, total: catTotal, hrsTotal: catHrsTotal, color: "#a855f7" },
+            ].map(({ key, label, tickets, total, hrsTotal, color }) => (
               <div key={key} style={{ marginBottom: 10 }}>
                 <button type="button" onClick={() => toggle(key)} style={{ width: "100%", border: "none", background: "none", cursor: "pointer", padding: 0, display: "block" }}>
                   <div style={{ ...BH, background: `${color}10` }}>
                     <span style={{ ...BHL, color }}>{label} {collapsed[key] ? "▶" : "▼"}</span>
-                    <span style={{ ...BHR, color }}>{fmtCurrency(total)}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      {hrsTotal > 0 && <span style={{ fontSize: 11, fontWeight: 700, color, opacity: 0.7 }}>{hrsTotal}h</span>}
+                      <span style={{ ...BHR, color }}>{fmtCurrency(total)}</span>
+                    </div>
                   </div>
                 </button>
                 {!collapsed[key] && <div style={BLK}>
