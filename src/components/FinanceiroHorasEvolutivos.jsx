@@ -181,16 +181,16 @@ const COL_DEFS = {
   avanco:            { header: "AVANÇO",             align: "center", maxWidth: 90 },
   demandaFast:       { header: "DM FAST",            align: "center", maxWidth: 80 },
   estimativaTotal:   { header: "EST. TOTAL",         align: "right" },
-  fatPct:            { header: "FATURADO (%)",        align: "right", maxWidth: 90 },
-  fatFaturadas:      { header: "FATURADAS (H)",       align: "right" },
-  fatAFaturar:       { header: "A FATURAR (H)",       align: "right" },
+  fatPct:            { header: "FAT (%)",             align: "right", maxWidth: 70 },
+  fatFaturadas:      { header: "FAT (H)",             align: "right", maxWidth: 80 },
+  fatAFaturar:       { header: "A FAT (H)",           align: "right", maxWidth: 80 },
   plHrsFast:         { header: "PL. HRS FAST",       align: "right" },
   tempoEsforco:      { header: "TEMPO ESFORÇO (H)",  align: "right" },
   sistemaImpactado:  { header: "SISTEMA",            align: "left" },
   grupoSolucionador: { header: "GRUPO SOLUCIONADOR", align: "left" },
   contrato:          { header: "CONTRATO",           align: "left" },
   reporter:          { header: "RELATOR",            align: "left" },
-  termoFaturamento:  { header: "TERMO FATURAMENTO",  align: "left" },
+  termoFaturamento:  { header: "TERMO",              align: "left", maxWidth: 180 },
   dataAtividade:     { header: "DATA ATIVIDADE",     align: "left" },
   dataEncerramento:  { header: "DATA ENCERRAMENTO",  align: "left" },
   resolution:        { header: "RESOLUTION",         align: "left",  maxWidth: 110 },
@@ -720,7 +720,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: em.color, color: "#fff", flexShrink: 0 }}>{em.short}</span>
                       {!hideIssueType && t.issueType && <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "rgba(107,114,128,0.2)", color: "var(--gray-11)", flexShrink: 0 }}>{t.issueType}</span>}
-                      <span style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo-11)", fontFamily: "monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 100 }}>{t.issueKey || t.id}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo-11)", fontFamily: "monospace", whiteSpace: "nowrap" }}>{t.issueKey || t.id}</span>
                     </div>
                   </td>
                   <td style={{ ...D, maxWidth: 180, overflow: "hidden" }}>
