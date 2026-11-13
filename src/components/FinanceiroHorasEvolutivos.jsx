@@ -62,10 +62,11 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
     if (open) document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
+  const MAX_TERMOS = isDemanda ? 3 : 1;
   const toggle = async (termoId) => {
     if (saving) return;
     const next = isDemanda
-      ? (selected.includes(termoId) ? selected.filter(id => id !== termoId) : [...selected, termoId])
+      ? (selected.includes(termoId) ? selected.filter(id => id !== termoId) : selected.length < MAX_TERMOS ? [...selected, termoId] : selected)
       : (selected.includes(termoId) ? [] : [termoId]);
     setSaving(true);
     try {
@@ -94,7 +95,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
       {open && (
         <div style={{ position: "absolute", top: "105%", left: 0, zIndex: 300, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,.35)", minWidth: 200, maxHeight: 240, overflowY: "auto" }}>
           <div style={{ padding: "6px 10px", fontSize: 9, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: "1px solid var(--gray-4)" }}>
-            {isDemanda ? "Multi-seleção (DEMANDA)" : "Seleção única"}
+            {isDemanda ? `Multi-seleção (máx. ${MAX_TERMOS})` : "Seleção única"}
           </div>
           <button type="button" onClick={() => { setDoc(doc(db, "tickets_global", ticketId), { termoFaturamento: [] }, { merge: true }); setOpen(false); }}
             style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 11, border: "none", background: "none", cursor: "pointer", color: "var(--gray-9)", borderBottom: "1px solid var(--gray-4)" }}>
@@ -126,7 +127,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
 }
 
 // Column definitions for reordering
-const STATUS_30PCT = new Set(["Planejamento", "Aprovação de Planejamento", "Aguardando Planejamento", "Em Execução", "Execução"]);
+const STATUS_30PCT = new Set(["Aprovação de Planejamento", "Execução"]);
 const STATUS_60PCT = new Set(["Em Teste", "Em homologação", "Revisão de homologação", "Etapa de KT", "Aguardando Mudança"]);
 const STATUS_10PCT = new Set(["Concluída"]);
 
@@ -150,10 +151,12 @@ const COL_DEFS = {
   avanco:            { header: "AVANÇO",             align: "center", maxWidth: 90 },
   demandaFast:       { header: "DM FAST",            align: "center", maxWidth: 80 },
   estimativaTotal:   { header: "EST. TOTAL",         align: "right" },
+  fatPct:            { header: "FATURADO (%)",        align: "right", maxWidth: 90 },
   fatFaturadas:      { header: "FATURADAS (H)",       align: "right" },
   fatAFaturar:       { header: "A FATURAR (H)",       align: "right" },
   plHrsFast:         { header: "PL. HRS FAST",       align: "right" },
   tempoEsforco:      { header: "TEMPO ESFORÇO (H)",  align: "right" },
+  sistemaImpactado:  { header: "SISTEMA",            align: "left" },
   grupoSolucionador: { header: "GRUPO SOLUCIONADOR", align: "left" },
   contrato:          { header: "CONTRATO",           align: "left" },
   reporter:          { header: "RELATOR",            align: "left" },
@@ -175,7 +178,7 @@ function prevMonthRange() {
   };
 }
 
-export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, showGrupoAprovFilter = false, showCicloFilter = false, excludeIssueTypes = [], defaultFilters = {} } = {}) {
+export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, showGrupoAprovFilter = false, showCicloFilter = false, compactAvanco = false, excludeIssueTypes = [], defaultFilters = {} } = {}) {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termos, setTermos] = useState([]);
@@ -715,11 +718,51 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                           {squad !== "—" ? <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.35)", color: "#6ee7b7", whiteSpace: "nowrap" }}>{squad}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                         </td>
                       );
-                      case "avanco": return (
-                        <td key={id} style={{ ...D, textAlign: "center" }}>
-                          <AvancoBar pctDev={t.percentualConclusao} pctTeste={t.percentualConclusaoTesteInterno} escopo={t.escopo} />
-                        </td>
-                      );
+                      case "avanco": {
+                        const isFastT = String(t.escopo||"").toUpperCase().includes("FAST");
+                        const devP = t.percentualConclusao != null ? Math.min(100, Math.max(0, Number(t.percentualConclusao))) : null;
+                        const testeP = t.percentualConclusaoTesteInterno != null ? Math.min(100, Math.max(0, Number(t.percentualConclusaoTesteInterno))) : null;
+                        const avgP = devP == null && testeP == null ? null
+                          : isFastT ? Math.round((devP ?? 0) * 10) / 10
+                          : Math.round(((devP ?? 0) * 0.7 + (testeP ?? 0) * 0.3) * 10) / 10;
+                        const colP = avgP == null ? "var(--gray-7)" : avgP >= 100 ? "#4ade80" : avgP >= 75 ? "#22d3ee" : avgP >= 40 ? "#fbbf24" : "#f87171";
+                        return (
+                          <td key={id} style={{ ...D, textAlign: "center" }}>
+                            {compactAvanco
+                              ? <span style={{ fontSize: 12, fontWeight: 800, color: colP }}>{avgP != null ? `${avgP}%` : "—"}</span>
+                              : <AvancoBar pctDev={t.percentualConclusao} pctTeste={t.percentualConclusaoTesteInterno} escopo={t.escopo} />}
+                          </td>
+                        );
+                      }
+                      case "fatPct": {
+                        const fatV = getFaturadas(t);
+                        const estV = getEstTotal(t);
+                        const pctV = STATUS_10PCT.has(t.status) ? 100
+                          : STATUS_60PCT.has(t.status) ? 90
+                          : STATUS_30PCT.has(t.status) ? 30
+                          : null;
+                        return (
+                          <td key={id} style={{ ...D, textAlign: "right", maxWidth: 90 }}>
+                            {pctV != null
+                              ? <span style={{ fontSize: 12, fontWeight: 800, color: pctV >= 100 ? "#4ade80" : pctV >= 90 ? "#38bdf8" : "#fb923c", fontVariantNumeric: "tabular-nums" }}>{pctV}%</span>
+                              : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
+                          </td>
+                        );
+                      }
+                      case "sistemaImpactado": {
+                        const sis = t.sistemaImpactado || t.sistemasImpactados || t.sistema || "";
+                        const sisArr = Array.isArray(sis) ? sis : (sis ? [sis] : []);
+                        return (
+                          <td key={id} style={{ ...D, maxWidth: 140, overflow: "hidden" }}>
+                            {sisArr.length > 0
+                              ? <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                                  {sisArr.slice(0,2).map((s, i) => <span key={i} style={{ fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: 4, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)", color: "#a5b4fc", whiteSpace: "nowrap" }}>{String(s)}</span>)}
+                                  {sisArr.length > 2 && <span style={{ fontSize: 9, color: "var(--gray-8)" }}>+{sisArr.length - 2}</span>}
+                                </div>
+                              : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
+                          </td>
+                        );
+                      }
                       case "estimativaTotal": return (
                         <td key={id} style={{ ...D, textAlign: "right" }}>
                           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-11)", fontVariantNumeric: "tabular-nums" }}>
