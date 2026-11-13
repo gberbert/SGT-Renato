@@ -54,7 +54,9 @@ function fmtDate(v) {
 function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const ref = useRef(null);
+  const btnRef = useRef(null);
   const isDemanda = String(escopo || "").toUpperCase().replace(/_/g, " ") === "DEMANDA";
   const selected = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
   useEffect(() => {
@@ -65,6 +67,14 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   const MILESTONE_LABELS = ["30%", "60%", "10%"];
   const MILESTONE_COLORS = ["#fb923c", "#38bdf8", "#4ade80"];
   const MAX_TERMOS = isDemanda ? 3 : 1;
+  const handleOpen = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - r.bottom;
+      setDropUp(spaceBelow < 220);
+    }
+    setOpen(v => !v);
+  };
   const toggle = async (termoId) => {
     if (saving) return;
     const next = isDemanda
@@ -87,7 +97,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   });
   return (
     <div ref={ref} style={{ position: "relative", minWidth: 140 }}>
-      <button type="button" onClick={() => setOpen(v => !v)}
+      <button ref={btnRef} type="button" onClick={handleOpen}
         style={{ width: "100%", padding: "4px 8px", borderRadius: 6, border: `1px solid ${selected.length > 0 ? "var(--indigo-7)" : "var(--gray-6)"}`, background: selected.length > 0 ? "var(--indigo-2)" : "var(--gray-2)", color: selected.length > 0 ? "var(--indigo-11)" : "var(--gray-9)", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, outline: "none" }}>
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, textAlign: "left" }}>
           {selected.length === 0 ? "— Selecionar —"
@@ -103,7 +113,8 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
         <span style={{ fontSize: 9, opacity: 0.6, flexShrink: 0 }}>▼</span>
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "105%", left: 0, zIndex: 300, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,.35)", minWidth: 200, maxHeight: 240, overflowY: "auto" }}>
+        <div style={{ position: "fixed", zIndex: 9500, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,.45)", minWidth: 220, maxHeight: 260, overflowY: "auto" }}
+          ref={el => { if (el && btnRef.current) { const r = btnRef.current.getBoundingClientRect(); el.style.left = r.left + "px"; el.style.width = Math.max(220, r.width) + "px"; if (dropUp) { el.style.bottom = (window.innerHeight - r.top + 4) + "px"; el.style.top = "auto"; } else { el.style.top = (r.bottom + 4) + "px"; el.style.bottom = "auto"; } } }}>
           <div style={{ padding: "6px 10px", fontSize: 9, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: "1px solid var(--gray-4)" }}>
             {isDemanda ? `Multi-seleção (máx. ${MAX_TERMOS})` : "Seleção única"}
           </div>
