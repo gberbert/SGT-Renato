@@ -246,8 +246,16 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, "financeiro_emissao_termos"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, snap => setTermos(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => {});
+    // No orderBy to avoid excluding docs without createdAt field
+    return onSnapshot(collection(db, "financeiro_emissao_termos"), snap => {
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      all.sort((a, b) => {
+        const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return tb - ta;
+      });
+      setTermos(all);
+    }, () => {});
   }, []);
 
   useEffect(() => {

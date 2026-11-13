@@ -133,7 +133,17 @@ export default function FinanceiroAlocacoes() {
 
   useEffect(() => { const u = subscribeToUsers(d => setUsers(d || [])); return () => u(); }, []);
   useEffect(() => { return onSnapshot(query(collection(db, "squads")), s => setSquads(s.docs.map(d => ({ id: d.id, ...d.data() }))), () => {}); }, []);
-  useEffect(() => { return onSnapshot(query(collection(db, "financeiro_emissao_termos"), orderBy("createdAt", "desc")), s => setTermos(s.docs.map(d => ({ id: d.id, ...d.data() }))), () => {}); }, []);
+  useEffect(() => {
+    return onSnapshot(collection(db, "financeiro_emissao_termos"), snap => {
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      all.sort((a, b) => {
+        const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0);
+        const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0);
+        return tb - ta;
+      });
+      setTermos(all);
+    }, () => {});
+  }, []);
   useEffect(() => {
     return onSnapshot(query(collection(db, "financeiro_alocacoes")), snap => {
       const map = {};
