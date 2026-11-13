@@ -807,14 +807,10 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                       case "fatFaturadas": {
                         const fat = getFaturadas(t);
                         const isAny = STATUS_30PCT.has(t.status) || STATUS_60PCT.has(t.status) || STATUS_10PCT.has(t.status);
-                        const pctLabel = STATUS_10PCT.has(t.status) ? "100%" : STATUS_60PCT.has(t.status) ? "90%" : STATUS_30PCT.has(t.status) ? "30%" : null;
                         return (
                           <td key={id} style={{ ...D, textAlign: "right", background: isAny ? "rgba(167,139,250,0.08)" : undefined }}>
                             {fat != null && fat > 0
-                              ? <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
-                                  {pctLabel && <span style={{ fontSize: 9, fontWeight: 800, color: "#a78bfa", opacity: 0.75, letterSpacing: "0.04em", flexShrink: 0 }}>{pctLabel}</span>}
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontVariantNumeric: "tabular-nums" }}>{fat}</span>
-                                </div>
+                              ? <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontVariantNumeric: "tabular-nums" }}>{fat}</span>
                               : fat === 0 && getEstTotal(t) != null
                                 ? <span style={{ fontSize: 11, color: "var(--gray-6)" }}>0</span>
                                 : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
@@ -825,18 +821,11 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                         const est = getEstTotal(t);
                         const fat = getFaturadas(t);
                         const aFaturar = est != null && fat != null ? Math.round(Math.max(0, est - fat) * 10) / 10 : null;
-                        const aFaturarPct = STATUS_10PCT.has(t.status) ? null
-                          : STATUS_60PCT.has(t.status) ? "10%"
-                          : STATUS_30PCT.has(t.status) ? "70%"
-                          : est != null ? "100%" : null;
                         return (
                           <td key={id} style={{ ...D, textAlign: "right", background: aFaturar != null && aFaturar > 0 ? "rgba(251,146,60,0.08)" : undefined }}>
                             {aFaturar != null
                               ? aFaturar > 0
-                                ? <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
-                                    {aFaturarPct && <span style={{ fontSize: 9, fontWeight: 800, color: "#fb923c", opacity: 0.75, letterSpacing: "0.04em", flexShrink: 0 }}>{aFaturarPct}</span>}
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c", fontVariantNumeric: "tabular-nums" }}>{aFaturar}</span>
-                                  </div>
+                                ? <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c", fontVariantNumeric: "tabular-nums" }}>{aFaturar}</span>
                                 : <span style={{ fontSize: 11, color: "var(--gray-6)" }}>0</span>
                               : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
                           </td>
