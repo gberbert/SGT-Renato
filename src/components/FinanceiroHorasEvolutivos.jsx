@@ -224,8 +224,17 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [cicloDropOpen, setCicloDropOpen] = useState(false);
   const cicloDropRef = useRef(null);
   const [faturamentoFilter, setFaturamentoFilter] = useState(""); // "" | "faturadas" | "afaturar"
+  const [showLegend, setShowLegend] = useState(false);
+  const legendRef = useRef(null);
   // Track if resolution has been initialized from defaultFilters
   const resInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!showLegend) return;
+    const h = (e) => { if (legendRef.current && !legendRef.current.contains(e.target)) setShowLegend(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showLegend]);
 
   useEffect(() => {
     if (!resDropOpen) return;
@@ -376,12 +385,14 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Buscar por chave ou título…" style={{ flex: 1, minWidth: 220, padding: "7px 12px", borderRadius: 7, border: "1px solid var(--gray-6)", background: "var(--gray-2)", color: "var(--gray-12)", fontSize: 13, outline: "none" }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "var(--gray-2)", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--gray-5)" }}>
+        {/* Search */}
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Chave ou título…" style={{ minWidth: 160, maxWidth: 240, padding: "5px 10px", borderRadius: 6, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, outline: "none" }} />
+        {/* Termo filter */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Termo</span>
           <select value={termoFilter} onChange={e => setTermoFilter(e.target.value)}
-            style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${termoFilter ? "var(--indigo-6)" : "var(--gray-6)"}`, background: termoFilter ? "var(--indigo-2)" : "var(--gray-2)", color: termoFilter ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", maxWidth: 200 }}>
+            style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${termoFilter ? "var(--indigo-6)" : "var(--gray-6)"}`, background: termoFilter ? "var(--indigo-2)" : "var(--gray-1)", color: termoFilter ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 11, cursor: "pointer", outline: "none", maxWidth: 160 }}>
             <option value="">— Todos —</option>
             {termos.map(t => {
               const mes = t.mesReferencia ? (() => { const [y,m] = t.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
@@ -391,25 +402,41 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
           </select>
           {termoFilter && <button type="button" onClick={() => setTermoFilter("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
         </div>
-        {!escopoFilter && (
-          <div style={{ display: "flex", gap: 6 }}>
-            {ESCOPOS.map(e => {
-              const m = getEscopoMeta(e);
-              const on = selEscopo.has(e);
-              return (
-                <button key={e} type="button"
-                  onClick={() => { const n = new Set(selEscopo); on ? n.delete(e) : n.add(e); setSelEscopo(n); }}
-                  style={{ padding: "5px 12px", borderRadius: 999, border: `1px solid ${on ? m.color : "var(--gray-6)"}`, background: on ? m.bg : "transparent", color: on ? m.color : "var(--gray-11)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  {m.short}
-                </button>
-              );
-            })}
+        <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
+        {/* Legend icon */}
+        {(visibleCols.includes("fatFaturadas") || visibleCols.includes("fatAFaturar")) && (
+          <div ref={legendRef} style={{ position: "relative", flexShrink: 0 }}>
+            <button type="button" onClick={() => setShowLegend(v => !v)}
+              title="Lógica de cálculo de horas faturadas"
+              style={{ width: 28, height: 28, borderRadius: 999, border: `1px solid ${showLegend ? "var(--indigo-7)" : "var(--gray-5)"}`, background: showLegend ? "var(--indigo-2)" : "var(--gray-1)", color: showLegend ? "var(--indigo-11)" : "var(--gray-9)", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", outline: "none" }}>
+              ℹ️
+            </button>
+            {showLegend && (
+              <div style={{ position: "fixed", zIndex: 9500, background: "var(--color-panel-solid)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,.45)", padding: "14px 16px", width: 420, maxWidth: "95vw" }}
+                ref={el => { if (el && legendRef.current) { const r = legendRef.current.getBoundingClientRect(); el.style.top = (r.bottom + 6) + "px"; el.style.left = Math.max(8, r.left - 200) + "px"; } }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo-11)", letterSpacing: "0.04em", marginBottom: 10 }}>Lógica de Cálculo — Horas Faturadas (cumulativo)</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    { pct: "30%", color: "#fb923c", statuses: "Aprovação de Planejamento · Execução · Em Execução" },
+                    { pct: "90%", color: "#38bdf8", statuses: "Em Teste · Em homologação · Revisão de homologação · Etapa de KT · Aguardando Mudança" },
+                    { pct: "100%", color: "#4ade80", statuses: "Concluída" },
+                  ].map(item => (
+                    <div key={item.pct} style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 900, color: item.color, flexShrink: 0, minWidth: 42 }}>{item.pct}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", flexShrink: 0 }}>= EST.TOTAL ×</span>
+                      <span style={{ fontSize: 10, color: "var(--gray-10)", lineHeight: 1.4 }}>{item.statuses}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--gray-4)", fontSize: 9, color: "var(--gray-8)" }}>
+                  Demandas com múltiplos termos: 1º→30% · 2º→60% · 3º→10%
+                </div>
+              </div>
+            )}
           </div>
         )}
-        <span style={{ fontSize: 11, color: "var(--gray-9)", flexShrink: 0 }}>{filtered.length} ticket{filtered.length !== 1 ? "s" : ""}</span>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "var(--gray-2)", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--gray-5)" }}>
+        <span style={{ fontSize: 11, color: "var(--gray-9)", flexShrink: 0, marginLeft: "auto" }}>{filtered.length} ticket{filtered.length !== 1 ? "s" : ""}</span>
+        <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
         {!hideFilters.includes("dataAtividade") && <>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Data Atividade</span>
@@ -654,34 +681,6 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
           </div>
         );
       })()}
-
-      {(visibleCols.includes("fatFaturadas") || visibleCols.includes("fatAFaturar")) && (
-        <details style={{ background: "rgba(99,102,241,0.04)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 8, padding: "0" }}>
-          <summary style={{ padding: "7px 14px", fontSize: 11, fontWeight: 700, color: "var(--indigo-11)", cursor: "pointer", letterSpacing: "0.04em", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 10 }}>ℹ️</span> Lógica de Cálculo — Horas Faturadas (cumulativo por milestone)
-          </summary>
-          <div style={{ padding: "10px 14px 12px", display: "flex", gap: 20, flexWrap: "wrap", borderTop: "1px solid rgba(99,102,241,0.12)" }}>
-            {[
-              { pct: "30%", color: "#fb923c", bg: "rgba(251,146,60,0.08)", statuses: ["Planejamento", "Aprovação de Planejamento", "Aguardando Planejamento", "Em Execução"] },
-              { pct: "90%", color: "#38bdf8", bg: "rgba(56,189,248,0.08)", statuses: ["Em Teste", "Em homologação", "Revisão de homologação", "Etapa de KT", "Aguardando Mudança"] },
-              { pct: "100%", color: "#4ade80", bg: "rgba(74,222,128,0.08)", statuses: ["Concluída"] },
-            ].map(item => (
-              <div key={item.pct} style={{ background: item.bg, border: `1px solid ${item.color}33`, borderRadius: 7, padding: "8px 12px", minWidth: 180, flex: "1 1 180px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 900, color: item.color }}>{item.pct}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Faturado</span>
-                  <span style={{ fontSize: 10, color: "var(--gray-8)", marginLeft: "auto" }}>= EST.TOTAL × {item.pct}</span>
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {item.statuses.map(s => (
-                    <span key={s} style={{ fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: `${item.color}18`, border: `1px solid ${item.color}44`, color: item.color, whiteSpace: "nowrap" }}>{s}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
 
       <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--gray-4)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
