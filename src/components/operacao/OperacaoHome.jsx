@@ -897,7 +897,7 @@ const OperacaoHome = ({ userRole }) => {
     return [
       { key: 'PROBLEMAS', label: 'PROBLEMAS', total: findTotal('PROBLEMAS'), color: '#ff4d4f' },
       {
-        key: 'DEMANDA_FAST',
+        key: 'DEMANDA FAST',
         label: 'DEMANDA FAST',
         total: findTotal('DEMANDA FAST'),
         color: '#ff9f43',
