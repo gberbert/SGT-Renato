@@ -4,6 +4,7 @@ import { collection, query, where, onSnapshot, orderBy, doc, setDoc, serverTimes
 import { getStatusColor } from "./PlanejamentoCicloHelpers";
 import { stripNumericPrefix } from "../utils/stripNumericPrefix";
 import { subscribeToSystems } from "../services/settingsService";
+import { subscribeToCiclos } from "../services/cicloService";
 
 const ESCOPOS = ["DEMANDA", "DEMANDA FAST", "CATALOGO"];
 const ESCOPO_META = {
@@ -134,15 +135,23 @@ function getEstTotal(t) {
   return (v != null && Number.isFinite(v)) ? v : null;
 }
 
+function getFaturadas(t) {
+  const est = getEstTotal(t);
+  if (est == null) return null;
+  if (STATUS_10PCT.has(t.status)) return Math.round(est * 1.0 * 10) / 10;
+  if (STATUS_60PCT.has(t.status)) return Math.round(est * 0.9 * 10) / 10;
+  if (STATUS_30PCT.has(t.status)) return Math.round(est * 0.3 * 10) / 10;
+  return 0;
+}
+
 const COL_DEFS = {
   status:            { header: "STATUS",             align: "left",  maxWidth: 110 },
   squad:             { header: "SQUAD",              align: "left" },
   avanco:            { header: "AVANÇO",             align: "center", maxWidth: 90 },
   demandaFast:       { header: "DM FAST",            align: "center", maxWidth: 80 },
   estimativaTotal:   { header: "EST. TOTAL",         align: "right" },
-  fat30:             { header: "30% (H)",             align: "right" },
-  fat60:             { header: "60% (H)",             align: "right" },
-  fat10:             { header: "10% (H)",             align: "right" },
+  fatFaturadas:      { header: "FATURADAS (H)",       align: "right" },
+  fatAFaturar:       { header: "A FATURAR (H)",       align: "right" },
   plHrsFast:         { header: "PL. HRS FAST",       align: "right" },
   tempoEsforco:      { header: "TEMPO ESFORÇO (H)",  align: "right" },
   grupoSolucionador: { header: "GRUPO SOLUCIONADOR", align: "left" },
@@ -166,7 +175,7 @@ function prevMonthRange() {
   };
 }
 
-export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, showGrupoAprovFilter = false, excludeIssueTypes = [], defaultFilters = {} } = {}) {
+export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [], colOrder = null, hideIssueType = false, hideFilters = [], showContratoFilter = false, showStatusFilter = false, showGrupoAprovFilter = false, showCicloFilter = false, excludeIssueTypes = [], defaultFilters = {} } = {}) {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termos, setTermos] = useState([]);
@@ -188,6 +197,10 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [selGrupoAprov, setSelGrupoAprov] = useState(() => new Set(defaultFilters.grupoAprovFilter || []));
   const [grupoAprovDropOpen, setGrupoAprovDropOpen] = useState(false);
   const grupoAprovDropRef = useRef(null);
+  const [ciclos, setCiclos] = useState([]);
+  const [selCiclo, setSelCiclo] = useState(new Set());
+  const [cicloDropOpen, setCicloDropOpen] = useState(false);
+  const cicloDropRef = useRef(null);
   // Track if resolution has been initialized from defaultFilters
   const resInitialized = useRef(false);
 
@@ -211,6 +224,18 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [grupoAprovDropOpen]);
+
+  useEffect(() => {
+    if (!cicloDropOpen) return;
+    const h = (e) => { if (cicloDropRef.current && !cicloDropRef.current.contains(e.target)) setCicloDropOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [cicloDropOpen]);
+
+  useEffect(() => {
+    if (!showCicloFilter) return;
+    return subscribeToCiclos(d => setCiclos(d || []));
+  }, [showCicloFilter]);
 
   useEffect(() => {
     setLoading(true);
@@ -270,7 +295,20 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
     }
     if (selGrupoAprov.size > 0) list = list.filter(t => selGrupoAprov.has(t.grupoAprovadorHoras || ""));
     if (selStatusFilter.size > 0) list = list.filter(t => selStatusFilter.has(t.status || ""));
-  // Note: selGrupoAprov added to deps below
+    if (selCiclo.size > 0) {
+      const cicloKeysMap = new Map();
+      ciclos.forEach(c => { if (c.nome) cicloKeysMap.set(c.nome, new Set((c.ticketKeys || []).map(k => String(k).trim().toUpperCase()))); });
+      const allCicloKeys = new Set();
+      ciclos.forEach(c => (c.ticketKeys || []).forEach(k => allCicloKeys.add(String(k).trim().toUpperCase())));
+      list = list.filter(t => {
+        const key = String(t.issueKey || t.id || "").trim().toUpperCase();
+        if (selCiclo.has("__SEM_CICLO__") && !allCicloKeys.has(key)) return true;
+        return [...selCiclo].filter(n => n !== "__SEM_CICLO__").some(nome => {
+          const ks = cicloKeysMap.get(nome);
+          return ks && ks.has(key);
+        });
+      });
+    }
     if (termoFilter) {
       list = list.filter(t => {
         const tf = t.termoFaturamento;
@@ -287,7 +325,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
       });
     }
     return list;
-  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selGrupoAprov, selStatusFilter, termoFilter, contratoFilter, sistemas]);
+  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selGrupoAprov, selStatusFilter, selCiclo, ciclos, termoFilter, contratoFilter, sistemas]);
 
   // Compute visible columns in order
   const visibleCols = useMemo(() => {
@@ -474,6 +512,54 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
             </div>
           </>
         )}
+        {showCicloFilter && ciclos.length > 0 && (
+          <>
+            <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
+            <div ref={cicloDropRef} style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Ciclo</span>
+              <button type="button" onClick={() => setCicloDropOpen(v => !v)}
+                style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${selCiclo.size > 0 ? "var(--cyan-7)" : "var(--gray-6)"}`, background: selCiclo.size > 0 ? "var(--cyan-2)" : "var(--gray-1)", color: selCiclo.size > 0 ? "var(--cyan-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+                <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {selCiclo.size === 0 ? "— Todos —" : `${selCiclo.size} selecionados`}
+                </span>
+                <span style={{ fontSize: 9, opacity: 0.6, flexShrink: 0 }}>▼</span>
+              </button>
+              {cicloDropOpen && (
+                <div style={{ position: "fixed", zIndex: 9000, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,.45)", minWidth: 260, maxHeight: 320, overflowY: "auto", marginTop: 4 }}
+                  ref={el => { if (el && cicloDropRef.current) { const r = cicloDropRef.current.getBoundingClientRect(); el.style.top = (r.bottom + 4) + "px"; el.style.left = Math.max(8, r.right - 260) + "px"; } }}>
+                  <div style={{ padding: "8px 12px", fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: "1px solid var(--gray-4)", background: "var(--gray-3)" }}>Ciclo — multi-seleção</div>
+                  <button type="button" onClick={() => { setSelCiclo(new Set()); setCicloDropOpen(false); }}
+                    style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: selCiclo.size === 0 ? "var(--cyan-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-4)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 15, height: 15, borderRadius: 3, border: `2px solid ${selCiclo.size === 0 ? "var(--cyan-9)" : "var(--gray-6)"}`, background: selCiclo.size === 0 ? "var(--cyan-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {selCiclo.size === 0 && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
+                    </span>
+                    — Todos —
+                  </button>
+                  {/* Sem ciclo option */}
+                  {(() => { const on = selCiclo.has("__SEM_CICLO__"); return (
+                    <button type="button" onClick={() => setSelCiclo(p => { const n = new Set(p); on ? n.delete("__SEM_CICLO__") : n.add("__SEM_CICLO__"); return n; })}
+                      style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: on ? "var(--cyan-2)" : "none", cursor: "pointer", color: on ? "var(--cyan-11)" : "var(--gray-11)", borderBottom: "1px solid var(--gray-4)", display: "flex", alignItems: "center", gap: 8, fontStyle: "italic" }}>
+                      <span style={{ width: 15, height: 15, borderRadius: 3, border: `2px solid ${on ? "var(--cyan-9)" : "var(--gray-6)"}`, background: on ? "var(--cyan-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {on && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
+                      </span>
+                      — Sem ciclo —
+                    </button>
+                  ); })()}
+                  {ciclos.map(c => { const on = selCiclo.has(c.nome); return (
+                    <button key={c.id} type="button" onClick={() => setSelCiclo(p => { const n = new Set(p); on ? n.delete(c.nome) : n.add(c.nome); return n; })}
+                      style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: on ? "var(--cyan-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 15, height: 15, borderRadius: 3, border: `2px solid ${on ? "var(--cyan-9)" : "var(--gray-6)"}`, background: on ? "var(--cyan-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {on && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
+                      </span>
+                      {c.nome}
+                    </button>
+                  ); })}
+                </div>
+              )}
+              {selCiclo.size > 0 && <button type="button" onClick={() => setSelCiclo(new Set())} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
+            </div>
+          </>
+        )}
         {showContratoFilter && (() => {
           const contratos = [...new Set(sistemas.map(s => s.contratoNome).filter(Boolean))].sort();
           return contratos.length > 0 ? (
@@ -507,10 +593,9 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
             <span style={{ fontWeight: 700, color: "var(--gray-12)" }}>{filtered.length} <span style={{ fontWeight: 400, color: "var(--gray-9)" }}>tickets</span></span>
             <span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} />
             <span style={{ fontWeight: 700, color: "#34d399" }}>{Math.round(totalHoras * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Tempo Esforço</span></span>
-            {visibleCols.includes("estimativaTotal") && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "var(--gray-11)" }}>{Math.round(totalEst * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Est. Total</span></span></>}
-            {showFat && total30 > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#fb923c" }}>{Math.round(total30 * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>30%</span></span></>}
-            {showFat && total60 > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#38bdf8" }}>{Math.round(total60 * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>60%</span></span></>}
-            {showFat && total10 > 0 && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#4ade80" }}>{Math.round(total10 * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>10%</span></span></>}
+        {visibleCols.includes("estimativaTotal") && <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "var(--gray-11)" }}>{Math.round(totalEst * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Est. Total</span></span></>}
+        {visibleCols.includes("fatFaturadas") && (() => { const v = filtered.reduce((s, t) => { const f = getFaturadas(t); return s + (f != null ? f : 0); }, 0); return v > 0 ? <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#a78bfa" }}>{Math.round(v * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>Faturadas</span></span></> : null; })()}
+        {visibleCols.includes("fatAFaturar") && (() => { const v = filtered.reduce((s, t) => { const est = getEstTotal(t); const fat = getFaturadas(t); return s + (est != null && fat != null ? Math.max(0, est - fat) : 0); }, 0); return v > 0 ? <><span style={{ width: 1, height: 16, background: "var(--gray-5)", flexShrink: 0 }} /><span style={{ fontWeight: 700, color: "#fb923c" }}>{Math.round(v * 10) / 10}h <span style={{ fontWeight: 400, color: "var(--gray-9)", fontSize: 11 }}>A Faturar</span></span></> : null; })()}
             {showFast && (() => {
               const totalFast = filtered.reduce((s, t) => {
                 const h = t.planejamentoHorasDemandaFast != null ? Number(t.planejamentoHorasDemandaFast) : (t.tempoEsforcoHoras != null ? Number(t.tempoEsforcoHoras) : 0);
@@ -588,40 +673,29 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                           </span>
                         </td>
                       );
-                      case "fat30": {
-                        const est = getEstTotal(t);
-                        const val = est != null ? Math.round(est * 0.3 * 10) / 10 : null;
-                        const isCurrent = STATUS_30PCT.has(t.status);
-                        const isPast = STATUS_60PCT.has(t.status) || STATUS_10PCT.has(t.status);
+                      case "fatFaturadas": {
+                        const fat = getFaturadas(t);
+                        const isAny = STATUS_30PCT.has(t.status) || STATUS_60PCT.has(t.status) || STATUS_10PCT.has(t.status);
                         return (
-                          <td key={id} style={{ ...D, textAlign: "right", background: isCurrent ? "rgba(251,146,60,0.12)" : undefined, borderLeft: isCurrent ? "2px solid #fb923c" : undefined }}>
-                            {val != null
-                              ? <span style={{ fontSize: 12, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? "#fb923c" : isPast ? "var(--gray-6)" : "rgba(251,146,60,0.35)", fontVariantNumeric: "tabular-nums" }}>{val}</span>
-                              : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
+                          <td key={id} style={{ ...D, textAlign: "right", background: isAny ? "rgba(167,139,250,0.08)" : undefined }}>
+                            {fat != null && fat > 0
+                              ? <span style={{ fontSize: 12, fontWeight: 700, color: "#a78bfa", fontVariantNumeric: "tabular-nums" }}>{fat}</span>
+                              : fat === 0 && getEstTotal(t) != null
+                                ? <span style={{ fontSize: 11, color: "var(--gray-6)" }}>0</span>
+                                : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
                           </td>
                         );
                       }
-                      case "fat60": {
+                      case "fatAFaturar": {
                         const est = getEstTotal(t);
-                        const val = est != null ? Math.round(est * 0.6 * 10) / 10 : null;
-                        const isCurrent = STATUS_60PCT.has(t.status);
-                        const isPast = STATUS_10PCT.has(t.status);
+                        const fat = getFaturadas(t);
+                        const aFaturar = est != null && fat != null ? Math.round(Math.max(0, est - fat) * 10) / 10 : null;
                         return (
-                          <td key={id} style={{ ...D, textAlign: "right", background: isCurrent ? "rgba(56,189,248,0.12)" : undefined, borderLeft: isCurrent ? "2px solid #38bdf8" : undefined }}>
-                            {val != null
-                              ? <span style={{ fontSize: 12, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? "#38bdf8" : isPast ? "var(--gray-6)" : "rgba(56,189,248,0.3)", fontVariantNumeric: "tabular-nums" }}>{val}</span>
-                              : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
-                          </td>
-                        );
-                      }
-                      case "fat10": {
-                        const est = getEstTotal(t);
-                        const val = est != null ? Math.round(est * 0.1 * 10) / 10 : null;
-                        const isCurrent = STATUS_10PCT.has(t.status);
-                        return (
-                          <td key={id} style={{ ...D, textAlign: "right", background: isCurrent ? "rgba(74,222,128,0.12)" : undefined, borderLeft: isCurrent ? "2px solid #4ade80" : undefined }}>
-                            {val != null
-                              ? <span style={{ fontSize: 12, fontWeight: isCurrent ? 800 : 600, color: isCurrent ? "#4ade80" : "rgba(74,222,128,0.3)", fontVariantNumeric: "tabular-nums" }}>{val}</span>
+                          <td key={id} style={{ ...D, textAlign: "right", background: aFaturar != null && aFaturar > 0 ? "rgba(251,146,60,0.08)" : undefined }}>
+                            {aFaturar != null
+                              ? aFaturar > 0
+                                ? <span style={{ fontSize: 12, fontWeight: 700, color: "#fb923c", fontVariantNumeric: "tabular-nums" }}>{aFaturar}</span>
+                                : <span style={{ fontSize: 11, color: "var(--gray-6)" }}>0</span>
                               : <span style={{ color: "var(--gray-6)", fontSize: 11 }}>—</span>}
                           </td>
                         );
