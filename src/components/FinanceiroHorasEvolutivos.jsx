@@ -99,17 +99,22 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
     <div ref={ref} style={{ position: "relative", minWidth: 140 }}>
       <button ref={btnRef} type="button" onClick={handleOpen}
         style={{ width: "100%", padding: "4px 8px", borderRadius: 6, border: `1px solid ${selected.length > 0 ? "var(--indigo-7)" : "var(--gray-6)"}`, background: selected.length > 0 ? "var(--indigo-2)" : "var(--gray-2)", color: selected.length > 0 ? "var(--indigo-11)" : "var(--gray-9)", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, outline: "none" }}>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, textAlign: "left" }}>
-          {selected.length === 0 ? "— Selecionar —"
-            : isDemanda && selected.length > 0
-              ? selected.map((id, i) => {
+        {selected.length === 0
+          ? <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, color: "var(--gray-9)", fontSize: 11 }}>— Selecionar —</span>
+          : isDemanda && selected.length > 0
+            ? <span style={{ display: "flex", alignItems: "center", gap: 3, flex: 1, overflow: "hidden" }}>
+                {selected.map((id, i) => {
                   const tFound = termos.find(x => x.id === id);
                   const mes = tFound?.mesReferencia ? (() => { const [y,m] = tFound.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
-                  const short = ((tFound?.contratoNome || id || "").split("-").slice(-1)[0].trim() || (tFound?.contratoNome || id));
-                  return `${MILESTONE_LABELS[i] || ""}·${mes ? mes + "·" : ""}${short}`;
-                }).join(" | ")
-              : labels.length === 1 ? labels[0] : `${labels.length} termos`}
-        </span>
+                  const col = MILESTONE_COLORS[i] || "#a5b4fc";
+                  return (
+                    <span key={id} style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 9, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: `${col}18`, border: `1px solid ${col}55`, color: col, flexShrink: 0, whiteSpace: "nowrap" }}>
+                      {MILESTONE_LABELS[i]}{mes ? <span style={{ fontWeight: 400, opacity: 0.8 }}>·{mes}</span> : null}
+                    </span>
+                  );
+                })}
+              </span>
+            : <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{labels.length === 1 ? labels[0] : `${labels.length} termos`}</span>}
         <span style={{ fontSize: 9, opacity: 0.6, flexShrink: 0 }}>▼</span>
       </button>
       {open && (
@@ -716,7 +721,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
               const isFast = String(t.escopo||"").toUpperCase().includes("FAST");
               return (
                 <tr key={t.id} style={{ background: idx % 2 === 0 ? undefined : "var(--gray-1)" }}>
-                  <td style={{ ...D, maxWidth: 180 }}>
+                  <td style={{ ...D, whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: em.color, color: "#fff", flexShrink: 0 }}>{em.short}</span>
                       {!hideIssueType && t.issueType && <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "rgba(107,114,128,0.2)", color: "var(--gray-11)", flexShrink: 0 }}>{t.issueType}</span>}
