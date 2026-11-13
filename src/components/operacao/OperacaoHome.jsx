@@ -373,6 +373,8 @@ const OperacaoHome = ({ userRole }) => {
   // Tracks which escopos have been successfully loaded
   const [loadedEscopos, setLoadedEscopos] = useState(new Set());
 
+  const [selectedGeralEscopo, setSelectedGeralEscopo] = useState(null);
+  const [geralEscopoLoading, setGeralEscopoLoading] = useState(false);
   const [computedRadar, setComputedRadar] = useState(null);
   const [drillEscopo, setDrillEscopo] = useState(null);
   const [drillLabel, setDrillLabel] = useState('');
@@ -620,6 +622,10 @@ const OperacaoHome = ({ userRole }) => {
     setDrillTickets([]);
     setDrillError('');
   };
+
+  // Auto-bootstrap on mount so GERAL totals load immediately
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { ensureRadarBootstrap(); }, []);
 
   // 1) Ao entrar na tela Radar, restaurar cache de sessão por escopo silenciosamente
   useEffect(() => {
@@ -904,17 +910,6 @@ const OperacaoHome = ({ userRole }) => {
         total: findTotal('SOLICITACAO'),
         color: '#00c2ff',
       },
-      {
-        key: 'PRECIFICACAO DEMANDAS',
-        label: 'Precificação',
-        total: findTotal('PRECIFICACAO DEMANDAS'),
-      },
-      {
-        key: 'CATALOGO',
-        label: 'CATÁLOGO',
-        total: findTotal('CATALOGO'),
-        color: '#a855f7',
-      },
     ];
   }, [radar.escopos]);
 
@@ -1045,42 +1040,89 @@ const OperacaoHome = ({ userRole }) => {
                   </Box>
 
                   <Box className="operacao-radar-lanes" mt="4" style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-                    {geralCards.map((card) => (
-                      <button
-                        key={card.key}
-                        type="button"
-                        className="operacao-radar-summary-value"
-                        onClick={() => openDrill(card.key, card.label)}
-                        disabled={drillLoading}
-                        style={{
-                          width: 210,
-                          height: 86,
-                          borderRadius: 16,
-                          border: `1px solid rgba(255,255,255,0.08)`,
-                          background: 'rgba(255,255,255,0.02)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          justifyContent: 'center',
-                          padding: 16,
-                          gap: 6,
-                          cursor: 'pointer',
-                        }}
-                        title={`Ver tickets de ${card.label}`}
-                      >
-                        <Text
-                          size="7"
-                          weight="bold"
-                          style={{ margin: 0, color: card.color, lineHeight: 1 }}
+                    {geralCards.map((card) => {
+                      const isSelG = selectedGeralEscopo === card.key;
+                      return (
+                        <button
+                          key={card.key}
+                          type="button"
+                          className="operacao-radar-summary-value"
+                          onClick={async () => {
+                            if (isSelG) { setSelectedGeralEscopo(null); return; }
+                            setSelectedGeralEscopo(card.key);
+                            if (!loadedEscopos.has(card.key)) {
+                              setGeralEscopoLoading(true);
+                              try { await loadTicketsData(card.key); } finally { setGeralEscopoLoading(false); }
+                            }
+                          }}
+                          disabled={drillLoading}
+                          style={{
+                            width: 210, height: 86, borderRadius: 16,
+                            border: isSelG ? `2px solid ${card.color || '#22d3ee'}` : '1px solid rgba(255,255,255,0.08)',
+                            background: isSelG ? `${(card.color || '#22d3ee')}18` : 'rgba(255,255,255,0.02)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
+                            padding: 16, gap: 6, cursor: 'pointer',
+                            boxShadow: isSelG ? `0 0 0 3px ${(card.color || '#22d3ee')}22` : 'none',
+                            transition: 'border 0.15s, box-shadow 0.15s, background 0.15s',
+                          }}
+                          title={`Ver tickets de ${card.label}`}
                         >
-                          {formatNumber(card.total)}
-                        </Text>
-                        <Text size="2" color="gray" style={{ margin: 0, textTransform: 'uppercase' }}>
-                          {card.label}
-                        </Text>
-                      </button>
-                    ))}
+                          <Text size="7" weight="bold" style={{ margin: 0, color: card.color, lineHeight: 1 }}>
+                            {formatNumber(card.total)}
+                          </Text>
+                          <Text size="2" color="gray" style={{ margin: 0, textTransform: 'uppercase' }}>
+                            {card.label}
+                          </Text>
+                        </button>
+                      );
+                    })}
                   </Box>
+
+                  {/* Status breakdown for selected GERAL escopo */}
+                  {selectedGeralEscopo && (() => {
+                    const selCard = geralCards.find(c => c.key === selectedGeralEscopo);
+                    if (geralEscopoLoading) return (
+                      <Flex align="center" gap="3" mt="3" style={{ padding: 16 }}>
+                        <Loader2 size={18} color="#38bdf8" className="spin" />
+                        <Text size="2" color="gray">Carregando dados de {selCard?.label}...</Text>
+                      </Flex>
+                    );
+                    if (!Array.isArray(ticketsCache)) return null;
+                    const escopoT = ticketsCache.filter(t => String(t.escopo || '').toUpperCase() === selectedGeralEscopo.toUpperCase());
+                    if (!escopoT.length) return <Text size="2" color="gray" mt="3">Nenhum ticket carregado para {selCard?.label}.</Text>;
+                    const sCounts = {};
+                    for (const t of escopoT) {
+                      const s = t.status ? String(t.status).trim() : '(sem status)';
+                      sCounts[s] = (sCounts[s] || 0) + 1;
+                    }
+                    const sortedS = Object.entries(sCounts).sort((a, b) => b[1] - a[1]);
+                    return (
+                      <Box mt="3" style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${(selCard?.color || '#22d3ee')}33`, borderRadius: 12, padding: '14px 16px' }}>
+                        <Flex align="center" justify="between" mb="3">
+                          <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: `${selCard?.color || '#22d3ee'}99` }}>
+                            {selCard?.label} · POR STATUS
+                          </Text>
+                          <button type="button" onClick={() => openDrill(selectedGeralEscopo, selCard?.label || selectedGeralEscopo)} disabled={drillLoading}
+                            style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, border: `1px solid ${(selCard?.color || '#22d3ee')}55`, background: `${(selCard?.color || '#22d3ee')}15`, color: selCard?.color || '#22d3ee', cursor: 'pointer' }}>
+                            Ver todos
+                          </button>
+                        </Flex>
+                        <Flex gap="2" wrap="wrap">
+                          {sortedS.map(([status, count]) => (
+                            <button key={status} type="button"
+                              onClick={() => openDrill(selectedGeralEscopo, `${selCard?.label} · ${status}`, null, status)}
+                              disabled={drillLoading}
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', textAlign: 'left', width: 150, flex: '0 0 150px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, transition: 'border 0.12s, background 0.12s' }}
+                              onMouseEnter={e => { e.currentTarget.style.border = `1px solid ${selCard?.color || '#22d3ee'}55`; e.currentTarget.style.background = `${selCard?.color || '#22d3ee'}0d`; }}
+                              onMouseLeave={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}>
+                              <span style={{ fontSize: 24, fontWeight: 900, color: selCard?.color || '#22d3ee', lineHeight: 1 }}>{formatNumber(count)}</span>
+                              <span style={{ fontSize: 10, lineHeight: 1.3, color: 'rgba(255,255,255,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{status}</span>
+                            </button>
+                          ))}
+                        </Flex>
+                      </Box>
+                    );
+                  })()}
                 </>
               ) : activeEscopoTab === 'EFICIENCIA' ? (
                 ticketsCache === null ? (
