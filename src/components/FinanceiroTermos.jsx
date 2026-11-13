@@ -281,10 +281,10 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
 
   const getTicketH = t => {
     const fullH = getTicketFullH(t);
-    // For DEMANDA tickets with multi-term billing, apply milestone factor
+    // For DEMANDA tickets, always apply milestone factor based on slot position
     if (String(t.escopo || "").toUpperCase().trim() === "DEMANDA") {
       const tf = t.termoFaturamento;
-      if (Array.isArray(tf) && tf.length > 1) {
+      if (Array.isArray(tf) && tf.length >= 1) {
         const slotIdx = tf.indexOf(termo.id);
         if (slotIdx >= 0 && slotIdx < MILESTONE_FACTORS.length) {
           return Math.round(fullH * MILESTONE_FACTORS[slotIdx] * 10) / 10;
@@ -563,24 +563,33 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                 {!collapsed[key] && <div style={BLK}>
                   <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
                     <colgroup>
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "28%" }} />
                       <col style={{ width: "12%" }} />
-                      <col style={{ width: "32%" }} />
-                      <col style={{ width: "12%" }} />
-                      <col style={{ width: "16%" }} />
-                      <col style={{ width: "16%" }} />
-                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "13%" }} />
                     </colgroup>
                     <thead><tr>
                       <th style={TH}>Chave</th>
                       <th style={TH}>Resumo</th>
                       <th style={TH}>Status</th>
                       <th style={TH}>Squad</th>
-                      <th style={{ ...TH, textAlign: "right" }}>Horas</th>
+                      <th style={{ ...TH, textAlign: "right" }}>EST. TOTAL</th>
+                      <th style={{ ...TH, textAlign: "right" }}>FAT (H)</th>
                       <th style={{ ...TH, textAlign: "right" }}>Valor</th>
                     </tr></thead>
                     <tbody>
                       {tickets.map(t => {
-                        const h = getTicketH(t);
+                        const fatH = getTicketH(t);
+                        const fullH = getTicketFullH(t);
+                        const isDem = String(t.escopo || "").toUpperCase().trim() === "DEMANDA";
+                        const tf = t.termoFaturamento;
+                        const slotIdx = isDem && Array.isArray(tf) ? tf.indexOf(termo.id) : -1;
+                        const milePct = slotIdx >= 0 ? (MILESTONE_FACTORS[slotIdx] * 100).toFixed(0) + "%" : null;
+                        const mileColors = ["#fb923c", "#38bdf8", "#4ade80"];
+                        const mileCol = slotIdx >= 0 ? mileColors[slotIdx] : "#a78bfa";
                         const squad = t.squadPrincipal || t.squad || "—";
                         return (
                           <tr key={t.id}>
@@ -592,12 +601,18 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                             <td style={{ ...TD, overflow: "hidden", textOverflow: "ellipsis" }}>
                               {squad !== "—" ? <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 999, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", color: "#6ee7b7", whiteSpace: "nowrap" }}>{squad}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                             </td>
-                            <td style={TDR}>{h}h</td>
-                            <td style={{ ...TDR, color }}>{fmtCurrency(h * valorBase)}</td>
+                            <td style={{ ...TDR, color: "var(--gray-10)" }}>{fullH}h</td>
+                            <td style={{ ...TDR }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
+                                {milePct && <span style={{ fontSize: 9, fontWeight: 800, color: mileCol, padding: "1px 4px", borderRadius: 3, background: `${mileCol}18`, border: `1px solid ${mileCol}44`, flexShrink: 0 }}>{milePct}</span>}
+                                <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fatH}h</span>
+                              </div>
+                            </td>
+                            <td style={{ ...TDR, color }}>{fmtCurrency(fatH * valorBase)}</td>
                           </tr>
                         );
                       })}
-                      {tickets.length === 0 && <tr><td colSpan={6} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum ticket vinculado neste termo.</td></tr>}
+                      {tickets.length === 0 && <tr><td colSpan={7} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum ticket vinculado neste termo.</td></tr>}
                     </tbody>
                   </table>
                 </div>}
