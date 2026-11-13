@@ -625,6 +625,34 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
         );
       })()}
 
+      {(visibleCols.includes("fatFaturadas") || visibleCols.includes("fatAFaturar")) && (
+        <details style={{ background: "rgba(99,102,241,0.04)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 8, padding: "0" }}>
+          <summary style={{ padding: "7px 14px", fontSize: 11, fontWeight: 700, color: "var(--indigo-11)", cursor: "pointer", letterSpacing: "0.04em", listStyle: "none", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 10 }}>ℹ️</span> Lógica de Cálculo — Horas Faturadas (cumulativo por milestone)
+          </summary>
+          <div style={{ padding: "10px 14px 12px", display: "flex", gap: 20, flexWrap: "wrap", borderTop: "1px solid rgba(99,102,241,0.12)" }}>
+            {[
+              { pct: "30%", color: "#fb923c", bg: "rgba(251,146,60,0.08)", statuses: ["Planejamento", "Aprovação de Planejamento", "Aguardando Planejamento", "Em Execução"] },
+              { pct: "90%", color: "#38bdf8", bg: "rgba(56,189,248,0.08)", statuses: ["Em Teste", "Em homologação", "Revisão de homologação", "Etapa de KT", "Aguardando Mudança"] },
+              { pct: "100%", color: "#4ade80", bg: "rgba(74,222,128,0.08)", statuses: ["Concluída"] },
+            ].map(item => (
+              <div key={item.pct} style={{ background: item.bg, border: `1px solid ${item.color}33`, borderRadius: 7, padding: "8px 12px", minWidth: 180, flex: "1 1 180px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: item.color }}>{item.pct}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Faturado</span>
+                  <span style={{ fontSize: 10, color: "var(--gray-8)", marginLeft: "auto" }}>= EST.TOTAL × {item.pct}</span>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {item.statuses.map(s => (
+                    <span key={s} style={{ fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: `${item.color}18`, border: `1px solid ${item.color}44`, color: item.color, whiteSpace: "nowrap" }}>{s}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+
       <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--gray-4)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
           <thead>
