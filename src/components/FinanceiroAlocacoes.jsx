@@ -71,7 +71,7 @@ function TermoPickerAlocacao({ userId, mesRef, currentTermoId, termos }) {
   const termo = termos.find(t => t.id === current);
   const label = (() => {
     if (!current || !termo) return "— Selecionar —";
-    const mes = termo.mesReferencia ? new Date(termo.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+    const mes = termo.mesReferencia ? (() => { const [y,m] = termo.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
     const short = (termo.contratoNome || termo.id || "").split("-").slice(-1)[0].trim() || (termo.contratoNome || termo.id);
     return mes ? `${mes} · ${short}` : short;
   })();
@@ -99,7 +99,7 @@ function TermoPickerAlocacao({ userId, mesRef, currentTermoId, termos }) {
             — Nenhum —
           </button>
           {termos.map(t => {
-            const mes = t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+            const mes = t.mesReferencia ? (() => { const [y,m] = t.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
             const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
             return (
               <button key={t.id} type="button" onMouseDown={e => { e.preventDefault(); e.stopPropagation(); select(t.id); }}
@@ -231,7 +231,7 @@ export default function FinanceiroAlocacoes() {
             style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${termoFiltro ? "var(--indigo-6)" : "var(--gray-6)"}`, background: termoFiltro ? "var(--indigo-2)" : "var(--gray-1)", color: termoFiltro ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", maxWidth: 220 }}>
             <option value="">— Todos —</option>
             {termos.map(t => {
-              const mes = t.mesReferencia ? new Date(t.mesReferencia + "-01").toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "") : "";
+              const mes = t.mesReferencia ? (() => { const [y,m] = t.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
               const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
               return <option key={t.id} value={t.id}>{mes ? `${mes} · ${short}` : short}</option>;
             })}
