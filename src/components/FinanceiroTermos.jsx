@@ -563,13 +563,14 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                 {!collapsed[key] && <div style={BLK}>
                   <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
                     <colgroup>
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "28%" }} />
-                      <col style={{ width: "12%" }} />
-                      <col style={{ width: "13%" }} />
                       <col style={{ width: "10%" }} />
-                      <col style={{ width: "13%" }} />
-                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "25%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "9%" }} />
+                      <col style={{ width: "7%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "16%" }} />
                     </colgroup>
                     <thead><tr>
                       <th style={TH}>Chave</th>
@@ -577,6 +578,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                       <th style={TH}>Status</th>
                       <th style={TH}>Squad</th>
                       <th style={{ ...TH, textAlign: "right" }}>EST. TOTAL</th>
+                      <th style={{ ...TH, textAlign: "right" }}>FAT (%)</th>
                       <th style={{ ...TH, textAlign: "right" }}>FAT (H)</th>
                       <th style={{ ...TH, textAlign: "right" }}>Valor</th>
                     </tr></thead>
@@ -603,16 +605,16 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                             </td>
                             <td style={{ ...TDR, color: "var(--gray-10)" }}>{fullH}h</td>
                             <td style={{ ...TDR }}>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5 }}>
-                                {milePct && <span style={{ fontSize: 9, fontWeight: 800, color: mileCol, padding: "1px 4px", borderRadius: 3, background: `${mileCol}18`, border: `1px solid ${mileCol}44`, flexShrink: 0 }}>{milePct}</span>}
-                                <span style={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fatH}h</span>
-                              </div>
+                              {milePct
+                                ? <span style={{ fontSize: 10, fontWeight: 900, color: mileCol, padding: "2px 7px", borderRadius: 5, background: `${mileCol}18`, border: `1px solid ${mileCol}44`, whiteSpace: "nowrap" }}>{milePct}</span>
+                                : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                             </td>
+                            <td style={{ ...TDR, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fatH}h</td>
                             <td style={{ ...TDR, color }}>{fmtCurrency(fatH * valorBase)}</td>
                           </tr>
                         );
                       })}
-                      {tickets.length === 0 && <tr><td colSpan={7} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum ticket vinculado neste termo.</td></tr>}
+                      {tickets.length === 0 && <tr><td colSpan={8} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum ticket vinculado neste termo.</td></tr>}
                     </tbody>
                   </table>
                 </div>}
