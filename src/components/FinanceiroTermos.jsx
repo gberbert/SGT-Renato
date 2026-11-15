@@ -204,6 +204,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   const [mesReferencia, setMesReferencia] = useState(termo.mesReferencia || todayYM());
   const [codigoProjeto, setCodigoProjeto] = useState(termo.codigoProjeto || "");
   const [status, setStatus] = useState(termo.status || "Criado");
+  const [valorHoraOverride, setValorHoraOverride] = useState(termo.valorHoraBase ?? null);
   const [saving, setSaving] = useState(false);
 
   // ── Composição do Termo ──
@@ -267,7 +268,8 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
     { nome: "Sustentação GED AI", valorBase: 700.21 },
   ];
   const arcItems  = (config?.tabelaArc?.length ? config.tabelaArc : DEFAULT_ARC_FALLBACK);
-  const valorBase = config?.valorHoraBase || 0;
+  const configValorBase = config?.valorHoraBase || 0;
+  const valorBase = valorHoraOverride != null ? Number(valorHoraOverride) : configValorBase;
 
   // Milestone factors per slot: slot 0 = 30%, slot 1 = 60%, slot 2 = 10%
   const MILESTONE_FACTORS = [0.30, 0.60, 0.10];
@@ -314,12 +316,19 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   const catTotal   = ticketsCatalogo.reduce((s, t) => s + getTicketH(t) * valorBase, 0);
   const grandTotal = arcTotal + alocTotal + demTotal + fastTotal + catTotal;
 
-  // Persist computed total back to the termo document
+  // Persist computed totals back to the termo document (block-level for grid display)
   useEffect(() => {
     if (grandTotal > 0) {
-      updateDoc(doc(db, EMISSAO_COL, termo.id), { valorTotal: grandTotal }).catch(() => {});
+      updateDoc(doc(db, EMISSAO_COL, termo.id), {
+        valorTotal: grandTotal,
+        valorArc: arcTotal,
+        valorAlocacoes: alocTotal,
+        valorDemandas: demTotal,
+        valorDemandaFast: fastTotal,
+        valorCatalogo: catTotal,
+      }).catch(() => {});
     }
-  }, [grandTotal]);
+  }, [grandTotal]); // grandTotal captures all block totals
 
   // Collapsible state — all collapsed by default
   const [collapsed, setCollapsed] = useState({ arc: true, aloc: true, dem: true, fast: true, cat: true });
@@ -352,6 +361,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
     try {
       await onSave(termo.id, {
         contratoId, contratoNome, mesReferencia, codigoProjeto, status,
+        valorHoraBase: valorHoraOverride != null ? Number(valorHoraOverride) : null,
         ...(arcOverride ? { arcOverride: arcOverride.map(r => ({ nome: r.nome, valorBase: numVal(String(r.valorBase)) })) } : {}),
       });
       onClose();
@@ -467,6 +477,35 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                       </select>
                     : <input value={codigoProjeto} onChange={e => setCodigoProjeto(e.target.value)} style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, outline: "none" }} />)
                 : <span style={{ fontSize: 13, fontWeight: 700, color: "var(--amber-11)" }}>{termo.codigoProjeto || "—"}</span>}
+            </div>
+            <div style={{ minWidth: 160 }}>
+              <label style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 3 }}>
+                Valor Hora (R$/h)
+                {valorHoraOverride != null && Number(valorHoraOverride) !== configValorBase && (
+                  <span title={`Base configurada: ${fmtCurrency(configValorBase)}`} style={{ marginLeft: 4, fontSize: 9, fontWeight: 900, color: "#f59e0b", cursor: "help" }}>★ override</span>
+                )}
+              </label>
+              {editing ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <input type="number" min={0} step={0.01}
+                    value={valorHoraOverride ?? configValorBase}
+                    onChange={e => setValorHoraOverride(e.target.value !== "" ? numVal(e.target.value) : null)}
+                    style={{ padding: "5px 8px", borderRadius: 6, border: `1px solid ${valorHoraOverride != null && Number(valorHoraOverride) !== configValorBase ? "rgba(245,158,11,0.6)" : "var(--gray-6)"}`, background: "var(--gray-1)", color: valorHoraOverride != null && Number(valorHoraOverride) !== configValorBase ? "#f59e0b" : "var(--gray-12)", fontSize: 12, outline: "none", width: 90 }} />
+                  {valorHoraOverride != null && Number(valorHoraOverride) !== configValorBase && (
+                    <button type="button" title="Resetar para base" onClick={() => setValorHoraOverride(null)}
+                      style={{ padding: "2px 6px", borderRadius: 5, border: "1px solid rgba(245,158,11,0.5)", background: "rgba(245,158,11,0.1)", color: "#f59e0b", fontSize: 10, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      ↺ base
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <span style={{ fontSize: 13, fontWeight: 700, color: valorHoraOverride != null && Number(valorHoraOverride) !== configValorBase ? "#f59e0b" : "var(--gray-12)" }}>
+                  {fmtCurrency(valorHoraOverride ?? configValorBase)}
+                  {valorHoraOverride != null && Number(valorHoraOverride) !== configValorBase && (
+                    <span style={{ marginLeft: 4, fontSize: 10, color: "var(--gray-8)" }} title={`Base: ${fmtCurrency(configValorBase)}`}>vs {fmtCurrency(configValorBase)}</span>
+                  )}
+                </span>
+              )}
             </div>
             {/* Grand Total inline — right side of fields row */}
             <div style={{ marginLeft: "auto", textAlign: "right", flexShrink: 0, borderLeft: "1px solid var(--gray-5)", paddingLeft: 16 }}>
@@ -832,6 +871,24 @@ export default function FinanceiroTermos() {
   const [showCriar, setShowCriar] = useState(false);
   const [viewTermo, setViewTermo] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [sortKey, setSortKey] = useState("mesReferencia");
+  const [sortDir, setSortDir] = useState("desc");
+
+  const sortedTermos = useMemo(() => {
+    if (!sortKey) return termos;
+    return [...termos].sort((a, b) => {
+      const av = a[sortKey] ?? "";
+      const bv = b[sortKey] ?? "";
+      const isNum = typeof av === "number" || typeof bv === "number";
+      let cmp = isNum ? (Number(av) || 0) - (Number(bv) || 0) : String(av).localeCompare(String(bv), "pt-BR");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [termos, sortKey, sortDir]);
+
+  const handleSort = (key) => {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("desc"); }
+  };
 
   useEffect(() => onSnapshot(doc(db, "financeiro_termos", "config"), snap => setConfig(snap.exists() ? snap.data() : null), () => {}), []);
   useEffect(() => {
@@ -886,58 +943,81 @@ export default function FinanceiroTermos() {
           <div style={{ fontSize: 12, marginTop: 6, color: "var(--gray-7)" }}>Clique em "Criar Termo" para emitir o primeiro termo.</div>
         </div>
       ) : (
-        <div style={{ borderRadius: 10, border: "1px solid var(--gray-5)", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ borderRadius: 10, border: "1px solid var(--gray-5)", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1200 }}>
+            <colgroup>
+              <col style={{ minWidth: 130 }} />
+              <col style={{ minWidth: 110 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 130, maxWidth: 150 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead>
               <tr style={{ background: "var(--gray-3)" }}>
                 {[
-                  { label: "STATUS", align: "left" },
-                  { label: "MÊS REF.", align: "left" },
-                  { label: "VALOR TOTAL", align: "right" },
-                  { label: "CONTRATO", align: "left" },
-                  { label: "CÓD. PROJETO", align: "left" },
-                  { label: "CRIADO EM", align: "left" },
-                  { label: "AÇÕES", align: "center" },
+                  { label: "STATUS",        color: "var(--gray-9)", align: "left",   key: "status" },
+                  { label: "MÊS REF.",      color: "var(--gray-9)", align: "left",   key: "mesReferencia" },
+                  { label: "TABELA ARC",    color: "#38bdf8",       align: "right",  key: "valorArc" },
+                  { label: "ALOCAÇÕES",     color: "#a78bfa",       align: "right",  key: "valorAlocacoes" },
+                  { label: "DEMANDAS",      color: "#3b82f6",       align: "right",  key: "valorDemandas" },
+                  { label: "DEM. FAST",     color: "#f59e0b",       align: "right",  key: "valorDemandaFast" },
+                  { label: "CATÁLOGO",      color: "#a855f7",       align: "right",  key: "valorCatalogo" },
+                  { label: "VALOR TOTAL",   color: "var(--indigo-11)", align: "right", key: "valorTotal" },
+                  { label: "CONTRATO",      color: "var(--gray-9)", align: "left",   key: "contratoNome" },
+                  { label: "COD. PROJETO",  color: "var(--gray-9)", align: "left",   key: "codigoProjeto" },
+                  { label: "AÇÕES",         color: "var(--gray-9)", align: "center", key: null },
                 ].map((h, i) => (
-                  <th key={i} style={{ padding: "9px 14px", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--gray-9)", textAlign: h.align, borderBottom: "1px solid var(--gray-5)", whiteSpace: "nowrap" }}>{h.label}</th>
+                  <th key={i} onClick={h.key ? () => handleSort(h.key) : undefined}
+                    style={{ padding: "9px 10px", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: h.key && sortKey === h.key ? (h.color === "var(--gray-9)" ? "var(--gray-12)" : h.color) : h.color, textAlign: h.align, borderBottom: "1px solid var(--gray-5)", whiteSpace: "nowrap", cursor: h.key ? "pointer" : "default", userSelect: "none" }}>
+                    {h.label}
+                    {h.key && <span style={{ marginLeft: 4, opacity: sortKey === h.key ? 1 : 0.3, fontSize: 9 }}>{sortKey === h.key ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {termos.map((t, idx) => {
-                const createdAt = t.createdAt?.toDate ? t.createdAt.toDate().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+              {sortedTermos.map((t, idx) => {
+                const cv = (v, color, size = 12) => v == null ? <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>
+                  : <span title={fmtCurrency(v)} style={{ fontSize: size, fontWeight: size > 12 ? 900 : 700, color, opacity: v === 0 ? 0.5 : 1, fontVariantNumeric: "tabular-nums" }}>{fmtCurrency(v)}</span>;
                 return (
-                  <tr key={t.id} style={{ borderBottom: "1px solid var(--gray-4)", background: idx % 2 === 0 ? undefined : "var(--gray-1)" }}>
-                    <td style={{ padding: "10px 14px" }}><StatusBadge status={t.status} /></td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--gray-12)" }}>{fmtMes(t.mesReferencia)}</td>
-                    <td style={{ padding: "10px 14px", textAlign: "right" }}>
-                      {t.valorTotal != null
-                        ? <span style={{ fontSize: 12, fontWeight: 800, color: "var(--indigo-11)", fontVariantNumeric: "tabular-nums" }}>{fmtCurrency(t.valorTotal)}</span>
-                        : <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>}
-                    </td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, fontWeight: 700, color: "var(--gray-12)" }}>{t.contratoNome || "—"}</td>
-                    <td style={{ padding: "10px 14px" }}>
-                      {t.codigoProjeto ? <span style={{ fontSize: 12, fontWeight: 700, color: "var(--amber-11)", background: "var(--amber-3)", border: "1px solid var(--amber-7)", borderRadius: 6, padding: "2px 8px" }}>{t.codigoProjeto}</span>
-                        : <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>}
-                    </td>
-                    <td style={{ padding: "10px 14px", fontSize: 11, color: "var(--gray-9)" }}>{createdAt}</td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <div style={{ display: "flex", gap: 5, justifyContent: "center" }}>
-                        <button type="button" title="Visualizar" onClick={() => setViewTermo(t)}
-                          style={{ padding: "4px 7px", borderRadius: 6, border: "1px solid var(--gray-6)", background: "var(--gray-2)", color: "var(--gray-10)", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                          <Eye size={13} />
-                        </button>
-                        <button type="button" title="Editar" onClick={() => setViewTermo(t)}
-                          style={{ padding: "4px 7px", borderRadius: 6, border: "1px solid var(--indigo-6)", background: "var(--indigo-3)", color: "var(--indigo-11)", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                          <Pencil size={13} />
-                        </button>
-                        <button type="button" title="Excluir" disabled={deletingId === t.id} onClick={() => handleDelete(t.id)}
-                          style={{ padding: "4px 7px", borderRadius: 6, border: "1px solid var(--red-6)", background: "var(--red-3)", color: "var(--red-10)", cursor: "pointer", display: "flex", alignItems: "center", opacity: deletingId === t.id ? 0.5 : 1 }}>
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                <tr key={t.id} style={{ borderBottom: "1px solid var(--gray-4)", background: idx % 2 === 0 ? undefined : "var(--gray-1)" }}>
+                  <td style={{ padding: "10px 10px" }}><StatusBadge status={t.status} /></td>
+                  <td style={{ padding: "10px 10px", fontSize: 12, color: "var(--gray-12)", whiteSpace: "nowrap" }}>{fmtMes(t.mesReferencia)}</td>
+                  <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorArc, "#38bdf8")}</td>
+                  <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorAlocacoes, "#a78bfa")}</td>
+                  <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorDemandas, "#3b82f6")}</td>
+                  <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorDemandaFast, "#f59e0b")}</td>
+                  <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorCatalogo, "#a855f7")}</td>
+                  <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorTotal, "var(--indigo-11)", 13)}</td>
+                  <td style={{ padding: "10px 10px", maxWidth: 150, overflow: "hidden" }}>
+                    <span title={t.contratoNome} style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-12)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t.contratoNome || "—"}
+                    </span>
+                  </td>
+                  <td style={{ padding: "10px 10px" }}>
+                    {t.codigoProjeto
+                      ? <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber-11)", background: "var(--amber-3)", border: "1px solid var(--amber-7)", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.codigoProjeto}</span>
+                      : <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>}
+                  </td>
+                  <td style={{ padding: "10px 10px" }}>
+                    <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                      <button type="button" title="Visualizar / Editar" onClick={() => setViewTermo(t)}
+                        style={{ padding: "4px 7px", borderRadius: 6, border: "1px solid var(--indigo-6)", background: "var(--indigo-3)", color: "var(--indigo-11)", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                        <Eye size={13} />
+                      </button>
+                      <button type="button" title="Excluir" disabled={deletingId === t.id} onClick={() => handleDelete(t.id)}
+                        style={{ padding: "4px 7px", borderRadius: 6, border: "1px solid var(--red-6)", background: "var(--red-3)", color: "var(--red-10)", cursor: "pointer", display: "flex", alignItems: "center", opacity: deletingId === t.id ? 0.5 : 1 }}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
                 );
               })}
             </tbody>

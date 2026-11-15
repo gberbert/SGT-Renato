@@ -2,6 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Flex, Text, Callout, Progress, TextField, Tabs as RadixTabs } from '@radix-ui/themes';
 import { Radar, RefreshCw, XCircle, Search, ChevronRight, ChevronDown, Loader2, Clock, Download, DatabaseZap, Eye, Pencil } from 'lucide-react';
+import {
+  WORKFLOW_STEPS_DEMANDAS,
+  WORKFLOW_STEPS_FAST,
+  WORKFLOW_STEPS_SERVICES,
+  WORKFLOW_STEPS_PROBLEMAS,
+} from '../../components/WorkflowReferenceModal';
 import * as XLSX from 'xlsx';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -28,6 +34,7 @@ import {
   computeRadarEscopos,
   updateTicketRadarFields,
   PRIORIDADE_INTERNA_OPTIONS,
+  normalizeEscopoKey,
 } from '../../services/operacaoRadarService';
 import { stripNumericPrefix } from '../../utils/stripNumericPrefix';
 import './operacao-radar.css';
@@ -164,6 +171,33 @@ const RESPONSIBLE_STYLE = {
   'NTT Data': { bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.4)', color: '#38bdf8' },
   CPFL:       { bg: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.4)',  color: '#22c55e' },
 };
+
+const _buildFilaMap = (steps) => {
+  const m = new Map();
+  steps.forEach((s) => { if (s.status && s.fila) m.set(s.status, s.fila); });
+  return m;
+};
+const STATUS_FILA_BY_ESCOPO = {
+  'DEMANDA':      _buildFilaMap(WORKFLOW_STEPS_DEMANDAS),
+  'DEMANDA FAST': _buildFilaMap(WORKFLOW_STEPS_FAST.filter(s => !s.separator)),
+  'INCIDENTE':    _buildFilaMap(WORKFLOW_STEPS_SERVICES),
+  'SOLICITACAO':  _buildFilaMap(WORKFLOW_STEPS_SERVICES),
+  'PROBLEMAS':    _buildFilaMap(WORKFLOW_STEPS_PROBLEMAS),
+};
+
+function FilaTagInline({ fila }) {
+  if (!fila) return null;
+  const isNTT = fila === 'NTT Data';
+  const isPrevista = fila === 'CPFL Prevista';
+  const bg     = isNTT ? 'rgba(59,130,246,0.15)' : isPrevista ? 'rgba(255,180,50,0.15)' : 'rgba(255,120,0,0.15)';
+  const color  = isNTT ? '#60a5fa'                : isPrevista ? '#ffd166'               : '#ff8c00';
+  const border = isNTT ? 'rgba(59,130,246,0.45)'  : isPrevista ? 'rgba(255,180,50,0.5)' : 'rgba(255,120,0,0.5)';
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: bg, color, border: `1px solid ${border}`, whiteSpace: 'nowrap', marginTop: 2, display: 'inline-block' }}>
+      {fila}
+    </span>
+  );
+}
 
 const RADAR_TAB_DEFS = [
   { value: 'GERAL', slug: 'geral', label: 'Geral', requiredFn: PermissionFunctionKeys.RADAR_GERAL_VIEW },
@@ -1088,13 +1122,22 @@ const OperacaoHome = ({ userRole }) => {
                       </Flex>
                     );
                     if (!Array.isArray(ticketsCache)) return null;
-                    const escopoT = ticketsCache.filter(t => String(t.escopo || '').toUpperCase() === selectedGeralEscopo.toUpperCase());
-                    if (!escopoT.length) return <Text size="2" color="gray" mt="3">Nenhum ticket carregado para {selCard?.label}.</Text>;
-                    const sCounts = {};
-                    for (const t of escopoT) {
-                      const s = t.status ? String(t.status).trim() : '(sem status)';
-                      sCounts[s] = (sCounts[s] || 0) + 1;
+                    // Use pre-computed stats from statsRadar.byStatusByEscopo when available
+                    // (complete distribution, not limited by 5000-ticket fetch cap)
+                    const precomputedStats = statsRadar?.byStatusByEscopo?.[selectedGeralEscopo];
+                    let sCounts = {};
+                    if (precomputedStats && Object.keys(precomputedStats).length > 0) {
+                      sCounts = precomputedStats;
+                    } else if (Array.isArray(ticketsCache)) {
+                      const escopoT = ticketsCache.filter(t =>
+                        normalizeEscopoKey(t.escopo) === selectedGeralEscopo
+                      );
+                      for (const t of escopoT) {
+                        const s = t.status ? String(t.status).trim() : '(sem status)';
+                        sCounts[s] = (sCounts[s] || 0) + 1;
+                      }
                     }
+                    if (!Object.keys(sCounts).length) return <Text size="2" color="gray" mt="3">Nenhum dado de status para {selCard?.label}.</Text>;
                     const sortedS = Object.entries(sCounts).sort((a, b) => b[1] - a[1]);
                     return (
                       <Box mt="3" style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${(selCard?.color || '#22d3ee')}33`, borderRadius: 12, padding: '14px 16px' }}>
@@ -1108,17 +1151,47 @@ const OperacaoHome = ({ userRole }) => {
                           </button>
                         </Flex>
                         <Flex gap="2" wrap="wrap">
-                          {sortedS.map(([status, count]) => (
-                            <button key={status} type="button"
-                              onClick={() => openDrill(selectedGeralEscopo, `${selCard?.label} · ${status}`, null, status)}
-                              disabled={drillLoading}
-                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px', textAlign: 'left', width: 150, flex: '0 0 150px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4, transition: 'border 0.12s, background 0.12s' }}
-                              onMouseEnter={e => { e.currentTarget.style.border = `1px solid ${selCard?.color || '#22d3ee'}55`; e.currentTarget.style.background = `${selCard?.color || '#22d3ee'}0d`; }}
-                              onMouseLeave={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}>
-                              <span style={{ fontSize: 24, fontWeight: 900, color: selCard?.color || '#22d3ee', lineHeight: 1 }}>{formatNumber(count)}</span>
-                              <span style={{ fontSize: 10, lineHeight: 1.3, color: 'rgba(255,255,255,0.5)', whiteSpace: 'normal', wordBreak: 'break-word' }}>{status}</span>
-                            </button>
-                          ))}
+                          {sortedS.map(([status, count]) => {
+                            const fila = (STATUS_FILA_BY_ESCOPO[selectedGeralEscopo] || new Map()).get(status);
+                            const filaStyle = fila === 'NTT Data'
+                              ? RESPONSIBLE_STYLE['NTT Data']
+                              : fila === 'CPFL'
+                              ? RESPONSIBLE_STYLE['CPFL']
+                              : fila === 'CPFL Prevista'
+                              ? { bg: 'rgba(255,180,50,0.15)', border: 'rgba(255,180,50,0.5)', color: '#ffd166' }
+                              : null;
+                            return (
+                              <button key={status} type="button"
+                                onClick={() => openDrill(selectedGeralEscopo, `${selCard?.label} · ${status}`, null, status)}
+                                disabled={drillLoading}
+                                style={{
+                                  background: 'rgba(255,255,255,0.02)',
+                                  border: count > 0 ? '1px solid rgba(56,213,169,0.3)' : '1px solid rgba(255,255,255,0.07)',
+                                  borderRadius: 10,
+                                  padding: '10px 14px',
+                                  textAlign: 'left',
+                                  width: 120,
+                                  flex: '0 0 120px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 4,
+                                  transition: 'border 0.15s, box-shadow 0.15s',
+                                }}>
+                                <span style={{ fontSize: 28, fontWeight: 900, lineHeight: 1, color: count > 0 ? '#f0f0f0' : 'rgba(255,255,255,0.25)' }}>
+                                  {formatNumber(count)}
+                                </span>
+                                <span style={{ fontSize: 11, lineHeight: 1.3, color: count > 0 ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.28)', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                                  {status}
+                                </span>
+                                {filaStyle && (
+                                  <span style={{ marginTop: 4, display: 'inline-block', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: filaStyle.bg, color: filaStyle.color, border: `1px solid ${filaStyle.border}`, width: 'fit-content' }}>
+                                    {fila}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
                         </Flex>
                       </Box>
                     );
@@ -2013,46 +2086,83 @@ const OperacaoHome = ({ userRole }) => {
                   ) : progressHistoryMap !== null ? null : (
                     <Box className="operacao-radar-tickets-table-wrap">
                       <table className="operacao-radar-tickets-table">
-                        <colgroup>
-                          <col className="col-num" />
-                          <col className="col-acoes" />
-                          <col className="col-key" />
-                          <col className="col-status" />
-                          <col className="col-type" />
-                          <col className="col-summary" />
-                          <col className="col-squad" />
-                          <col className="col-prio" />
-                          <col className="col-imp" />
-                          <col className="col-estim" />
-                          <col className="col-estim" />
-                          <col style={{ width: 90 }} />
-                          <col style={{ width: 90 }} />
-                          <col className="col-date" />
-                          <col className="col-date" />
-                          <col className="col-date" />
-                        </colgroup>
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>AÇÕES</th>
-                            <th>ISSUE_KEY</th>
-                            <th>STATUS</th>
-                            <th>ISSUETYPE</th>
-                            <th>SUMMARY</th>
-                            <th>SQUAD</th>
-                            <th>PRIORIDADE</th>
-                            <th>IMPEDIMENTO</th>
-                            <th>EST. MACRO</th>
-                            <th>EST. TOTAL</th>
-                            <th>% DEV</th>
-                            <th>% TESTE INT</th>
-                            <th>DESENVOLVIMENTO</th>
-                            <th>TESTE INTERNO</th>
-                            <th>PRODUÇÃO</th>
-                          </tr>
-                        </thead>
+                        {activeEscopoTab === 'GERAL' ? (
+                          <>
+                            <colgroup>
+                              <col className="col-num" />
+                              <col className="col-acoes" />
+                              <col className="col-key" />
+                              <col className="col-status" />
+                              <col className="col-type" />
+                              <col className="col-summary" />
+                              <col className="col-squad" />
+                              <col className="col-prio" />
+                              <col style={{ width: 100 }} />
+                              <col style={{ width: 80 }} />
+                            </colgroup>
+                            <thead>
+                              <tr>
+                                <th>#</th>
+                                <th>AÇÕES</th>
+                                <th>ISSUE_KEY</th>
+                                <th>STATUS</th>
+                                <th>ISSUETYPE</th>
+                                <th>SUMMARY</th>
+                                <th>SQUAD</th>
+                                <th>PRIORIDADE</th>
+                                <th>CRIAÇÃO</th>
+                                <th>AGING</th>
+                              </tr>
+                            </thead>
+                          </>
+                        ) : (
+                          <>
+                            <colgroup>
+                              <col className="col-num" />
+                              <col className="col-acoes" />
+                              <col className="col-key" />
+                              <col className="col-status" />
+                              <col className="col-type" />
+                              <col className="col-summary" />
+                              <col className="col-squad" />
+                              <col className="col-prio" />
+                              <col className="col-imp" />
+                              <col className="col-estim" />
+                              <col className="col-estim" />
+                              <col style={{ width: 90 }} />
+                              <col style={{ width: 90 }} />
+                              <col className="col-date" />
+                              <col className="col-date" />
+                              <col className="col-date" />
+                            </colgroup>
+                            <thead>
+                              <tr>
+                                <th>#</th>
+                                <th>AÇÕES</th>
+                                <th>ISSUE_KEY</th>
+                                <th>STATUS</th>
+                                <th>ISSUETYPE</th>
+                                <th>SUMMARY</th>
+                                <th>SQUAD</th>
+                                <th>PRIORIDADE</th>
+                                <th>IMPEDIMENTO</th>
+                                <th>EST. MACRO</th>
+                                <th>EST. TOTAL</th>
+                                <th>% DEV</th>
+                                <th>% TESTE INT</th>
+                                <th>DESENVOLVIMENTO</th>
+                                <th>TESTE INTERNO</th>
+                                <th>PRODUÇÃO</th>
+                              </tr>
+                            </thead>
+                          </>
+                        )}
                         <tbody>
-                          {drillRows.map((ticket, idx) => (
+                          {drillRows.map((ticket, idx) => {
+                            const _cMs = ticket.createdAt ? new Date(ticket.createdAt).getTime() : null;
+                            const _age = (_cMs && !isNaN(_cMs)) ? Math.floor((Date.now() - _cMs) / 86400000) : null;
+                            const _ageC = _age == null ? 'rgba(255,255,255,0.4)' : _age > 90 ? '#f87171' : _age > 30 ? '#f97316' : _age > 7 ? '#fbbf24' : 'rgba(255,255,255,0.6)';
+                            return (
                             <tr
                               key={ticket.issueKey}
                               className={ticket.depth > 0 ? 'operacao-radar-tickets-row-child' : undefined}
@@ -2161,6 +2271,12 @@ const OperacaoHome = ({ userRole }) => {
                                   return ticket.priority || '—';
                                 })()}
                               </td>
+                              {activeEscopoTab === 'GERAL' ? (
+                                <>
+                                  <td style={{ padding: '4px 8px', fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{fmtDate(ticket.createdAt)}</td>
+                                  <td style={{ padding: '4px 8px', textAlign: 'center' }}>{_age != null ? <span style={{ fontSize: 12, fontWeight: 700, color: _ageC }}>{_age}d</span> : '—'}</td>
+                                </>
+                              ) : (<>
                               <td style={{ textAlign: 'center', color: ticket.impedimento === true ? '#eab308' : 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
                                 {ticket.impedimento === true ? '🚧' : '—'}
                               </td>
@@ -2223,8 +2339,10 @@ const OperacaoHome = ({ userRole }) => {
                                 if (v === plus1Str || v === plus2Str) return { color: '#fbbf24', fontWeight: 700, background: 'rgba(251,191,36,0.10)' };
                                 return {};
                               })()}>{fmtDate(ticket.dataConclusao)}</td>
+                              </>)}
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </Box>

@@ -692,6 +692,7 @@ async function incrementStatsCounters(tickets) {
   const byStatus = {};
   const byProject = {};
   const byIssueTypeByEscopo = {};
+  const byStatusByEscopo = {};
 
   for (const ticket of tickets) {
     if (ticket.escopo) {
@@ -702,6 +703,12 @@ async function incrementStatsCounters(tickets) {
         if (!byIssueTypeByEscopo[escopoKey]) byIssueTypeByEscopo[escopoKey] = {};
         byIssueTypeByEscopo[escopoKey][issueType] =
           (byIssueTypeByEscopo[escopoKey][issueType] || 0) + 1;
+        // Per-escopo status distribution
+        if (ticket.status) {
+          if (!byStatusByEscopo[escopoKey]) byStatusByEscopo[escopoKey] = {};
+          byStatusByEscopo[escopoKey][ticket.status] =
+            (byStatusByEscopo[escopoKey][ticket.status] || 0) + 1;
+        }
       }
     }
     if (ticket.status) byStatus[ticket.status] = (byStatus[ticket.status] || 0) + 1;
@@ -726,7 +733,18 @@ async function incrementStatsCounters(tickets) {
     }
   }
 
+  const statusEscopoPatch = { byStatusByEscopo: {} };
+  for (const [escopoKey, statuses] of Object.entries(byStatusByEscopo)) {
+    statusEscopoPatch.byStatusByEscopo[escopoKey] = {};
+    for (const [status, count] of Object.entries(statuses)) {
+      statusEscopoPatch.byStatusByEscopo[escopoKey][status] = FieldValue.increment(count);
+    }
+  }
+
   await db.doc(OPERACAO_STATS_DOC).set(updates, { merge: true });
+  if (Object.keys(byStatusByEscopo).length) {
+    await db.doc(OPERACAO_STATS_DOC).set(statusEscopoPatch, { merge: true });
+  }
   if (Object.keys(byIssueTypeByEscopo).length) {
     await db.doc(OPERACAO_STATS_DOC).set(issueTypePatch, { merge: true });
   }

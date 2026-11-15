@@ -6,7 +6,8 @@ import {
 import { db, auth } from '../firebase';
 import { fetchTicketsForRoadmap, PRIORIDADE_INTERNA_OPTIONS } from '../services/operacaoRadarService';
 import { subscribeToCiclos, createCiclo, addTicketToCiclo, removeTicketFromCiclo } from '../services/cicloService';
-import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, X, Download, Clock, Save, Trash2, FileText } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Filter, HelpCircle, Download, Clock, Save, Trash2, FileText } from 'lucide-react';
+import { WorkflowModal } from './WorkflowReferenceModal';
 import { CicloSection, TicketRow, ESCOPOS_ALVO, DATE_FIELD_OPTIONS, MultiSelectFilter, exportTicketsToXlsx, WorkflowTab } from './PlanejamentoCicloHelpers';
 import GestaoReleaseTab from './GestaoReleaseTab';
 import { exportCicloPdf } from './CicloPdfExport';
@@ -168,6 +169,25 @@ const WORKFLOW_STEPS_FAST = [
   { id: 19, status: 'Aguardando Solicitante',          fila: 'CPFL' },
 ];
 
+// Workflow de Services (Incidentes + Solicitações)
+const WORKFLOW_STEPS_SERVICES = [
+  { id: 1,  status: 'Aguardando Atendimento',          fila: 'NTT Data' },
+  { id: 2,  status: 'Em Atendimento',                  fila: 'NTT Data' },
+  { id: 3,  status: 'Resolvido',                       fila: 'NTT Data' },
+  { id: 4,  status: 'Agendado',                        fila: 'NTT Data' },
+  { id: 5,  status: 'Aguardando Compra',               fila: 'CPFL' },
+  { id: 6,  status: 'Aguardando Validação',            fila: 'CPFL' },
+  { id: 7,  status: 'Aguardando Problema',             fila: 'NTT Data' },
+  { id: 8,  status: 'Aguardando Mudança',              fila: 'NTT Data' },
+  { id: 9,  status: 'Aguardando Fornecedor',           fila: 'CPFL' },
+  { id: 10, status: 'Aguardando Solicitante',          fila: 'CPFL' },
+  { id: 11, status: 'Aprovação Demanda Fast',          fila: 'CPFL' },
+  { id: 12, status: 'Aguardando Aprovação Gestor',     fila: 'CPFL' },
+  { id: 13, status: 'Aguardando Aprovação Tecnica',    fila: 'CPFL' },
+  { id: 14, status: 'Aguardando Aprovação Adicional',  fila: 'CPFL' },
+  { id: 15, status: 'Aprovado',                        fila: 'NTT Data' },
+];
+
 // Grupos do workflow de Problemas
 const WORKFLOW_STEPS_PROBLEMAS = [
   { tipo: 'Problema', id: 1,  status: 'Aguardando RCA',                        fila: 'NTT Data' },
@@ -231,36 +251,42 @@ const FILA_STATUS_MAP = {
   ],
 };
 
-function FilaTag({ fila }) {
-  const isNTT = fila === 'NTT Data';
-  const isPrevisto = fila === 'CPFL Previsto';
-  // CPFL Previsto = neon laranja claro, CPFL = neon laranja, NTT Data = azul
-  const bg     = isNTT ? 'rgba(59,130,246,0.15)'  : isPrevisto ? 'rgba(255,180,50,0.15)'  : 'rgba(255,120,0,0.15)';
-  const color  = isNTT ? '#60a5fa'                 : isPrevisto ? '#ffd166'                : '#ff8c00';
-  const border = isNTT ? 'rgba(59,130,246,0.45)'   : isPrevisto ? 'rgba(255,180,50,0.5)'  : 'rgba(255,120,0,0.5)';
-  return (
-    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: bg, color, border: `1px solid ${border}`, whiteSpace: 'nowrap', flexShrink: 0 }}>
-      {fila}
-    </span>
-  );
-}
-
-function EscopoTag({ escopo }) {
-  return (
-    <span style={{ fontSize: 12, color: 'var(--gray-10)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-      {escopo}
-    </span>
-  );
-}
-
-function WorkflowModal({ onClose }) {
+// WorkflowModal imported from ./WorkflowReferenceModal (dead local copy removed)
+function _PLACEHOLDER_NEVER_CALLED_DO_NOT_USE({ onClose }) {
+  return null; // stripped
   const [activeTab, setActiveTab] = useState('demandas');
+  const [filaFilter, setFilaFilter] = useState(new Set()); // empty = show all
 
   const tabs = [
     { key: 'demandas', label: 'DEMANDAS' },
     { key: 'fast', label: 'DEMANDAS FAST' },
     { key: 'problemas', label: 'PROBLEMAS' },
+    { key: 'services', label: 'SERVICES' },
   ];
+
+  // All filas available per tab
+  const filasByTab = {
+    demandas: ['CPFL Prevista', 'CPFL', 'NTT Data'],
+    fast: ['CPFL', 'NTT Data'],
+    problemas: ['CPFL', 'NTT Data'],
+    services: ['CPFL', 'NTT Data'],
+  };
+
+  const availableFilas = filasByTab[activeTab] || ['CPFL', 'NTT Data'];
+
+  const toggleFila = (fila) => {
+    setFilaFilter(prev => {
+      const next = new Set(prev);
+      if (next.has(fila)) next.delete(fila);
+      else next.add(fila);
+      return next;
+    });
+  };
+
+  const isFilaActive = (fila) => filaFilter.size === 0 || filaFilter.has(fila);
+
+  const filterByFila = (steps) =>
+    filaFilter.size === 0 ? steps : steps.filter(s => !s.separator && filaFilter.has(s.fila));
 
   // Group problemas by tipo
   const problemasByTipo = useMemo(() => {
@@ -320,12 +346,36 @@ function WorkflowModal({ onClose }) {
           ))}
         </div>
 
-        {/* Legenda */}
-        <div style={{ padding: '8px 20px', borderBottom: '1px solid var(--gray-4)', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* Fila filter — interactive pills */}
+        <div style={{ padding: '8px 20px', borderBottom: '1px solid var(--gray-4)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: 'var(--gray-9)', fontWeight: 600 }}>FILA:</span>
-          {activeTab === 'demandas' && <FilaTag fila="CPFL Prevista" />}
-          <FilaTag fila="CPFL" />
-          <FilaTag fila="NTT Data" />
+          {availableFilas.map(fila => {
+            const active = isFilaActive(fila);
+            return (
+              <button
+                key={fila}
+                type="button"
+                onClick={() => toggleFila(fila)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  opacity: active ? 1 : 0.35,
+                  transition: 'opacity 0.15s',
+                }}
+                title={active ? `Ocultar fila ${fila}` : `Mostrar fila ${fila}`}
+              >
+                <FilaTag fila={fila} />
+              </button>
+            );
+          })}
+          {filaFilter.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilaFilter(new Set())}
+              style={{ fontSize: 10, padding: '2px 8px', background: 'none', border: '1px solid var(--gray-5)', borderRadius: 6, cursor: 'pointer', color: 'var(--gray-9)' }}
+            >
+              Todas
+            </button>
+          )}
         </div>
 
         {/* Table content */}
@@ -343,7 +393,7 @@ function WorkflowModal({ onClose }) {
                 </tr>
               </thead>
               <tbody>
-                {WORKFLOW_STEPS.map((step, idx) => (
+                {filterByFila(WORKFLOW_STEPS).map((step, idx) => (
                   <tr key={step.id} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}>
                     <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
                     <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
@@ -368,8 +418,10 @@ function WorkflowModal({ onClose }) {
               <tbody>
                 {WORKFLOW_STEPS_FAST.map((step, idx) => {
                   if (step.separator) {
+                    if (filaFilter.size > 0) return null;
                     return <tr key={`sep-${idx}`}><td colSpan={3} style={{ padding: '3px 0', borderBottom: '2px solid var(--gray-5)', background: 'transparent' }} /></tr>;
                   }
+                  if (filaFilter.size > 0 && !filaFilter.has(step.fila)) return null;
                   return (
                     <tr key={step.id} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}>
                       <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
@@ -394,11 +446,13 @@ function WorkflowModal({ onClose }) {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(problemasByTipo).map(([tipo, steps]) =>
-                  steps.map((step, idx) => (
+                {Object.entries(problemasByTipo).map(([tipo, steps]) => {
+                  const filteredSteps = filterByFila(steps);
+                  if (filteredSteps.length === 0) return null;
+                  return filteredSteps.map((step, idx) => (
                     <tr key={`${tipo}-${step.id}`} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}>
                       {idx === 0 && (
-                        <td rowSpan={steps.length} style={{
+                        <td rowSpan={filteredSteps.length} style={{
                           padding: '6px 14px', fontSize: 11, fontWeight: 800,
                           color: 'var(--gray-9)', verticalAlign: 'top',
                           borderRight: '1px solid var(--gray-4)',
@@ -412,8 +466,30 @@ function WorkflowModal({ onClose }) {
                       <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
                       <td style={{ padding: '4px 14px' }}><FilaTag fila={step.fila} /></td>
                     </tr>
-                  ))
-                )}
+                  ));
+                })}
+              </tbody>
+            </table>
+          )}
+
+          {/* SERVICES tab — Incidentes + Solicitações */}
+          {activeTab === 'services' && (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--gray-3)', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'center', width: 40, borderBottom: '1px solid var(--gray-5)' }}>#</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>STATUS</th>
+                  <th style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)', textAlign: 'left', borderBottom: '1px solid var(--gray-5)' }}>FILA (RESPONSÁVEL)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filterByFila(WORKFLOW_STEPS_SERVICES).map((step, idx) => (
+                  <tr key={step.id} style={{ background: idx % 2 === 0 ? 'transparent' : 'var(--gray-2)', borderBottom: '1px solid var(--gray-3)' }}>
+                    <td style={{ padding: '4px 14px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gray-9)' }}>{step.id}</td>
+                    <td style={{ padding: '4px 14px', fontSize: 12, color: 'var(--gray-12)', fontWeight: 500 }}>{step.status}</td>
+                    <td style={{ padding: '4px 14px' }}><FilaTag fila={step.fila} /></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
@@ -422,6 +498,8 @@ function WorkflowModal({ onClose }) {
     </div>
   );
 }
+
+// WorkflowModal is imported from ./WorkflowReferenceModal
 
 export default function PlanejamentoCiclo() {
   const [tickets, setTickets] = useState([]);

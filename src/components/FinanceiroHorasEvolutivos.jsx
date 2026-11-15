@@ -77,9 +77,25 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   };
   const toggle = async (termoId) => {
     if (saving) return;
-    const next = isDemanda
-      ? (selected.includes(termoId) ? selected.filter(id => id !== termoId) : selected.length < MAX_TERMOS ? [...selected, termoId] : selected)
-      : (selected.includes(termoId) ? [] : [termoId]);
+    let next;
+    if (isDemanda) {
+      const count = selected.filter(id => id === termoId).length;
+      if (count > 0 && selected.length >= MAX_TERMOS) {
+        // Term already selected and all slots full → remove all occurrences
+        next = selected.filter(id => id !== termoId);
+      } else if (count > 0 && selected.length < MAX_TERMOS) {
+        // Term already selected but slot still open → add again (allow duplicate for same-term multi-%)
+        next = [...selected, termoId];
+      } else if (count === 0 && selected.length < MAX_TERMOS) {
+        // New term, slot available → add
+        next = [...selected, termoId];
+      } else {
+        // No slots, different term → no change
+        next = selected;
+      }
+    } else {
+      next = selected.includes(termoId) ? [] : [termoId];
+    }
     setSaving(true);
     try {
       await setDoc(doc(db, "tickets_global", ticketId), {
@@ -136,7 +152,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
             const milestoneIdx = isSel ? selIdx : nextSlot;
             const milestonePct = isDemanda && milestoneIdx >= 0 ? MILESTONE_LABELS[milestoneIdx] : null;
             const milestoneColor = isDemanda && milestoneIdx >= 0 ? MILESTONE_COLORS[milestoneIdx] : "var(--indigo-9)";
-            const disabled = isDemanda && !isSel && selected.length >= MAX_TERMOS;
+            const disabled = isDemanda && selected.length >= MAX_TERMOS && !selected.includes(t.id);
             return (
               <button key={t.id} type="button" onClick={() => !disabled && toggle(t.id)}
                 style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", background: isSel ? "var(--indigo-2)" : "none", cursor: disabled ? "not-allowed" : "pointer", color: disabled ? "var(--gray-7)" : "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7, opacity: disabled ? 0.5 : 1 }}>
@@ -410,7 +426,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
           <select value={termoFilter} onChange={e => setTermoFilter(e.target.value)}
             style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${termoFilter ? "var(--indigo-6)" : "var(--gray-6)"}`, background: termoFilter ? "var(--indigo-2)" : "var(--gray-1)", color: termoFilter ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 11, cursor: "pointer", outline: "none", maxWidth: 160 }}>
             <option value="">— Todos —</option>
-            {termos.map(t => {
+            {[...termos].sort((a, b) => (b.mesReferencia || "").localeCompare(a.mesReferencia || "")).map(t => {
               const mes = t.mesReferencia ? (() => { const [y,m] = t.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
               const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
               return <option key={t.id} value={t.id}>{mes ? `${mes} · ${short}` : short}</option>;
