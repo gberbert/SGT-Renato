@@ -75,35 +75,43 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
     }
     setOpen(v => !v);
   };
-  const toggle = async (termoId) => {
-    if (saving) return;
-    let next;
-    if (isDemanda) {
-      const count = selected.filter(id => id === termoId).length;
-      if (count > 0 && selected.length >= MAX_TERMOS) {
-        // Term already selected and all slots full → remove all occurrences
-        next = selected.filter(id => id !== termoId);
-      } else if (count > 0 && selected.length < MAX_TERMOS) {
-        // Term already selected but slot still open → add again (allow duplicate for same-term multi-%)
-        next = [...selected, termoId];
-      } else if (count === 0 && selected.length < MAX_TERMOS) {
-        // New term, slot available → add
-        next = [...selected, termoId];
-      } else {
-        // No slots, different term → no change
-        next = selected;
-      }
-    } else {
-      next = selected.includes(termoId) ? [] : [termoId];
-    }
+  // ── save helper ──────────────────────────────────────────────
+  const save = async (next) => {
     setSaving(true);
     try {
       await setDoc(doc(db, "tickets_global", ticketId), {
         termoFaturamento: next, termoFaturamentoUpdatedAt: serverTimestamp(),
       }, { merge: true });
-    } catch { } finally { setSaving(false); }
-    if (!isDemanda) setOpen(false);
+    } catch {} finally { setSaving(false); }
   };
+
+  // DEMANDA: add one slot for this term (up to MAX_TERMOS)
+  const addTermo = async (termoId) => {
+    if (saving || selected.length >= MAX_TERMOS) return;
+    await save([...selected, termoId]);
+  };
+
+  // DEMANDA: remove last occurrence of this term
+  const removeTermo = async (termoId) => {
+    if (saving) return;
+    const idx = selected.lastIndexOf(termoId);
+    if (idx === -1) return;
+    const next = [...selected.slice(0, idx), ...selected.slice(idx + 1)];
+    await save(next);
+  };
+
+  // Non-demanda: single toggle
+  const toggleSingle = async (termoId) => {
+    if (saving) return;
+    await save(selected.includes(termoId) ? [] : [termoId]);
+    setOpen(false);
+  };
+
+  // Sorted list (mesReferencia desc, most recent first)
+  const sortedTermos = useMemo(
+    () => [...termos].sort((a, b) => (b.mesReferencia || "").localeCompare(a.mesReferencia || "")),
+    [termos]
+  );
   const labels = selected.map(id => {
     const t = termos.find(x => x.id === id);
     if (!t) return id;
@@ -143,34 +151,75 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
             style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 11, border: "none", background: "none", cursor: "pointer", color: "var(--gray-9)", borderBottom: "1px solid var(--gray-4)" }}>
             — Nenhum —
           </button>
-          {termos.map(t => {
-            const isSel = selected.includes(t.id);
-            const selIdx = selected.indexOf(t.id);
-            const nextSlot = selected.length < MAX_TERMOS ? selected.length : -1;
-            const mes = t.mesReferencia ? (() => { const [y,m] = t.mesReferencia.split("-").map(Number); return new Date(y, m-1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", ""); })() : "";
+          {sortedTermos.map(t => {
+            const mes = t.mesReferencia ? (() => {
+              const [y, m] = t.mesReferencia.split("-").map(Number);
+              return new Date(y, m - 1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
+            })() : "";
             const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
-            const milestoneIdx = isSel ? selIdx : nextSlot;
-            const milestonePct = isDemanda && milestoneIdx >= 0 ? MILESTONE_LABELS[milestoneIdx] : null;
-            const milestoneColor = isDemanda && milestoneIdx >= 0 ? MILESTONE_COLORS[milestoneIdx] : "var(--indigo-9)";
-            const disabled = isDemanda && selected.length >= MAX_TERMOS && !selected.includes(t.id);
-            return (
-              <button key={t.id} type="button" onClick={() => !disabled && toggle(t.id)}
-                style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", background: isSel ? "var(--indigo-2)" : "none", cursor: disabled ? "not-allowed" : "pointer", color: disabled ? "var(--gray-7)" : "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7, opacity: disabled ? 0.5 : 1 }}>
-                <span style={{ width: 14, height: 14, borderRadius: isDemanda ? 3 : 999, border: `2px solid ${isSel ? milestoneColor : "var(--gray-6)"}`, background: isSel ? milestoneColor : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {isSel && <span style={{ fontSize: 8, color: "#fff", fontWeight: 900 }}>✓</span>}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    {milestonePct && <span style={{ fontSize: 9, fontWeight: 900, color: milestoneColor, padding: "1px 5px", borderRadius: 4, background: `${milestoneColor}18`, border: `1px solid ${milestoneColor}44`, flexShrink: 0 }}>{milestonePct}</span>}
-                    {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)" }}>{mes}</span>}
+            const count = isDemanda ? selected.filter(id => id === t.id).length : (selected.includes(t.id) ? 1 : 0);
+            const occupiedSlots = selected.map((id, i) => ({ id, i })).filter(x => x.id === t.id);
+            const canAdd = selected.length < MAX_TERMOS;
+            if (!isDemanda) {
+              const isSel = count > 0;
+              return (
+                <button key={t.id} type="button" onClick={() => toggleSingle(t.id)}
+                  style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", background: isSel ? "var(--indigo-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7 }}>
+                  <span style={{ width: 14, height: 14, borderRadius: 999, border: `2px solid ${isSel ? "var(--indigo-9)" : "var(--gray-6)"}`, background: isSel ? "var(--indigo-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {isSel && <span style={{ fontSize: 8, color: "#fff", fontWeight: 900 }}>✓</span>}
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 5 }}>{mes}</span>}
                     <span style={{ fontWeight: 600, fontSize: 11 }}>{short}</span>
+                    {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", marginTop: 1 }}>{t.codigoProjeto}</div>}
                   </div>
+                </button>
+              );
+            }
+            // ── DEMANDA: +/− counter row per term ────────────────
+            const nextSlotColor = MILESTONE_COLORS[selected.length] || "#a5b4fc";
+            return (
+              <div key={t.id} style={{ padding: "6px 10px", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8, background: count > 0 ? "var(--indigo-2)" : "none" }}>
+                {/* Milestone badges for occupied slots */}
+                <div style={{ display: "flex", gap: 3, flexWrap: "wrap", minWidth: 52 }}>
+                  {occupiedSlots.length > 0
+                    ? occupiedSlots.map(({ i }) => (
+                        <span key={i} style={{ fontSize: 9, fontWeight: 900, color: MILESTONE_COLORS[i], padding: "1px 5px", borderRadius: 4, background: MILESTONE_COLORS[i] + "20", border: "1px solid " + MILESTONE_COLORS[i] + "55", whiteSpace: "nowrap" }}>
+                          {MILESTONE_LABELS[i]}
+                        </span>
+                      ))
+                    : canAdd
+                      ? <span style={{ fontSize: 9, fontWeight: 700, color: nextSlotColor, padding: "1px 5px", borderRadius: 4, background: nextSlotColor + "15", border: "1px dashed " + nextSlotColor + "55", whiteSpace: "nowrap", opacity: 0.6 }}>
+                          {MILESTONE_LABELS[selected.length]}
+                        </span>
+                      : null}
+                </div>
+                {/* Term label */}
+                <div style={{ flex: 1, fontSize: 11, color: "var(--gray-12)" }}>
+                  {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 4 }}>{mes}</span>}
+                  <span style={{ fontWeight: 600 }}>{short}</span>
                   {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", marginTop: 1 }}>{t.codigoProjeto}</div>}
                 </div>
-              </button>
+                {/* +/− controls */}
+                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                  <button type="button" onClick={e => { e.stopPropagation(); removeTermo(t.id); }}
+                    disabled={count === 0 || saving}
+                    style={{ width: 22, height: 22, borderRadius: 5, border: "1px solid var(--gray-6)", background: count > 0 ? "rgba(239,68,68,0.12)" : "transparent", color: count > 0 ? "#f87171" : "var(--gray-6)", fontSize: 14, fontWeight: 900, cursor: count > 0 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>
+                    −
+                  </button>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: count > 0 ? "var(--indigo-11)" : "var(--gray-7)", minWidth: 14, textAlign: "center" }}>
+                    {count}
+                  </span>
+                  <button type="button" onClick={e => { e.stopPropagation(); addTermo(t.id); }}
+                    disabled={!canAdd || saving}
+                    style={{ width: 22, height: 22, borderRadius: 5, border: "1px solid var(--gray-6)", background: canAdd ? "rgba(99,102,241,0.12)" : "transparent", color: canAdd ? "var(--indigo-9)" : "var(--gray-6)", fontSize: 14, fontWeight: 900, cursor: canAdd ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, padding: 0 }}>
+                    +
+                  </button>
+                </div>
+              </div>
             );
           })}
-          {termos.length === 0 && <div style={{ padding: "10px", fontSize: 11, color: "var(--gray-8)" }}>Nenhum termo emitido.</div>}
+          {sortedTermos.length === 0 && <div style={{ padding: "10px", fontSize: 11, color: "var(--gray-8)" }}>Nenhum termo emitido.</div>}
         </div>
       )}
     </div>
