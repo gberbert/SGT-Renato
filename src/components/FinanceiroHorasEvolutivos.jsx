@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { db } from "../firebase";
 import { collection, query, where, onSnapshot, orderBy, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import * as XLSX from "xlsx";
 import { getStatusColor } from "./PlanejamentoCicloHelpers";
 import { stripNumericPrefix } from "../utils/stripNumericPrefix";
 import { subscribeToSystems } from "../services/settingsService";
@@ -502,6 +503,62 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
           {termoFilter && <button type="button" onClick={() => setTermoFilter("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
         </div>
         <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
+        <button type="button" onClick={() => {
+          const fmtV = v => v == null ? "" : v;
+          const rows = filtered.map(t => {
+            const em = getEscopoMeta(t.escopo);
+            const squad = t.squadPrincipal || stripNumericPrefix(t.grupoSolucionador || t.grupoSuporte || "") || t.squad || "";
+            const isFastT = String(t.escopo||"").toUpperCase().includes("FAST");
+            const devP = t.percentualConclusao != null ? Math.min(100,Math.max(0,Number(t.percentualConclusao))) : null;
+            const testeP = t.percentualConclusaoTesteInterno != null ? Math.min(100,Math.max(0,Number(t.percentualConclusaoTesteInterno))) : null;
+            const avgP = devP==null&&testeP==null ? null : isFastT ? Math.round((devP??0)*10)/10 : Math.round(((devP??0)*0.7+(testeP??0)*0.3)*10)/10;
+            const fatH = getFaturadas(t);
+            const estV = getEstTotal(t);
+            const aFaturar = estV!=null&&fatH!=null ? Math.round(Math.max(0,estV-fatH)*10)/10 : null;
+            const pctV = STATUS_10PCT.has(t.status)?100:STATUS_60PCT.has(t.status)?90:STATUS_30PCT.has(t.status)?30:null;
+            const termoLabels = (() => {
+              const tf = t.termoFaturamento;
+              if (!tf) return "";
+              const ids = Array.isArray(tf) ? tf : [tf];
+              return ids.map(id => { const trm = termos.find(x=>x.id===id); if(!trm) return id; const mes=trm.mesReferencia?(() => { const [y,m]=trm.mesReferencia.split("-").map(Number); return new Date(y,m-1,1).toLocaleString("pt-BR",{month:"short",year:"2-digit"}).replace(".",""); })():""; const short=(trm.contratoNome||trm.id||"").split("-").slice(-1)[0].trim()||(trm.contratoNome||trm.id); return mes?`${mes}·${short}`:short; }).join(" | ");
+            })();
+            const sis = t.sistemaImpactado||t.sistemasImpactados||t.sistema||"";
+            const sisStr = Array.isArray(sis)?sis.join(", "):String(sis||"");
+            const contratoNome = (() => { const grp=t.grupoSolucionador||t.grupoSuporte||""; const sys=sistemas.find(s=>s.grupoSuporte===grp); return sys?.contratoNome||""; })();
+            const row = { "ESCOPO": em.short, "TIPO": fmtV(t.issueType), "CHAVE": fmtV(t.issueKey||t.id), "RESUMO": fmtV(t.summary) };
+            visibleCols.forEach(id => {
+              switch(id) {
+                case "termoFaturamento": row["TERMO"] = termoLabels; break;
+                case "status": row["STATUS"] = fmtV(t.status); break;
+                case "squad": row["SQUAD"] = squad; break;
+                case "avanco": row["AVANÇO (%)"] = avgP!=null?avgP:""; break;
+                case "estimativaTotal": row["EST. TOTAL (H)"] = fmtV(estV); break;
+                case "fatPct": row["FAT (%)"] = pctV!=null?pctV:""; break;
+                case "fatFaturadas": row["FAT (H)"] = fmtV(fatH); break;
+                case "fatAFaturar": row["A FAT (H)"] = fmtV(aFaturar); break;
+                case "plHrsFast": row["PL. HRS FAST"] = fmtV(t.planejamentoHorasDemandaFast); break;
+                case "tempoEsforco": row["TEMPO ESFORÇO (H)"] = fmtV(t.tempoEsforcoHoras); break;
+                case "sistemaImpactado": row["SISTEMA"] = sisStr; break;
+                case "grupoSolucionador": row["GRUPO SOLUCIONADOR"] = fmtV(t.grupoSolucionador||t.grupoSuporte); break;
+                case "contrato": row["CONTRATO"] = contratoNome; break;
+                case "reporter": row["RELATOR"] = fmtV(t.reporter); break;
+                case "dataAtividade": row["DATA ATIVIDADE"] = fmtDate(t.dataAtividade); break;
+                case "dataEncerramento": row["DATA ENCERRAMENTO"] = fmtDate(t.dataEncerramento||t.resolvedAt); break;
+                case "resolution": row["RESOLUTION"] = fmtV(t.resolution); break;
+                case "demandaFast": row["DM FAST"] = fmtV(t.demandaFast); break;
+                case "avanco": row["AVANÇO (%)"] = avgP!=null?avgP:""; break;
+              }
+            });
+            return row;
+          });
+          const ws = XLSX.utils.json_to_sheet(rows);
+          ws["!cols"] = Object.keys(rows[0]||{}).map(k => ({ wch: Math.max(k.length, ...rows.map(r=>String(r[k]??"").length), 8) }));
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Demandas");
+          XLSX.writeFile(wb, `demandas_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--green-7)", background: "var(--green-3)", color: "var(--green-11)", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+          ⬇ Excel
+        </button>
         <span style={{ fontSize: 11, color: "var(--gray-9)", flexShrink: 0, marginLeft: "auto" }}>{filtered.length} ticket{filtered.length !== 1 ? "s" : ""}</span>
         <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
         {!hideFilters.includes("dataAtividade") && <>
