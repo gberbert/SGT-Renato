@@ -60,9 +60,9 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   const isDemanda = String(escopo || "").toUpperCase().replace(/_/g, " ") === "DEMANDA";
   const selected = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    if (open) document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    const h = () => setOpen(false);
+    if (open) document.addEventListener("click", h);
+    return () => document.removeEventListener("click", h);
   }, [open]);
   const MILESTONE_LABELS = ["30%", "60%", "10%"];
   const MILESTONE_COLORS = ["#fb923c", "#38bdf8", "#4ade80"];
@@ -121,7 +121,8 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   });
   return (
     <div ref={ref} style={{ position: "relative", minWidth: 140 }}>
-      <button ref={btnRef} type="button" onClick={handleOpen}
+      <button ref={btnRef} type="button"
+        onClick={e => { e.stopPropagation(); handleOpen(); }}
         style={{ width: "100%", padding: "4px 8px", borderRadius: 6, border: `1px solid ${selected.length > 0 ? "var(--indigo-7)" : "var(--gray-6)"}`, background: selected.length > 0 ? "var(--indigo-2)" : "var(--gray-2)", color: selected.length > 0 ? "var(--indigo-11)" : "var(--gray-9)", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, outline: "none" }}>
         {selected.length === 0
           ? <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, color: "var(--gray-9)", fontSize: 11 }}>— Selecionar —</span>
@@ -142,7 +143,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
         <span style={{ fontSize: 9, opacity: 0.6, flexShrink: 0 }}>▼</span>
       </button>
       {open && (
-        <div style={{ position: "fixed", zIndex: 9500, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,.45)", minWidth: 220, maxHeight: 260, overflowY: "auto" }}
+        <div onClick={e => e.stopPropagation()} style={{ position: "fixed", zIndex: 9500, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,.45)", minWidth: 220, maxHeight: 260, overflowY: "auto" }}
           ref={el => { if (el && btnRef.current) { const r = btnRef.current.getBoundingClientRect(); el.style.left = r.left + "px"; el.style.width = Math.max(220, r.width) + "px"; if (dropUp) { el.style.bottom = (window.innerHeight - r.top + 4) + "px"; el.style.top = "auto"; } else { el.style.top = (r.bottom + 4) + "px"; el.style.bottom = "auto"; } } }}>
           <div style={{ padding: "6px 10px", fontSize: 9, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: "1px solid var(--gray-4)" }}>
             {isDemanda ? `Multi-seleção (máx. ${MAX_TERMOS})` : "Seleção única"}
@@ -179,7 +180,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
             // ── DEMANDA: +/− counter row per term ────────────────
             const nextSlotColor = MILESTONE_COLORS[selected.length] || "#a5b4fc";
             return (
-              <div key={t.id} style={{ padding: "6px 10px", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8, background: count > 0 ? "var(--indigo-2)" : "none" }}>
+              <div key={t.id} onClick={() => { if (canAdd) addTermo(t.id); }} style={{ padding: "6px 10px", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8, background: count > 0 ? "var(--indigo-2)" : "none", cursor: canAdd ? "pointer" : "default" }}>
                 {/* Milestone badges for occupied slots */}
                 <div style={{ display: "flex", gap: 3, flexWrap: "wrap", minWidth: 52 }}>
                   {occupiedSlots.length > 0
@@ -195,10 +196,12 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
                       : null}
                 </div>
                 {/* Term label */}
-                <div style={{ flex: 1, fontSize: 11, color: "var(--gray-12)" }}>
-                  {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 4 }}>{mes}</span>}
-                  <span style={{ fontWeight: 600 }}>{short}</span>
-                  {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", marginTop: 1 }}>{t.codigoProjeto}</div>}
+                <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                  <div style={{ fontSize: 11, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 4 }}>{mes}</span>}
+                    <span style={{ fontWeight: 600 }}>{short}</span>
+                  </div>
+                  {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.codigoProjeto}</div>}
                 </div>
                 {/* +/− controls */}
                 <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>

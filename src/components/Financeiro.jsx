@@ -747,7 +747,7 @@ export default function Financeiro() {
 
           {/* Sub-tab content */}
           {termosSubTab === "gerenciar"  && <FinanceiroTermos />}
-          {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" hideFilters={["dataAtividade","dataEncerramento","resolution"]} showStatusFilter={true} showCicloFilter={true} compactAvanco={true} colOrder={["status","avanco","squad","sistemaImpactado","estimativaTotal","fatPct","fatFaturadas","fatAFaturar","termoFaturamento"]} />}
+          {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" hideFilters={["dataAtividade","dataEncerramento","resolution"]} showStatusFilter={true} showCicloFilter={true} compactAvanco={true} colOrder={["termoFaturamento","status","avanco","squad","sistemaImpactado","estimativaTotal","fatPct","fatFaturadas","fatAFaturar"]} />}
           {termosSubTab === "fast"       && (() => {
             const now = new Date();
             const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
@@ -769,7 +769,7 @@ export default function Financeiro() {
                   statusFilter: ["Fechada"],
                   excludeResolutions: ["Cancelado pelo Solicitante"],
                 }}
-                colOrder={["status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador","termoFaturamento"]}
+                colOrder={["termoFaturamento","status","resolution","demandaFast","dataEncerramento","plHrsFast","grupoSolucionador"]}
               />
             );
           })()}
@@ -793,7 +793,7 @@ export default function Financeiro() {
                   grupoAprovFilter: ["Aprovador Horas - EIC", "Aprovador Horas - ETS", "Aprovador Horas - EITS", "Aprovador Horas - EII"],
                 }}
                 showGrupoAprovFilter={true}
-                colOrder={["status","resolution","dataAtividade","tempoEsforco","reporter","squad","termoFaturamento"]}
+                colOrder={["termoFaturamento","status","resolution","dataAtividade","tempoEsforco","reporter","squad"]}
               />
             );
           })()}

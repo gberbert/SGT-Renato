@@ -243,7 +243,22 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
     return tf === termo.id;
   };
 
-  const ticketsDemanda = useMemo(() => ticketsAll.filter(t => inTermo(t) && String(t.escopo || "").toUpperCase().trim() === "DEMANDA"), [ticketsAll, termo.id]);
+  // For DEMANDA tickets, expand to one row per slot that references this termo
+  // (a ticket may reference the same termo in both slot 1=60% and slot 2=10%)
+  const ticketsDemanda = useMemo(() => {
+    const rows = [];
+    ticketsAll
+      .filter(t => inTermo(t) && String(t.escopo || "").toUpperCase().trim() === "DEMANDA")
+      .forEach(t => {
+        const tf = t.termoFaturamento;
+        if (Array.isArray(tf)) {
+          tf.forEach((id, i) => { if (id === termo.id) rows.push({ ...t, _slotIdx: i }); });
+        } else {
+          rows.push({ ...t, _slotIdx: -1 });
+        }
+      });
+    return rows;
+  }, [ticketsAll, termo.id]);
   const ticketsFast    = useMemo(() => ticketsAll.filter(t => inTermo(t) && String(t.escopo || "").toUpperCase().includes("FAST")), [ticketsAll, termo.id]);
   const ticketsCatalogo = useMemo(() => ticketsAll.filter(t => inTermo(t) && String(t.escopo || "").toUpperCase().trim() === "CATALOGO"), [ticketsAll, termo.id]);
 
@@ -283,14 +298,11 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
 
   const getTicketH = t => {
     const fullH = getTicketFullH(t);
-    // For DEMANDA tickets, always apply milestone factor based on slot position
+    // For DEMANDA tickets, use _slotIdx injected by ticketsDemanda expansion
     if (String(t.escopo || "").toUpperCase().trim() === "DEMANDA") {
-      const tf = t.termoFaturamento;
-      if (Array.isArray(tf) && tf.length >= 1) {
-        const slotIdx = tf.indexOf(termo.id);
-        if (slotIdx >= 0 && slotIdx < MILESTONE_FACTORS.length) {
-          return Math.round(fullH * MILESTONE_FACTORS[slotIdx] * 10) / 10;
-        }
+      const slotIdx = t._slotIdx ?? -1;
+      if (slotIdx >= 0 && slotIdx < MILESTONE_FACTORS.length) {
+        return Math.round(fullH * MILESTONE_FACTORS[slotIdx] * 10) / 10;
       }
     }
     return fullH;
@@ -333,6 +345,11 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   // Collapsible state — all collapsed by default
   const [collapsed, setCollapsed] = useState({ arc: true, aloc: true, dem: true, fast: true, cat: true });
   const toggle = key => setCollapsed(p => ({ ...p, [key]: !p[key] }));
+
+  const termoMes = termo.mesReferencia ? (() => {
+    const [y, m] = termo.mesReferencia.split("-").map(Number);
+    return new Date(y, m - 1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
+  })() : "";
 
   const BLK = { borderRadius: 10, border: "1px solid var(--gray-5)", overflow: "hidden", marginTop: 4 };
   const BH  = { background: "var(--gray-3)", padding: "9px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" };
@@ -564,6 +581,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
               {!collapsed.aloc && <div style={BLK}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr>
+                    <th style={TH}>TERMO</th>
                     <th style={TH}>Membro</th>
                     <th style={{ ...TH, textAlign: "right" }}>Rate Card (R$/h)</th>
                     <th style={{ ...TH, textAlign: "right" }}>Horas</th>
@@ -578,6 +596,9 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                       const name = u ? (u.displayName || u.shortName || u.name || u.id) : a.userId;
                       return (
                         <tr key={a.id}>
+                          <td style={TD}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--indigo-11)", whiteSpace: "nowrap" }}>{termoMes || "—"}</span>
+                          </td>
                           <td style={TD}>{name}</td>
                           <td style={TDR}>{rc > 0 ? fmtCurrency(rc) : "—"}</td>
                           <td style={TDR}>{h}h</td>
@@ -585,7 +606,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                         </tr>
                       );
                     })}
-                    {alocacoes.length === 0 && <tr><td colSpan={4} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum membro alocado neste termo. Configure em ALOCAÇÕES.</td></tr>}
+                    {alocacoes.length === 0 && <tr><td colSpan={5} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum membro alocado neste termo. Configure em ALOCAÇÕES.</td></tr>}
                   </tbody>
                 </table>
               </div>}
@@ -608,15 +629,17 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                   <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "10%" }} />
-                      <col style={{ width: "25%" }} />
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "11%" }} />
                       <col style={{ width: "9%" }} />
+                      <col style={{ width: "21%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "8%" }} />
                       <col style={{ width: "7%" }} />
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "15%" }} />
                     </colgroup>
                     <thead><tr>
+                      <th style={TH}>TERMO</th>
                       <th style={TH}>Chave</th>
                       <th style={TH}>Resumo</th>
                       <th style={TH}>Status</th>
@@ -631,14 +654,23 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                         const fatH = getTicketH(t);
                         const fullH = getTicketFullH(t);
                         const isDem = String(t.escopo || "").toUpperCase().trim() === "DEMANDA";
-                        const tf = t.termoFaturamento;
-                        const slotIdx = isDem && Array.isArray(tf) ? tf.indexOf(termo.id) : -1;
+                        const slotIdx = isDem ? (t._slotIdx ?? -1) : -1;
                         const milePct = slotIdx >= 0 ? (MILESTONE_FACTORS[slotIdx] * 100).toFixed(0) + "%" : null;
                         const mileColors = ["#fb923c", "#38bdf8", "#4ade80"];
                         const mileCol = slotIdx >= 0 ? mileColors[slotIdx] : "#a78bfa";
                         const squad = t.squadPrincipal || t.squad || "—";
                         return (
-                          <tr key={t.id}>
+                          <tr key={`${t.id}-${slotIdx}`}>
+                            <td style={{ ...TD, whiteSpace: "nowrap" }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                {slotIdx >= 0 && (
+                                  <span style={{ fontSize: 9, fontWeight: 900, color: mileColors[slotIdx], padding: "1px 5px", borderRadius: 4, background: mileColors[slotIdx] + "20", border: "1px solid " + mileColors[slotIdx] + "55", alignSelf: "flex-start", whiteSpace: "nowrap" }}>
+                                    {(MILESTONE_FACTORS[slotIdx] * 100).toFixed(0)}%
+                                  </span>
+                                )}
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--indigo-11)" }}>{termoMes || "—"}</span>
+                              </div>
+                            </td>
                             <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "var(--indigo-11)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.issueKey || t.id}</td>
                             <td style={{ ...TD, overflow: "hidden", textOverflow: "ellipsis" }} title={t.summary}>{t.summary || "—"}</td>
                             <td style={TD}>
@@ -658,7 +690,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                           </tr>
                         );
                       })}
-                      {tickets.length === 0 && <tr><td colSpan={8} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum ticket vinculado neste termo.</td></tr>}
+                      {tickets.length === 0 && <tr><td colSpan={9} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>Nenhum ticket vinculado neste termo.</td></tr>}
                     </tbody>
                   </table>
                 </div>}
