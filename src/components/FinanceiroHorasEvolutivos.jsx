@@ -516,19 +516,28 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
             const estV = getEstTotal(t);
             const aFaturar = estV!=null&&fatH!=null ? Math.round(Math.max(0,estV-fatH)*10)/10 : null;
             const pctV = STATUS_10PCT.has(t.status)?100:STATUS_60PCT.has(t.status)?90:STATUS_30PCT.has(t.status)?30:null;
-            const termoLabels = (() => {
+            const termoSlots = (() => {
               const tf = t.termoFaturamento;
-              if (!tf) return "";
-              const ids = Array.isArray(tf) ? tf : [tf];
-              return ids.map(id => { const trm = termos.find(x=>x.id===id); if(!trm) return id; const mes=trm.mesReferencia?(() => { const [y,m]=trm.mesReferencia.split("-").map(Number); return new Date(y,m-1,1).toLocaleString("pt-BR",{month:"short",year:"2-digit"}).replace(".",""); })():""; const short=(trm.contratoNome||trm.id||"").split("-").slice(-1)[0].trim()||(trm.contratoNome||trm.id); return mes?`${mes}·${short}`:short; }).join(" | ");
+              const ids = Array.isArray(tf) ? tf : (tf ? [tf] : []);
+              return [0,1,2].map(i => {
+                const id = ids[i];
+                if (!id) return "";
+                const trm = termos.find(x=>x.id===id);
+                if (!trm) return id;
+                const mes = trm.mesReferencia ? (() => { const [y,m]=trm.mesReferencia.split("-").map(Number); return new Date(y,m-1,1).toLocaleString("pt-BR",{month:"short",year:"2-digit"}).replace(".",""); })() : "";
+                const short = (trm.contratoNome||trm.id||"").split("-").slice(-1)[0].trim()||(trm.contratoNome||trm.id);
+                return mes ? `${mes} · ${short}` : short;
+              });
             })();
-            const sis = t.sistemaImpactado||t.sistemasImpactados||t.sistema||"";
-            const sisStr = Array.isArray(sis)?sis.join(", "):String(sis||"");
             const contratoNome = (() => { const grp=t.grupoSolucionador||t.grupoSuporte||""; const sys=sistemas.find(s=>s.grupoSuporte===grp); return sys?.contratoNome||""; })();
             const row = { "ESCOPO": em.short, "TIPO": fmtV(t.issueType), "CHAVE": fmtV(t.issueKey||t.id), "RESUMO": fmtV(t.summary) };
             visibleCols.forEach(id => {
               switch(id) {
-                case "termoFaturamento": row["TERMO"] = termoLabels; break;
+                case "termoFaturamento":
+                  row["TERMO 30%"] = termoSlots[0];
+                  row["TERMO 60%"] = termoSlots[1];
+                  row["TERMO 10%"] = termoSlots[2];
+                  break;
                 case "status": row["STATUS"] = fmtV(t.status); break;
                 case "squad": row["SQUAD"] = squad; break;
                 case "avanco": row["AVANÇO (%)"] = avgP!=null?avgP:""; break;
@@ -538,7 +547,6 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                 case "fatAFaturar": row["A FAT (H)"] = fmtV(aFaturar); break;
                 case "plHrsFast": row["PL. HRS FAST"] = fmtV(t.planejamentoHorasDemandaFast); break;
                 case "tempoEsforco": row["TEMPO ESFORÇO (H)"] = fmtV(t.tempoEsforcoHoras); break;
-                case "sistemaImpactado": row["SISTEMA"] = sisStr; break;
                 case "grupoSolucionador": row["GRUPO SOLUCIONADOR"] = fmtV(t.grupoSolucionador||t.grupoSuporte); break;
                 case "contrato": row["CONTRATO"] = contratoNome; break;
                 case "reporter": row["RELATOR"] = fmtV(t.reporter); break;
@@ -546,7 +554,6 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                 case "dataEncerramento": row["DATA ENCERRAMENTO"] = fmtDate(t.dataEncerramento||t.resolvedAt); break;
                 case "resolution": row["RESOLUTION"] = fmtV(t.resolution); break;
                 case "demandaFast": row["DM FAST"] = fmtV(t.demandaFast); break;
-                case "avanco": row["AVANÇO (%)"] = avgP!=null?avgP:""; break;
               }
             });
             return row;
