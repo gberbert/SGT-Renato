@@ -51,6 +51,15 @@ function fmtDate(v) {
   return `${d}/${m}/${y}`;
 }
 
+// Deterministic color from string — cycles through a palette
+const CONTRACT_PALETTE = ["#38bdf8","#f59e0b","#a78bfa","#4ade80","#f87171","#fb923c","#e879f9","#34d399","#60a5fa","#facc15"];
+function contractColor(name) {
+  if (!name) return "#6b7280";
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return CONTRACT_PALETTE[h % CONTRACT_PALETTE.length];
+}
+
 function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -158,6 +167,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
               return new Date(y, m - 1, 1).toLocaleString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
             })() : "";
             const short = (t.contratoNome || t.id || "").split("-").slice(-1)[0].trim() || (t.contratoNome || t.id);
+            const cColor = contractColor(t.contratoNome);
             const count = isDemanda ? selected.filter(id => id === t.id).length : (selected.includes(t.id) ? 1 : 0);
             const occupiedSlots = selected.map((id, i) => ({ id, i })).filter(x => x.id === t.id);
             const canAdd = selected.length < MAX_TERMOS;
@@ -165,13 +175,16 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
               const isSel = count > 0;
               return (
                 <button key={t.id} type="button" onClick={() => toggleSingle(t.id)}
-                  style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", background: isSel ? "var(--indigo-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7 }}>
-                  <span style={{ width: 14, height: 14, borderRadius: 999, border: `2px solid ${isSel ? "var(--indigo-9)" : "var(--gray-6)"}`, background: isSel ? "var(--indigo-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  style={{ width: "100%", padding: "7px 10px", textAlign: "left", fontSize: 12, border: "none", borderLeft: `3px solid ${cColor}`, background: isSel ? `${cColor}15` : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 7 }}>
+                  <span style={{ width: 14, height: 14, borderRadius: 999, border: `2px solid ${isSel ? cColor : "var(--gray-6)"}`, background: isSel ? cColor : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {isSel && <span style={{ fontSize: 8, color: "#fff", fontWeight: 900 }}>✓</span>}
                   </span>
-                  <div style={{ flex: 1 }}>
-                    {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 5 }}>{mes}</span>}
-                    <span style={{ fontWeight: 600, fontSize: 11 }}>{short}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
+                      {mes && <span style={{ fontSize: 10, fontWeight: 800, color: cColor, flexShrink: 0 }}>{mes}</span>}
+                      <span style={{ fontWeight: 600, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{short}</span>
+                    </div>
+                    {t.contratoNome && <div style={{ fontSize: 9, color: cColor, opacity: 0.8, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.contratoNome}</div>}
                     {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", marginTop: 1 }}>{t.codigoProjeto}</div>}
                   </div>
                 </button>
@@ -180,7 +193,7 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
             // ── DEMANDA: +/− counter row per term ────────────────
             const nextSlotColor = MILESTONE_COLORS[selected.length] || "#a5b4fc";
             return (
-              <div key={t.id} onClick={() => { if (canAdd) addTermo(t.id); }} style={{ padding: "6px 10px", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8, background: count > 0 ? "var(--indigo-2)" : "none", cursor: canAdd ? "pointer" : "default" }}>
+              <div key={t.id} onClick={() => { if (canAdd) addTermo(t.id); }} style={{ padding: "6px 10px", borderLeft: `3px solid ${cColor}`, borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8, background: count > 0 ? `${cColor}15` : "none", cursor: canAdd ? "pointer" : "default" }}>
                 {/* Milestone badges for occupied slots */}
                 <div style={{ display: "flex", gap: 3, flexWrap: "wrap", minWidth: 52 }}>
                   {occupiedSlots.length > 0
@@ -198,9 +211,10 @@ function TermoPicker({ ticketId, escopo, currentValue, termos }) {
                 {/* Term label */}
                 <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
                   <div style={{ fontSize: 11, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {mes && <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo-11)", marginRight: 4 }}>{mes}</span>}
+                    {mes && <span style={{ fontSize: 10, fontWeight: 800, color: cColor, marginRight: 4 }}>{mes}</span>}
                     <span style={{ fontWeight: 600 }}>{short}</span>
                   </div>
+                  {t.contratoNome && <div style={{ fontSize: 9, color: cColor, opacity: 0.8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>{t.contratoNome}</div>}
                   {t.codigoProjeto && <div style={{ fontSize: 9, color: "var(--gray-9)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.codigoProjeto}</div>}
                 </div>
                 {/* +/− controls */}
