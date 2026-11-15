@@ -311,6 +311,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [selStatusFilter, setSelStatusFilter] = useState(() => new Set(defaultFilters.statusFilter || []));
   const [statusDropOpen, setStatusDropOpen] = useState(false);
   const statusDropRef = useRef(null);
+  const [statusSearch, setStatusSearch] = useState("");
   const [termoFilter, setTermoFilter] = useState("");
   const [sistemas, setSistemas] = useState([]);
   const [contratoFilter, setContratoFilter] = useState("");
@@ -563,37 +564,73 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
           <>
             <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
             <div ref={statusDropRef} style={{ display: "flex", alignItems: "center", gap: 6, position: "relative", flexShrink: 0 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Status</span>
-              <button type="button" onClick={() => setStatusDropOpen(v => !v)}
-                style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${selStatusFilter.size > 0 ? "var(--amber-7)" : "var(--gray-6)"}`, background: selStatusFilter.size > 0 ? "var(--amber-2)" : "var(--gray-1)", color: selStatusFilter.size > 0 ? "var(--amber-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-                <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {selStatusFilter.size === 0 ? "— Todos —" : selStatusFilter.size === 1 ? [...selStatusFilter][0] : `${selStatusFilter.size} selecionados`}
+              <button type="button" onClick={() => { setStatusDropOpen(v => !v); setStatusSearch(""); }}
+                style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${selStatusFilter.size > 0 ? "var(--amber-7)" : "var(--gray-6)"}`, background: selStatusFilter.size > 0 ? "var(--amber-2)" : "var(--gray-1)", color: selStatusFilter.size > 0 ? "var(--amber-11)" : "var(--gray-12)", fontSize: 12, cursor: "pointer", outline: "none", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                <span style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {selStatusFilter.size === 0 ? "Todos os status" : selStatusFilter.size === 1 ? [...selStatusFilter][0] : `${selStatusFilter.size} status`}
                 </span>
-                <span style={{ fontSize: 9, opacity: 0.6, flexShrink: 0 }}>▼</span>
+                <span style={{ fontSize: 10, opacity: 0.6, flexShrink: 0 }}>▼</span>
               </button>
               {statusDropOpen && (
-                <div style={{ position: "fixed", zIndex: 9000, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,.45)", minWidth: 260, maxHeight: 320, overflowY: "auto", marginTop: 4 }}
-                  ref={el => { if (el && statusDropRef.current) { const r = statusDropRef.current.getBoundingClientRect(); el.style.top = (r.bottom + 4) + "px"; el.style.left = Math.max(8, r.right - 260) + "px"; } }}>
-                  <div style={{ padding: "8px 12px", fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: "1px solid var(--gray-4)", background: "var(--gray-3)" }}>Status — multi-seleção</div>
-                  <button type="button" onClick={() => { setSelStatusFilter(new Set()); setStatusDropOpen(false); }}
-                    style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: selStatusFilter.size === 0 ? "var(--amber-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-4)", display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ width: 15, height: 15, borderRadius: 3, border: `2px solid ${selStatusFilter.size === 0 ? "var(--amber-9)" : "var(--gray-6)"}`, background: selStatusFilter.size === 0 ? "var(--amber-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {selStatusFilter.size === 0 && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
-                    </span>
-                    — Todos —
-                  </button>
-                  {statusFilterOptions.map(s => {
-                    const on = selStatusFilter.has(s);
-                    return (
-                      <button key={s} type="button" onClick={() => setSelStatusFilter(p => { const n = new Set(p); on ? n.delete(s) : n.add(s); return n; })}
-                        style={{ width: "100%", padding: "8px 12px", textAlign: "left", fontSize: 12, border: "none", background: on ? "var(--amber-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ width: 15, height: 15, borderRadius: 3, border: `2px solid ${on ? "var(--amber-9)" : "var(--gray-6)"}`, background: on ? "var(--amber-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {on && <span style={{ fontSize: 9, color: "#fff", fontWeight: 900 }}>✓</span>}
-                        </span>
-                        {s}
+                <div style={{ position: "fixed", zIndex: 9000, background: "var(--color-panel-solid)", border: "1px solid var(--gray-5)", borderRadius: 10, boxShadow: "0 8px 32px rgba(0,0,0,.45)", minWidth: 280, maxHeight: 380, display: "flex", flexDirection: "column" }}
+                  ref={el => { if (el && statusDropRef.current) { const r = statusDropRef.current.getBoundingClientRect(); el.style.top = (r.bottom + 4) + "px"; el.style.left = Math.max(8, r.left) + "px"; } }}>
+                  {/* Search */}
+                  <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--gray-4)", flexShrink: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 10px", borderRadius: 6, background: "var(--gray-3)", border: "1px solid var(--gray-5)" }}>
+                      <span style={{ fontSize: 13, opacity: 0.5 }}>🔍</span>
+                      <input
+                        autoFocus
+                        value={statusSearch}
+                        onChange={e => setStatusSearch(e.target.value)}
+                        placeholder="Buscar status..."
+                        style={{ flex: 1, border: "none", background: "transparent", color: "var(--gray-12)", fontSize: 13, outline: "none" }}
+                      />
+                      {statusSearch && <button type="button" onClick={() => setStatusSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-9)", fontSize: 12, padding: 0 }}>✕</button>}
+                    </div>
+                  </div>
+                  {/* Select all / deselect */}
+                  <div style={{ padding: "6px 14px", borderBottom: "1px solid var(--gray-4)", flexShrink: 0 }}>
+                    {selStatusFilter.size < statusFilterOptions.length
+                      ? <button type="button" onClick={() => setSelStatusFilter(new Set(statusFilterOptions))}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--indigo-10)", fontSize: 13, fontWeight: 700, padding: 0 }}>
+                          Selecionar todos
+                        </button>
+                      : <button type="button" onClick={() => setSelStatusFilter(new Set())}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--red-10)", fontSize: 13, fontWeight: 700, padding: 0 }}>
+                          Desmarcar todos
+                        </button>}
+                  </div>
+                  {/* Options list */}
+                  <div style={{ overflowY: "auto", flex: 1 }}>
+                    {statusFilterOptions
+                      .filter(s => !statusSearch.trim() || s.toLowerCase().includes(statusSearch.trim().toLowerCase()))
+                      .map(s => {
+                        const on = selStatusFilter.has(s);
+                        return (
+                          <button key={s} type="button"
+                            onClick={() => setSelStatusFilter(p => { const n = new Set(p); on ? n.delete(s) : n.add(s); return n; })}
+                            style={{ width: "100%", padding: "9px 14px", textAlign: "left", fontSize: 13, border: "none", background: on ? "var(--indigo-2)" : "none", cursor: "pointer", color: "var(--gray-12)", borderBottom: "1px solid var(--gray-3)", display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ width: 16, height: 16, borderRadius: 3, border: `2px solid ${on ? "var(--indigo-9)" : "var(--gray-7)"}`, background: on ? "var(--indigo-9)" : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              {on && <span style={{ fontSize: 10, color: "#fff", fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                            </span>
+                            <span style={{ flex: 1 }}>{s}</span>
+                          </button>
+                        );
+                      })}
+                    {statusFilterOptions.filter(s => !statusSearch.trim() || s.toLowerCase().includes(statusSearch.trim().toLowerCase())).length === 0 && (
+                      <div style={{ padding: "12px 14px", fontSize: 12, color: "var(--gray-8)", textAlign: "center" }}>Nenhum status encontrado.</div>
+                    )}
+                  </div>
+                  {/* Footer */}
+                  {selStatusFilter.size > 0 && (
+                    <div style={{ padding: "6px 12px", borderTop: "1px solid var(--gray-4)", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: "var(--gray-9)" }}>{selStatusFilter.size} selecionado{selStatusFilter.size !== 1 ? "s" : ""}</span>
+                      <button type="button" onClick={() => { setSelStatusFilter(new Set()); setStatusDropOpen(false); }}
+                        style={{ fontSize: 11, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>
+                        Limpar
                       </button>
-                    );
-                  })}
+                    </div>
+                  )}
                 </div>
               )}
               {selStatusFilter.size > 0 && <button type="button" onClick={() => setSelStatusFilter(new Set())} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
