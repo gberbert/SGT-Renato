@@ -61,6 +61,60 @@ function contractColor(name) {
   return CONTRACT_PALETTE[h % CONTRACT_PALETTE.length];
 }
 
+// ── Read-only modal for tickets_global ───────────────────────────
+function TicketGlobalViewModal({ ticket, termos, onClose }) {
+  if (!ticket) return null;
+  const em = getEscopoMeta(ticket.escopo);
+  const fmtV = v => (v == null || v === "") ? "—" : String(v);
+  const tf = ticket.termoFaturamento;
+  const ids = Array.isArray(tf) ? tf : (tf ? [tf] : []);
+  const ML = ["30%","60%","10%"];
+  const termoStr = ids.map((id, i) => {
+    const trm = termos.find(x => x.id === id); if (!trm) return id;
+    const mes = trm.mesReferencia ? (() => { const [y,m] = trm.mesReferencia.split("-").map(Number); return new Date(y,m-1,1).toLocaleString("pt-BR",{month:"short",year:"2-digit"}).replace(".",""); })() : "";
+    const short = (trm.contratoNome||trm.id||"").split("-").slice(-1)[0].trim()||(trm.contratoNome||trm.id);
+    return `${ML[i]||""}  ${mes ? mes+" · " : ""}${short}`;
+  }).join("  |  ") || "—";
+  const fields = [
+    ["Escopo", ticket.escopo], ["Tipo", ticket.issueType], ["Status", ticket.status],
+    ["Squad", ticket.squadPrincipal || ticket.squad],
+    ["Grupo Solucionador", ticket.grupoSolucionador || ticket.grupoSuporte],
+    ["Sistema", Array.isArray(ticket.sistemaImpactado) ? ticket.sistemaImpactado.join(", ") : ticket.sistemaImpactado],
+    ["Est. Total (H)", ticket.estimativaTotal ?? ticket.estimativaMacroJira],
+    ["Tempo Esforço (H)", ticket.tempoEsforcoHoras],
+    ["Avanço Dev (%)", ticket.percentualConclusao],
+    ["Avanço Teste (%)", ticket.percentualConclusaoTesteInterno],
+    ["Resolution", ticket.resolution],
+    ["Data Atividade", fmtDate(ticket.dataAtividade)],
+    ["Data Encerramento", fmtDate(ticket.dataEncerramento || ticket.resolvedAt)],
+    ["Relator", ticket.reporter],
+    ["Motivo / Observação", ticket.motivoImpedimento || ticket.observacao],
+    ["Termos Faturamento", termoStr],
+  ];
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
+      <div style={{background:"var(--color-panel-solid)",border:"1px solid var(--gray-6)",borderRadius:14,width:"min(98vw,700px)",maxHeight:"88vh",overflowY:"auto",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 20px",borderBottom:"1px solid var(--gray-5)",flexWrap:"wrap"}}>
+          <span style={{fontSize:10,fontWeight:800,padding:"2px 7px",borderRadius:4,background:em.color,color:"#fff"}}>{em.short}</span>
+          {ticket.issueType && <span style={{fontSize:11,fontWeight:600,padding:"2px 7px",borderRadius:4,background:"rgba(107,114,128,0.2)",color:"var(--gray-11)"}}>{ticket.issueType}</span>}
+          <span style={{fontSize:13,fontWeight:800,color:"var(--indigo-11)",fontFamily:"monospace"}}>{ticket.issueKey||ticket.id}</span>
+          <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:999,background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.3)",color:"#a5b4fc",marginLeft:4}}>Somente leitura</span>
+          <button type="button" onClick={onClose} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:"var(--gray-10)",fontSize:18,lineHeight:1}}>✕</button>
+        </div>
+        <div style={{padding:"12px 20px 8px",fontSize:15,fontWeight:700,color:"var(--gray-12)",borderBottom:"1px solid var(--gray-4)"}}>{ticket.summary||"—"}</div>
+        <div style={{padding:"14px 20px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 24px"}}>
+          {fields.filter(([,v]) => v != null && v !== "").map(([label,value]) => (
+            <div key={label} style={{display:"flex",flexDirection:"column",gap:2,gridColumn:label==="Motivo / Observação"||label==="Termos Faturamento"?"span 2":"span 1"}}>
+              <span style={{fontSize:9,fontWeight:700,color:"var(--gray-9)",textTransform:"uppercase",letterSpacing:"0.07em"}}>{label}</span>
+              <span style={{fontSize:13,color:"var(--gray-12)",wordBreak:"break-word"}}>{fmtV(value)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TermoPicker({ ticketId, escopo, currentValue, termos }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -326,6 +380,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [faturamentoFilter, setFaturamentoFilter] = useState(""); // "" | "faturadas" | "afaturar"
   const [showLegend, setShowLegend] = useState(false);
   const legendRef = useRef(null);
+  const [ticketView, setTicketView] = useState(null);
   // Track if resolution has been initialized from defaultFilters
   const resInitialized = useRef(false);
 
@@ -485,6 +540,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {ticketView && <TicketGlobalViewModal ticket={ticketView} termos={termos} onClose={() => setTicketView(null)} />}
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "var(--gray-2)", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--gray-5)" }}>
         {/* Search */}
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Buscar por chave ou título…" style={{ flex: 1, minWidth: 220, padding: "5px 10px", borderRadius: 6, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, outline: "none" }} />
@@ -556,6 +612,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                 case "demandaFast": row["DM FAST"] = fmtV(t.demandaFast); break;
               }
             });
+            row["MOTIVO"] = fmtV(t.motivoImpedimento || t.observacao);
             return row;
           });
           const ws = XLSX.utils.json_to_sheet(rows);
@@ -908,7 +965,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: em.color, color: "#fff", flexShrink: 0 }}>{em.short}</span>
                       {!hideIssueType && t.issueType && <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "rgba(107,114,128,0.2)", color: "var(--gray-11)", flexShrink: 0 }}>{t.issueType}</span>}
-                      <span style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo-11)", fontFamily: "monospace", whiteSpace: "nowrap" }}>{t.issueKey || t.id}</span>
+                      <button type="button" onClick={() => setTicketView(t)} style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo-11)", fontFamily: "monospace", whiteSpace: "nowrap", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline dotted" }}>{t.issueKey || t.id}</button>
                     </div>
                   </td>
                   <td style={{ ...D, maxWidth: 180, overflow: "hidden" }}>
