@@ -629,6 +629,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
               .filter(Boolean)
               .join(", ");
             row["CICLO"] = ticketCiclos;
+            row["PACOTE (RELEASE)"] = fmtV(t.pacote);
             row["MOTIVO IMPEDIMENTO"] = fmtV(t.observacaoAdicional || t.motivoImpedimento);
             return row;
           });
