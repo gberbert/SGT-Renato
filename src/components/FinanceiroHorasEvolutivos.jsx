@@ -621,6 +621,14 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                 case "demandaFast": row["DM FAST"] = fmtV(t.demandaFast); break;
               }
             });
+            // Ciclo: find all ciclos whose ticketKeys contain this ticket's issueKey
+            const ticketKey = String(t.issueKey || t.id || "").trim().toUpperCase();
+            const ticketCiclos = ciclos
+              .filter(c => (c.ticketKeys || []).map(k => String(k).trim().toUpperCase()).includes(ticketKey))
+              .map(c => c.nome)
+              .filter(Boolean)
+              .join(", ");
+            row["CICLO"] = ticketCiclos;
             row["MOTIVO IMPEDIMENTO"] = fmtV(t.observacaoAdicional || t.motivoImpedimento);
             return row;
           });
