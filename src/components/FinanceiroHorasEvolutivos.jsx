@@ -6,6 +6,7 @@ import { getStatusColor } from "./PlanejamentoCicloHelpers";
 import { stripNumericPrefix } from "../utils/stripNumericPrefix";
 import { subscribeToSystems } from "../services/settingsService";
 import { subscribeToCiclos } from "../services/cicloService";
+import DemandaDetailsModal from "./operacao/DemandaDetailsModal";
 
 const ESCOPOS = ["DEMANDA", "DEMANDA FAST", "CATALOGO"];
 const ESCOPO_META = {
@@ -61,8 +62,8 @@ function contractColor(name) {
   return CONTRACT_PALETTE[h % CONTRACT_PALETTE.length];
 }
 
-// ── Read-only modal for tickets_global ───────────────────────────
-function TicketGlobalViewModal({ ticket, termos, onClose }) {
+// ── (legacy inline modal removed — using DemandaDetailsModal instead) ──
+function _TicketGlobalViewModal_UNUSED({ ticket, termos, onClose }) {
   if (!ticket) return null;
   const em = getEscopoMeta(ticket.escopo);
   const fmtV = v => (v == null || v === "") ? "—" : String(v);
@@ -540,7 +541,15 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {ticketView && <TicketGlobalViewModal ticket={ticketView} termos={termos} onClose={() => setTicketView(null)} />}
+      {ticketView && (
+        <DemandaDetailsModal
+          ticket={ticketView}
+          mode="view"
+          onClose={() => setTicketView(null)}
+          onSave={() => {}}
+          ticketDocId={ticketView.id || ticketView.issueKey}
+        />
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "var(--gray-2)", borderRadius: 8, padding: "10px 14px", border: "1px solid var(--gray-5)" }}>
         {/* Search */}
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Buscar por chave ou título…" style={{ flex: 1, minWidth: 220, padding: "5px 10px", borderRadius: 6, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, outline: "none" }} />
@@ -612,7 +621,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                 case "demandaFast": row["DM FAST"] = fmtV(t.demandaFast); break;
               }
             });
-            row["MOTIVO"] = fmtV(t.motivoImpedimento || t.observacao);
+            row["MOTIVO IMPEDIMENTO"] = fmtV(t.observacaoAdicional || t.motivoImpedimento);
             return row;
           });
           const ws = XLSX.utils.json_to_sheet(rows);
