@@ -8,6 +8,15 @@ import { Settings, Plus, Trash2, ChevronDown, X, Save, FileText, Pencil, Eye } f
 import { subscribeToUsers } from "../services/settingsService";
 import { loadCapacityConfig, DEFAULT_BASE_PARAMS } from "../services/teamCapacityService";
 
+// Deterministic color from string
+const COLOR_PALETTE = ["#38bdf8","#f59e0b","#a78bfa","#4ade80","#f87171","#fb923c","#e879f9","#34d399","#60a5fa","#facc15","#22d3ee","#c084fc"];
+function hashColor(str) {
+  if (!str) return "#6b7280";
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return COLOR_PALETTE[h % COLOR_PALETTE.length];
+}
+
 const NATIONAL_FIXED_T = new Set(["01-01","04-21","05-01","09-07","10-12","11-02","11-15","11-20","12-25"]);
 function countWDT(year, month) {
   const last = new Date(year, month + 1, 0).getDate();
@@ -1028,14 +1037,16 @@ export default function FinanceiroTermos() {
                   <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorCatalogo, "#a855f7")}</td>
                   <td style={{ padding: "10px 10px", textAlign: "right" }}>{cv(t.valorTotal, "var(--indigo-11)", 13)}</td>
                   <td style={{ padding: "10px 10px", maxWidth: 150, overflow: "hidden" }}>
-                    <span title={t.contratoNome} style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-12)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {t.contratoNome || "—"}
-                    </span>
+                    {t.contratoNome ? (() => {
+                      const c = hashColor(t.contratoNome);
+                      return <span title={t.contratoNome} style={{ fontSize: 12, fontWeight: 700, color: c, background: c + "18", border: `1px solid ${c}44`, borderRadius: 6, padding: "2px 8px", display: "inline-block", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.contratoNome}</span>;
+                    })() : <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>}
                   </td>
                   <td style={{ padding: "10px 10px" }}>
-                    {t.codigoProjeto
-                      ? <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber-11)", background: "var(--amber-3)", border: "1px solid var(--amber-7)", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.codigoProjeto}</span>
-                      : <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>}
+                    {t.codigoProjeto ? (() => {
+                      const c = hashColor(t.codigoProjeto);
+                      return <span style={{ fontSize: 11, fontWeight: 700, color: c, background: c + "18", border: `1px solid ${c}55`, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>{t.codigoProjeto}</span>;
+                    })() : <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>}
                   </td>
                   <td style={{ padding: "10px 10px" }}>
                     <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
