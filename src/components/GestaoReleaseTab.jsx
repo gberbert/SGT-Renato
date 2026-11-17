@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Package, Pencil, Save, X, Layers } from 'lucide-react';
 import { subscribeToReleases, deleteRelease } from '../services/releaseService';
 import { NewReleaseModal, AddJanelaModal } from './GestaoReleaseModals';
@@ -9,6 +9,40 @@ import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, d
 const SISTEMAS_COL = 'sistemas_alterados';
 const CATEGORIAS = ['Modernizado', 'Legado'];
 function catStyle(c) { return c === 'Modernizado' ? { color: '#22d3ee', bg: 'rgba(34,211,238,0.1)', border: 'rgba(34,211,238,0.35)' } : { color: '#fb923c', bg: 'rgba(251,146,60,0.1)', border: 'rgba(251,146,60,0.35)' }; }
+
+function SquadCheckPicker({ sel, squads, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  const toggle = sq => { const ex = sel.find(s => s.id === sq.id); onChange(ex ? sel.filter(s => s.id !== sq.id) : [...sel, { id: sq.id, name: sq.name }]); };
+  return (
+    <div ref={ref} style={{ position: 'relative', minWidth: 180 }}>
+      <button type="button" onClick={() => setOpen(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', padding: '5px 9px', borderRadius: 6, border: '1px solid var(--gray-6)', background: 'var(--gray-1)', cursor: 'pointer', minWidth: 180, minHeight: 32, width: '100%', textAlign: 'left' }}>
+        {sel.length === 0
+          ? <span style={{ fontSize: 11, color: 'var(--gray-8)' }}>— Squad(s) —</span>
+          : sel.map(s => <span key={s.id} style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 5, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>{s.name}</span>)}
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--gray-8)', flexShrink: 0 }}>&#x25BE;</span>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '105%', left: 0, zIndex: 300, background: 'var(--color-panel-solid)', border: '1px solid var(--gray-5)', borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,.35)', minWidth: 200, maxHeight: 240, overflowY: 'auto', padding: '4px 0' }}>
+          {squads.length === 0 && <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--gray-8)' }}>Nenhuma squad cadastrada.</div>}
+          {squads.map(sq => { const checked = !!sel.find(s => s.id === sq.id); return (
+            <label key={sq.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', background: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.background='var(--gray-3)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+              <input type="checkbox" checked={checked} onChange={() => toggle(sq)} style={{ width: 14, height: 14, accentColor: '#6ee7b7', cursor: 'pointer', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: 'var(--gray-12)', fontWeight: checked ? 700 : 400 }}>{sq.name}</span>
+            </label>
+          ); })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SistemasAlteradosSection() {
   const [sistemas, setSistemas] = useState([]);
@@ -51,7 +85,7 @@ function SistemasAlteradosSection() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '10px 12px', borderRadius: 9, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.3)', marginBottom: 8 }}>
           <input autoFocus value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') cancel(); }} placeholder="Nome do sistema *" style={{ ...inp, flex: 2, minWidth: 160, border: '1px solid rgba(99,102,241,0.5)', background: 'rgba(99,102,241,0.05)' }} />
           <select value={form.categoria} onChange={e => setForm(p => ({ ...p, categoria: e.target.value }))} style={{ ...inp, minWidth: 130, cursor: 'pointer' }}>{CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}</select>
-          <select multiple value={form.squads.map(s => s.id)} onChange={onSquads} size={Math.min(squads.length || 1, 4)} style={{ ...inp, minWidth: 160, cursor: 'pointer', resize: 'none' }}>{squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+          <SquadCheckPicker sel={form.squads} squads={squads} onChange={v => setForm(p => ({ ...p, squads: v }))} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <button type="button" onClick={handleSave} disabled={saving || !form.nome.trim()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--indigo-9)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: (!form.nome.trim() || saving) ? 0.6 : 1 }}><Save size={12} /> {saving ? '...' : 'Salvar'}</button>
             {addMore && <span style={{ fontSize: 10, color: '#4ade80', textAlign: 'center', fontWeight: 700 }}>&#10003; salvo</span>}
@@ -78,7 +112,7 @@ function SistemasAlteradosSection() {
                   </td>
                   <td style={{ padding: '7px 12px' }}>
                     {isEdit
-                      ? <select multiple value={form.squads.map(x => x.id)} onChange={onSquads} size={Math.min(squads.length || 1, 4)} style={{ ...inp, cursor: 'pointer', resize: 'none' }}>{squads.map(sq => <option key={sq.id} value={sq.id}>{sq.name}</option>)}</select>
+                      ? <SquadCheckPicker sel={form.squads} squads={squads} onChange={v => setForm(p => ({ ...p, squads: v }))} />
                       : (s.squads?.length
                           ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>{s.squads.map(sq => <span key={sq.id} style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>{sq.name}</span>)}</div>
                           : s.squadNome ? <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 7, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}>{s.squadNome}</span> : <span style={{ fontSize: 11, color: 'var(--gray-7)' }}>—</span>)}
