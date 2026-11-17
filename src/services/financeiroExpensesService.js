@@ -184,6 +184,17 @@ export async function saveRevenueEstab(projectCode, data) {
 /* ─── ESTABILIZAÇÃO — HORA ─────────────────────────── */
 // Key: periodoYM (start month of the 6-month view, e.g. "2026-11")
 // Structure: { periodo, savedAt, savedBy, overrides: { [memberId]: { [YYYY-MM]: hours } } }
+export function subscribeToHoraAdicionais(periodoYM, callback) {
+  if (!periodoYM) return () => {};
+  const ref = doc(db, "financeiro_hora_adicionais", periodoYM);
+  return onSnapshot(ref, (snap) => callback(snap.exists() ? snap.data() : null), () => callback(null));
+}
+export async function saveHoraAdicionais(periodoYM, overrides, savedBy) {
+  if (!periodoYM) return;
+  const ref = doc(db, "financeiro_hora_adicionais", periodoYM);
+  await setDoc(ref, { periodo: periodoYM, overrides, savedAt: serverTimestamp(), savedBy }, { merge: false });
+}
+
 export function subscribeToHoraEstab(periodoYM, callback) {
   if (!periodoYM) return () => {};
   const ref = doc(db, "financeiro_hora_estab", periodoYM);

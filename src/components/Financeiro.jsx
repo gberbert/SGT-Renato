@@ -14,7 +14,7 @@ import FinanceiroTermos from "./FinanceiroTermos";
 import FinanceiroHorasEvolutivos from "./FinanceiroHorasEvolutivos";
 import FinanceiroAlocacoes from "./FinanceiroAlocacoes";
 import UserDetailsModal from "./UserDetailsModal";
-import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, loadRevenueEstab, subscribeToHoraEstab, saveHoraEstab } from "../services/financeiroExpensesService";
+import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, loadRevenueEstab, subscribeToHoraEstab, saveHoraEstab, subscribeToHoraAdicionais, saveHoraAdicionais } from "../services/financeiroExpensesService";
 import { ensureControlDoc, subscribeToControl, validatePassword, closeControl, openControl } from "../services/financeiroControlService";
 
 /* ─── date helpers ─────────────────────────────────── */
@@ -178,6 +178,12 @@ export default function Financeiro() {
   const [horaEstabMeta, setHoraEstabMeta] = useState(null); // { savedAt, savedBy }
   const [horaEstabDirty, setHoraEstabDirty] = useState(false);
   const [horaEstabSaving, setHoraEstabSaving] = useState(false);
+  // HE / HN adicionais: { memberId: { YYYY-MM: { he: number, hn: number } } }
+  const [showAdicionais, setShowAdicionais] = useState(false);
+  const [horaAdicionaisOverrides, setHoraAdicionaisOverrides] = useState({});
+  const [horaAdicionaisDirty, setHoraAdicionaisDirty] = useState(false);
+  const [horaAdicionaisSaving, setHoraAdicionaisSaving] = useState(false);
+  const [horaAdicionaisMeta, setHoraAdicionaisMeta] = useState(null);
   const [isClosed, setIsClosed] = useState(false);
   const [closedMeta, setClosedMeta] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -247,6 +253,15 @@ export default function Financeiro() {
   const squadsSorted = useMemo(() => [...squads].sort((a, b) => (a?.name || a?.key || "").toString().toUpperCase().localeCompare((b?.name || b?.key || "").toString().toUpperCase(), "pt-BR")), [squads]);
   const usersSorted = useMemo(() => [...users].sort((a, b) => getUserLabel(a).toUpperCase().localeCompare(getUserLabel(b).toUpperCase(), "pt-BR")), [users]);
   const projectCodeOptions = useMemo(() => { const c = new Set(); for (const u of usersSorted) { if (u?.projectCode) c.add(u.projectCode); } return [...c].sort(); }, [usersSorted]);
+
+  /* subscribe to HORA adicionais (HE/HN) — always loaded */
+  useEffect(() => {
+    return subscribeToHoraAdicionais(startMonth, (data) => {
+      if (data?.overrides) { setHoraAdicionaisOverrides(data.overrides); setHoraAdicionaisMeta({ savedAt: data.savedAt, savedBy: data.savedBy }); }
+      else { setHoraAdicionaisOverrides({}); setHoraAdicionaisMeta(null); }
+      setHoraAdicionaisDirty(false);
+    });
+  }, [startMonth]);
 
   /* subscribe to HORA estab overrides — always loaded so exports always reflect saved values */
   useEffect(() => {
@@ -390,6 +405,9 @@ export default function Financeiro() {
       months.forEach(({ ps, label }, i) => { const mk = ps.slice(0, 7); row[`${label} [Estab]`] = horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]; });
       row["TOTAL"] = r.total;
       row["TOTAL [Estab]"] = months.reduce((acc, { ps }, i) => { const mk = ps.slice(0, 7); return acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]); }, 0);
+      months.forEach(({ ps, label }) => { const mk = ps.slice(0, 7); row[`${label} HE`] = horaAdicionaisOverrides[r.id]?.[mk]?.he ?? 0; row[`${label} HN`] = horaAdicionaisOverrides[r.id]?.[mk]?.hn ?? 0; });
+      row["TOTAL HE"] = months.reduce((acc, { ps }) => { const mk = ps.slice(0, 7); return acc + (horaAdicionaisOverrides[r.id]?.[mk]?.he ?? 0); }, 0);
+      row["TOTAL HN"] = months.reduce((acc, { ps }) => { const mk = ps.slice(0, 7); return acc + (horaAdicionaisOverrides[r.id]?.[mk]?.hn ?? 0); }, 0);
       return row;
     });
     const totRow = { "Membro": `TOTAL (${rows.length} membros)`, "Cód. Projeto": "", "Squad(s)": "", "Contrato": "", "Classificação": "" };
@@ -926,6 +944,24 @@ export default function Financeiro() {
             <button type="button" onClick={() => setViewMode("horas")} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: viewMode === "horas" ? "var(--indigo-9)" : "var(--gray-2)", color: viewMode === "horas" ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.04em" }}>Horas</button>
             <button type="button" onClick={() => setViewMode("valor")} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: viewMode === "valor" ? "var(--green-9)" : "var(--gray-2)", color: viewMode === "valor" ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.04em" }}>R$</button>
           </div>
+          <button type="button" onClick={() => setShowAdicionais(v => !v)} title="Habilitar linhas de Hora Extra e Hora Noturna"
+            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, border: showAdicionais ? "1px solid rgba(251,146,60,0.7)" : "1px solid var(--gray-6)", background: showAdicionais ? "rgba(251,146,60,0.12)" : "var(--gray-2)", color: showAdicionais ? "#fb923c" : "var(--gray-10)", cursor: "pointer", letterSpacing: "0.04em", transition: "all 0.15s" }}>
+            ⚡ HE / HN
+          </button>
+          {showAdicionais && horaAdicionaisDirty && !isClosed && (
+            <button type="button" disabled={horaAdicionaisSaving} onClick={async () => {
+              setHoraAdicionaisSaving(true);
+              try {
+                const userName = (await import("../firebase")).auth?.currentUser?.displayName || (await import("../firebase")).auth?.currentUser?.email || "Usuário";
+                await saveHoraAdicionais(startMonth, horaAdicionaisOverrides, userName);
+                setHoraAdicionaisDirty(false);
+              } catch(e) { console.error(e); }
+              finally { setHoraAdicionaisSaving(false); }
+            }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, border: "none", background: "rgba(251,146,60,0.9)", color: "white", cursor: horaAdicionaisSaving ? "not-allowed" : "pointer", opacity: horaAdicionaisSaving ? 0.7 : 1 }}>
+              {horaAdicionaisSaving ? "Salvando…" : "💾 Salvar HE/HN"}
+            </button>
+          )}
           <button type="button" onClick={exportXlsx} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 7, fontSize: 12, fontWeight: 700, border: "1px solid var(--green-7)", background: "var(--green-3)", color: "var(--green-11)", cursor: "pointer", letterSpacing: "0.04em", transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--green-4)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "var(--green-3)"; }}>
             <Download size={14} />
             Exportar Excel
@@ -972,7 +1008,8 @@ export default function Financeiro() {
             {rows.map((r, i) => {
               const name = getUserLabel(r.user);
               return (
-                <tr key={r.id} style={{ background: i % 2 === 0 ? undefined : "var(--gray-1)" }}>
+                <React.Fragment key={r.id}>
+                <tr style={{ background: i % 2 === 0 ? undefined : "var(--gray-1)" }}>
                   <td style={{ ...TDL, maxWidth: 160 }}>
                     <span style={{ fontWeight: 600, color: "var(--gray-12)", display: "block", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }} title={name}>{name}</span>
                   </td>
@@ -1061,6 +1098,21 @@ export default function Financeiro() {
                     </span>
                   </td>
                 </tr>
+                {showAdicionais && (
+                  <tr style={{ background: "rgba(251,146,60,0.04)" }}>
+                    <td style={{ ...TDL, padding: "2px 8px", fontSize: 10, color: "#fb923c", fontWeight: 700, whiteSpace: "nowrap" }} colSpan={7}>⚡ Hora Extra</td>
+                    {months.map((mo, mi) => { const mk = mo.ps.slice(0, 7); const he = horaAdicionaisOverrides[r.id]?.[mk]?.he ?? 0; return (<td key={mi} style={{ ...TDR, padding: "2px 4px", background: "rgba(251,146,60,0.04)" }}><input type="number" min={0} step={0.5} value={he === 0 ? "" : he} placeholder="0" disabled={isClosed} onChange={e => { const v = parseFloat(e.target.value) || 0; setHoraAdicionaisOverrides(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), [mk]: { ...(prev[r.id]?.[mk] || {}), he: v } } })); setHoraAdicionaisDirty(true); }} style={{ width: 60, padding: "1px 4px", textAlign: "right", fontSize: 11, fontWeight: 700, borderRadius: 4, border: "1px solid rgba(251,146,60,0.4)", background: "transparent", color: "#fb923c", outline: "none" }} /></td>); })}
+                    <td style={{ ...TDR, padding: "2px 4px" }} colSpan={2} />
+                  </tr>
+                )}
+                {showAdicionais && (
+                  <tr style={{ background: "rgba(167,139,250,0.04)" }}>
+                    <td style={{ ...TDL, padding: "2px 8px", fontSize: 10, color: "#a78bfa", fontWeight: 700, whiteSpace: "nowrap" }} colSpan={7}>🌙 Hora Noturna</td>
+                    {months.map((mo, mi) => { const mk = mo.ps.slice(0, 7); const hn = horaAdicionaisOverrides[r.id]?.[mk]?.hn ?? 0; return (<td key={mi} style={{ ...TDR, padding: "2px 4px", background: "rgba(167,139,250,0.04)" }}><input type="number" min={0} step={0.5} value={hn === 0 ? "" : hn} placeholder="0" disabled={isClosed} onChange={e => { const v = parseFloat(e.target.value) || 0; setHoraAdicionaisOverrides(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), [mk]: { ...(prev[r.id]?.[mk] || {}), hn: v } } })); setHoraAdicionaisDirty(true); }} style={{ width: 60, padding: "1px 4px", textAlign: "right", fontSize: 11, fontWeight: 700, borderRadius: 4, border: "1px solid rgba(167,139,250,0.4)", background: "transparent", color: "#a78bfa", outline: "none" }} /></td>); })}
+                    <td style={{ ...TDR, padding: "2px 4px" }} colSpan={2} />
+                  </tr>
+                )}
+                </React.Fragment>
               );
             })}
           </tbody>
