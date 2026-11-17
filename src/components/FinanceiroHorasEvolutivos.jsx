@@ -337,6 +337,7 @@ const COL_DEFS = {
   dataAtividade:     { header: "DATA ATIVIDADE",     align: "left" },
   dataEncerramento:  { header: "DATA ENCERRAMENTO",  align: "left" },
   resolution:        { header: "RESOLUTION",         align: "left",  maxWidth: 110 },
+  dataInicioHml:     { header: "DT INÍ. HOMOLOG.",   align: "left" },
   pacote:            { header: "PACOTE (RELEASE)",   align: "left" },
 };
 const DEFAULT_COL_ORDER = ["status","squad","avanco","estimativaTotal","plHrsFast","tempoEsforco","termoFaturamento","dataAtividade","dataEncerramento","resolution"];
@@ -1168,6 +1169,11 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                           {t.resolution
                             ? <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 6, background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }} title={t.resolution}>{t.resolution}</span>
                             : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
+                        </td>
+                      );
+                      case "dataInicioHml": return (
+                        <td key={id} style={D}>
+                          <span style={{ fontSize: 11, color: t.dataInicioHomologacao ? "var(--gray-12)" : "var(--gray-7)" }}>{fmtDate(t.dataInicioHomologacao)}</span>
                         </td>
                       );
                       case "pacote": return (
