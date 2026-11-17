@@ -949,12 +949,10 @@ export default function Financeiro() {
             <button type="button" onClick={() => setViewMode("horas")} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: viewMode === "horas" ? "var(--indigo-9)" : "var(--gray-2)", color: viewMode === "horas" ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.04em" }}>Horas</button>
             <button type="button" onClick={() => setViewMode("valor")} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: viewMode === "valor" ? "var(--green-9)" : "var(--gray-2)", color: viewMode === "valor" ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.04em" }}>R$</button>
           </div>
-          {showAdicionais && (
-            <button type="button" onClick={() => setFilterHEHN(v => !v)} title="Filtrar apenas membros com HE ou HN preenchido"
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, border: filterHEHN ? "1px solid rgba(251,146,60,0.9)" : "1px solid var(--gray-6)", background: filterHEHN ? "rgba(251,146,60,0.2)" : "var(--gray-2)", color: filterHEHN ? "#fb923c" : "var(--gray-10)", cursor: "pointer", letterSpacing: "0.04em", transition: "all 0.15s" }}>
-              🔍 Apenas HE/HN
-            </button>
-          )}
+          <button type="button" onClick={() => setFilterHEHN(v => !v)} title="Filtrar apenas membros com HE ou HN preenchido"
+            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, border: filterHEHN ? "1px solid rgba(251,146,60,0.9)" : "1px solid var(--gray-6)", background: filterHEHN ? "rgba(251,146,60,0.2)" : "var(--gray-2)", color: filterHEHN ? "#fb923c" : "var(--gray-10)", cursor: "pointer", letterSpacing: "0.04em", transition: "all 0.15s" }}>
+            🔍 HE/HN
+          </button>
           <button type="button" onClick={() => setShowAdicionais(v => !v)} title="Habilitar linhas de Hora Extra e Hora Noturna"
             style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, border: showAdicionais ? "1px solid rgba(251,146,60,0.7)" : "1px solid var(--gray-6)", background: showAdicionais ? "rgba(251,146,60,0.12)" : "var(--gray-2)", color: showAdicionais ? "#fb923c" : "var(--gray-10)", cursor: "pointer", letterSpacing: "0.04em", transition: "all 0.15s" }}>
             ⚡ HE / HN
