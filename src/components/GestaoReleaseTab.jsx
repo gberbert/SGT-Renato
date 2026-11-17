@@ -14,22 +14,22 @@ function SistemasAlteradosSection() {
   const [sistemas, setSistemas] = useState([]);
   const [squads, setSquads] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ nome: '', categoria: 'Modernizado', squadId: '', squadNome: '' });
+  const [form, setForm] = useState({ nome: '', categoria: 'Modernizado', squads: [] });
+  const [addMore, setAddMore] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   useEffect(() => { const q = query(collection(db, SISTEMAS_COL), orderBy('createdAt', 'asc')); return onSnapshot(q, snap => setSistemas(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => {}); }, []);
   useEffect(() => { getDocs(query(collection(db, 'squads'), orderBy('createdAt', 'desc'))).then(snap => setSquads(snap.docs.map(d => ({ id: d.id, ...d.data() })))).catch(() => {}); }, []);
-  const startNew = () => { setForm({ nome: '', categoria: 'Modernizado', squadId: '', squadNome: '' }); setEditingId('new'); };
-  const startEdit = s => { setForm({ nome: s.nome || '', categoria: s.categoria || 'Modernizado', squadId: s.squadId || '', squadNome: s.squadNome || '' }); setEditingId(s.id); };
-  const cancel = () => { setEditingId(null); setForm({ nome: '', categoria: 'Modernizado', squadId: '', squadNome: '' }); };
-  const onSquad = e => { const sq = squads.find(s => s.id === e.target.value); setForm(p => ({ ...p, squadId: e.target.value, squadNome: sq?.name || '' })); };
+  const startNew = () => { setForm({ nome: '', categoria: 'Modernizado', squads: [] }); setEditingId('new'); setAddMore(false); };
+  const startEdit = s => { setForm({ nome: s.nome || '', categoria: s.categoria || 'Modernizado', squads: s.squads || [] }); setEditingId(s.id); };
+  const cancel = () => { setEditingId(null); setForm({ nome: '', categoria: 'Modernizado', squads: [] }); setAddMore(false); };
+  const onSquads = e => { const sel = Array.from(e.target.selectedOptions).map(o => ({ id: o.value, name: o.text })); setForm(p => ({ ...p, squads: sel })); };
   const handleSave = async () => {
     if (!form.nome.trim()) return; setSaving(true);
     try {
-      const d = { nome: form.nome.trim(), categoria: form.categoria, squadId: form.squadId, squadNome: form.squadNome };
-      if (editingId === 'new') await addDoc(collection(db, SISTEMAS_COL), { ...d, createdAt: serverTimestamp() });
-      else await updateDoc(doc(db, SISTEMAS_COL, editingId), { ...d, updatedAt: serverTimestamp() });
-      cancel();
+      const d = { nome: form.nome.trim(), categoria: form.categoria, squads: form.squads };
+      if (editingId === 'new') { await addDoc(collection(db, SISTEMAS_COL), { ...d, createdAt: serverTimestamp() }); setForm({ nome: '', categoria: 'Modernizado', squads: [] }); setAddMore(true); }
+      else { await updateDoc(doc(db, SISTEMAS_COL, editingId), { ...d, updatedAt: serverTimestamp() }); cancel(); }
     } catch { } finally { setSaving(false); }
   };
   const handleDel = async id => {
@@ -51,9 +51,12 @@ function SistemasAlteradosSection() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '10px 12px', borderRadius: 9, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.3)', marginBottom: 8 }}>
           <input autoFocus value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') cancel(); }} placeholder="Nome do sistema *" style={{ ...inp, flex: 2, minWidth: 160, border: '1px solid rgba(99,102,241,0.5)', background: 'rgba(99,102,241,0.05)' }} />
           <select value={form.categoria} onChange={e => setForm(p => ({ ...p, categoria: e.target.value }))} style={{ ...inp, minWidth: 130, cursor: 'pointer' }}>{CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}</select>
-          <select value={form.squadId} onChange={onSquad} style={{ ...inp, minWidth: 160, cursor: 'pointer' }}><option value="">— Squad —</option>{squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-          <button type="button" onClick={handleSave} disabled={saving || !form.nome.trim()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 14px', borderRadius: 6, border: 'none', background: 'var(--indigo-9)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: (!form.nome.trim() || saving) ? 0.6 : 1 }}><Save size={12} /> {saving ? '...' : 'Salvar'}</button>
-          <button type="button" onClick={cancel} style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', borderRadius: 6, border: '1px solid var(--gray-6)', background: 'var(--gray-3)', color: 'var(--gray-11)', fontSize: 12, cursor: 'pointer' }}><X size={12} /></button>
+          <select multiple value={form.squads.map(s => s.id)} onChange={onSquads} size={Math.min(squads.length || 1, 4)} style={{ ...inp, minWidth: 160, cursor: 'pointer', resize: 'none' }}>{squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <button type="button" onClick={handleSave} disabled={saving || !form.nome.trim()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: 'none', background: 'var(--indigo-9)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: (!form.nome.trim() || saving) ? 0.6 : 1 }}><Save size={12} /> {saving ? '...' : 'Salvar'}</button>
+            {addMore && <span style={{ fontSize: 10, color: '#4ade80', textAlign: 'center', fontWeight: 700 }}>&#10003; salvo</span>}
+            <button type="button" onClick={cancel} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 10px', borderRadius: 6, border: '1px solid var(--gray-6)', background: 'var(--gray-3)', color: 'var(--gray-11)', fontSize: 11, cursor: 'pointer' }}>Fechar</button>
+          </div>
         </div>
       )}
       {sistemas.length === 0 && editingId === null ? (
@@ -74,8 +77,11 @@ function SistemasAlteradosSection() {
                     : <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 7, background: cc.bg, border: `1px solid ${cc.border}`, color: cc.color, whiteSpace: 'nowrap' }}>{s.categoria||'—'}</span>}
                   </td>
                   <td style={{ padding: '7px 12px' }}>
-                    {isEdit ? <select value={form.squadId} onChange={onSquad} style={{ ...inp, cursor: 'pointer' }}><option value="">— Squad —</option>{squads.map(sq => <option key={sq.id} value={sq.id}>{sq.name}</option>)}</select>
-                    : s.squadNome ? <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 7, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>{s.squadNome}</span> : <span style={{ fontSize: 11, color: 'var(--gray-7)' }}>—</span>}
+                    {isEdit
+                      ? <select multiple value={form.squads.map(x => x.id)} onChange={onSquads} size={Math.min(squads.length || 1, 4)} style={{ ...inp, cursor: 'pointer', resize: 'none' }}>{squads.map(sq => <option key={sq.id} value={sq.id}>{sq.name}</option>)}</select>
+                      : (s.squads?.length
+                          ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>{s.squads.map(sq => <span key={sq.id} style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7', whiteSpace: 'nowrap' }}>{sq.name}</span>)}</div>
+                          : s.squadNome ? <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 7, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}>{s.squadNome}</span> : <span style={{ fontSize: 11, color: 'var(--gray-7)' }}>—</span>)}
                   </td>
                   <td style={{ padding: '7px 10px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                     {isEdit ? (
