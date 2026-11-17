@@ -141,13 +141,6 @@ export default function FinanceiroResumo({ rows, months, projectCodeOptions, mod
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
 
-      {isEstab && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.4)" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>📊 ESTABILIZAÇÃO</span>
-          <span style={{ fontSize: 11, color: "var(--gray-9)" }}>— Resumo consolidado com dados de horas, expenses e receita da estabilização</span>
-        </div>
-      )}
-
       {/* ── CONTRACT MARGEM — CONSOLIDADA (topo) ── */}
       <div>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: "var(--gray-9)", textTransform: "uppercase", marginBottom: 8 }}>

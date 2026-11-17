@@ -134,11 +134,6 @@ export default function FinanceiroExpenses({ projectCodes, months, readOnly = fa
             </button>
           ))}
         </div>
-        {isEstab && (
-          <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.5)", color: "#34d399", padding: "3px 10px", borderRadius: 6 }}>
-            📊 ESTABILIZAÇÃO
-          </span>
-        )}
         {readOnly && (
           <span style={{ fontSize: 11, color: "var(--red-11)", fontWeight: 600, background: "var(--red-2)", border: "1px solid var(--red-6)", padding: "3px 10px", borderRadius: 6 }}>
             🔒 Leitura — controle fechado

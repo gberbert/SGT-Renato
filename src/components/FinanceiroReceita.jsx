@@ -238,11 +238,6 @@ export default function FinanceiroReceita({ projectCodes, months, readOnly = fal
             <button key={m.id} type="button" onClick={() => setColMode(m.id)} style={{ padding: "3px 10px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: colMode === m.id ? "var(--green-9)" : "var(--gray-2)", color: colMode === m.id ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.03em" }}>{m.label}</button>
           ))}
         </div>
-        {isEstab && (
-          <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.5)", color: "#34d399", padding: "3px 10px", borderRadius: 6 }}>
-            📊 ESTABILIZAÇÃO
-          </span>
-        )}
         {readOnly && (
           <span style={{ fontSize: 11, color: "var(--red-11)", fontWeight: 600, background: "var(--red-2)", border: "1px solid var(--red-6)", padding: "3px 10px", borderRadius: 6 }}>
             🔒 Leitura — controle fechado
