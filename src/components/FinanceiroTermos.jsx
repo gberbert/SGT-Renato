@@ -46,7 +46,44 @@ const STATUS_LIST = [
   { label: "Solicitação Emissão Notas",   color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Aprovações do Gestor",        color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Emissão das Invoices",        color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
+  { label: "Faturado",                    color: "#facc15",  bg: "rgba(250,204,21,0.12)",   border: "rgba(250,204,21,0.5)" },
 ];
+
+/* ── Status Workflow Popup ───────────────────────────────────────── */
+function StatusFlowModal({ onClose }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}>
+      <div style={{ background: "var(--color-panel-solid)", border: "1px solid var(--gray-6)", borderRadius: 14, padding: "24px 28px", width: "min(96vw, 520px)", display: "flex", flexDirection: "column", gap: 0 }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "var(--gray-12)" }}>📋 Fluxo de Status do Termo</div>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--gray-10)", fontSize: 16 }}>✕</button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {STATUS_LIST.map((s, i) => (
+            <React.Fragment key={s.label}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: s.bg, border: `2px solid ${s.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: s.color }}>{i + 1}</span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, padding: "4px 12px", borderRadius: 6, background: s.bg, border: `1px solid ${s.border}`, color: s.color }}>
+                  {s.label}
+                </span>
+                {i === STATUS_LIST.length - 1 && (
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#facc15", marginLeft: 4 }}>✓ FINAL</span>
+                )}
+              </div>
+              {i < STATUS_LIST.length - 1 && (
+                <div style={{ marginLeft: 13, width: 2, height: 16, background: "var(--gray-5)" }} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function getStatusMeta(label) {
   return STATUS_LIST.find(s => s.label === label) || STATUS_LIST[0];
@@ -911,6 +948,7 @@ export default function FinanceiroTermos() {
   const [showConfig, setShowConfig] = useState(false);
   const [showCriar, setShowCriar] = useState(false);
   const [viewTermo, setViewTermo] = useState(null);
+  const [showFlow, setShowFlow] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [sortKey, setSortKey] = useState("mesReferencia");
   const [sortDir, setSortDir] = useState("desc");
@@ -979,6 +1017,7 @@ export default function FinanceiroTermos() {
       {showConfig && <ConfigModal config={config} contratos={contratos} onSave={handleSaveConfig} onClose={() => setShowConfig(false)} />}
       {showCriar && <CriarTermoModal contratos={contratos} projectCodes={projectCodes} onSave={handleCriarTermo} onClose={() => setShowCriar(false)} />}
       {viewTermo && <ViewTermoModal termo={viewTermo} contratos={contratos} projectCodes={projectCodes} config={config} onSave={handleUpdateTermo} onClose={() => setViewTermo(null)} />}
+      {showFlow && <StatusFlowModal onClose={() => setShowFlow(false)} />}
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div>
@@ -986,6 +1025,10 @@ export default function FinanceiroTermos() {
           <div style={{ fontSize: 11, color: "var(--gray-8)", marginTop: 3 }}>{filteredTermos.length}/{termos.length} termo{termos.length !== 1 ? "s" : ""}</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button type="button" onClick={() => setShowFlow(true)} title="Ver fluxo de status"
+            style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid var(--gray-6)", background: "var(--gray-2)", color: "var(--gray-10)", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600 }}>
+            🔄 Fluxo
+          </button>
           <button type="button" onClick={() => setShowConfig(true)} title="Configurações de Base"
             style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid var(--gray-6)", background: "var(--gray-2)", color: "var(--gray-10)", cursor: "pointer", display: "flex", alignItems: "center" }}>
             <Settings size={15} />
