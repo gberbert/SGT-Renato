@@ -14,7 +14,7 @@ import FinanceiroTermos from "./FinanceiroTermos";
 import FinanceiroHorasEvolutivos from "./FinanceiroHorasEvolutivos";
 import FinanceiroAlocacoes from "./FinanceiroAlocacoes";
 import UserDetailsModal from "./UserDetailsModal";
-import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, loadRevenueEstab, subscribeToHoraEstab, saveHoraEstab, subscribeToHoraAdicionais, saveHoraAdicionais } from "../services/financeiroExpensesService";
+import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, loadRevenueEstab, subscribeToHoraEstab, saveHoraEstab, subscribeToHoraAdicionais, saveHoraAdicionais, subscribeToHoraComparativo, saveHoraComparativo } from "../services/financeiroExpensesService";
 import { ensureControlDoc, subscribeToControl, validatePassword, closeControl, openControl } from "../services/financeiroControlService";
 
 /* ─── date helpers ─────────────────────────────────── */
@@ -186,6 +186,9 @@ export default function Financeiro() {
   const [horaAdicionaisEstabDirty, setHoraAdicionaisEstabDirty] = useState(false);
   const [horaAdicionaisSaving, setHoraAdicionaisSaving] = useState(false);
   const [filterHEHN, setFilterHEHN] = useState(false);
+  const [comparativoObs, setComparativoObs] = useState({});
+  const [comparativoDirty, setComparativoDirty] = useState(false);
+  const [comparativoSaving, setComparativoSaving] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
   const [closedMeta, setClosedMeta] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -255,6 +258,14 @@ export default function Financeiro() {
   const squadsSorted = useMemo(() => [...squads].sort((a, b) => (a?.name || a?.key || "").toString().toUpperCase().localeCompare((b?.name || b?.key || "").toString().toUpperCase(), "pt-BR")), [squads]);
   const usersSorted = useMemo(() => [...users].sort((a, b) => getUserLabel(a).toUpperCase().localeCompare(getUserLabel(b).toUpperCase(), "pt-BR")), [users]);
   const projectCodeOptions = useMemo(() => { const c = new Set(); for (const u of usersSorted) { if (u?.projectCode) c.add(u.projectCode); } return [...c].sort(); }, [usersSorted]);
+
+  /* subscribe to HORA comparativo obs */
+  useEffect(() => {
+    return subscribeToHoraComparativo(startMonth, (data) => {
+      setComparativoObs(data?.obs || {});
+      setComparativoDirty(false);
+    });
+  }, [startMonth]);
 
   /* subscribe to HORA adicionais (HE/HN) — always loaded, split by mode */
   useEffect(() => {
@@ -940,10 +951,10 @@ export default function Financeiro() {
         {/* Mode toggle */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Visão:</span>
-          {["estimativa", "estabilizacao"].map(m => (
+          {["estimativa", "estabilizacao", "comparativo"].map(m => (
             <button key={m} type="button" onClick={() => setHoraMode(m)}
-              style={{ padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${horaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.6)" : "var(--indigo-7)") : "var(--gray-6)"}`, background: horaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.15)" : "var(--indigo-2)") : "transparent", color: horaMode === m ? (m === "estabilizacao" ? "#34d399" : "var(--indigo-11)") : "var(--gray-11)", transition: "all 0.15s" }}>
-              {m === "estimativa" ? "📋 Estimativa" : "📊 Estabilização"}
+              style={{ padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${horaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.6)" : m === "comparativo" ? "rgba(99,102,241,0.7)" : "var(--indigo-7)") : "var(--gray-6)"}`, background: horaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.15)" : m === "comparativo" ? "rgba(99,102,241,0.15)" : "var(--indigo-2)") : "transparent", color: horaMode === m ? (m === "estabilizacao" ? "#34d399" : m === "comparativo" ? "#818cf8" : "var(--indigo-11)") : "var(--gray-11)", transition: "all 0.15s" }}>
+              {m === "estimativa" ? "📋 Estimativa" : m === "estabilizacao" ? "📊 Estabilização" : "⚖️ Comparativo"}
             </button>
           ))}
           {horaMode === "estabilizacao" && horaEstabMeta?.savedAt && (
@@ -1003,7 +1014,85 @@ export default function Financeiro() {
         </div>
       </div>
 
+      {/* ── COMPARATIVO VIEW ── */}
+      {horaMode === "comparativo" && (() => {
+        const mk = months[0].ps.slice(0, 7);
+        const moLabel = months[0].label;
+        const B2 = { padding: "6px 8px", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--gray-9)", borderBottom: "2px solid var(--gray-4)", whiteSpace: "nowrap", background: "var(--gray-2)", position: "sticky", top: 0, zIndex: 2, textAlign: "right" };
+        const D2 = { padding: "6px 8px", fontSize: 12, borderBottom: "1px solid var(--gray-3)", whiteSpace: "nowrap", verticalAlign: "middle", textAlign: "right" };
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                ⚖️ COMPARATIVO — {moLabel.toUpperCase()}
+                <span style={{ fontSize: 10, fontWeight: 400, color: "var(--gray-7)", textTransform: "none", letterSpacing: 0, marginLeft: 8 }}>Estimativa vs Estabilização do mês selecionado</span>
+              </div>
+              {comparativoDirty && !isClosed && (
+                <button type="button" disabled={comparativoSaving} onClick={async () => {
+                  setComparativoSaving(true);
+                  try {
+                    const userName = (await import("../firebase")).auth?.currentUser?.displayName || (await import("../firebase")).auth?.currentUser?.email || "Usuário";
+                    await saveHoraComparativo(startMonth, comparativoObs, userName);
+                    setComparativoDirty(false);
+                  } catch(e) { console.error(e); }
+                  finally { setComparativoSaving(false); }
+                }} style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 14px", borderRadius: 7, fontSize: 12, fontWeight: 700, border: "none", background: "rgba(99,102,241,0.9)", color: "white", cursor: comparativoSaving ? "not-allowed" : "pointer", opacity: comparativoSaving ? 0.7 : 1 }}>
+                  {comparativoSaving ? "Salvando…" : "💾 Salvar Observações"}
+                </button>
+              )}
+            </div>
+            <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid rgba(99,102,241,0.3)" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+                <thead>
+                  <tr style={{ background: "rgba(99,102,241,0.08)" }}>
+                    <th style={{ ...B2, textAlign: "left", width: 160 }}>MEMBRO</th>
+                    <th style={{ ...B2, textAlign: "left" }}>CÓD. PROJETO</th>
+                    <th style={{ ...B2, textAlign: "left" }}>CONTRATO</th>
+                    <th style={{ ...B2, textAlign: "right", color: "var(--indigo-11)" }}>ESTIMATIVA</th>
+                    <th style={{ ...B2, textAlign: "right", color: "#34d399" }}>ESTABILIZAÇÃO</th>
+                    <th style={{ ...B2, textAlign: "right", color: "#818cf8" }}>DIFERENÇA</th>
+                    <th style={{ ...B2, textAlign: "left", width: 280, color: "var(--gray-10)" }}>OBSERVAÇÃO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, i) => {
+                    const estimativaH = r.monthHours[0] + (horaAdicionaisEstima[r.id]?.[mk]?.he || 0) + (horaAdicionaisEstima[r.id]?.[mk]?.hn || 0);
+                    const estabH = (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[0]) + (horaAdicionaisEstab[r.id]?.[mk]?.he || 0) + (horaAdicionaisEstab[r.id]?.[mk]?.hn || 0);
+                    const diff = estabH - estimativaH;
+                    const diffColor = Math.abs(diff) < 0.1 ? "var(--gray-7)" : diff > 0 ? "var(--green-11)" : "var(--red-11)";
+                    const obs = comparativoObs[r.id] || "";
+                    return (
+                      <tr key={r.id} style={{ background: i % 2 === 0 ? undefined : "var(--gray-1)" }}>
+                        <td style={{ ...D2, textAlign: "left", maxWidth: 160 }}>
+                          <span style={{ fontWeight: 600, color: "var(--gray-12)", display: "block", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }} title={getUserLabel(r.user)}>{getUserLabel(r.user)}</span>
+                        </td>
+                        <td style={{ ...D2, textAlign: "left" }}>
+                          {r.user?.projectCode ? <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber-11)", background: "var(--amber-3)", border: "1px solid var(--amber-7)", borderRadius: 6, padding: "1px 6px" }}>{r.user.projectCode}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
+                        </td>
+                        <td style={{ ...D2, textAlign: "left" }}>
+                          {r.user?.contract ? <span style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-10)" }}>{r.user.contract}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
+                        </td>
+                        <td style={{ ...D2, color: "var(--indigo-11)", fontWeight: 600 }}>{estimativaH > 0 ? `${estimativaH}h` : "—"}</td>
+                        <td style={{ ...D2, color: "#34d399", fontWeight: 600 }}>{estabH > 0 ? `${estabH}h` : "—"}</td>
+                        <td style={{ ...D2, color: diffColor, fontWeight: 700 }}>{Math.abs(diff) < 0.1 ? "=" : diff > 0 ? `+${diff.toFixed(1)}h` : `${diff.toFixed(1)}h`}</td>
+                        <td style={{ ...D2, textAlign: "left", padding: "4px 6px" }}>
+                          <input type="text" value={obs} placeholder="Observação…" disabled={isClosed}
+                            onChange={e => { setComparativoObs(prev => ({ ...prev, [r.id]: e.target.value })); setComparativoDirty(true); }}
+                            style={{ width: "100%", padding: "4px 8px", fontSize: 12, borderRadius: 5, border: "1px solid var(--gray-5)", background: obs ? "rgba(99,102,241,0.06)" : "transparent", color: "var(--gray-12)", outline: "none", cursor: isClosed ? "not-allowed" : undefined, opacity: isClosed ? 0.6 : 1 }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── TABLE (grouped) ── */}
+      {horaMode !== "comparativo" && <>
       <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--gray-4)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
           <thead>
@@ -1172,6 +1261,8 @@ export default function Financeiro() {
           </tbody>
         </table>
       </div>
+      </>}
+      {horaMode === "comparativo" && null}
       </>}
     </div>
   );

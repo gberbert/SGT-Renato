@@ -197,6 +197,17 @@ export async function saveHoraAdicionais(periodoYM, mode, overrides, savedBy) {
   await setDoc(ref, { periodo: periodoYM, [field]: overrides, [metaField]: { savedAt: serverTimestamp(), savedBy } }, { merge: true });
 }
 
+export function subscribeToHoraComparativo(periodoYM, callback) {
+  if (!periodoYM) return () => {};
+  const ref = doc(db, "financeiro_hora_comparativo", periodoYM);
+  return onSnapshot(ref, (snap) => callback(snap.exists() ? snap.data() : null), () => callback(null));
+}
+export async function saveHoraComparativo(periodoYM, obs, savedBy) {
+  if (!periodoYM) return;
+  const ref = doc(db, "financeiro_hora_comparativo", periodoYM);
+  await setDoc(ref, { periodo: periodoYM, obs, savedAt: serverTimestamp(), savedBy }, { merge: true });
+}
+
 export function subscribeToHoraEstab(periodoYM, callback) {
   if (!periodoYM) return () => {};
   const ref = doc(db, "financeiro_hora_estab", periodoYM);

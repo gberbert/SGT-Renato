@@ -252,6 +252,11 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    match /financeiro_hora_comparativo/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     match /financeiro_snapshots/{document=**} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
