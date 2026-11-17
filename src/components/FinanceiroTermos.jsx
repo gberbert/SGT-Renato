@@ -433,7 +433,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
         contratoId, contratoNome, mesReferencia, codigoProjeto, status,
         valorHoraBase: valorHoraOverride != null ? Number(valorHoraOverride) : null,
         rcOverrides: Object.keys(rcOverrides).length > 0 ? rcOverrides : null,
-        itensAdicionais: itensAdicionais.map(x => ({ id: x.id || uid(), descricao: x.descricao || "", valor: numVal(String(x.valor || 0)) })),
+        itensAdicionais: itensAdicionais.map(x => ({ id: x.id || uid(), descricao: x.descricao || "", observacao: x.observacao || "", valor: numVal(String(x.valor || 0)) })),
         ...(arcOverride ? { arcOverride: arcOverride.map(r => ({ nome: r.nome, valorBase: numVal(String(r.valorBase)) })) } : {}),
       });
       onClose();
@@ -792,7 +792,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                   <div style={BLK}>
                     {editing && (
                       <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--gray-4)", display: "flex", alignItems: "center", gap: 10 }}>
-                        <button type="button" onClick={() => setItensAdicionais(p => [...p, { id: uid(), descricao: "", valor: 0 }])}
+                        <button type="button" onClick={() => setItensAdicionais(p => [...p, { id: uid(), descricao: "", observacao: "", valor: 0 }])}
                           style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, border: "none", background: "rgba(232,121,249,0.15)", color: "#e879f9", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                           + Adicionar item
                         </button>
@@ -802,6 +802,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead><tr>
                         <th style={TH}>DESCRIÇÃO</th>
+                        <th style={TH}>OBSERVAÇÃO</th>
                         <th style={{ ...TH, textAlign: "right" }}>VALOR (R$)</th>
                         {editing && <th style={{ ...TH, textAlign: "center", width: 40 }}></th>}
                       </tr></thead>
@@ -814,6 +815,11 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                                 {editing
                                   ? <input value={item.descricao} onChange={e => setItensAdicionais(p => p.map((x, i) => i === idx ? { ...x, descricao: e.target.value } : x))} placeholder="Descrição do item..." style={{ width: "100%", padding: "4px 7px", borderRadius: 5, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, outline: "none" }} />
                                   : (item.descricao || "—")}
+                              </td>
+                              <td style={TD}>
+                                {editing
+                                  ? <input value={item.observacao || ""} onChange={e => setItensAdicionais(p => p.map((x, i) => i === idx ? { ...x, observacao: e.target.value } : x))} placeholder="Observação..." style={{ width: "100%", padding: "4px 7px", borderRadius: 5, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, outline: "none" }} />
+                                  : (item.observacao ? <span style={{ fontSize: 11, color: "var(--gray-9)", fontStyle: "italic" }}>{item.observacao}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>)}
                               </td>
                               <td style={TDR}>
                                 {editing
@@ -829,7 +835,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                           );
                         })}
                         {itensAdicionais.length === 0 && (
-                          <tr><td colSpan={editing ? 3 : 2} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>
+                          <tr><td colSpan={editing ? 4 : 3} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>
                             {editing ? "Clique em \"Adicionar item\" para inserir um ajuste." : "Nenhum item adicional."}
                           </td></tr>
                         )}
