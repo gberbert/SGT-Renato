@@ -358,6 +358,8 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   // RC overrides per alocacao (key = alocacao.id)
   const [rcOverrides, setRcOverrides] = useState(termo.rcOverrides || {});
 
+  const [itensAdicionais, setItensAdicionais] = useState(termo.itensAdicionais || []);
+
   // ARC editable overrides (per termo) — must come before arcTotal
   const [arcOverride, setArcOverride] = useState(termo.arcOverride || null);
   const arcDisplay = arcOverride || arcItems;
@@ -376,7 +378,8 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   const fastTotal  = ticketsFast.reduce((s, t) => s + getTicketH(t) * valorBase, 0);
   const catHrsTotal = r1t(ticketsCatalogo.reduce((s, t) => s + getTicketH(t), 0));
   const catTotal   = ticketsCatalogo.reduce((s, t) => s + getTicketH(t) * valorBase, 0);
-  const grandTotal = arcTotal + alocTotal + demTotal + fastTotal + catTotal;
+  const itensAdicionaisTotal = itensAdicionais.reduce((s, x) => s + numVal(String(x.valor || 0)), 0);
+  const grandTotal = arcTotal + alocTotal + demTotal + fastTotal + catTotal + itensAdicionaisTotal;
 
   // Persist computed totals back to the termo document (block-level for grid display)
   useEffect(() => {
@@ -393,7 +396,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
   }, [grandTotal]); // grandTotal captures all block totals
 
   // Collapsible state — all collapsed by default
-  const [collapsed, setCollapsed] = useState({ arc: true, aloc: true, dem: true, fast: true, cat: true });
+  const [collapsed, setCollapsed] = useState({ arc: true, aloc: true, dem: true, fast: true, cat: true, add: true });
   const toggle = key => setCollapsed(p => ({ ...p, [key]: !p[key] }));
 
   const termoMes = termo.mesReferencia ? (() => {
@@ -430,6 +433,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
         contratoId, contratoNome, mesReferencia, codigoProjeto, status,
         valorHoraBase: valorHoraOverride != null ? Number(valorHoraOverride) : null,
         rcOverrides: Object.keys(rcOverrides).length > 0 ? rcOverrides : null,
+        itensAdicionais: itensAdicionais.map(x => ({ id: x.id || uid(), descricao: x.descricao || "", valor: numVal(String(x.valor || 0)) })),
         ...(arcOverride ? { arcOverride: arcOverride.map(r => ({ nome: r.nome, valorBase: numVal(String(r.valorBase)) })) } : {}),
       });
       onClose();
@@ -774,6 +778,67 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                 </div>}
               </div>
             ))}
+
+            {/* Block 6: Itens Adicionais — visível ao editar ou se houver itens */}
+            {(editing || itensAdicionais.length > 0) && (
+              <div style={{ marginBottom: 10 }}>
+                <button type="button" onClick={() => toggle("add")} style={{ width: "100%", border: "none", background: "none", cursor: "pointer", padding: 0, display: "block" }}>
+                  <div style={{ ...BH, background: "rgba(232,121,249,0.08)" }}>
+                    <span style={{ ...BHL, color: "#e879f9" }}>6 · Itens Adicionais {collapsed.add ? "▶" : "▼"}</span>
+                    <div style={{ display: "flex" }}><div style={{ width: HRS_W }} /><div style={{ width: VAL_W, textAlign: "right" }}><span style={{ ...BHR, color: itensAdicionaisTotal < 0 ? "#f87171" : "#e879f9" }}>{fmtCurrency(itensAdicionaisTotal)}</span></div></div>
+                  </div>
+                </button>
+                {!collapsed.add && (
+                  <div style={BLK}>
+                    {editing && (
+                      <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--gray-4)", display: "flex", alignItems: "center", gap: 10 }}>
+                        <button type="button" onClick={() => setItensAdicionais(p => [...p, { id: uid(), descricao: "", valor: 0 }])}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, border: "none", background: "rgba(232,121,249,0.15)", color: "#e879f9", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                          + Adicionar item
+                        </button>
+                        <span style={{ fontSize: 11, color: "var(--gray-8)" }}>Permite valores negativos para ajustes/descontos.</span>
+                      </div>
+                    )}
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead><tr>
+                        <th style={TH}>DESCRIÇÃO</th>
+                        <th style={{ ...TH, textAlign: "right" }}>VALOR (R$)</th>
+                        {editing && <th style={{ ...TH, textAlign: "center", width: 40 }}></th>}
+                      </tr></thead>
+                      <tbody>
+                        {itensAdicionais.map((item, idx) => {
+                          const v = numVal(String(item.valor || 0));
+                          return (
+                            <tr key={item.id || idx}>
+                              <td style={TD}>
+                                {editing
+                                  ? <input value={item.descricao} onChange={e => setItensAdicionais(p => p.map((x, i) => i === idx ? { ...x, descricao: e.target.value } : x))} placeholder="Descrição do item..." style={{ width: "100%", padding: "4px 7px", borderRadius: 5, border: "1px solid var(--gray-6)", background: "var(--gray-1)", color: "var(--gray-12)", fontSize: 12, outline: "none" }} />
+                                  : (item.descricao || "—")}
+                              </td>
+                              <td style={TDR}>
+                                {editing
+                                  ? <input type="number" step={0.01} value={item.valor} onChange={e => setItensAdicionais(p => p.map((x, i) => i === idx ? { ...x, valor: e.target.value } : x))} style={{ width: 140, padding: "4px 7px", borderRadius: 5, border: `1px solid ${v < 0 ? "rgba(248,113,113,0.5)" : "rgba(232,121,249,0.4)"}`, background: v < 0 ? "rgba(248,113,113,0.05)" : "rgba(232,121,249,0.05)", color: v < 0 ? "#f87171" : "#e879f9", fontSize: 12, fontWeight: 700, outline: "none", textAlign: "right" }} />
+                                  : <span style={{ color: v < 0 ? "#f87171" : "#e879f9" }}>{fmtCurrency(v)}</span>}
+                              </td>
+                              {editing && (
+                                <td style={{ ...TD, textAlign: "center" }}>
+                                  <button type="button" onClick={() => setItensAdicionais(p => p.filter((_, i) => i !== idx))} style={{ background: "none", border: "1px solid var(--red-6)", borderRadius: 5, padding: "2px 7px", cursor: "pointer", color: "var(--red-10)", fontSize: 11 }}>✕</button>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                        {itensAdicionais.length === 0 && (
+                          <tr><td colSpan={editing ? 3 : 2} style={{ ...TD, textAlign: "center", color: "var(--gray-7)" }}>
+                            {editing ? "Clique em \"Adicionar item\" para inserir um ajuste." : "Nenhum item adicional."}
+                          </td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
