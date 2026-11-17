@@ -1051,7 +1051,12 @@ export default function Financeiro() {
                     const estabH = horaMode === "estabilizacao" ? (hasOverride ? horaEstabOverrides[r.id][mk] : h) : h;
                     const isModified = horaMode === "estabilizacao" && hasOverride && estabH !== h;
                     const displayH = horaMode === "estabilizacao" ? estabH : h;
-                    const val = r1(displayH * r.csrRate);
+                    const aEM = horaMode === "estabilizacao" ? horaAdicionaisEstab : horaAdicionaisEstima;
+                    const heM = aEM[r.id]?.[mk]?.he || 0;
+                    const hnM = aEM[r.id]?.[mk]?.hn || 0;
+                    const hasAdicionaisM = heM > 0 || hnM > 0;
+                    const displayHTotal = r1(displayH + heM + hnM);
+                    const val = r1(displayHTotal * r.csrRate);
                     if (horaMode === "estabilizacao" && viewMode === "horas") {
                       return (
                         <td key={mi} style={{ ...TDR, background: isModified ? "rgba(251,146,60,0.1)" : "rgba(16,185,129,0.06)", position: "relative" }}>
@@ -1075,16 +1080,19 @@ export default function Financeiro() {
                           {isModified && (
                             <div style={{ fontSize: 9, color: "var(--gray-7)", textAlign: "right", marginTop: 1, lineHeight: 1 }} title={`Estimativa original: ${h}h`}>{h}h ▸</div>
                           )}
+                          {hasAdicionaisM && <div style={{ fontSize: 8, color: "#fb923c", textAlign: "right", lineHeight: 1, marginTop: 1 }} title={`HE: ${heM}h, HN: ${hnM}h`}>⚡+{r1(heM+hnM)}h</div>}
                         </td>
                       );
                     }
-                    const display = viewMode === "horas" ? (displayH > 0 ? `${displayH}h` : "—") : (val > 0 ? fmtCurrency(val) : "—");
-                    const color = viewMode === "horas" ? (displayH > 0 ? (isModified ? "#fb923c" : "var(--green-11)") : "var(--gray-7)") : (val > 0 ? (isModified ? "#fb923c" : "var(--teal-11)") : "var(--gray-7)");
+                    const display = viewMode === "horas" ? (displayHTotal > 0 ? `${displayHTotal}h` : "—") : (val > 0 ? fmtCurrency(val) : "—");
+                    const color = viewMode === "horas" ? (displayHTotal > 0 ? (isModified ? "#fb923c" : "var(--green-11)") : "var(--gray-7)") : (val > 0 ? (isModified ? "#fb923c" : "var(--teal-11)") : "var(--gray-7)");
                     return (
-                      <td key={mi} style={{ ...TDR, background: isModified ? "rgba(251,146,60,0.1)" : (horaMode === "estabilizacao" ? "rgba(16,185,129,0.06)" : undefined), position: "relative" }}>
+                      <td key={mi} style={{ ...TDR, background: isModified ? "rgba(251,146,60,0.1)" : (hasAdicionaisM ? "rgba(251,146,60,0.05)" : (horaMode === "estabilizacao" ? "rgba(16,185,129,0.06)" : undefined)), position: "relative" }}>
                         {isModified && <span title={`Estimativa: ${h}h`} style={{ position: "absolute", top: 2, right: 3, fontSize: 8, fontWeight: 900, color: "#fb923c", lineHeight: 1 }}>✎</span>}
-                        <span style={{ fontVariantNumeric: "tabular-nums", color, fontWeight: (displayH > 0 || val > 0) ? 600 : 400 }}>{display}</span>
+                        {hasAdicionaisM && !isModified && <span title={`HE: ${heM}h, HN: ${hnM}h`} style={{ position: "absolute", top: 1, right: 3, fontSize: 8, fontWeight: 900, color: "#fb923c", lineHeight: 1 }}>⚡</span>}
+                        <span style={{ fontVariantNumeric: "tabular-nums", color, fontWeight: (displayHTotal > 0 || val > 0) ? 600 : 400 }}>{display}</span>
                         {isModified && viewMode === "horas" && <div style={{ fontSize: 9, color: "var(--gray-7)", lineHeight: 1, marginTop: 1 }} title={`Estimativa original: ${h}h`}>{h}h ▸</div>}
+                        {hasAdicionaisM && viewMode === "horas" && <div style={{ fontSize: 8, color: "#fb923c", lineHeight: 1, marginTop: 1 }} title={`HE: ${heM}h, HN: ${hnM}h`}>+{r1(heM+hnM)}h</div>}
                       </td>
                     );
                   })}
