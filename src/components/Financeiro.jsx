@@ -189,6 +189,7 @@ export default function Financeiro() {
   const [comparativoObs, setComparativoObs] = useState({});
   const [comparativoDirty, setComparativoDirty] = useState(false);
   const [comparativoSaving, setComparativoSaving] = useState(false);
+  const [comparativoDiffFilter, setComparativoDiffFilter] = useState("all"); // "all" | "positive" | "negative" | "changed"
   const [isClosed, setIsClosed] = useState(false);
   const [closedMeta, setClosedMeta] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -1020,12 +1021,30 @@ export default function Financeiro() {
         const moLabel = months[0].label;
         const B2 = { padding: "6px 8px", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--gray-9)", borderBottom: "2px solid var(--gray-4)", whiteSpace: "nowrap", background: "var(--gray-2)", position: "sticky", top: 0, zIndex: 2, textAlign: "right" };
         const D2 = { padding: "6px 8px", fontSize: 12, borderBottom: "1px solid var(--gray-3)", whiteSpace: "nowrap", verticalAlign: "middle", textAlign: "right" };
+        const filteredRows = rows.filter(r => {
+          const estimativaH = r.monthHours[0] + (horaAdicionaisEstima[r.id]?.[mk]?.he || 0) + (horaAdicionaisEstima[r.id]?.[mk]?.hn || 0);
+          const estabH = (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[0]) + (horaAdicionaisEstab[r.id]?.[mk]?.he || 0) + (horaAdicionaisEstab[r.id]?.[mk]?.hn || 0);
+          const diff = estabH - estimativaH;
+          if (comparativoDiffFilter === "positive") return diff > 0.1;
+          if (comparativoDiffFilter === "negative") return diff < -0.1;
+          if (comparativoDiffFilter === "changed") return Math.abs(diff) >= 0.1;
+          return true;
+        });
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 ⚖️ COMPARATIVO — {moLabel.toUpperCase()}
-                <span style={{ fontSize: 10, fontWeight: 400, color: "var(--gray-7)", textTransform: "none", letterSpacing: 0, marginLeft: 8 }}>Estimativa vs Estabilização do mês selecionado</span>
+                <span style={{ fontSize: 10, fontWeight: 400, color: "var(--gray-7)", textTransform: "none", letterSpacing: 0, marginLeft: 8 }}>Estimativa vs Estabilização · {filteredRows.length} de {rows.length} membros</span>
+              </div>
+              {/* Filtro diferença */}
+              <div style={{ display: "flex", gap: 4, marginLeft: 8 }}>
+                {[{ id: "all", label: "Todos" }, { id: "changed", label: "⚡ Com diferença" }, { id: "positive", label: "▲ Positivo" }, { id: "negative", label: "▼ Negativo" }].map(f => (
+                  <button key={f.id} type="button" onClick={() => setComparativoDiffFilter(f.id)}
+                    style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: "pointer", border: comparativoDiffFilter === f.id ? "1px solid #818cf8" : "1px solid var(--gray-6)", background: comparativoDiffFilter === f.id ? "rgba(99,102,241,0.15)" : "transparent", color: comparativoDiffFilter === f.id ? "#818cf8" : "var(--gray-10)", transition: "all 0.15s" }}>
+                    {f.label}
+                  </button>
+                ))}
               </div>
               {comparativoDirty && !isClosed && (
                 <button type="button" disabled={comparativoSaving} onClick={async () => {
@@ -1042,12 +1061,16 @@ export default function Financeiro() {
               )}
             </div>
             <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid rgba(99,102,241,0.3)" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1100 }}>
                 <thead>
                   <tr style={{ background: "rgba(99,102,241,0.08)" }}>
                     <th style={{ ...B2, textAlign: "left", width: 160 }}>MEMBRO</th>
+                    <th style={{ ...B2, textAlign: "left" }}>SAP</th>
+                    <th style={{ ...B2, textAlign: "center" }}>STATUS</th>
                     <th style={{ ...B2, textAlign: "left" }}>CÓD. PROJETO</th>
+                    <th style={{ ...B2, textAlign: "left" }}>SQUAD</th>
                     <th style={{ ...B2, textAlign: "left" }}>CONTRATO</th>
+                    <th style={{ ...B2, textAlign: "right" }}>CSR</th>
                     <th style={{ ...B2, textAlign: "right", color: "var(--indigo-11)" }}>ESTIMATIVA</th>
                     <th style={{ ...B2, textAlign: "right", color: "#34d399" }}>ESTABILIZAÇÃO</th>
                     <th style={{ ...B2, textAlign: "right", color: "#818cf8" }}>DIFERENÇA</th>
@@ -1055,7 +1078,7 @@ export default function Financeiro() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r, i) => {
+                  {filteredRows.map((r, i) => {
                     const estimativaH = r.monthHours[0] + (horaAdicionaisEstima[r.id]?.[mk]?.he || 0) + (horaAdicionaisEstima[r.id]?.[mk]?.hn || 0);
                     const estabH = (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[0]) + (horaAdicionaisEstab[r.id]?.[mk]?.he || 0) + (horaAdicionaisEstab[r.id]?.[mk]?.hn || 0);
                     const diff = estabH - estimativaH;
@@ -1067,10 +1090,22 @@ export default function Financeiro() {
                           <span style={{ fontWeight: 600, color: "var(--gray-12)", display: "block", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }} title={getUserLabel(r.user)}>{getUserLabel(r.user)}</span>
                         </td>
                         <td style={{ ...D2, textAlign: "left" }}>
+                          {r.user?.sapId ? <span style={{ fontSize: 11, fontWeight: 700, color: "var(--violet-11)", background: "var(--violet-3)", border: "1px solid var(--violet-7)", borderRadius: 6, padding: "2px 7px", fontFamily: "monospace" }}>{r.user.sapId}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
+                        </td>
+                        <td style={{ ...D2, textAlign: "center" }}>
+                          {r.user?.status ? <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: r.user.status.toLowerCase() === "inativo" ? "var(--gray-3)" : "var(--green-3)", border: `1px solid ${r.user.status.toLowerCase() === "inativo" ? "var(--gray-6)" : "var(--green-7)"}`, color: r.user.status.toLowerCase() === "inativo" ? "var(--gray-9)" : "var(--green-11)", whiteSpace: "nowrap" }}>{r.user.status}</span> : <span style={{ color: "var(--gray-7)", fontSize: 10 }}>—</span>}
+                        </td>
+                        <td style={{ ...D2, textAlign: "left" }}>
                           {r.user?.projectCode ? <span style={{ fontSize: 11, fontWeight: 700, color: "var(--amber-11)", background: "var(--amber-3)", border: "1px solid var(--amber-7)", borderRadius: 6, padding: "1px 6px" }}>{r.user.projectCode}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                         </td>
                         <td style={{ ...D2, textAlign: "left" }}>
+                          <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>{r.userSquads.length > 0 ? r.userSquads.map((sq) => <span key={sq.id} style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 999, background: "var(--cyan-3)", border: "1px solid var(--cyan-7)", color: "var(--cyan-11)", whiteSpace: "nowrap" }}>{sq.label.toUpperCase()}</span>) : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}</div>
+                        </td>
+                        <td style={{ ...D2, textAlign: "left" }}>
                           {r.user?.contract ? <span style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-10)" }}>{r.user.contract}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
+                        </td>
+                        <td style={{ ...D2 }}>
+                          {r.csrRate > 0 ? <span style={{ fontSize: 11, fontWeight: 600, color: "var(--violet-11)", fontVariantNumeric: "tabular-nums" }}>{fmtCurrency(r.csrRate)}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                         </td>
                         <td style={{ ...D2, color: "var(--indigo-11)", fontWeight: 600 }}>{estimativaH > 0 ? `${estimativaH}h` : "—"}</td>
                         <td style={{ ...D2, color: "#34d399", fontWeight: 600 }}>{estabH > 0 ? `${estabH}h` : "—"}</td>
