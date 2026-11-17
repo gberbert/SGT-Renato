@@ -221,7 +221,7 @@ export default function FinanceiroReceita({ projectCodes, months, readOnly = fal
         <SelectorBar />
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-10)", whiteSpace: "nowrap" }}>Imposto (%):</label>
-          <input type="number" min={0} max={100} step={0.01} value={data?.taxRate ?? 5.65} onChange={(e) => setTaxRate(e.target.value)} style={{ width: 72, padding: "3px 7px", fontSize: 12, borderRadius: 5, border: "1px solid var(--violet-6)", background: "var(--violet-2)", color: "var(--gray-12)", fontWeight: 700, outline: "none" }} />
+          <input type="number" min={0} max={100} step={0.01} value={data?.taxRate ?? 5.65} disabled={readOnly} onChange={(e) => setTaxRate(e.target.value)} style={{ width: 72, padding: "3px 7px", fontSize: 12, borderRadius: 5, border: "1px solid var(--violet-6)", background: "var(--violet-2)", color: "var(--gray-12)", fontWeight: 700, outline: "none", cursor: readOnly ? "not-allowed" : undefined, opacity: readOnly ? 0.6 : 1 }} />
           <span style={{ fontSize: 11, color: "var(--gray-9)" }}>Net = Gross × (1 − {(data?.taxRate ?? 5.65).toFixed(2)}%)</span>
         </div>
         <div style={{ display: "flex", borderRadius: 7, border: "1px solid var(--gray-6)", overflow: "hidden", marginLeft: 8 }}>
@@ -282,8 +282,8 @@ export default function FinanceiroReceita({ projectCodes, months, readOnly = fal
                   return (
                     <tr key={f.key} style={{ background: fi % 2 === 0 ? "var(--green-1)" : undefined, borderTop: "1px solid var(--green-4)" }}>
                       <td style={{ padding: "5px 10px" }}>
-                        <input type="text" value={fieldData.label} onChange={(e) => setFieldLabel(f.key, e.target.value)}
-                          style={{ width: "100%", padding: "3px 7px", fontSize: 12, borderRadius: 5, border: "1px solid var(--green-5)", background: "transparent", color: "var(--gray-12)", outline: "none", fontWeight: 500 }}
+                        <input type="text" value={fieldData.label} disabled={readOnly} onChange={(e) => setFieldLabel(f.key, e.target.value)}
+                          style={{ width: "100%", padding: "3px 7px", fontSize: 12, borderRadius: 5, border: "1px solid var(--green-5)", background: "transparent", color: "var(--gray-12)", outline: "none", fontWeight: 500, cursor: readOnly ? "not-allowed" : undefined, opacity: readOnly ? 0.6 : 1 }}
                           onFocus={(e) => { e.target.style.borderColor = "var(--green-7)"; e.target.style.background = "rgba(255,255,255,0.08)"; }}
                           onBlur={(e) => { e.target.style.borderColor = "var(--green-5)"; e.target.style.background = "transparent"; }}
                         />
@@ -299,8 +299,9 @@ export default function FinanceiroReceita({ projectCodes, months, readOnly = fal
                             {colMode !== "net" && (
                               <td style={{ padding: "4px 6px", textAlign: "right" }}>
                                 <input type="number" value={gross || ""} placeholder="0"
+                                  disabled={readOnly}
                                   onChange={(e) => setFieldValue(f.key, mk, e.target.value)}
-                                  style={{ width: 100, padding: "3px 7px", fontSize: 12, borderRadius: 5, border: "1px solid var(--green-5)", background: "transparent", color: grossColor, textAlign: "right", outline: "none", fontWeight: gross !== 0 ? 700 : 400 }}
+                                  style={{ width: 100, padding: "3px 7px", fontSize: 12, borderRadius: 5, border: "1px solid var(--green-5)", background: "transparent", color: grossColor, textAlign: "right", outline: "none", fontWeight: gross !== 0 ? 700 : 400, cursor: readOnly ? "not-allowed" : undefined, opacity: readOnly ? 0.6 : 1 }}
                                   onFocus={(e) => { e.target.style.borderColor = "var(--green-7)"; e.target.style.background = "rgba(255,255,255,0.08)"; }}
                                   onBlur={(e) => { e.target.style.borderColor = "var(--green-5)"; e.target.style.background = "transparent"; }}
                                 />

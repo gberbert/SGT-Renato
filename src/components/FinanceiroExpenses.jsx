@@ -257,11 +257,13 @@ export default function FinanceiroExpenses({ projectCodes, months, readOnly = fa
                                 <input
                                   type="text"
                                   value={fieldData.label}
+                                  disabled={readOnly}
                                   onChange={(e) => setFieldLabel(cat.name, f.key, e.target.value)}
                                   style={{
                                     width: "100%", padding: "3px 7px", fontSize: 12, borderRadius: 5,
                                     border: `1px solid ${colors.border}66`, background: "transparent",
                                     color: "var(--gray-12)", outline: "none", fontWeight: 500,
+                                    cursor: readOnly ? "not-allowed" : undefined, opacity: readOnly ? 0.6 : 1,
                                   }}
                                   onFocus={(e) => { e.target.style.borderColor = colors.border; e.target.style.background = "rgba(255,255,255,0.08)"; }}
                                   onBlur={(e) => { e.target.style.borderColor = `${colors.border}66`; e.target.style.background = "transparent"; }}
@@ -277,12 +279,14 @@ export default function FinanceiroExpenses({ projectCodes, months, readOnly = fa
                                       min={0}
                                       value={val || ""}
                                       placeholder="0"
+                                      disabled={readOnly}
                                       onChange={(e) => setFieldValue(cat.name, f.key, mk, e.target.value)}
                                       style={{
                                         width: 90, padding: "3px 7px", fontSize: 12, borderRadius: 5,
                                         border: `1px solid ${colors.border}66`, background: "transparent",
                                         color: val > 0 ? colors.text : "var(--gray-9)", textAlign: "right",
                                         outline: "none", fontWeight: val > 0 ? 700 : 400,
+                                        cursor: readOnly ? "not-allowed" : undefined, opacity: readOnly ? 0.6 : 1,
                                       }}
                                       onFocus={(e) => { e.target.style.borderColor = colors.border; e.target.style.background = "rgba(255,255,255,0.08)"; }}
                                       onBlur={(e) => { e.target.style.borderColor = `${colors.border}66`; e.target.style.background = "transparent"; }}
