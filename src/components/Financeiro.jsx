@@ -747,7 +747,7 @@ export default function Financeiro() {
 
           {/* Sub-tab content */}
           {termosSubTab === "gerenciar"  && <FinanceiroTermos />}
-          {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" hideFilters={["dataAtividade","dataEncerramento","resolution"]} showStatusFilter={true} showCicloFilter={true} compactAvanco={true} colOrder={["termoFaturamento","status","avanco","squad","sistemaImpactado","estimativaTotal","fatPct","fatFaturadas","fatAFaturar"]} />}
+          {termosSubTab === "demanda"    && <FinanceiroHorasEvolutivos escopoFilter="DEMANDA" hideFilters={["dataAtividade","dataEncerramento","resolution"]} showStatusFilter={true} showCicloFilter={true} compactAvanco={true} colOrder={["termoFaturamento","pacote","status","avanco","squad","sistemaImpactado","estimativaTotal","fatPct","fatFaturadas","fatAFaturar"]} />}
           {termosSubTab === "fast"       && (() => {
             const now = new Date();
             const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;

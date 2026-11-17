@@ -337,6 +337,7 @@ const COL_DEFS = {
   dataAtividade:     { header: "DATA ATIVIDADE",     align: "left" },
   dataEncerramento:  { header: "DATA ENCERRAMENTO",  align: "left" },
   resolution:        { header: "RESOLUTION",         align: "left",  maxWidth: 110 },
+  pacote:            { header: "PACOTE (RELEASE)",   align: "left" },
 };
 const DEFAULT_COL_ORDER = ["status","squad","avanco","estimativaTotal","plHrsFast","tempoEsforco","termoFaturamento","dataAtividade","dataEncerramento","resolution"];
 
@@ -381,6 +382,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
   const [faturamentoFilter, setFaturamentoFilter] = useState(""); // "" | "faturadas" | "afaturar"
   const [showLegend, setShowLegend] = useState(false);
   const legendRef = useRef(null);
+  const [pacoteFilter, setPacoteFilter] = useState("");
   const [ticketView, setTicketView] = useState(null);
   // Track if resolution has been initialized from defaultFilters
   const resInitialized = useRef(false);
@@ -510,6 +512,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
         });
       });
     }
+    if (pacoteFilter) list = list.filter(t => (t.pacote || "") === pacoteFilter);
     if (termoFilter) {
       list = list.filter(t => {
         const tf = t.termoFaturamento;
@@ -526,7 +529,7 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
       });
     }
     return list;
-  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selGrupoAprov, selStatusFilter, faturamentoFilter, selCiclo, ciclos, termoFilter, contratoFilter, sistemas]);
+  }, [tickets, selEscopo, search, ativDe, ativAte, encerrDe, encerrAte, selResolutions, selGrupoAprov, selStatusFilter, faturamentoFilter, selCiclo, ciclos, pacoteFilter, termoFilter, contratoFilter, sistemas]);
 
   // Compute visible columns in order
   const visibleCols = useMemo(() => {
@@ -879,6 +882,23 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
             </div>
           </>
         )}
+        {visibleCols.includes("pacote") && (() => {
+          const pacoteOptions = [...new Set(tickets.map(t => t.pacote).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+          return pacoteOptions.length > 0 ? (
+            <>
+              <div style={{ width: 1, height: 20, background: "var(--gray-5)", flexShrink: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Pacote</span>
+                <select value={pacoteFilter} onChange={e => setPacoteFilter(e.target.value)}
+                  style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${pacoteFilter ? "var(--violet-6)" : "var(--gray-6)"}`, background: pacoteFilter ? "var(--violet-2)" : "var(--gray-1)", color: pacoteFilter ? "var(--violet-11)" : "var(--gray-12)", fontSize: 11, cursor: "pointer", outline: "none", maxWidth: 180 }}>
+                  <option value="">— Todos —</option>
+                  {pacoteOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                {pacoteFilter && <button type="button" onClick={() => setPacoteFilter("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
+              </div>
+            </>
+          ) : null;
+        })()}
         {showContratoFilter && (() => {
           const contratos = [...new Set(sistemas.map(s => s.contratoNome).filter(Boolean))].sort();
           return contratos.length > 0 ? (
@@ -1147,6 +1167,13 @@ export default function FinanceiroHorasEvolutivos({ escopoFilter, hideCols = [],
                         <td key={id} style={{ ...D, maxWidth: 110, overflow: "hidden" }}>
                           {t.resolution
                             ? <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 6, background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 100 }} title={t.resolution}>{t.resolution}</span>
+                            : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
+                        </td>
+                      );
+                      case "pacote": return (
+                        <td key={id} style={{ ...D, maxWidth: 160, overflow: "hidden" }}>
+                          {t.pacote
+                            ? <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 6, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 150 }} title={t.pacote}>{t.pacote}</span>
                             : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                         </td>
                       );
