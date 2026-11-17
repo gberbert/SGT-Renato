@@ -25,6 +25,8 @@ import Financeiro from '../components/Financeiro';
 import SecopsPermissionsLayout from './SecopsPermissionsLayout';
 import { getTicketById } from '../services/ticketService';
 import { logUserAccess } from '../services/auditService';
+import { getPermissionProfile } from '../services/permissionService';
+import { PermissionFunctionKeys } from '../services/permissionKeys';
 
 /** Gera ou reutiliza um ID de sessão único por aba/sessão do browser */
 function getOrCreateSessionId() {
@@ -47,6 +49,14 @@ const DemandasLayout = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [allowedFunctions, setAllowedFunctions] = useState([]);
+
+  useEffect(() => {
+    if (!userRole) return;
+    getPermissionProfile(userRole)
+      .then(profile => setAllowedFunctions(Array.isArray(profile?.allowedFunctions) ? profile.allowedFunctions : []))
+      .catch(() => {});
+  }, [userRole]);
   const location = useLocation();
   const sessionId = useRef(getOrCreateSessionId()).current;
   // Throttle: não registra o mesmo path mais de 1x por segundo
@@ -112,7 +122,7 @@ const DemandasLayout = ({
             <Route path="/projetos/:projectId" element={<ProjectDetails userRole={userRole} />} />
             <Route path="/ajuda" element={<HelpFlow />} />
             <Route path="/configuracoes" element={userRole === 'admin' ? <Settings userRole={userRole} /> : <Navigate to="/" replace />} />
-            <Route path="/planejamento" element={(userRole === 'admin' || userRole === 'squad_leader') ? <PlanejamentoLayout userRole={userRole} /> : <Navigate to="/" replace />} />
+            <Route path="/planejamento" element={(userRole === 'admin' || userRole === 'squad_leader' || allowedFunctions.includes(PermissionFunctionKeys.PLANEJAMENTO_VIEW) || allowedFunctions.includes(PermissionFunctionKeys.ADMIN_ALL)) ? <PlanejamentoLayout userRole={userRole} /> : <Navigate to="/" replace />} />
             <Route path="/secops/permissions" element={<SecopsPermissionsLayout userRole={userRole} />} />
             <Route path="/team" element={<Team userRole={userRole} />} />
             <Route path="/organograma" element={<Organograma userRole={userRole} />} />
