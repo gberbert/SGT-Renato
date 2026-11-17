@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { ComposedChart, Bar, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
+import { ComposedChart, Bar, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, LabelList } from "recharts";
 import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, subscribeToRevenueEstab } from "../services/financeiroExpensesService";
 
 function r2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
@@ -179,17 +179,23 @@ export default function FinanceiroResumo({ rows, months, projectCodeOptions, mod
           <span style={{ fontSize: 10, fontWeight: 400, color: "var(--gray-7)", textTransform: "none", letterSpacing: 0, marginLeft: 8 }}>Custo · Receita (barras) · Margem % (linha)</span>
         </div>
         <div style={{ background: "var(--gray-1)", borderRadius: 12, border: "1px solid var(--gray-4)", padding: "16px 8px 8px 0" }}>
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={chartData} margin={{ top: 8, right: 60, left: 20, bottom: 8 }}>
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={chartData} margin={{ top: 28, right: 60, left: 20, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--gray-9)", fontWeight: 600 }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="money" orientation="left" tickFormatter={fmtCurrencyShort} tick={{ fontSize: 10, fill: "var(--gray-8)" }} axisLine={false} tickLine={false} width={72} />
               <YAxis yAxisId="pct" orientation="right" tickFormatter={(v) => v !== null ? `${v.toFixed(0)}%` : ""} tick={{ fontSize: 10, fill: "#a78bfa" }} axisLine={false} tickLine={false} width={44} domain={["auto", "auto"]} />
               <Tooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-              <Bar yAxisId="money" dataKey="custo" name="Custo" fill="rgba(239,68,68,0.75)" radius={[3,3,0,0]} maxBarSize={48} />
-              <Bar yAxisId="money" dataKey="receita" name="Receita Net" fill="rgba(20,184,166,0.75)" radius={[3,3,0,0]} maxBarSize={48} />
-              <Area yAxisId="pct" type="monotone" dataKey="margem" name="Margem %" stroke="#a78bfa" strokeWidth={2} strokeDasharray="6 3" fill="rgba(167,139,250,0.18)" dot={{ r: 4, fill: "#a78bfa", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
+              <Bar yAxisId="money" dataKey="custo" name="Custo" fill="rgba(239,68,68,0.75)" radius={[3,3,0,0]} maxBarSize={22}>
+                <LabelList dataKey="custo" position="top" formatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${Math.round(v/1e3)}k`} style={{ fontSize: 9, fill: "rgba(239,68,68,0.95)", fontWeight: 700 }} />
+              </Bar>
+              <Bar yAxisId="money" dataKey="receita" name="Receita Net" fill="rgba(20,184,166,0.75)" radius={[3,3,0,0]} maxBarSize={22}>
+                <LabelList dataKey="receita" position="top" formatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : `${Math.round(v/1e3)}k`} style={{ fontSize: 9, fill: "rgba(20,184,166,0.95)", fontWeight: 700 }} />
+              </Bar>
+              <Area yAxisId="pct" type="monotone" dataKey="margem" name="Margem %" stroke="#a78bfa" strokeWidth={2} strokeDasharray="6 3" fill="rgba(167,139,250,0.18)" dot={{ r: 4, fill: "#a78bfa", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls>
+                <LabelList dataKey="margem" position="top" formatter={(v) => v !== null && v !== undefined ? `${v.toFixed(2)}%` : ""} style={{ fontSize: 9, fill: "#a78bfa", fontWeight: 700 }} offset={8} />
+              </Area>
               <ReferenceLine yAxisId="pct" y={0} stroke="rgba(239,68,68,0.4)" strokeDasharray="4 2" />
             </ComposedChart>
           </ResponsiveContainer>
