@@ -357,7 +357,7 @@ export default function Financeiro() {
     });
   }, [usersFiltered, monthConfigs, months, membership, squadById]);
 
-  /* column totals */
+  /* column totals — base (mode-agnostic, used by exports) */
   const colTotals = useMemo(() => {
     const tots = months.map((_, i) => r1(rows.reduce((a, r) => a + (r.monthHours[i] || 0), 0)));
     const grand = r1(tots.reduce((a, v) => a + v, 0));
@@ -365,6 +365,29 @@ export default function Financeiro() {
     const grandVal = r1(totVals.reduce((a, v) => a + v, 0));
     return { tots, grand, totVals, grandVal };
   }, [rows, months]);
+
+  /* column totals — mode-aware (estab overrides + HE/HN, shown in header) */
+  const colTotalsDisplay = useMemo(() => {
+    const aE = horaMode === "estabilizacao" ? horaAdicionaisEstab : horaAdicionaisEstima;
+    const tots = months.map((mo, i) => {
+      const mk = mo.ps.slice(0, 7);
+      return rows.reduce((acc, r) => {
+        const baseH = horaMode === "estabilizacao" ? (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]) : r.monthHours[i];
+        return acc + baseH + (aE[r.id]?.[mk]?.he || 0) + (aE[r.id]?.[mk]?.hn || 0);
+      }, 0);
+    });
+    const grand = tots.reduce((a, v) => a + v, 0);
+    const totVals = months.map((mo, i) => {
+      const mk = mo.ps.slice(0, 7);
+      return r1(rows.reduce((acc, r) => {
+        const baseH = horaMode === "estabilizacao" ? (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]) : r.monthHours[i];
+        const h = baseH + (aE[r.id]?.[mk]?.he || 0) + (aE[r.id]?.[mk]?.hn || 0);
+        return acc + r1(h * r.csrRate);
+      }, 0));
+    });
+    const grandVal = r1(totVals.reduce((a, v) => a + v, 0));
+    return { tots, grand, totVals, grandVal };
+  }, [rows, months, horaMode, horaEstabOverrides, horaAdicionaisEstima, horaAdicionaisEstab]);
 
   // Grouped rows: group by projectCode + classificação
   const groupedRows = useMemo(() => {
@@ -996,7 +1019,7 @@ export default function Financeiro() {
                 <th key={mo.ps} style={{ ...THR, lineHeight: 1.3 }}>
                   <div>{mo.label.toUpperCase()}</div>
                   <div style={{ fontSize: 11, fontWeight: 600, color: viewMode === "horas" ? "var(--green-11)" : "var(--teal-11)", marginTop: 2 }}>
-                    {viewMode === "horas" ? (colTotals.tots[i] > 0 ? `${colTotals.tots[i]}h` : "—") : fmtCurrency(colTotals.totVals[i])}
+                    {viewMode === "horas" ? (colTotalsDisplay.tots[i] > 0 ? `${r1(colTotalsDisplay.tots[i])}h` : "—") : fmtCurrency(colTotalsDisplay.totVals[i])}
                   </div>
                 </th>
               ))}
@@ -1007,7 +1030,7 @@ export default function Financeiro() {
               <th style={{ ...THR, color: "var(--indigo-11)", lineHeight: 1.3 }}>
                 <div>TOTAL</div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: viewMode === "horas" ? "var(--indigo-11)" : "var(--teal-11)", marginTop: 2 }}>
-                  {viewMode === "horas" ? `${colTotals.grand}h` : fmtCurrency(colTotals.grandVal)}
+                  {viewMode === "horas" ? `${r1(colTotalsDisplay.grand)}h` : fmtCurrency(colTotalsDisplay.grandVal)}
                 </div>
               </th>
             </tr>
