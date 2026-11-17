@@ -987,12 +987,17 @@ export default function Financeiro() {
                   </td>
                   {r.monthHours.map((h, mi) => {
                     const mk = months[mi].ps.slice(0, 7);
-                    const estabH = horaMode === "estabilizacao" ? (horaEstabOverrides[r.id]?.[mk] ?? h) : h;
+                    const hasOverride = horaEstabOverrides[r.id]?.[mk] !== undefined;
+                    const estabH = horaMode === "estabilizacao" ? (hasOverride ? horaEstabOverrides[r.id][mk] : h) : h;
+                    const isModified = horaMode === "estabilizacao" && hasOverride && estabH !== h;
                     const displayH = horaMode === "estabilizacao" ? estabH : h;
                     const val = r1(displayH * r.csrRate);
                     if (horaMode === "estabilizacao" && viewMode === "horas") {
                       return (
-                        <td key={mi} style={{ ...TDR, background: "rgba(16,185,129,0.06)" }}>
+                        <td key={mi} style={{ ...TDR, background: isModified ? "rgba(251,146,60,0.1)" : "rgba(16,185,129,0.06)", position: "relative" }}>
+                          {isModified && (
+                            <span title={`Estimativa: ${h}h`} style={{ position: "absolute", top: 2, right: 3, fontSize: 8, fontWeight: 900, color: "#fb923c", lineHeight: 1 }}>✎</span>
+                          )}
                           <input type="number" min={0} step={0.5}
                             value={estabH === 0 ? "" : estabH}
                             placeholder="0"
@@ -1005,14 +1010,23 @@ export default function Financeiro() {
                               }));
                               setHoraEstabDirty(true);
                             }}
-                            style={{ width: 72, padding: "2px 5px", textAlign: "right", fontSize: 12, fontWeight: 700, borderRadius: 5, border: "1px solid rgba(16,185,129,0.4)", background: "transparent", color: "#34d399", outline: "none", fontVariantNumeric: "tabular-nums" }}
+                            style={{ width: 72, padding: "2px 5px", textAlign: "right", fontSize: 12, fontWeight: 700, borderRadius: 5, border: isModified ? "1px solid rgba(251,146,60,0.7)" : "1px solid rgba(16,185,129,0.4)", background: "transparent", color: isModified ? "#fb923c" : "#34d399", outline: "none", fontVariantNumeric: "tabular-nums" }}
                           />
+                          {isModified && (
+                            <div style={{ fontSize: 9, color: "var(--gray-7)", textAlign: "right", marginTop: 1, lineHeight: 1 }} title={`Estimativa original: ${h}h`}>{h}h ▸</div>
+                          )}
                         </td>
                       );
                     }
                     const display = viewMode === "horas" ? (displayH > 0 ? `${displayH}h` : "—") : (val > 0 ? fmtCurrency(val) : "—");
-                    const color = viewMode === "horas" ? (displayH > 0 ? "var(--green-11)" : "var(--gray-7)") : (val > 0 ? "var(--teal-11)" : "var(--gray-7)");
-                    return <td key={mi} style={{ ...TDR, background: horaMode === "estabilizacao" ? "rgba(16,185,129,0.06)" : undefined }}><span style={{ fontVariantNumeric: "tabular-nums", color, fontWeight: (displayH > 0 || val > 0) ? 600 : 400 }}>{display}</span></td>;
+                    const color = viewMode === "horas" ? (displayH > 0 ? (isModified ? "#fb923c" : "var(--green-11)") : "var(--gray-7)") : (val > 0 ? (isModified ? "#fb923c" : "var(--teal-11)") : "var(--gray-7)");
+                    return (
+                      <td key={mi} style={{ ...TDR, background: isModified ? "rgba(251,146,60,0.1)" : (horaMode === "estabilizacao" ? "rgba(16,185,129,0.06)" : undefined), position: "relative" }}>
+                        {isModified && <span title={`Estimativa: ${h}h`} style={{ position: "absolute", top: 2, right: 3, fontSize: 8, fontWeight: 900, color: "#fb923c", lineHeight: 1 }}>✎</span>}
+                        <span style={{ fontVariantNumeric: "tabular-nums", color, fontWeight: (displayH > 0 || val > 0) ? 600 : 400 }}>{display}</span>
+                        {isModified && viewMode === "horas" && <div style={{ fontSize: 9, color: "var(--gray-7)", lineHeight: 1, marginTop: 1 }} title={`Estimativa original: ${h}h`}>{h}h ▸</div>}
+                      </td>
+                    );
                   })}
                   <td style={{ ...TDR }}>
                     <button
