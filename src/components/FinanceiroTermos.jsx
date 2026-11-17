@@ -355,6 +355,9 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
     return fullH;
   };
 
+  // RC overrides per alocacao (key = alocacao.id)
+  const [rcOverrides, setRcOverrides] = useState(termo.rcOverrides || {});
+
   // ARC editable overrides (per termo) — must come before arcTotal
   const [arcOverride, setArcOverride] = useState(termo.arcOverride || null);
   const arcDisplay = arcOverride || arcItems;
@@ -366,7 +369,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
 
   const arcTotal   = arcDisplay.reduce((s, x) => s + numVal(String(x.valorBase || 0)), 0);
   const alocHrsTotal = r1t(alocacoes.reduce((s, a) => s + calcHoras(a.userId), 0));
-  const alocTotal  = alocacoes.reduce((s, a) => { const u = allUsers.find(x => x.id === a.userId); const rc = parseFloat(String(u?.rc || "0").replace(",", ".")) || 0; return s + calcHoras(a.userId) * rc; }, 0);
+  const alocTotal  = alocacoes.reduce((s, a) => { const u = allUsers.find(x => x.id === a.userId); const baseRc = parseFloat(String(u?.rc || "0").replace(",", ".")) || 0; const rc = rcOverrides[a.id] != null ? Number(rcOverrides[a.id]) : baseRc; return s + calcHoras(a.userId) * rc; }, 0);
   const demHrsTotal = r1t(ticketsDemanda.reduce((s, t) => s + getTicketH(t), 0));
   const demTotal   = ticketsDemanda.reduce((s, t) => s + getTicketH(t) * valorBase, 0);
   const fastHrsTotal = r1t(ticketsFast.reduce((s, t) => s + getTicketH(t), 0));
@@ -426,6 +429,7 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
       await onSave(termo.id, {
         contratoId, contratoNome, mesReferencia, codigoProjeto, status,
         valorHoraBase: valorHoraOverride != null ? Number(valorHoraOverride) : null,
+        rcOverrides: Object.keys(rcOverrides).length > 0 ? rcOverrides : null,
         ...(arcOverride ? { arcOverride: arcOverride.map(r => ({ nome: r.nome, valorBase: numVal(String(r.valorBase)) })) } : {}),
       });
       onClose();
@@ -637,9 +641,11 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                   <tbody>
                     {alocacoes.map(a => {
                       const u = allUsers.find(x => x.id === a.userId);
-                      const rc = parseFloat(String(u?.rc || "0").replace(",", ".")) || 0;
+                      const baseRc = parseFloat(String(u?.rc || "0").replace(",", ".")) || 0;
+                      const effectiveRc = rcOverrides[a.id] != null ? Number(rcOverrides[a.id]) : baseRc;
+                      const isRcOverridden = rcOverrides[a.id] != null && Number(rcOverrides[a.id]) !== baseRc;
                       const h = calcHoras(a.userId);
-                      const v = r1t(h * rc);
+                      const v = r1t(h * effectiveRc);
                       const name = u ? (u.displayName || u.shortName || u.name || u.id) : a.userId;
                       return (
                         <tr key={a.id}>
@@ -647,7 +653,32 @@ function ViewTermoModal({ termo, contratos, projectCodes, config, onSave, onClos
                             <span style={{ fontSize: 10, fontWeight: 700, color: "var(--indigo-11)", whiteSpace: "nowrap" }}>{termoMes || "—"}</span>
                           </td>
                           <td style={TD}>{name}</td>
-                          <td style={TDR}>{rc > 0 ? fmtCurrency(rc) : "—"}</td>
+                          <td style={TDR}>
+                            {editing ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+                                <input
+                                  type="number" min={0} step={0.01}
+                                  value={rcOverrides[a.id] != null ? rcOverrides[a.id] : baseRc}
+                                  onChange={e => setRcOverrides(p => ({ ...p, [a.id]: e.target.value !== "" ? numVal(e.target.value) : null }))}
+                                  style={{ width: 90, padding: "4px 7px", borderRadius: 5, border: `1px solid ${isRcOverridden ? "rgba(167,139,250,0.6)" : "var(--gray-6)"}`, background: isRcOverridden ? "rgba(167,139,250,0.08)" : "var(--gray-1)", color: isRcOverridden ? "#a78bfa" : "var(--gray-12)", fontSize: 12, fontWeight: 700, outline: "none", textAlign: "right" }}
+                                />
+                                {isRcOverridden && (
+                                  <button type="button" title={`Resetar para base: ${fmtCurrency(baseRc)}`}
+                                    onClick={() => setRcOverrides(p => { const n = { ...p }; delete n[a.id]; return n; })}
+                                    style={{ padding: "2px 5px", borderRadius: 4, border: "1px solid rgba(167,139,250,0.5)", background: "rgba(167,139,250,0.1)", color: "#a78bfa", fontSize: 9, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                                    ↺
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span style={{ color: isRcOverridden ? "#a78bfa" : undefined }}>
+                                {effectiveRc > 0 ? fmtCurrency(effectiveRc) : "—"}
+                                {isRcOverridden && (
+                                  <span style={{ marginLeft: 4, fontSize: 10, color: "var(--gray-8)" }} title={`Base: ${fmtCurrency(baseRc)}`}>vs {fmtCurrency(baseRc)}</span>
+                                )}
+                              </span>
+                            )}
+                          </td>
                           <td style={TDR}>{h}h</td>
                           <td style={{ ...TDR, color: "#a78bfa" }}>{fmtCurrency(v)}</td>
                         </tr>
