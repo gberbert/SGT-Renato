@@ -63,6 +63,7 @@ const STATUS_FIELDS_TO_LOG = new Set([
   'ptNaoExecutado',
   'pacote',
   'adocaoIa',
+  'sistemasAfetados',
   'iaStatusAdocao',
   'iaAnaliseIA',
   'iaAnaliseIAObs',
@@ -96,6 +97,7 @@ const STATUS_FIELD_LABELS = {
   ptNaoExecutado: 'PT — Não Executado',
   pacote: 'Pacote (Release)',
   adocaoIa: 'Adoção de IA',
+  sistemasAfetados: 'Sistemas Afetados',
   iaStatusAdocao: 'IA — Status Adoção',
   iaAnaliseIA: 'IA — Análise IA',
   iaAnaliseIAObs: 'IA — Obs. Análise IA',
@@ -1009,17 +1011,26 @@ const handleSaveField = useCallback(async (issueKey, field, value) => {
           changedBy: auth.currentUser?.displayName || auth.currentUser?.email || auth.currentUser?.uid || 'unknown',
         });
       }
-      if (STATUS_FIELDS_TO_LOG.has(field) && oldValue !== newValue) {
-        await addDoc(collection(db, TICKETS_GLOBAL, t.id, 'statusChangeLog'), {
-          issueKey: t.issueKey || t.id,
-          field,
-          fieldLabel: STATUS_FIELD_LABELS[field] || field,
-          oldValue,
-          newValue,
-          changedAt: serverTimestamp(),
-          changedBy: auth.currentUser?.displayName || auth.currentUser?.email || auth.currentUser?.uid || 'unknown',
-          source: 'user',
-        });
+      if (STATUS_FIELDS_TO_LOG.has(field)) {
+        const serializeForLog = (v) => {
+          if (v == null) return null;
+          if (Array.isArray(v)) return v.map(x => (x?.nome || x?.name || String(x))).join(', ') || null;
+          return v;
+        };
+        const logOld = serializeForLog(oldValue);
+        const logNew = serializeForLog(newValue);
+        if (logOld !== logNew) {
+          await addDoc(collection(db, TICKETS_GLOBAL, t.id, 'statusChangeLog'), {
+            issueKey: t.issueKey || t.id,
+            field,
+            fieldLabel: STATUS_FIELD_LABELS[field] || field,
+            oldValue: logOld,
+            newValue: logNew,
+            changedAt: serverTimestamp(),
+            changedBy: auth.currentUser?.displayName || auth.currentUser?.email || auth.currentUser?.uid || 'unknown',
+            source: 'user',
+          });
+        }
       }
       setTickets(prev => prev.map(x => x.id === t.id ? { ...x, [field]: value } : x));
       setSelectedTicket(prev => prev ? { ...prev, [field]: value } : prev);
