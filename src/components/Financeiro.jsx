@@ -784,7 +784,7 @@ export default function Financeiro() {
                 </button>
               ))}
             </div>
-            <FinanceiroResumo rows={rowsForResumo} months={months} projectCodeOptions={projectCodeOptions} readOnly={isClosed} mode={resumoMode} />
+            <FinanceiroResumo rows={rowsForResumo} months={months} projectCodeOptions={projectCodeOptions} readOnly={isClosed} mode={resumoMode} horaAdicionais={resumoMode === "estabilizacao" ? horaAdicionaisEstab : horaAdicionaisEstima} />
           </>
         );
       })()}

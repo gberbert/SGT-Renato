@@ -22,7 +22,7 @@ const D = { padding: "5px 8px", fontSize: 12, borderBottom: "1px solid var(--gra
 
 const marColor = (m) => m === null ? "var(--gray-7)" : m >= 30 ? "var(--green-11)" : m >= 0 ? "var(--amber-11)" : "var(--red-11)";
 
-export default function FinanceiroResumo({ rows, months, projectCodeOptions, mode = "estimativa" }) {
+export default function FinanceiroResumo({ rows, months, projectCodeOptions, mode = "estimativa", horaAdicionais = {} }) {
   const isEstab = mode === "estabilizacao";
   const [expanded, setExpanded] = useState(new Set());
   const [expensesData, setExpensesData] = useState({});
@@ -72,6 +72,18 @@ export default function FinanceiroResumo({ rows, months, projectCodeOptions, mod
     return [...s].sort();
   }, [projectCodeOptions, costByProject]);
 
+  function projectHENHCost(code) {
+    const memberRows = rows.filter(r => (r.user?.projectCode || "__SEM__") === code);
+    return months.map((mo) => {
+      const mk = mo.ps.slice(0, 7);
+      return r2(memberRows.reduce((s, r) => {
+        const he = horaAdicionais[r.id]?.[mk]?.he || 0;
+        const hn = horaAdicionais[r.id]?.[mk]?.hn || 0;
+        return s + r2((he + hn) * r.csrRate);
+      }, 0));
+    });
+  }
+
   function projectMonthCost(code) {
     const peopleCost = months.map((_, i) => {
       const groups = costByProject[code] || {};
@@ -86,7 +98,8 @@ export default function FinanceiroResumo({ rows, months, projectCodeOptions, mod
         return s + Object.values(fields).reduce((fs, f) => fs + numVal(f?.values?.[mk]), 0);
       }, 0));
     });
-    return { peopleCost, expCost, total: months.map((_, i) => r2(peopleCost[i] + expCost[i])) };
+    const hehnCost = projectHENHCost(code);
+    return { peopleCost, expCost, hehnCost, total: months.map((_, i) => r2(peopleCost[i] + expCost[i] + hehnCost[i])) };
   }
 
   function projectMonthRevenue(code) {
@@ -276,6 +289,18 @@ export default function FinanceiroResumo({ rows, months, projectCodeOptions, mod
                             <td style={{ ...D, fontSize: 11 }}>{fmtCurrency(r2(g.monthValues.reduce((s, v) => s + v, 0)))}</td>
                           </tr>
                         ))}
+                        {(() => {
+                          const hehnCost = projectHENHCost(code);
+                          const hehnTotal = r2(hehnCost.reduce((s, v) => s + v, 0));
+                          if (hehnTotal === 0) return null;
+                          return (
+                            <tr key="hehn" style={{ background: "rgba(251,146,60,0.04)" }}>
+                              <td style={{ padding: "5px 10px 5px 28px", textAlign: "left", borderBottom: "1px solid var(--gray-3)", fontSize: 11, color: "#fb923c", fontWeight: 700 }}>⚡ HE / HN · Horas Adicionais</td>
+                              {hehnCost.map((v, i) => <td key={i} style={{ ...D, fontSize: 11, color: v > 0 ? "#fb923c" : "var(--gray-6)" }}>{v > 0 ? fmtCurrency(v) : "—"}</td>)}
+                              <td style={{ ...D, fontSize: 11, color: "#fb923c", fontWeight: 700 }}>{hehnTotal > 0 ? fmtCurrency(hehnTotal) : "—"}</td>
+                            </tr>
+                          );
+                        })()}
                         {DEFAULT_CATEGORIES.map((cat) => {
                           const catMonths = months.map((mo) => {
                             const mk = mo.ps.slice(0, 7);
