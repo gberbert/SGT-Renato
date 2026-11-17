@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { ComposedChart, Bar, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, subscribeToRevenueEstab } from "../services/financeiroExpensesService";
 
 function r2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
@@ -138,8 +139,62 @@ export default function FinanceiroResumo({ rows, months, projectCodeOptions, mod
   const grandRev = r2(totRevs.reduce((s, v) => s + v, 0));
   const grandMar = grandRev !== 0 ? ((grandRev - grandCost) / grandRev) * 100 : null;
 
+  // Chart data
+  const chartData = months.map((mo, i) => ({
+    label: mo.label,
+    custo: totCosts[i] || 0,
+    receita: totRevs[i] || 0,
+    margem: totMargins[i] !== null && totMargins[i] !== undefined ? Math.round(totMargins[i] * 100) / 100 : null,
+  }));
+
+  const fmtCurrencyShort = (v) => {
+    if (!v && v !== 0) return "—";
+    if (Math.abs(v) >= 1e6) return `R$ ${(v / 1e6).toFixed(2)}M`;
+    if (Math.abs(v) >= 1e3) return `R$ ${(v / 1e3).toFixed(0)}K`;
+    return fmtCurrency(v);
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div style={{ background: "var(--gray-1)", border: "1px solid var(--gray-6)", borderRadius: 8, padding: "10px 14px", fontSize: 12, minWidth: 200 }}>
+        <div style={{ fontWeight: 700, marginBottom: 6, color: "var(--gray-12)" }}>{label}</div>
+        {payload.map((p, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 16, color: p.color, marginBottom: 2 }}>
+            <span style={{ fontWeight: 600 }}>{p.name}</span>
+            <span style={{ fontWeight: 700 }}>{p.dataKey === "margem" ? (p.value !== null ? `${p.value.toFixed(2)}%` : "—") : fmtCurrency(p.value)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+      {/* ── GRÁFICO CUSTO / RECEITA / MARGEM ── */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", color: "var(--gray-9)", textTransform: "uppercase", marginBottom: 12 }}>
+          EVOLUÇÃO MENSAL
+          <span style={{ fontSize: 10, fontWeight: 400, color: "var(--gray-7)", textTransform: "none", letterSpacing: 0, marginLeft: 8 }}>Custo · Receita (barras) · Margem % (linha)</span>
+        </div>
+        <div style={{ background: "var(--gray-1)", borderRadius: 12, border: "1px solid var(--gray-4)", padding: "16px 8px 8px 0" }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={chartData} margin={{ top: 8, right: 60, left: 20, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--gray-9)", fontWeight: 600 }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="money" orientation="left" tickFormatter={fmtCurrencyShort} tick={{ fontSize: 10, fill: "var(--gray-8)" }} axisLine={false} tickLine={false} width={72} />
+              <YAxis yAxisId="pct" orientation="right" tickFormatter={(v) => v !== null ? `${v.toFixed(0)}%` : ""} tick={{ fontSize: 10, fill: "#a78bfa" }} axisLine={false} tickLine={false} width={44} domain={["auto", "auto"]} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+              <Bar yAxisId="money" dataKey="custo" name="Custo" fill="rgba(239,68,68,0.75)" radius={[3,3,0,0]} maxBarSize={48} />
+              <Bar yAxisId="money" dataKey="receita" name="Receita Net" fill="rgba(20,184,166,0.75)" radius={[3,3,0,0]} maxBarSize={48} />
+              <Area yAxisId="pct" type="monotone" dataKey="margem" name="Margem %" stroke="#a78bfa" strokeWidth={2} strokeDasharray="6 3" fill="rgba(167,139,250,0.18)" dot={{ r: 4, fill: "#a78bfa", strokeWidth: 0 }} activeDot={{ r: 6 }} connectNulls />
+              <ReferenceLine yAxisId="pct" y={0} stroke="rgba(239,68,68,0.4)" strokeDasharray="4 2" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
       {/* ── CONTRACT MARGEM — CONSOLIDADA (topo) ── */}
       <div>
