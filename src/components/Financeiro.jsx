@@ -248,15 +248,14 @@ export default function Financeiro() {
   const usersSorted = useMemo(() => [...users].sort((a, b) => getUserLabel(a).toUpperCase().localeCompare(getUserLabel(b).toUpperCase(), "pt-BR")), [users]);
   const projectCodeOptions = useMemo(() => { const c = new Set(); for (const u of usersSorted) { if (u?.projectCode) c.add(u.projectCode); } return [...c].sort(); }, [usersSorted]);
 
-  /* subscribe to HORA estab overrides when HORA tab OR RESUMO tab is in estabilizacao mode */
+  /* subscribe to HORA estab overrides — always loaded so exports always reflect saved values */
   useEffect(() => {
-    if (horaMode !== "estabilizacao" && resumoMode !== "estabilizacao") return;
     return subscribeToHoraEstab(startMonth, (data) => {
       if (data?.overrides) { setHoraEstabOverrides(data.overrides); setHoraEstabMeta({ savedAt: data.savedAt, savedBy: data.savedBy }); }
       else { setHoraEstabOverrides({}); setHoraEstabMeta(null); }
       setHoraEstabDirty(false);
     });
-  }, [horaMode, resumoMode, startMonth]);
+  }, [startMonth]);
 
   /* load expenses + revenue for export — must come after projectCodeOptions useMemo */
   useEffect(() => {
