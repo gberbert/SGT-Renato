@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults } from "../services/financeiroExpensesService";
+import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, subscribeToRevenueEstab } from "../services/financeiroExpensesService";
 
 function r2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
 function calcNetLine(gross, taxRate) {
@@ -22,28 +22,31 @@ const D = { padding: "5px 8px", fontSize: 12, borderBottom: "1px solid var(--gra
 
 const marColor = (m) => m === null ? "var(--gray-7)" : m >= 30 ? "var(--green-11)" : m >= 0 ? "var(--amber-11)" : "var(--red-11)";
 
-export default function FinanceiroResumo({ rows, months, projectCodeOptions }) {
+export default function FinanceiroResumo({ rows, months, projectCodeOptions, mode = "estimativa" }) {
+  const isEstab = mode === "estabilizacao";
   const [expanded, setExpanded] = useState(new Set());
   const [expensesData, setExpensesData] = useState({});
   const [revenueData, setRevenueData] = useState({});
 
   useEffect(() => {
     if (!projectCodeOptions?.length) return;
+    const loadFn = isEstab ? loadExpensesEstab : loadExpenses;
     Promise.all(projectCodeOptions.map(async (code) => {
-      const saved = await loadExpenses(code).catch(() => null);
+      const saved = await loadFn(code).catch(() => null);
       return [code, mergeWithDefaults(saved, code, months)];
     })).then((entries) => setExpensesData(Object.fromEntries(entries)));
-  }, [projectCodeOptions?.join(","), months.map(m => m.ps).join(",")]);
+  }, [projectCodeOptions?.join(","), months.map(m => m.ps).join(","), isEstab]);
 
   useEffect(() => {
     if (!projectCodeOptions?.length) return;
+    const subscribeFn = isEstab ? subscribeToRevenueEstab : subscribeToRevenue;
     const unsubs = projectCodeOptions.map((code) =>
-      subscribeToRevenue(code, (saved) => {
+      subscribeFn(code, (saved) => {
         setRevenueData((prev) => ({ ...prev, [code]: mergeRevenueWithDefaults(saved, code, months) }));
       })
     );
     return () => unsubs.forEach((u) => u && u());
-  }, [projectCodeOptions?.join(","), months.map(m => m.ps).join(",")]);
+  }, [projectCodeOptions?.join(","), months.map(m => m.ps).join(","), isEstab]);
 
   const toggleExpand = (code) => setExpanded((prev) => {
     const n = new Set(prev); n.has(code) ? n.delete(code) : n.add(code); return n;
@@ -124,6 +127,13 @@ export default function FinanceiroResumo({ rows, months, projectCodeOptions }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+      {isEstab && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 8, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.4)" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>📊 ESTABILIZAÇÃO</span>
+          <span style={{ fontSize: 11, color: "var(--gray-9)" }}>— Resumo consolidado com dados de horas, expenses e receita da estabilização</span>
+        </div>
+      )}
 
       {/* ── CONTRACT MARGEM — CONSOLIDADA (topo) ── */}
       <div>

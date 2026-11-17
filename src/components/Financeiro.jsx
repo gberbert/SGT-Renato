@@ -169,6 +169,7 @@ export default function Financeiro() {
   const [exportRevenue, setExportRevenue] = useState({});
   const [exportLoading, setExportLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [resumoMode, setResumoMode] = useState("estimativa"); // "estimativa" | "estabilizacao"
   const [horaMode, setHoraMode] = useState("estimativa");   // "estimativa" | "estabilizacao"
   const [expensesMode, setExpensesMode] = useState("estimativa");
   const [receitaMode, setReceitaMode] = useState("estimativa");
@@ -247,15 +248,15 @@ export default function Financeiro() {
   const usersSorted = useMemo(() => [...users].sort((a, b) => getUserLabel(a).toUpperCase().localeCompare(getUserLabel(b).toUpperCase(), "pt-BR")), [users]);
   const projectCodeOptions = useMemo(() => { const c = new Set(); for (const u of usersSorted) { if (u?.projectCode) c.add(u.projectCode); } return [...c].sort(); }, [usersSorted]);
 
-  /* subscribe to HORA estab overrides when in estabilizacao mode */
+  /* subscribe to HORA estab overrides when HORA tab OR RESUMO tab is in estabilizacao mode */
   useEffect(() => {
-    if (horaMode !== "estabilizacao") return;
+    if (horaMode !== "estabilizacao" && resumoMode !== "estabilizacao") return;
     return subscribeToHoraEstab(startMonth, (data) => {
       if (data?.overrides) { setHoraEstabOverrides(data.overrides); setHoraEstabMeta({ savedAt: data.savedAt, savedBy: data.savedBy }); }
       else { setHoraEstabOverrides({}); setHoraEstabMeta(null); }
       setHoraEstabDirty(false);
     });
-  }, [horaMode, startMonth]);
+  }, [horaMode, resumoMode, startMonth]);
 
   /* load expenses + revenue for export — must come after projectCodeOptions useMemo */
   useEffect(() => {
@@ -720,9 +721,34 @@ export default function Financeiro() {
       </div>
 
       {/* ── RESUMO TAB ── */}
-      {activeTab === "resumo" && (
-        <FinanceiroResumo rows={rows} months={months} projectCodeOptions={projectCodeOptions} readOnly={isClosed} />
-      )}
+      {activeTab === "resumo" && (() => {
+        // Build estab rows: apply horaEstabOverrides to monthHours/monthValues
+        const rowsForResumo = resumoMode === "estabilizacao"
+          ? rows.map(r => {
+              const monthHoursE = months.map((mo, i) => {
+                const mk = mo.ps.slice(0, 7);
+                return horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i];
+              });
+              const monthValuesE = monthHoursE.map(h => r1(h * r.csrRate));
+              return { ...r, monthHours: monthHoursE, monthValues: monthValuesE, total: r1(monthHoursE.reduce((a, v) => a + v, 0)), totalValue: r1(monthValuesE.reduce((a, v) => a + v, 0)) };
+            })
+          : rows;
+        return (
+          <>
+            {/* Mode toggle */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Visão:</span>
+              {["estimativa", "estabilizacao"].map(m => (
+                <button key={m} type="button" onClick={() => setResumoMode(m)}
+                  style={{ padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${resumoMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.6)" : "var(--indigo-7)") : "var(--gray-6)"}`, background: resumoMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.15)" : "var(--indigo-2)") : "transparent", color: resumoMode === m ? (m === "estabilizacao" ? "#34d399" : "var(--indigo-11)") : "var(--gray-11)", transition: "all 0.15s" }}>
+                  {m === "estimativa" ? "📋 Estimativa" : "📊 Estabilização"}
+                </button>
+              ))}
+            </div>
+            <FinanceiroResumo rows={rowsForResumo} months={months} projectCodeOptions={projectCodeOptions} readOnly={isClosed} mode={resumoMode} />
+          </>
+        );
+      })()}
 
       {/* ── EXPENSES TAB ── */}
       {activeTab === "expenses" && (
