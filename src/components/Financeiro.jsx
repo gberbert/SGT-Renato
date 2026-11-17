@@ -388,12 +388,16 @@ export default function Financeiro() {
         "Classificação": r.classificacao,
       };
       months.forEach(({ label }, i) => { row[label] = r.monthHours[i]; });
+      months.forEach(({ ps, label }, i) => { const mk = ps.slice(0, 7); row[`${label} [Estab]`] = horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]; });
       row["TOTAL"] = r.total;
+      row["TOTAL [Estab]"] = months.reduce((acc, { ps }, i) => { const mk = ps.slice(0, 7); return acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]); }, 0);
       return row;
     });
     const totRow = { "Membro": `TOTAL (${rows.length} membros)`, "Cód. Projeto": "", "Squad(s)": "", "Contrato": "", "Classificação": "" };
     months.forEach(({ label }, i) => { totRow[label] = colTotals.tots[i]; });
+    months.forEach(({ ps, label }, i) => { const mk = ps.slice(0, 7); totRow[`${label} [Estab]`] = rows.reduce((acc, r) => acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]), 0); });
     totRow["TOTAL"] = colTotals.grand;
+    totRow["TOTAL [Estab]"] = months.reduce((acc, { ps }, i) => { const mk = ps.slice(0, 7); return acc + rows.reduce((s, r) => s + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]), 0); }, 0);
     dataRows.push(totRow);
     const ws = XLSX.utils.json_to_sheet(dataRows);
     const wb = XLSX.utils.book_new();
@@ -424,18 +428,32 @@ export default function Financeiro() {
           row[`${label} (h)`] = r.monthHours[i];
           row[`${label} (R$)`] = r.monthValues[i];
         });
+        months.forEach(({ ps, label }, i) => {
+          const mk = ps.slice(0, 7);
+          const eh = horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i];
+          row[`${label} [Estab](h)`] = eh;
+          row[`${label} [Estab](R$)`] = r1(eh * r.csrRate);
+        });
         row["TOTAL (h)"] = r.total;
         row["TOTAL (R$)"] = r.totalValue;
+        const estabTotalH = r1(months.reduce((acc, { ps }, i) => { const mk = ps.slice(0, 7); return acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]); }, 0));
+        row["TOTAL [Estab](h)"] = estabTotalH;
+        row["TOTAL [Estab](R$)"] = r1(estabTotalH * r.csrRate);
         return row;
       });
       // Totals row
       const horaTot = { "Membro": "TOTAL", "Cód. SAP": "", "Status": "", "Cód. Projeto": "", "Squad(s)": "", "Contrato": "", "Classificação": "", "CSR (R$/h)": "" };
-      months.forEach(({ label }, i) => {
+      months.forEach(({ ps, label }, i) => {
+        const mk = ps.slice(0, 7);
         horaTot[`${label} (h)`] = colTotals.tots[i];
         horaTot[`${label} (R$)`] = colTotals.totVals[i];
+        horaTot[`${label} [Estab](h)`] = rows.reduce((acc, r) => acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]), 0);
+        horaTot[`${label} [Estab](R$)`] = r1(rows.reduce((acc, r) => { const eh = horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]; return acc + r1(eh * r.csrRate); }, 0));
       });
       horaTot["TOTAL (h)"] = colTotals.grand;
       horaTot["TOTAL (R$)"] = colTotals.grandVal;
+      horaTot["TOTAL [Estab](h)"] = r1(months.reduce((acc, { ps }, i) => { const mk = ps.slice(0, 7); return acc + rows.reduce((s, r) => s + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]), 0); }, 0));
+      horaTot["TOTAL [Estab](R$)"] = r1(rows.reduce((acc, r) => { const eh = r1(months.reduce((a, { ps }, i) => { const mk = ps.slice(0, 7); return a + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]); }, 0)); return acc + r1(eh * r.csrRate); }, 0));
       horaRows.push(horaTot);
       const wsHora = XLSX.utils.json_to_sheet(horaRows);
       wsHora["!cols"] = Object.keys(horaRows[0] || {}).map((k) => ({ wch: Math.max(k.length, 10) }));
