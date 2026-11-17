@@ -27,6 +27,15 @@ function useSquads() {
   return squads;
 }
 
+function useSistemasAlterados() {
+  const [list, setList] = useState([]);
+  useEffect(() => {
+    const q = query(collection(db, 'sistemas_alterados'), orderBy('createdAt', 'asc'));
+    return onSnapshot(q, snap => setList(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => {});
+  }, []);
+  return list;
+}
+
 function getUserLabel(u) {
   return u?.displayName || u?.shortName || u?.name || u?.email || u?.id || '';
 }
@@ -1010,6 +1019,51 @@ function PlanoComTabContent({ ticket, fmtDate, freshData = {}, pendingChanges = 
   );
 }
 
+function SistemasAfetadosPicker({ value, list, readOnly, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  const sel = Array.isArray(value) ? value : [];
+  const toggle = s => { const ex = sel.find(x => x.id === s.id); onChange(ex ? sel.filter(x => x.id !== s.id) : [...sel, { id: s.id, nome: s.nome, categoria: s.categoria }]); };
+  if (readOnly) {
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, paddingTop: 2 }}>
+        {sel.length === 0 ? <span className="dmd-field-value">—</span>
+          : sel.map(s => <span key={s.id} style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', whiteSpace: 'nowrap' }}>{s.nome}</span>)}
+      </div>
+    );
+  }
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" className="dmd-combobox-trigger" onClick={() => setOpen(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', minHeight: 34, width: '100%' }}>
+        {sel.length === 0 ? <span className="dmd-combobox-placeholder">— Selecionar sistemas —</span>
+          : sel.map(s => <span key={s.id} style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)', color: '#38bdf8', whiteSpace: 'nowrap' }}>{s.nome}</span>)}
+        <ChevronDown size={13} style={{ marginLeft: 'auto', flexShrink: 0 }} />
+      </button>
+      {open && (
+        <div className="dmd-combobox-dropdown" style={{ zIndex: 400 }}>
+          <div className="dmd-combobox-list">
+            {list.length === 0 && <span className="dmd-combobox-empty">Nenhum sistema cadastrado.</span>}
+            {list.map(s => { const checked = !!sel.find(x => x.id === s.id); return (
+              <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', background: 'none' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--gray-3)'} onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <input type="checkbox" checked={checked} onChange={() => toggle(s)} style={{ width: 14, height: 14, accentColor: '#38bdf8', cursor: 'pointer', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, color: 'var(--gray-12)', fontWeight: checked ? 700 : 400, flex: 1 }}>{s.nome}</span>
+                {s.categoria && <span style={{ fontSize: 10, color: s.categoria === 'Modernizado' ? '#22d3ee' : '#fb923c', flexShrink: 0 }}>{s.categoria}</span>}
+              </label>
+            ); })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, ticketDocId: ticketDocIdProp }) {
   const [activeTab, setActiveTab] = useState('geral');
   const [squadPrincipal, setSquadPrincipal] = useState(ticket?.squadPrincipal ?? null);
@@ -1022,6 +1076,8 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
   const systems = useSystems();
   const squads = useSquads();
   const releases = useReleases();
+  const sistemasAlterados = useSistemasAlterados();
+  const [sistemasAfetados, setSistemasAfetados] = useState(ticket?.sistemasAfetados || []);
   const hasPending = Object.keys(pendingChanges).length > 0;
 
   // Subscribe to live Firestore data so fields saved externally (e.g. dataEntregaRca) are always visible
@@ -1034,7 +1090,7 @@ export default function DemandaDetailsModal({ ticket, mode, onClose, onSave, tic
     return unsub;
   }, [ticket?.issueKey, ticketDocIdProp, ticket?.id]);
 
-  useEffect(() => { setActiveTab('geral'); setSquadPrincipal(ticket?.squadPrincipal ?? null); setPendingChanges({}); setFreshData({}); }, [ticket?.issueKey]);
+  useEffect(() => { setActiveTab('geral'); setSquadPrincipal(ticket?.squadPrincipal ?? null); setSistemasAfetados(ticket?.sistemasAfetados || []); setPendingChanges({}); setFreshData({}); }, [ticket?.issueKey]);
 
   // Buffer edits locally — nothing goes to Firestore until SALVAR
   const save = useCallback(
@@ -1596,6 +1652,14 @@ const handleSave = useCallback(async () => {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Row 3d: SISTEMAS AFETADOS */}
+              <div className="dmd-row">
+                <div className="dmd-field dmd-field--wide">
+                  <FieldLabel>SISTEMAS AFETADOS</FieldLabel>
+                  <SistemasAfetadosPicker value={sistemasAfetados} list={sistemasAlterados} readOnly={!isEdit} onChange={next => { setSistemasAfetados(next); save('sistemasAfetados', next); }} />
+                </div>
               </div>
 
               {/* Row 4: IMPEDIDO + MOTIVO IMPEDIMENTO */}
