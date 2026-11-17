@@ -914,6 +914,10 @@ export default function FinanceiroTermos() {
   const [deletingId, setDeletingId] = useState(null);
   const [sortKey, setSortKey] = useState("mesReferencia");
   const [sortDir, setSortDir] = useState("desc");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterMes, setFilterMes] = useState("");
+  const [filterContrato, setFilterContrato] = useState("");
+  const [filterCodigo, setFilterCodigo] = useState("");
 
   const sortedTermos = useMemo(() => {
     if (!sortKey) return termos;
@@ -925,6 +929,22 @@ export default function FinanceiroTermos() {
       return sortDir === "asc" ? cmp : -cmp;
     });
   }, [termos, sortKey, sortDir]);
+
+  const filteredTermos = useMemo(() => {
+    let list = sortedTermos;
+    if (filterStatus) list = list.filter(t => (t.status || "Criado") === filterStatus);
+    if (filterMes) list = list.filter(t => (t.mesReferencia || "") === filterMes);
+    if (filterContrato) list = list.filter(t => (t.contratoNome || "") === filterContrato);
+    if (filterCodigo) list = list.filter(t => (t.codigoProjeto || "") === filterCodigo);
+    return list;
+  }, [sortedTermos, filterStatus, filterMes, filterContrato, filterCodigo]);
+
+  const hasFiltersActive = filterStatus || filterMes || filterContrato || filterCodigo;
+
+  // Distinct options derived from all termos (not filtered)
+  const mesOptions = useMemo(() => [...new Set(termos.map(t => t.mesReferencia).filter(Boolean))].sort((a, b) => b.localeCompare(a)), [termos]);
+  const contratoOptions = useMemo(() => [...new Set(termos.map(t => t.contratoNome).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")), [termos]);
+  const codigoOptions = useMemo(() => [...new Set(termos.map(t => t.codigoProjeto).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")), [termos]);
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -963,7 +983,7 @@ export default function FinanceiroTermos() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--gray-12)" }}>Gestão de Emissão de Termos</div>
-          <div style={{ fontSize: 11, color: "var(--gray-8)", marginTop: 3 }}>{termos.length} termo{termos.length !== 1 ? "s" : ""} emitido{termos.length !== 1 ? "s" : ""}.</div>
+          <div style={{ fontSize: 11, color: "var(--gray-8)", marginTop: 3 }}>{filteredTermos.length}/{termos.length} termo{termos.length !== 1 ? "s" : ""}</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button type="button" onClick={() => setShowConfig(true)} title="Configurações de Base"
@@ -976,6 +996,68 @@ export default function FinanceiroTermos() {
           </button>
         </div>
       </div>
+
+      {/* ── Filter bar ── */}
+      {termos.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "var(--gray-2)", borderRadius: 8, padding: "8px 12px", border: "1px solid var(--gray-5)" }}>
+          {/* Status filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Status</span>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${filterStatus ? "var(--indigo-6)" : "var(--gray-6)"}`, background: filterStatus ? "var(--indigo-2)" : "var(--gray-1)", color: filterStatus ? "var(--indigo-11)" : "var(--gray-12)", fontSize: 11, cursor: "pointer", outline: "none", maxWidth: 180 }}>
+              <option value="">— Todos —</option>
+              {STATUS_LIST.map(s => <option key={s.label} value={s.label}>{s.label}</option>)}
+            </select>
+            {filterStatus && <button type="button" onClick={() => setFilterStatus("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
+          </div>
+          <div style={{ width: 1, height: 18, background: "var(--gray-5)", flexShrink: 0 }} />
+          {/* Mês Ref filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Mês Ref.</span>
+            <select value={filterMes} onChange={e => setFilterMes(e.target.value)}
+              style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${filterMes ? "var(--cyan-6)" : "var(--gray-6)"}`, background: filterMes ? "var(--cyan-2)" : "var(--gray-1)", color: filterMes ? "var(--cyan-11)" : "var(--gray-12)", fontSize: 11, cursor: "pointer", outline: "none", maxWidth: 160 }}>
+              <option value="">— Todos —</option>
+              {mesOptions.map(m => {
+                const [y, mo] = m.split("-").map(Number);
+                const label = new Date(y, mo - 1, 1).toLocaleString("pt-BR", { month: "short", year: "numeric" }).replace(".", "");
+                return <option key={m} value={m}>{label}</option>;
+              })}
+            </select>
+            {filterMes && <button type="button" onClick={() => setFilterMes("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
+          </div>
+          <div style={{ width: 1, height: 18, background: "var(--gray-5)", flexShrink: 0 }} />
+          {/* Contrato filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Contrato</span>
+            <select value={filterContrato} onChange={e => setFilterContrato(e.target.value)}
+              style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${filterContrato ? "var(--amber-6)" : "var(--gray-6)"}`, background: filterContrato ? "var(--amber-2)" : "var(--gray-1)", color: filterContrato ? "var(--amber-11)" : "var(--gray-12)", fontSize: 11, cursor: "pointer", outline: "none", maxWidth: 180 }}>
+              <option value="">— Todos —</option>
+              {contratoOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {filterContrato && <button type="button" onClick={() => setFilterContrato("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
+          </div>
+          <div style={{ width: 1, height: 18, background: "var(--gray-5)", flexShrink: 0 }} />
+          {/* Cod. Projeto filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>Cód. Projeto</span>
+            <select value={filterCodigo} onChange={e => setFilterCodigo(e.target.value)}
+              style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${filterCodigo ? "var(--violet-6)" : "var(--gray-6)"}`, background: filterCodigo ? "var(--violet-2)" : "var(--gray-1)", color: filterCodigo ? "var(--violet-11)" : "var(--gray-12)", fontSize: 11, cursor: "pointer", outline: "none", maxWidth: 180 }}>
+              <option value="">— Todos —</option>
+              {codigoOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {filterCodigo && <button type="button" onClick={() => setFilterCodigo("")} style={{ fontSize: 10, color: "var(--red-10)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>}
+          </div>
+          {hasFiltersActive && (
+            <>
+              <div style={{ width: 1, height: 18, background: "var(--gray-5)", flexShrink: 0 }} />
+              <button type="button" onClick={() => { setFilterStatus(""); setFilterMes(""); setFilterContrato(""); setFilterCodigo(""); }}
+                style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, border: "1px solid var(--red-6)", background: "var(--red-3)", color: "var(--red-10)", cursor: "pointer", whiteSpace: "nowrap" }}>
+                ✕ Limpar filtros
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {termos.length === 0 ? (
         <div style={{ padding: "48px 0", textAlign: "center", color: "var(--gray-8)" }}>
@@ -1023,7 +1105,7 @@ export default function FinanceiroTermos() {
               </tr>
             </thead>
             <tbody>
-              {sortedTermos.map((t, idx) => {
+              {filteredTermos.map((t, idx) => {
                 const cv = (v, color, size = 12) => v == null ? <span style={{ fontSize: 11, color: "var(--gray-7)" }}>—</span>
                   : <span title={fmtCurrency(v)} style={{ fontSize: size, fontWeight: size > 12 ? 900 : 700, color, opacity: v === 0 ? 0.5 : 1, fontVariantNumeric: "tabular-nums" }}>{fmtCurrency(v)}</span>;
                 return (
