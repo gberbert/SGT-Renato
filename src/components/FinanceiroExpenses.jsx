@@ -5,6 +5,8 @@ import {
   subscribeToExpenses,
   saveExpenses,
   mergeWithDefaults,
+  subscribeToExpensesEstab,
+  saveExpensesEstab,
 } from "../services/financeiroExpensesService";
 
 const CAT_COLORS = {
@@ -20,7 +22,8 @@ function fmtCurrency(v) {
 
 function numVal(s) { return parseFloat(String(s || "0").replace(",", ".")) || 0; }
 
-export default function FinanceiroExpenses({ projectCodes, months, readOnly = false }) {
+export default function FinanceiroExpenses({ projectCodes, months, readOnly = false, mode = "estimativa" }) {
+  const isEstab = mode === "estabilizacao";
   const [selectedCode, setSelectedCode] = useState("__TODOS__");
   const [data, setData] = useState(null);
   const [dirty, setDirty] = useState(false);
@@ -31,23 +34,25 @@ export default function FinanceiroExpenses({ projectCodes, months, readOnly = fa
   // Subscribe to all codes for TODOS view
   useEffect(() => {
     if (!projectCodes?.length) return;
+    const subscribeFn = isEstab ? subscribeToExpensesEstab : subscribeToExpenses;
     const unsubs = projectCodes.map((code) =>
-      subscribeToExpenses(code, (saved) => {
+      subscribeFn(code, (saved) => {
         setAllData((prev) => ({ ...prev, [code]: mergeWithDefaults(saved, code, months) }));
       })
     );
     return () => unsubs.forEach((u) => u && u());
-  }, [projectCodes?.join(","), months.map((m) => m.ps).join(",")]);
+  }, [projectCodes?.join(","), months.map((m) => m.ps).join(","), isEstab]);
 
   // Subscribe to individual code for editing
   useEffect(() => {
     if (!selectedCode || selectedCode === "__TODOS__") { setData(null); return; }
-    const unsub = subscribeToExpenses(selectedCode, (saved) => {
+    const subscribeFn = isEstab ? subscribeToExpensesEstab : subscribeToExpenses;
+    const unsub = subscribeFn(selectedCode, (saved) => {
       setData(mergeWithDefaults(saved, selectedCode, months));
       setDirty(false);
     });
     return () => unsub();
-  }, [selectedCode, months.map(m => m.ps).join(",")]);
+  }, [selectedCode, months.map(m => m.ps).join(","), isEstab]);
 
   const setFieldLabel = useCallback((catName, fieldKey, label) => {
     setData((prev) => {
@@ -72,7 +77,11 @@ export default function FinanceiroExpenses({ projectCodes, months, readOnly = fa
   const handleSave = async () => {
     if (!selectedCode || !data) return;
     setSaving(true);
-    try { await saveExpenses(selectedCode, data); setDirty(false); }
+    try {
+      if (isEstab) { await saveExpensesEstab(selectedCode, data); }
+      else { await saveExpenses(selectedCode, data); }
+      setDirty(false);
+    }
     catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
@@ -125,6 +134,11 @@ export default function FinanceiroExpenses({ projectCodes, months, readOnly = fa
             </button>
           ))}
         </div>
+        {isEstab && (
+          <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.5)", color: "#34d399", padding: "3px 10px", borderRadius: 6 }}>
+            📊 ESTABILIZAÇÃO
+          </span>
+        )}
         {readOnly && (
           <span style={{ fontSize: 11, color: "var(--red-11)", fontWeight: 600, background: "var(--red-2)", border: "1px solid var(--red-6)", padding: "3px 10px", borderRadius: 6 }}>
             🔒 Leitura — controle fechado
@@ -138,12 +152,14 @@ export default function FinanceiroExpenses({ projectCodes, months, readOnly = fa
             style={{
               marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6,
               padding: "6px 16px", borderRadius: 7, fontSize: 12, fontWeight: 700,
-              border: "none", background: "var(--indigo-9)", color: "white",
+              border: "none",
+              background: isEstab ? "rgba(16,185,129,0.9)" : "var(--indigo-9)",
+              color: "white",
               cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
             }}
           >
             <Save size={13} />
-            {saving ? "Salvando…" : "Salvar alterações"}
+            {saving ? "Salvando…" : isEstab ? "Salvar Estabilização" : "Salvar alterações"}
           </button>
         )}
       </div>

@@ -14,7 +14,7 @@ import FinanceiroTermos from "./FinanceiroTermos";
 import FinanceiroHorasEvolutivos from "./FinanceiroHorasEvolutivos";
 import FinanceiroAlocacoes from "./FinanceiroAlocacoes";
 import UserDetailsModal from "./UserDetailsModal";
-import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults } from "../services/financeiroExpensesService";
+import { loadExpenses, mergeWithDefaults, DEFAULT_CATEGORIES, REVENUE_FIELDS, subscribeToRevenue, mergeRevenueWithDefaults, loadExpensesEstab, loadRevenueEstab, subscribeToHoraEstab, saveHoraEstab } from "../services/financeiroExpensesService";
 import { ensureControlDoc, subscribeToControl, validatePassword, closeControl, openControl } from "../services/financeiroControlService";
 
 /* ─── date helpers ─────────────────────────────────── */
@@ -169,6 +169,14 @@ export default function Financeiro() {
   const [exportRevenue, setExportRevenue] = useState({});
   const [exportLoading, setExportLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [horaMode, setHoraMode] = useState("estimativa");   // "estimativa" | "estabilizacao"
+  const [expensesMode, setExpensesMode] = useState("estimativa");
+  const [receitaMode, setReceitaMode] = useState("estimativa");
+  // HORA estab: overrides stored per member per month-key
+  const [horaEstabOverrides, setHoraEstabOverrides] = useState({}); // { memberId: { YYYY-MM: hours } }
+  const [horaEstabMeta, setHoraEstabMeta] = useState(null); // { savedAt, savedBy }
+  const [horaEstabDirty, setHoraEstabDirty] = useState(false);
+  const [horaEstabSaving, setHoraEstabSaving] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
   const [closedMeta, setClosedMeta] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -238,6 +246,16 @@ export default function Financeiro() {
   const squadsSorted = useMemo(() => [...squads].sort((a, b) => (a?.name || a?.key || "").toString().toUpperCase().localeCompare((b?.name || b?.key || "").toString().toUpperCase(), "pt-BR")), [squads]);
   const usersSorted = useMemo(() => [...users].sort((a, b) => getUserLabel(a).toUpperCase().localeCompare(getUserLabel(b).toUpperCase(), "pt-BR")), [users]);
   const projectCodeOptions = useMemo(() => { const c = new Set(); for (const u of usersSorted) { if (u?.projectCode) c.add(u.projectCode); } return [...c].sort(); }, [usersSorted]);
+
+  /* subscribe to HORA estab overrides when in estabilizacao mode */
+  useEffect(() => {
+    if (horaMode !== "estabilizacao") return;
+    return subscribeToHoraEstab(startMonth, (data) => {
+      if (data?.overrides) { setHoraEstabOverrides(data.overrides); setHoraEstabMeta({ savedAt: data.savedAt, savedBy: data.savedBy }); }
+      else { setHoraEstabOverrides({}); setHoraEstabMeta(null); }
+      setHoraEstabDirty(false);
+    });
+  }, [horaMode, startMonth]);
 
   /* load expenses + revenue for export — must come after projectCodeOptions useMemo */
   useEffect(() => {
@@ -708,12 +726,36 @@ export default function Financeiro() {
 
       {/* ── EXPENSES TAB ── */}
       {activeTab === "expenses" && (
-        <FinanceiroExpenses projectCodes={projectCodeOptions} months={months} readOnly={isClosed} />
+        <>
+          {/* Mode toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Visão:</span>
+            {["estimativa", "estabilizacao"].map(m => (
+              <button key={m} type="button" onClick={() => setExpensesMode(m)}
+                style={{ padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${expensesMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.6)" : "var(--indigo-7)") : "var(--gray-6)"}`, background: expensesMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.15)" : "var(--indigo-2)") : "transparent", color: expensesMode === m ? (m === "estabilizacao" ? "#34d399" : "var(--indigo-11)") : "var(--gray-11)", transition: "all 0.15s" }}>
+                {m === "estimativa" ? "📋 Estimativa" : "📊 Estabilização"}
+              </button>
+            ))}
+          </div>
+          <FinanceiroExpenses projectCodes={projectCodeOptions} months={months} readOnly={isClosed} mode={expensesMode} />
+        </>
       )}
 
       {/* ── RECEITA TAB ── */}
       {activeTab === "receita" && (
-        <FinanceiroReceita projectCodes={projectCodeOptions} months={months} readOnly={isClosed} />
+        <>
+          {/* Mode toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Visão:</span>
+            {["estimativa", "estabilizacao"].map(m => (
+              <button key={m} type="button" onClick={() => setReceitaMode(m)}
+                style={{ padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${receitaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.6)" : "var(--indigo-7)") : "var(--gray-6)"}`, background: receitaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.15)" : "var(--indigo-2)") : "transparent", color: receitaMode === m ? (m === "estabilizacao" ? "#34d399" : "var(--indigo-11)") : "var(--gray-11)", transition: "all 0.15s" }}>
+                {m === "estimativa" ? "📋 Estimativa" : "📊 Estabilização"}
+              </button>
+            ))}
+          </div>
+          <FinanceiroReceita projectCodes={projectCodeOptions} months={months} readOnly={isClosed} mode={receitaMode} />
+        </>
       )}
 
       {/* ── TERMOS TAB ── */}
@@ -804,9 +846,39 @@ export default function Financeiro() {
       {/* ── CUSTO TAB content ── */}
       {activeTab !== "custo" ? null : <>
 
-      {/* ── HORA TABLE CONTROLS (view mode + export) ── */}
+      {/* ── HORA TABLE CONTROLS (view mode + export + mode toggle) ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        {/* Mode toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Visão:</span>
+          {["estimativa", "estabilizacao"].map(m => (
+            <button key={m} type="button" onClick={() => setHoraMode(m)}
+              style={{ padding: "4px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", border: `1px solid ${horaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.6)" : "var(--indigo-7)") : "var(--gray-6)"}`, background: horaMode === m ? (m === "estabilizacao" ? "rgba(16,185,129,0.15)" : "var(--indigo-2)") : "transparent", color: horaMode === m ? (m === "estabilizacao" ? "#34d399" : "var(--indigo-11)") : "var(--gray-11)", transition: "all 0.15s" }}>
+              {m === "estimativa" ? "📋 Estimativa" : "📊 Estabilização"}
+            </button>
+          ))}
+          {horaMode === "estabilizacao" && horaEstabMeta?.savedAt && (
+            <span style={{ fontSize: 10, color: "var(--gray-8)", marginLeft: 4 }}>
+              Salvo em {horaEstabMeta.savedAt?.toDate ? horaEstabMeta.savedAt.toDate().toLocaleDateString("pt-BR") : "—"} por {horaEstabMeta.savedBy || "—"}
+            </span>
+          )}
+        </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Salvar Estabilização de HORA */}
+          {horaMode === "estabilizacao" && horaEstabDirty && !isClosed && (
+            <button type="button" disabled={horaEstabSaving} onClick={async () => {
+              setHoraEstabSaving(true);
+              try {
+                const userName = (await import("../firebase")).auth?.currentUser?.displayName || (await import("../firebase")).auth?.currentUser?.email || "Usuário";
+                await saveHoraEstab(startMonth, horaEstabOverrides, userName);
+                setHoraEstabDirty(false);
+              } catch(e) { console.error(e); }
+              finally { setHoraEstabSaving(false); }
+            }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 7, fontSize: 12, fontWeight: 700, border: "none", background: "rgba(16,185,129,0.9)", color: "white", cursor: horaEstabSaving ? "not-allowed" : "pointer", opacity: horaEstabSaving ? 0.7 : 1 }}>
+              {horaEstabSaving ? "Salvando…" : "💾 Salvar Estabilização"}
+            </button>
+          )}
           <div style={{ display: "flex", borderRadius: 7, border: "1px solid var(--gray-6)", overflow: "hidden" }}>
             <button type="button" onClick={() => setViewMode("horas")} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: viewMode === "horas" ? "var(--indigo-9)" : "var(--gray-2)", color: viewMode === "horas" ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.04em" }}>Horas</button>
             <button type="button" onClick={() => setViewMode("valor")} style={{ padding: "5px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: viewMode === "valor" ? "var(--green-9)" : "var(--gray-2)", color: viewMode === "valor" ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.04em" }}>R$</button>
@@ -888,10 +960,33 @@ export default function Financeiro() {
                     {r.csrRate > 0 ? <span style={{ fontSize: 11, fontWeight: 600, color: "var(--violet-11)", fontVariantNumeric: "tabular-nums" }}>{fmtCurrency(r.csrRate)}</span> : <span style={{ color: "var(--gray-7)", fontSize: 11 }}>—</span>}
                   </td>
                   {r.monthHours.map((h, mi) => {
-                    const val = r.monthValues[mi];
-                    const display = viewMode === "horas" ? (h > 0 ? `${h}h` : "—") : (val > 0 ? fmtCurrency(val) : "—");
-                    const color = viewMode === "horas" ? (h > 0 ? "var(--green-11)" : "var(--gray-7)") : (val > 0 ? "var(--teal-11)" : "var(--gray-7)");
-                    return <td key={mi} style={TDR}><span style={{ fontVariantNumeric: "tabular-nums", color, fontWeight: (h > 0 || val > 0) ? 600 : 400 }}>{display}</span></td>;
+                    const mk = months[mi].ps.slice(0, 7);
+                    const estabH = horaMode === "estabilizacao" ? (horaEstabOverrides[r.id]?.[mk] ?? h) : h;
+                    const displayH = horaMode === "estabilizacao" ? estabH : h;
+                    const val = r1(displayH * r.csrRate);
+                    if (horaMode === "estabilizacao" && viewMode === "horas") {
+                      return (
+                        <td key={mi} style={{ ...TDR, background: "rgba(16,185,129,0.06)" }}>
+                          <input type="number" min={0} step={0.5}
+                            value={estabH === 0 ? "" : estabH}
+                            placeholder="0"
+                            disabled={isClosed}
+                            onChange={e => {
+                              const v = parseFloat(e.target.value) || 0;
+                              setHoraEstabOverrides(prev => ({
+                                ...prev,
+                                [r.id]: { ...(prev[r.id] || {}), [mk]: v }
+                              }));
+                              setHoraEstabDirty(true);
+                            }}
+                            style={{ width: 72, padding: "2px 5px", textAlign: "right", fontSize: 12, fontWeight: 700, borderRadius: 5, border: "1px solid rgba(16,185,129,0.4)", background: "transparent", color: "#34d399", outline: "none", fontVariantNumeric: "tabular-nums" }}
+                          />
+                        </td>
+                      );
+                    }
+                    const display = viewMode === "horas" ? (displayH > 0 ? `${displayH}h` : "—") : (val > 0 ? fmtCurrency(val) : "—");
+                    const color = viewMode === "horas" ? (displayH > 0 ? "var(--green-11)" : "var(--gray-7)") : (val > 0 ? "var(--teal-11)" : "var(--gray-7)");
+                    return <td key={mi} style={{ ...TDR, background: horaMode === "estabilizacao" ? "rgba(16,185,129,0.06)" : undefined }}><span style={{ fontVariantNumeric: "tabular-nums", color, fontWeight: (displayH > 0 || val > 0) ? 600 : 400 }}>{display}</span></td>;
                   })}
                   <td style={{ ...TDR }}>
                     <button

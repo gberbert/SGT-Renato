@@ -232,6 +232,21 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    match /financeiro_expenses_estab/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /financeiro_receita_estab/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    match /financeiro_hora_estab/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
     match /financeiro_snapshots/{document=**} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();

@@ -5,6 +5,8 @@ import {
   subscribeToRevenue,
   saveRevenue,
   mergeRevenueWithDefaults,
+  subscribeToRevenueEstab,
+  saveRevenueEstab,
 } from "../services/financeiroExpensesService";
 
 function fmtCurrency(v) {
@@ -17,7 +19,8 @@ function calcNet(gross, taxRate) {
   return Math.round(gross * (1 - taxRate / 100) * 100) / 100;
 }
 
-export default function FinanceiroReceita({ projectCodes, months, readOnly = false }) {
+export default function FinanceiroReceita({ projectCodes, months, readOnly = false, mode = "estimativa" }) {
+  const isEstab = mode === "estabilizacao";
   const [selectedCode, setSelectedCode] = useState("__TODOS__");
   const [data, setData] = useState(null);
   const [dirty, setDirty] = useState(false);
@@ -28,23 +31,25 @@ export default function FinanceiroReceita({ projectCodes, months, readOnly = fal
   // Subscribe to all codes for TODOS view
   useEffect(() => {
     if (!projectCodes?.length) return;
+    const subscribeFn = isEstab ? subscribeToRevenueEstab : subscribeToRevenue;
     const unsubs = projectCodes.map((code) =>
-      subscribeToRevenue(code, (saved) => {
+      subscribeFn(code, (saved) => {
         setAllData((prev) => ({ ...prev, [code]: mergeRevenueWithDefaults(saved, code, months) }));
       })
     );
     return () => unsubs.forEach((u) => u && u());
-  }, [projectCodes?.join(","), months.map((m) => m.ps).join(",")]);
+  }, [projectCodes?.join(","), months.map((m) => m.ps).join(","), isEstab]);
 
   // Subscribe to individual code for editing
   useEffect(() => {
     if (!selectedCode || selectedCode === "__TODOS__") { setData(null); return; }
-    const unsub = subscribeToRevenue(selectedCode, (saved) => {
+    const subscribeFn = isEstab ? subscribeToRevenueEstab : subscribeToRevenue;
+    const unsub = subscribeFn(selectedCode, (saved) => {
       setData(mergeRevenueWithDefaults(saved, selectedCode, months));
       setDirty(false);
     });
     return () => unsub();
-  }, [selectedCode, months.map((m) => m.ps).join(",")]);
+  }, [selectedCode, months.map((m) => m.ps).join(","), isEstab]);
 
   const setFieldLabel = useCallback((fieldKey, label) => {
     setData((prev) => { const next = JSON.parse(JSON.stringify(prev)); next.fields[fieldKey].label = label; return next; });
@@ -64,7 +69,11 @@ export default function FinanceiroReceita({ projectCodes, months, readOnly = fal
   const handleSave = async () => {
     if (!selectedCode || !data) return;
     setSaving(true);
-    try { await saveRevenue(selectedCode, data); setDirty(false); }
+    try {
+      if (isEstab) { await saveRevenueEstab(selectedCode, data); }
+      else { await saveRevenue(selectedCode, data); }
+      setDirty(false);
+    }
     catch (e) { console.error(e); }
     finally { setSaving(false); }
   };
@@ -229,14 +238,19 @@ export default function FinanceiroReceita({ projectCodes, months, readOnly = fal
             <button key={m.id} type="button" onClick={() => setColMode(m.id)} style={{ padding: "3px 10px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: colMode === m.id ? "var(--green-9)" : "var(--gray-2)", color: colMode === m.id ? "white" : "var(--gray-10)", transition: "all 0.15s", letterSpacing: "0.03em" }}>{m.label}</button>
           ))}
         </div>
+        {isEstab && (
+          <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.5)", color: "#34d399", padding: "3px 10px", borderRadius: 6 }}>
+            📊 ESTABILIZAÇÃO
+          </span>
+        )}
         {readOnly && (
           <span style={{ fontSize: 11, color: "var(--red-11)", fontWeight: 600, background: "var(--red-2)", border: "1px solid var(--red-6)", padding: "3px 10px", borderRadius: 6 }}>
             🔒 Leitura — controle fechado
           </span>
         )}
         {!readOnly && dirty && (
-          <button type="button" onClick={handleSave} disabled={saving} style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 16px", borderRadius: 7, fontSize: 12, fontWeight: 700, border: "none", background: "var(--indigo-9)", color: "white", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
-            <Save size={13} /> {saving ? "Salvando…" : "Salvar alterações"}
+          <button type="button" onClick={handleSave} disabled={saving} style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 16px", borderRadius: 7, fontSize: 12, fontWeight: 700, border: "none", background: isEstab ? "rgba(16,185,129,0.9)" : "var(--indigo-9)", color: "white", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
+            <Save size={13} /> {saving ? "Salvando…" : isEstab ? "Salvar Estabilização" : "Salvar alterações"}
           </button>
         )}
       </div>
