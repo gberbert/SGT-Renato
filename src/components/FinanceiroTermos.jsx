@@ -37,7 +37,7 @@ const EMISSAO_COL = "financeiro_emissao_termos";
 
 /* ── Status definitions ─────────────────────────────────────────── */
 const STATUS_LIST = [
-  { label: "Criado",                      color: "#4ade80",  bg: "rgba(74,222,128,0.12)",   border: "rgba(74,222,128,0.4)" },
+  { label: "Criado",                      color: "#facc15",  bg: "rgba(250,204,21,0.12)",   border: "rgba(250,204,21,0.5)" },
   { label: "Termo enviado",               color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Aprovação Gestor",            color: "#fb923c",  bg: "rgba(251,146,60,0.12)",   border: "rgba(251,146,60,0.4)" },
   { label: "Aprovação Governança",        color: "#fb923c",  bg: "rgba(251,146,60,0.12)",   border: "rgba(251,146,60,0.4)" },
@@ -46,7 +46,7 @@ const STATUS_LIST = [
   { label: "Solicitação Emissão Notas",   color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Aprovações do Gestor",        color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Emissão das Invoices",        color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
-  { label: "Faturado",                    color: "#facc15",  bg: "rgba(250,204,21,0.12)",   border: "rgba(250,204,21,0.5)" },
+  { label: "Faturado",                    color: "#4ade80",  bg: "rgba(74,222,128,0.12)",   border: "rgba(74,222,128,0.4)" },
 ];
 
 /* ── Status Workflow Popup ───────────────────────────────────────── */
