@@ -178,12 +178,13 @@ export default function Financeiro() {
   const [horaEstabMeta, setHoraEstabMeta] = useState(null); // { savedAt, savedBy }
   const [horaEstabDirty, setHoraEstabDirty] = useState(false);
   const [horaEstabSaving, setHoraEstabSaving] = useState(false);
-  // HE / HN adicionais: { memberId: { YYYY-MM: { he: number, hn: number } } }
+  // HE / HN adicionais — stored separately per mode
   const [showAdicionais, setShowAdicionais] = useState(false);
-  const [horaAdicionaisOverrides, setHoraAdicionaisOverrides] = useState({});
-  const [horaAdicionaisDirty, setHoraAdicionaisDirty] = useState(false);
+  const [horaAdicionaisEstima, setHoraAdicionaisEstima] = useState({});
+  const [horaAdicionaisEstab, setHoraAdicionaisEstab] = useState({});
+  const [horaAdicionaisEstimaDirty, setHoraAdicionaisEstimaDirty] = useState(false);
+  const [horaAdicionaisEstabDirty, setHoraAdicionaisEstabDirty] = useState(false);
   const [horaAdicionaisSaving, setHoraAdicionaisSaving] = useState(false);
-  const [horaAdicionaisMeta, setHoraAdicionaisMeta] = useState(null);
   const [isClosed, setIsClosed] = useState(false);
   const [closedMeta, setClosedMeta] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -254,12 +255,13 @@ export default function Financeiro() {
   const usersSorted = useMemo(() => [...users].sort((a, b) => getUserLabel(a).toUpperCase().localeCompare(getUserLabel(b).toUpperCase(), "pt-BR")), [users]);
   const projectCodeOptions = useMemo(() => { const c = new Set(); for (const u of usersSorted) { if (u?.projectCode) c.add(u.projectCode); } return [...c].sort(); }, [usersSorted]);
 
-  /* subscribe to HORA adicionais (HE/HN) — always loaded */
+  /* subscribe to HORA adicionais (HE/HN) — always loaded, split by mode */
   useEffect(() => {
     return subscribeToHoraAdicionais(startMonth, (data) => {
-      if (data?.overrides) { setHoraAdicionaisOverrides(data.overrides); setHoraAdicionaisMeta({ savedAt: data.savedAt, savedBy: data.savedBy }); }
-      else { setHoraAdicionaisOverrides({}); setHoraAdicionaisMeta(null); }
-      setHoraAdicionaisDirty(false);
+      setHoraAdicionaisEstima(data?.overrides_estima || {});
+      setHoraAdicionaisEstab(data?.overrides_estab || {});
+      setHoraAdicionaisEstimaDirty(false);
+      setHoraAdicionaisEstabDirty(false);
     });
   }, [startMonth]);
 
@@ -405,9 +407,11 @@ export default function Financeiro() {
       months.forEach(({ ps, label }, i) => { const mk = ps.slice(0, 7); row[`${label} [Estab]`] = horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]; });
       row["TOTAL"] = r.total;
       row["TOTAL [Estab]"] = months.reduce((acc, { ps }, i) => { const mk = ps.slice(0, 7); return acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[i]); }, 0);
-      months.forEach(({ ps, label }) => { const mk = ps.slice(0, 7); row[`${label} HE`] = horaAdicionaisOverrides[r.id]?.[mk]?.he ?? 0; row[`${label} HN`] = horaAdicionaisOverrides[r.id]?.[mk]?.hn ?? 0; });
-      row["TOTAL HE"] = months.reduce((acc, { ps }) => { const mk = ps.slice(0, 7); return acc + (horaAdicionaisOverrides[r.id]?.[mk]?.he ?? 0); }, 0);
-      row["TOTAL HN"] = months.reduce((acc, { ps }) => { const mk = ps.slice(0, 7); return acc + (horaAdicionaisOverrides[r.id]?.[mk]?.hn ?? 0); }, 0);
+      months.forEach(({ ps, label }) => { const mk = ps.slice(0, 7); row[`${label} HE-Estima`] = horaAdicionaisEstima[r.id]?.[mk]?.he ?? 0; row[`${label} HN-Estima`] = horaAdicionaisEstima[r.id]?.[mk]?.hn ?? 0; row[`${label} HE-Estab`] = horaAdicionaisEstab[r.id]?.[mk]?.he ?? 0; row[`${label} HN-Estab`] = horaAdicionaisEstab[r.id]?.[mk]?.hn ?? 0; });
+      row["TOTAL HE-Estima"] = months.reduce((acc, { ps }) => acc + (horaAdicionaisEstima[r.id]?.[ps.slice(0,7)]?.he ?? 0), 0);
+      row["TOTAL HN-Estima"] = months.reduce((acc, { ps }) => acc + (horaAdicionaisEstima[r.id]?.[ps.slice(0,7)]?.hn ?? 0), 0);
+      row["TOTAL HE-Estab"] = months.reduce((acc, { ps }) => acc + (horaAdicionaisEstab[r.id]?.[ps.slice(0,7)]?.he ?? 0), 0);
+      row["TOTAL HN-Estab"] = months.reduce((acc, { ps }) => acc + (horaAdicionaisEstab[r.id]?.[ps.slice(0,7)]?.hn ?? 0), 0);
       return row;
     });
     const totRow = { "Membro": `TOTAL (${rows.length} membros)`, "Cód. Projeto": "", "Squad(s)": "", "Contrato": "", "Classificação": "" };
@@ -948,13 +952,15 @@ export default function Financeiro() {
             style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 700, border: showAdicionais ? "1px solid rgba(251,146,60,0.7)" : "1px solid var(--gray-6)", background: showAdicionais ? "rgba(251,146,60,0.12)" : "var(--gray-2)", color: showAdicionais ? "#fb923c" : "var(--gray-10)", cursor: "pointer", letterSpacing: "0.04em", transition: "all 0.15s" }}>
             ⚡ HE / HN
           </button>
-          {showAdicionais && horaAdicionaisDirty && !isClosed && (
+          {showAdicionais && (horaMode === "estabilizacao" ? horaAdicionaisEstabDirty : horaAdicionaisEstimaDirty) && !isClosed && (
             <button type="button" disabled={horaAdicionaisSaving} onClick={async () => {
               setHoraAdicionaisSaving(true);
               try {
                 const userName = (await import("../firebase")).auth?.currentUser?.displayName || (await import("../firebase")).auth?.currentUser?.email || "Usuário";
-                await saveHoraAdicionais(startMonth, horaAdicionaisOverrides, userName);
-                setHoraAdicionaisDirty(false);
+                const ovr = horaMode === "estabilizacao" ? horaAdicionaisEstab : horaAdicionaisEstima;
+                await saveHoraAdicionais(startMonth, horaMode, ovr, userName);
+                if (horaMode === "estabilizacao") setHoraAdicionaisEstabDirty(false);
+                else setHoraAdicionaisEstimaDirty(false);
               } catch(e) { console.error(e); }
               finally { setHoraAdicionaisSaving(false); }
             }}
@@ -1093,22 +1099,28 @@ export default function Financeiro() {
                     </button>
                   </td>
                   <td style={{ ...TDR, background: "var(--indigo-2)" }}>
-                    <span style={{ fontWeight: 700, color: "var(--indigo-11)", fontVariantNumeric: "tabular-nums" }}>
-                      {viewMode === "horas" ? `${r.total}h` : fmtCurrency(r.totalValue)}
-                    </span>
+                    {(() => {
+                      const aE = horaMode === "estabilizacao" ? horaAdicionaisEstab : horaAdicionaisEstima;
+                      const baseH = horaMode === "estabilizacao" ? r1(months.reduce((acc, { ps }, idx) => { const mk = ps.slice(0,7); return acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[idx]); }, 0)) : r.total;
+                      const addHE = months.reduce((acc, { ps }) => acc + (aE[r.id]?.[ps.slice(0,7)]?.he || 0), 0);
+                      const addHN = months.reduce((acc, { ps }) => acc + (aE[r.id]?.[ps.slice(0,7)]?.hn || 0), 0);
+                      const totalH = r1(baseH + addHE + addHN);
+                      const totalV = r1(totalH * r.csrRate);
+                      return <span style={{ fontWeight: 700, color: "var(--indigo-11)", fontVariantNumeric: "tabular-nums" }}>{viewMode === "horas" ? `${totalH}h` : fmtCurrency(totalV)}</span>;
+                    })()}
                   </td>
                 </tr>
                 {showAdicionais && (
                   <tr style={{ background: "rgba(251,146,60,0.04)" }}>
                     <td style={{ ...TDL, padding: "2px 8px", fontSize: 10, color: "#fb923c", fontWeight: 700, whiteSpace: "nowrap" }} colSpan={7}>⚡ Hora Extra</td>
-                    {months.map((mo, mi) => { const mk = mo.ps.slice(0, 7); const he = horaAdicionaisOverrides[r.id]?.[mk]?.he ?? 0; return (<td key={mi} style={{ ...TDR, padding: "2px 4px", background: "rgba(251,146,60,0.04)" }}><input type="number" min={0} step={0.5} value={he === 0 ? "" : he} placeholder="0" disabled={isClosed} onChange={e => { const v = parseFloat(e.target.value) || 0; setHoraAdicionaisOverrides(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), [mk]: { ...(prev[r.id]?.[mk] || {}), he: v } } })); setHoraAdicionaisDirty(true); }} style={{ width: 60, padding: "1px 4px", textAlign: "right", fontSize: 11, fontWeight: 700, borderRadius: 4, border: "1px solid rgba(251,146,60,0.4)", background: "transparent", color: "#fb923c", outline: "none" }} /></td>); })}
+                    {months.map((mo, mi) => { const aE = horaMode === "estabilizacao" ? horaAdicionaisEstab : horaAdicionaisEstima; const setAE = horaMode === "estabilizacao" ? setHoraAdicionaisEstab : setHoraAdicionaisEstima; const setAD = horaMode === "estabilizacao" ? setHoraAdicionaisEstabDirty : setHoraAdicionaisEstimaDirty; const mk = mo.ps.slice(0, 7); const he = aE[r.id]?.[mk]?.he ?? 0; return (<td key={mi} style={{ ...TDR, padding: "2px 4px", background: "rgba(251,146,60,0.04)" }}><input type="number" min={0} step={0.5} value={he === 0 ? "" : he} placeholder="0" disabled={isClosed} onChange={e => { const v = parseFloat(e.target.value) || 0; setAE(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), [mk]: { ...(prev[r.id]?.[mk] || {}), he: v } } })); setAD(true); }} style={{ width: 60, padding: "1px 4px", textAlign: "right", fontSize: 11, fontWeight: 700, borderRadius: 4, border: "1px solid rgba(251,146,60,0.4)", background: "transparent", color: "#fb923c", outline: "none" }} /></td>); })}
                     <td style={{ ...TDR, padding: "2px 4px" }} colSpan={2} />
                   </tr>
                 )}
                 {showAdicionais && (
                   <tr style={{ background: "rgba(167,139,250,0.04)" }}>
                     <td style={{ ...TDL, padding: "2px 8px", fontSize: 10, color: "#a78bfa", fontWeight: 700, whiteSpace: "nowrap" }} colSpan={7}>🌙 Hora Noturna</td>
-                    {months.map((mo, mi) => { const mk = mo.ps.slice(0, 7); const hn = horaAdicionaisOverrides[r.id]?.[mk]?.hn ?? 0; return (<td key={mi} style={{ ...TDR, padding: "2px 4px", background: "rgba(167,139,250,0.04)" }}><input type="number" min={0} step={0.5} value={hn === 0 ? "" : hn} placeholder="0" disabled={isClosed} onChange={e => { const v = parseFloat(e.target.value) || 0; setHoraAdicionaisOverrides(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), [mk]: { ...(prev[r.id]?.[mk] || {}), hn: v } } })); setHoraAdicionaisDirty(true); }} style={{ width: 60, padding: "1px 4px", textAlign: "right", fontSize: 11, fontWeight: 700, borderRadius: 4, border: "1px solid rgba(167,139,250,0.4)", background: "transparent", color: "#a78bfa", outline: "none" }} /></td>); })}
+                    {months.map((mo, mi) => { const aE = horaMode === "estabilizacao" ? horaAdicionaisEstab : horaAdicionaisEstima; const setAE = horaMode === "estabilizacao" ? setHoraAdicionaisEstab : setHoraAdicionaisEstima; const setAD = horaMode === "estabilizacao" ? setHoraAdicionaisEstabDirty : setHoraAdicionaisEstimaDirty; const mk = mo.ps.slice(0, 7); const hn = aE[r.id]?.[mk]?.hn ?? 0; return (<td key={mi} style={{ ...TDR, padding: "2px 4px", background: "rgba(167,139,250,0.04)" }}><input type="number" min={0} step={0.5} value={hn === 0 ? "" : hn} placeholder="0" disabled={isClosed} onChange={e => { const v = parseFloat(e.target.value) || 0; setAE(prev => ({ ...prev, [r.id]: { ...(prev[r.id] || {}), [mk]: { ...(prev[r.id]?.[mk] || {}), hn: v } } })); setAD(true); }} style={{ width: 60, padding: "1px 4px", textAlign: "right", fontSize: 11, fontWeight: 700, borderRadius: 4, border: "1px solid rgba(167,139,250,0.4)", background: "transparent", color: "#a78bfa", outline: "none" }} /></td>); })}
                     <td style={{ ...TDR, padding: "2px 4px" }} colSpan={2} />
                   </tr>
                 )}

@@ -189,10 +189,12 @@ export function subscribeToHoraAdicionais(periodoYM, callback) {
   const ref = doc(db, "financeiro_hora_adicionais", periodoYM);
   return onSnapshot(ref, (snap) => callback(snap.exists() ? snap.data() : null), () => callback(null));
 }
-export async function saveHoraAdicionais(periodoYM, overrides, savedBy) {
+export async function saveHoraAdicionais(periodoYM, mode, overrides, savedBy) {
   if (!periodoYM) return;
   const ref = doc(db, "financeiro_hora_adicionais", periodoYM);
-  await setDoc(ref, { periodo: periodoYM, overrides, savedAt: serverTimestamp(), savedBy }, { merge: false });
+  const field = mode === "estabilizacao" ? "overrides_estab" : "overrides_estima";
+  const metaField = mode === "estabilizacao" ? "meta_estab" : "meta_estima";
+  await setDoc(ref, { periodo: periodoYM, [field]: overrides, [metaField]: { savedAt: serverTimestamp(), savedBy } }, { merge: true });
 }
 
 export function subscribeToHoraEstab(periodoYM, callback) {
