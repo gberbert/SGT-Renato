@@ -42,10 +42,11 @@ const STATUS_LIST = [
   { label: "Aprovação Gestor",            color: "#fb923c",  bg: "rgba(251,146,60,0.12)",   border: "rgba(251,146,60,0.4)" },
   { label: "Aprovação Governança",        color: "#fb923c",  bg: "rgba(251,146,60,0.12)",   border: "rgba(251,146,60,0.4)" },
   { label: "Emissão POs",                 color: "#fb923c",  bg: "rgba(251,146,60,0.12)",   border: "rgba(251,146,60,0.4)" },
-  { label: "Envio NF-e",                  color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Solicitação Emissão Notas",   color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Aprovações do Gestor",        color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Emissão das Invoices",        color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
+  { label: "Revisão das Notas",           color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
+  { label: "Envio da NF-e",              color: "#38bdf8",  bg: "rgba(56,189,248,0.12)",   border: "rgba(56,189,248,0.4)" },
   { label: "Faturado",                    color: "#4ade80",  bg: "rgba(74,222,128,0.12)",   border: "rgba(74,222,128,0.4)" },
 ];
 
