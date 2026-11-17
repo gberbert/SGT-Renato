@@ -1055,7 +1055,7 @@ export default function Financeiro() {
                     const heM = aEM[r.id]?.[mk]?.he || 0;
                     const hnM = aEM[r.id]?.[mk]?.hn || 0;
                     const hasAdicionaisM = heM > 0 || hnM > 0;
-                    const displayHTotal = r1(displayH + heM + hnM);
+                    const displayHTotal = displayH + heM + hnM;
                     const val = r1(displayHTotal * r.csrRate);
                     if (horaMode === "estabilizacao" && viewMode === "horas") {
                       return (
@@ -1080,7 +1080,7 @@ export default function Financeiro() {
                           {isModified && (
                             <div style={{ fontSize: 9, color: "var(--gray-7)", textAlign: "right", marginTop: 1, lineHeight: 1 }} title={`Estimativa original: ${h}h`}>{h}h ▸</div>
                           )}
-                          {hasAdicionaisM && <div style={{ fontSize: 8, color: "#fb923c", textAlign: "right", lineHeight: 1, marginTop: 1 }} title={`HE: ${heM}h, HN: ${hnM}h`}>⚡+{r1(heM+hnM)}h</div>}
+                          {hasAdicionaisM && <div style={{ fontSize: 8, color: "#fb923c", textAlign: "right", lineHeight: 1, marginTop: 1 }} title={`HE: ${heM}h, HN: ${hnM}h`}>⚡+{heM+hnM}h</div>}
                         </td>
                       );
                     }
@@ -1092,7 +1092,7 @@ export default function Financeiro() {
                         {hasAdicionaisM && !isModified && <span title={`HE: ${heM}h, HN: ${hnM}h`} style={{ position: "absolute", top: 1, right: 3, fontSize: 8, fontWeight: 900, color: "#fb923c", lineHeight: 1 }}>⚡</span>}
                         <span style={{ fontVariantNumeric: "tabular-nums", color, fontWeight: (displayHTotal > 0 || val > 0) ? 600 : 400 }}>{display}</span>
                         {isModified && viewMode === "horas" && <div style={{ fontSize: 9, color: "var(--gray-7)", lineHeight: 1, marginTop: 1 }} title={`Estimativa original: ${h}h`}>{h}h ▸</div>}
-                        {hasAdicionaisM && viewMode === "horas" && <div style={{ fontSize: 8, color: "#fb923c", lineHeight: 1, marginTop: 1 }} title={`HE: ${heM}h, HN: ${hnM}h`}>+{r1(heM+hnM)}h</div>}
+                        {hasAdicionaisM && viewMode === "horas" && <div style={{ fontSize: 8, color: "#fb923c", lineHeight: 1, marginTop: 1 }} title={`HE: ${heM}h, HN: ${hnM}h`}>+{heM+hnM}h</div>}
                       </td>
                     );
                   })}
@@ -1112,7 +1112,7 @@ export default function Financeiro() {
                       const baseH = horaMode === "estabilizacao" ? r1(months.reduce((acc, { ps }, idx) => { const mk = ps.slice(0,7); return acc + (horaEstabOverrides[r.id]?.[mk] ?? r.monthHours[idx]); }, 0)) : r.total;
                       const addHE = months.reduce((acc, { ps }) => acc + (aE[r.id]?.[ps.slice(0,7)]?.he || 0), 0);
                       const addHN = months.reduce((acc, { ps }) => acc + (aE[r.id]?.[ps.slice(0,7)]?.hn || 0), 0);
-                      const totalH = r1(baseH + addHE + addHN);
+                      const totalH = baseH + addHE + addHN;
                       const totalV = r1(totalH * r.csrRate);
                       return <span style={{ fontWeight: 700, color: "var(--indigo-11)", fontVariantNumeric: "tabular-nums" }}>{viewMode === "horas" ? `${totalH}h` : fmtCurrency(totalV)}</span>;
                     })()}
