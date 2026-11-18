@@ -1073,24 +1073,45 @@ const OperacaoHome = ({ userRole }) => {
                     <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
                   </Box>
 
-                  {/* Stacked bar per escopo — each segment = one status */}
+                  {/* Stacked bar per escopo — each segment = one status (computed from ticketsCache) */}
                   {(() => {
                     const COLORS = ['#38bdf8','#4ade80','#f97316','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15','#2dd4bf','#818cf8','#c084fc','#e879f9','#86efac','#fbbf24','#99f6e4','#bae6fd','#bbf7d0','#fde68a','#ddd6fe','#fca5a5','#6ee7b7','#67e8f9','#a5b4fc','#f9a8d4'];
                     const hashColor = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffff; return COLORS[h % COLORS.length]; };
                     return (
                       <Box mt="4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         {geralCards.map((card) => {
-                          const statusMap = statsRadar?.byStatusByEscopo?.[card.key] || {};
+                          // Build status map: prefer precomputed, fallback to ticketsCache
+                          let statusMap = {};
+                          const precomputed = statsRadar?.byStatusByEscopo?.[card.key];
+                          if (precomputed && Object.keys(precomputed).length > 0) {
+                            statusMap = precomputed;
+                          } else if (Array.isArray(ticketsCache)) {
+                            const escopoTickets = ticketsCache.filter(t =>
+                              String(t.escopo || '').toUpperCase() === card.key.toUpperCase()
+                            );
+                            for (const t of escopoTickets) {
+                              const s = t.status ? String(t.status).trim() : '(sem status)';
+                              statusMap[s] = (statusMap[s] || 0) + 1;
+                            }
+                          }
                           const sortedStatuses = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
                           const total = sortedStatuses.reduce((s, [, c]) => s + c, 0) || card.total || 1;
+                          const isLoaded = loadedEscopos.has(card.key);
                           if (sortedStatuses.length === 0) return (
                             <Box key={card.key}>
                               <Flex align="center" justify="between" mb="1">
                                 <span style={{ fontSize: 14, fontWeight: 700, color: card.color }}>{card.label}</span>
                                 <span style={{ fontSize: 14, fontWeight: 900, color: 'rgba(255,255,255,0.7)' }}>{formatNumber(card.total)}</span>
                               </Flex>
-                              <Box style={{ height: 22, borderRadius: 6, background: `${card.color}33` }} />
-                              <Text size="1" color="gray" mt="1">Sem dados de status disponíveis</Text>
+                              <Box style={{ height: 22, borderRadius: 6, background: `${card.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isLoaded
+                                  ? <Text size="1" color="gray">Sem dados de status</Text>
+                                  : <button type="button" disabled={ticketsCacheLoading} onClick={() => loadTicketsData(card.key)}
+                                      style={{ background: `${card.color}22`, border: `1px solid ${card.color}55`, borderRadius: 5, padding: '2px 12px', fontSize: 11, fontWeight: 700, color: card.color, cursor: 'pointer' }}>
+                                      {ticketsCacheLoading ? 'Carregando…' : '⚡ Carregar dados'}
+                                    </button>
+                                }
+                              </Box>
                             </Box>
                           );
                           return (
