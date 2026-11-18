@@ -1183,28 +1183,20 @@ const OperacaoHome = ({ userRole }) => {
 
                     return (
                       <>
-                        {/* Unified filter bar: date + comboboxes in one single row */}
-                        <Flex align="center" gap="8px" mt="3" style={{ flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8 }}>
-                          {/* Date group */}
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(56,189,248,0.7)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>📅</span>
-                          <Flex align="center" gap="6px" style={{ flexShrink: 0 }}>
-                            <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>De</label>
+                        {/* Unified filter bar: date pill + combobox pills */}
+                        <Flex align="center" gap="8px" mt="3" style={{ flexWrap: 'wrap' }}>
+                          {/* Date pill */}
+                          <Flex align="center" gap="6px" style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', borderBottom: '2px solid #22d3ee', background: 'rgba(0,0,0,0.3)', minHeight: 36, flexShrink: 0 }}>
+                            <span style={{ fontSize: 13, flexShrink: 0 }}>📅</span>
+                            <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>De</label>
                             <input type="date" value={geralDateFrom} onChange={e => setGeralDateFrom(e.target.value)}
-                              style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
-                            <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>Até</label>
+                              style={{ fontSize: 12, border: 'none', background: 'transparent', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark', minWidth: 0 }} />
+                            <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>Até</label>
                             <input type="date" value={geralDateTo} onChange={e => setGeralDateTo(e.target.value)}
-                              style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
+                              style={{ fontSize: 12, border: 'none', background: 'transparent', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark', minWidth: 0 }} />
                           </Flex>
-                          {!isDefault2 && (
-                            <button type="button" onClick={() => { setGeralDateFrom(DEFAULT_DATE_FROM); setGeralDateTo(DEFAULT_DATE_TO); }}
-                              style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'transparent', color: '#38bdf8', cursor: 'pointer', flexShrink: 0 }}>
-                              Padrão
-                            </button>
-                          )}
-                          {/* Separator */}
-                          <span style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', flexShrink: 0, alignSelf: 'center' }} />
-                          {/* Comboboxes */}
-                          <Box style={{ flexShrink: 0 }}>
+                          {/* Comboboxes — no Box wrapper needed, combobox renders its own pill */}
+                          <Box style={{ position: 'relative', flexShrink: 0 }}>
                             <OperacaoMultiCombobox
                               label=""
                               placeholder={geralEscopoFilter.size === 5 ? 'Todos os escopos' : `${geralEscopoFilter.size} escopo(s)`}
@@ -1214,7 +1206,7 @@ const OperacaoHome = ({ userRole }) => {
                               formatOption={(item) => item.nome}
                             />
                           </Box>
-                          <Box style={{ flexShrink: 0, position: 'relative' }}>
+                          <Box style={{ position: 'relative', flexShrink: 0 }}>
                             <OperacaoMultiCombobox
                               label=""
                               placeholder={statusPlaceholder}
@@ -1224,13 +1216,13 @@ const OperacaoHome = ({ userRole }) => {
                               formatOption={(item) => item.nome}
                             />
                             {statusExcluded && (
-                              <span style={{ position: 'absolute', top: -5, right: -5, fontSize: 9, fontWeight: 800, background: '#f59e0b', color: '#000', borderRadius: 99, padding: '1px 4px', pointerEvents: 'none', lineHeight: 1.3 }}>
+                              <span style={{ position: 'absolute', top: -5, right: -5, fontSize: 9, fontWeight: 800, background: '#f59e0b', color: '#000', borderRadius: 99, padding: '1px 4px', pointerEvents: 'none', lineHeight: 1.3, zIndex: 1 }}>
                                 {GERAL_STATUS_EXCLUIDOS.size}
                               </span>
                             )}
                           </Box>
                           {allIssueTypes.length > 0 && (
-                            <Box style={{ flexShrink: 0 }}>
+                            <Box style={{ position: 'relative', flexShrink: 0 }}>
                               <OperacaoMultiCombobox
                                 label=""
                                 placeholder={geralIssueTypeFilter.size === 0 ? 'Todos os tipos' : `${geralIssueTypeFilter.size} tipo(s)`}
@@ -1241,7 +1233,7 @@ const OperacaoHome = ({ userRole }) => {
                               />
                             </Box>
                           )}
-                          <Box style={{ flexShrink: 0 }}>
+                          <Box style={{ position: 'relative', flexShrink: 0 }}>
                             <OperacaoMultiCombobox
                               label=""
                               placeholder={geralFilaFilter.size === 0 ? 'Todas as filas' : `${geralFilaFilter.size} fila(s)`}
@@ -1253,7 +1245,7 @@ const OperacaoHome = ({ userRole }) => {
                           </Box>
                           {hasAnyFilter && (
                             <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); setGeralDateFrom('2024-01-01'); setGeralDateTo(new Date().toISOString().slice(0, 10)); }}
-                              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', flexShrink: 0 }}>
+                              style={{ fontSize: 11, padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', flexShrink: 0, minHeight: 36, borderBottom: '2px solid rgba(255,255,255,0.15)' }}>
                               ✕ Limpar
                             </button>
                           )}
