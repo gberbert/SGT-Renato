@@ -62,7 +62,7 @@ const fmtDate = (v) => {
 
 function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
   const HEADERS = [
-    'ISSUE_KEY', 'STATUS', 'ISSUETYPE', 'SUMMARY', 'SQUAD', 'PRIORIDADE',
+    'ISSUE_KEY', 'STATUS', 'ISSUETYPE', 'SUMMARY', 'SQUAD', 'FILA_ATENDIMENTO', 'PRIORIDADE',
     'IMPEDIMENTO', 'ESTIMATIVA MACRO', 'ESTIMATIVA TOTAL',
     'DESENVOLVIMENTO', 'TESTE INTERNO', 'TESTE (QA)', 'HOMOLOGAÇÃO', 'PRODUÇÃO',
   ];
@@ -82,6 +82,7 @@ function exportRowsToExcel(rows, filename = 'radar-operacao.xlsx') {
       t.issueType || '',
       t.summary || '',
       stripNumericPrefix(t.grupoSuporte) || '',
+      t.grupoSuporte || '',
       fmtPrio(t),
       t.impedimento ? 'Sim' : 'Não',
       t.estimativaMacroJira != null ? String(t.estimativaMacroJira) : '',
@@ -426,6 +427,8 @@ const OperacaoHome = ({ userRole }) => {
   const [geralEscopoFilter, setGeralEscopoFilter] = useState(() => new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO']));
   // GERAL tab fila filter
   const [geralFilaFilter, setGeralFilaFilter] = useState(() => new Set());
+  // GERAL tab grupoSuporte filter
+  const [geralGrupoSuporteFilter, setGeralGrupoSuporteFilter] = useState(() => new Set());
   // Workflow modal
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
   const [computedRadar, setComputedRadar] = useState(null);
@@ -1132,6 +1135,15 @@ const OperacaoHome = ({ userRole }) => {
                         if (it) issueTypeCounts.set(it, (issueTypeCounts.get(it) || 0) + 1);
                       }
                     }
+                    const grupoSuporteCounts = new Map();
+                    if (hasTickets) {
+                      for (const t of ticketsCache) {
+                        if (!geralKeys.has(String(t.escopo || '').toUpperCase())) continue;
+                        const gs = t.grupoSuporte ? String(t.grupoSuporte).trim() : '';
+                        if (gs) grupoSuporteCounts.set(gs, (grupoSuporteCounts.get(gs) || 0) + 1);
+                      }
+                    }
+                    const allGrupoSuporte = [...grupoSuporteCounts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ id: s, nome: s }));
                     const allStatuses = [...statusCounts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ id: s, nome: s }));
                     const allIssueTypes = [...issueTypeCounts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ id: s, nome: s }));
 
@@ -1163,6 +1175,10 @@ const OperacaoHome = ({ userRole }) => {
                         const fila = filaMap.get(s) || '';
                         if (!geralFilaFilter.has(fila)) return false;
                       }
+                      if (geralGrupoSuporteFilter.size > 0) {
+                        const gs = t.grupoSuporte ? String(t.grupoSuporte).trim() : '';
+                        if (!geralGrupoSuporteFilter.has(gs)) return false;
+                      }
                       return true;
                     }) : [];
 
@@ -1192,7 +1208,7 @@ const OperacaoHome = ({ userRole }) => {
                     const isDefault2 = geralDateFrom === DEFAULT_DATE_FROM && geralDateTo === DEFAULT_DATE_TO;
 
                     const hasAnyFilter = geralStatusFilter.size > 0 || geralIssueTypeFilter.size > 0 ||
-                      geralEscopoFilter.size < 5 || geralFilaFilter.size > 0 || !isDefault2;
+                      geralEscopoFilter.size < 5 || geralFilaFilter.size > 0 || geralGrupoSuporteFilter.size > 0 || !isDefault2;
 
                     return (
                       <>
@@ -1208,11 +1224,11 @@ const OperacaoHome = ({ userRole }) => {
                             <input type="date" value={geralDateTo} onChange={e => setGeralDateTo(e.target.value)}
                               style={{ fontSize: 12, border: 'none', background: 'transparent', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark', minWidth: 0 }} />
                           </Flex>
-                          {/* Comboboxes — no Box wrapper needed, combobox renders its own pill */}
+                          {/* Comboboxes with labels */}
                           <Box style={{ position: 'relative', flexShrink: 0 }}>
                             <OperacaoMultiCombobox
-                              label=""
-                              placeholder={geralEscopoFilter.size === 5 ? 'Todos os escopos' : `${geralEscopoFilter.size} escopo(s)`}
+                              label="Escopo"
+                              placeholder={geralEscopoFilter.size === 5 ? 'Todos' : `${geralEscopoFilter.size} sel.`}
                               options={GERAL_ESCOPOS}
                               selected={geralEscopoFilter}
                               onChange={setGeralEscopoFilter}
@@ -1221,8 +1237,8 @@ const OperacaoHome = ({ userRole }) => {
                           </Box>
                           <Box style={{ position: 'relative', flexShrink: 0 }}>
                             <OperacaoMultiCombobox
-                              label=""
-                              placeholder={statusPlaceholder}
+                              label="Status"
+                              placeholder={statusExcluded ? `Excl. ${GERAL_STATUS_EXCLUIDOS.size}` : `${geralStatusFilter.size} sel.`}
                               options={allStatuses}
                               selected={geralStatusFilter}
                               onChange={setGeralStatusFilter}
@@ -1237,8 +1253,8 @@ const OperacaoHome = ({ userRole }) => {
                           {allIssueTypes.length > 0 && (
                             <Box style={{ position: 'relative', flexShrink: 0 }}>
                               <OperacaoMultiCombobox
-                                label=""
-                                placeholder={geralIssueTypeFilter.size === 0 ? 'Todos os tipos' : `${geralIssueTypeFilter.size} tipo(s)`}
+                                label="Tipo"
+                                placeholder={geralIssueTypeFilter.size === 0 ? 'Todos' : `${geralIssueTypeFilter.size} sel.`}
                                 options={allIssueTypes}
                                 selected={geralIssueTypeFilter}
                                 onChange={setGeralIssueTypeFilter}
@@ -1248,16 +1264,28 @@ const OperacaoHome = ({ userRole }) => {
                           )}
                           <Box style={{ position: 'relative', flexShrink: 0 }}>
                             <OperacaoMultiCombobox
-                              label=""
-                              placeholder={geralFilaFilter.size === 0 ? 'Todas as filas' : `${geralFilaFilter.size} fila(s)`}
+                              label="Fila"
+                              placeholder={geralFilaFilter.size === 0 ? 'Todas' : `${geralFilaFilter.size} sel.`}
                               options={FILAS_OPTIONS}
                               selected={geralFilaFilter}
                               onChange={setGeralFilaFilter}
                               formatOption={(item) => item.nome}
                             />
                           </Box>
+                          {allGrupoSuporte.length > 0 && (
+                            <Box style={{ position: 'relative', flexShrink: 0 }}>
+                              <OperacaoMultiCombobox
+                                label="Fila Atend."
+                                placeholder={geralGrupoSuporteFilter.size === 0 ? 'Todas' : `${geralGrupoSuporteFilter.size} sel.`}
+                                options={allGrupoSuporte}
+                                selected={geralGrupoSuporteFilter}
+                                onChange={setGeralGrupoSuporteFilter}
+                                formatOption={(item) => item.nome}
+                              />
+                            </Box>
+                          )}
                           {hasAnyFilter && (
-                            <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); setGeralDateFrom('2024-01-01'); setGeralDateTo(new Date().toISOString().slice(0, 10)); }}
+                            <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); setGeralGrupoSuporteFilter(new Set()); setGeralDateFrom('2024-01-01'); setGeralDateTo(new Date().toISOString().slice(0, 10)); }}
                               style={{ fontSize: 13, fontWeight: 500, padding: '9px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', flexShrink: 0, minHeight: 38, transition: 'background 0.15s' }}>
                               ✕ Limpar
                             </button>

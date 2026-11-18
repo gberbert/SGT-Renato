@@ -78,9 +78,6 @@ const OperacaoMultiCombobox = ({
 
   return (
     <Box ref={rootRef} className="operacao-combobox" style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-      <Text size="1" weight="bold" color="gray" mb="1" style={{ letterSpacing: '0.06em' }}>
-        {label}
-      </Text>
       <button
         type="button"
         className="operacao-combobox-trigger"
@@ -88,8 +85,13 @@ const OperacaoMultiCombobox = ({
         aria-expanded={open}
         disabled={disabled}
       >
-        <span>{displayValue}</span>
-        <ChevronDown size={16} />
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+          {label && (
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', flexShrink: 0, letterSpacing: '0.03em' }}>{label}</span>
+          )}
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayValue}</span>
+        </span>
+        <ChevronDown size={16} style={{ flexShrink: 0 }} />
       </button>
       {open && (
         <Box className="operacao-combobox-panel">
