@@ -1360,49 +1360,97 @@ const OperacaoHome = ({ userRole }) => {
                           );
                         })()}
 
-                        {/* Separate bars per status */}
-                        <Box mt="4">
-                          <Flex align="center" justify="between" mb="3">
-                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                              {[...geralEscopoFilter].join(' · ')}
-                            </span>
-                            <button type="button" disabled={drillLoading}
-                              onClick={() => openDrill('', `Geral`)}
-                              style={{ fontSize: 16, fontWeight: 900, color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer' }}>
-                              {formatNumber(unifiedSorted.reduce((s, [, c]) => s + c, 0))}
-                            </button>
-                          </Flex>
-                          {unifiedSorted.length === 0 ? (
-                            <Box style={{ height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Text size="1" color="gray">
-                                {!hasTickets ? 'Carregando dados…' : 'Nenhum ticket encontrado com os filtros selecionados'}
-                              </Text>
-                            </Box>
-                          ) : (
-                            <Box style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                              {unifiedSorted.map(([status, count]) => {
-                                const maxCount = unifiedSorted[0]?.[1] || 1;
-                                const pct = (count / unifiedTotal) * 100;
-                                const barW = (count / maxCount) * 100;
-                                const color = hashColor(status);
+                        {/* Bars per fila → per escopo */}
+                        {(() => {
+                          const FILA_DEFS = [
+                            { fila: 'NTT Data',      color: '#38bdf8', border: 'rgba(56,189,248,0.4)',  bg: 'rgba(56,189,248,0.08)', label: 'Aguardando ação do time da operação' },
+                            { fila: 'CPFL',          color: '#22c55e', border: 'rgba(34,197,94,0.4)',   bg: 'rgba(34,197,94,0.08)',  label: 'Aguardando ação do cliente' },
+                            { fila: 'CPFL Prevista', color: '#f59e0b', border: 'rgba(245,158,11,0.4)',  bg: 'rgba(245,158,11,0.08)', label: 'Na fila de pré-análise CPFL' },
+                          ];
+                          const ESCOPO_LABELS = {
+                            'INCIDENTE':   'Incidente',
+                            'PROBLEMAS':   'Problemas',
+                            'DEMANDA':     'Demanda',
+                            'DEMANDA FAST':'Demanda Fast',
+                            'SOLICITACAO': 'Solicitação',
+                          };
+                          const totalAll = filteredTickets.length || 1;
+
+                          return (
+                            <Box mt="4" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                              {FILA_DEFS.map(({ fila, color, border, bg, label }) => {
+                                // Count per escopo for this fila
+                                const escopoCounts = {};
+                                for (const t of filteredTickets) {
+                                  const esc = String(t.escopo || '').toUpperCase();
+                                  if (!ESCOPO_LABELS[esc]) continue;
+                                  const s = t.status ? String(t.status).trim() : '';
+                                  const fm = STATUS_FILA_BY_ESCOPO[esc] || new Map();
+                                  if ((fm.get(s) || '') !== fila) continue;
+                                  escopoCounts[esc] = (escopoCounts[esc] || 0) + 1;
+                                }
+                                const filaTotal = Object.values(escopoCounts).reduce((a, b) => a + b, 0);
+                                if (filaTotal === 0) return null;
+                                const pctTotal = ((filaTotal / totalAll) * 100).toFixed(0);
+                                const maxEscopo = Math.max(...Object.values(escopoCounts), 1);
+                                const sortedEscopos = Object.entries(escopoCounts).sort((a, b) => b[1] - a[1]);
                                 return (
-                                  <button key={status} type="button" disabled={drillLoading}
-                                    onClick={() => openDrill('', `Status: ${status}`, null, status)}
-                                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
-                                    <Flex align="center" gap="2" style={{ marginBottom: 2 }}>
-                                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
-                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', minWidth: 40, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
-                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', minWidth: 44, textAlign: 'right', flexShrink: 0 }}>({pct.toFixed(1)}%)</span>
+                                  <Box key={fila} style={{ borderLeft: `3px solid ${color}`, paddingLeft: 14, background: bg, borderRadius: '0 8px 8px 0', padding: '14px 16px 14px 16px', borderLeftWidth: 3, borderLeftStyle: 'solid', borderLeftColor: color }}>
+                                    {/* Header */}
+                                    <Flex align="center" justify="between" mb="3">
+                                      <Flex align="center" gap="2">
+                                        <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: `${color}25`, color, border: `1px solid ${border}` }}>{fila}</span>
+                                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{label}</span>
+                                      </Flex>
+                                      <button type="button" disabled={drillLoading}
+                                        onClick={() => openDrillDirect(
+                                          filteredTickets.filter(t => {
+                                            const esc2 = String(t.escopo || '').toUpperCase();
+                                            const s2 = t.status ? String(t.status).trim() : '';
+                                            const fm2 = STATUS_FILA_BY_ESCOPO[esc2] || new Map();
+                                            return (fm2.get(s2) || '') === fila;
+                                          }),
+                                          `Fila: ${fila}`
+                                        )}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'right', padding: 0 }}>
+                                        <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--gray-12)' }}>{formatNumber(filaTotal)}</span>
+                                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>tickets · {pctTotal}% do total</span>
+                                      </button>
                                     </Flex>
-                                    <Box style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                                      <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 4, transition: 'width 0.5s ease' }} />
+                                    {/* Bars per escopo */}
+                                    <Box style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                      {sortedEscopos.map(([esc, count]) => {
+                                        const barW = (count / maxEscopo) * 100;
+                                        return (
+                                          <button key={esc} type="button" disabled={drillLoading}
+                                            onClick={() => openDrillDirect(
+                                              filteredTickets.filter(t => {
+                                                const esc2 = String(t.escopo || '').toUpperCase();
+                                                if (esc2 !== esc) return false;
+                                                const s2 = t.status ? String(t.status).trim() : '';
+                                                const fm2 = STATUS_FILA_BY_ESCOPO[esc2] || new Map();
+                                                return (fm2.get(s2) || '') === fila;
+                                              }),
+                                              `${fila} · ${ESCOPO_LABELS[esc]}`
+                                            )}
+                                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+                                            <Flex align="center" gap="3">
+                                              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 90, flexShrink: 0 }}>{ESCOPO_LABELS[esc]}</span>
+                                              <Box style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                                                <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 99, transition: 'width 0.5s ease', opacity: 0.9 }} />
+                                              </Box>
+                                              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 36, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
+                                            </Flex>
+                                          </button>
+                                        );
+                                      })}
                                     </Box>
-                                  </button>
+                                  </Box>
                                 );
                               })}
                             </Box>
-                          )}
-                        </Box>
+                          );
+                        })()}
                       </>
                     );
                   })()}
