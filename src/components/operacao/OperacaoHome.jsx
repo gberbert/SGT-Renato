@@ -1233,16 +1233,16 @@ const OperacaoHome = ({ userRole }) => {
                           {ticketsCacheLoading && <Loader2 size={14} color="#38bdf8" className="spin" style={{ flexShrink: 0 }} />}
                         </Flex>
 
-                        {/* Unified stacked bar */}
+                        {/* Separate bars per status */}
                         <Box mt="4">
-                          <Flex align="center" justify="between" mb="2">
-                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                              {[...geralEscopoFilter].join(', ')}
+                          <Flex align="center" justify="between" mb="3">
+                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              {[...geralEscopoFilter].join(' · ')}
                             </span>
                             <button type="button" disabled={drillLoading}
-                              onClick={() => openDrill('', `Geral · ${[...geralEscopoFilter].join(', ')}`)}
-                              style={{ fontSize: 14, fontWeight: 900, color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer' }}>
-                              {formatNumber(unifiedTotal)}
+                              onClick={() => openDrill('', `Geral`)}
+                              style={{ fontSize: 16, fontWeight: 900, color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer' }}>
+                              {formatNumber(unifiedSorted.reduce((s, [, c]) => s + c, 0))}
                             </button>
                           </Flex>
                           {unifiedSorted.length === 0 ? (
@@ -1252,42 +1252,28 @@ const OperacaoHome = ({ userRole }) => {
                               </Text>
                             </Box>
                           ) : (
-                            <>
-                              <Box style={{ display: 'flex', height: 28, borderRadius: 6, overflow: 'hidden', gap: 1 }}>
-                                {unifiedSorted.map(([status, count]) => {
-                                  const pct = (count / unifiedTotal) * 100;
-                                  const color = hashColor(status);
-                                  return (
-                                    <button key={status} type="button" disabled={drillLoading}
-                                      onClick={() => openDrill('', `Status: ${status}`, null, status)}
-                                      title={`${status}: ${formatNumber(count)} (${pct.toFixed(1)}%)`}
-                                      style={{ width: `${pct}%`, minWidth: pct > 0 ? 2 : 0, background: color, border: 'none', padding: 0, cursor: 'pointer', transition: 'opacity 0.15s', flexShrink: 0 }}
-                                      onMouseEnter={e => { e.currentTarget.style.opacity = '0.75'; }}
-                                      onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
-                                    />
-                                  );
-                                })}
-                              </Box>
-                              <Flex gap="2" wrap="wrap" mt="2">
-                                {unifiedSorted.slice(0, 10).map(([status, count]) => {
-                                  const pct = ((count / unifiedTotal) * 100).toFixed(1);
-                                  const color = hashColor(status);
-                                  return (
-                                    <button key={status} type="button" disabled={drillLoading}
-                                      onClick={() => openDrill('', `Status: ${status}`, null, status)}
-                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: '1px 0', cursor: 'pointer' }}>
-                                      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
-                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>{status}</span>
-                                      <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>{formatNumber(count)}</span>
-                                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>({pct}%)</span>
-                                    </button>
-                                  );
-                                })}
-                                {unifiedSorted.length > 10 && (
-                                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>+{unifiedSorted.length - 10} outros</span>
-                                )}
-                              </Flex>
-                            </>
+                            <Box style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              {unifiedSorted.map(([status, count]) => {
+                                const maxCount = unifiedSorted[0]?.[1] || 1;
+                                const pct = (count / unifiedTotal) * 100;
+                                const barW = (count / maxCount) * 100;
+                                const color = hashColor(status);
+                                return (
+                                  <button key={status} type="button" disabled={drillLoading}
+                                    onClick={() => openDrill('', `Status: ${status}`, null, status)}
+                                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+                                    <Flex align="center" gap="2" style={{ marginBottom: 2 }}>
+                                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', minWidth: 40, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
+                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', minWidth: 44, textAlign: 'right', flexShrink: 0 }}>({pct.toFixed(1)}%)</span>
+                                    </Flex>
+                                    <Box style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                                      <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 4, transition: 'width 0.5s ease' }} />
+                                    </Box>
+                                  </button>
+                                );
+                              })}
+                            </Box>
                           )}
                         </Box>
                       </>
