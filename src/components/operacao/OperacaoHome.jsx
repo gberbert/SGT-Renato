@@ -1109,41 +1109,7 @@ const OperacaoHome = ({ userRole }) => {
                     <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
                   </Box>
 
-                  {/* Date filter — data de criação */}
-                  {(() => {
-                    const t = new Date();
-                    const curMonthStart = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
-                    const lastDay = new Date(t.getFullYear(), t.getMonth()+1, 0);
-                    const curMonthEnd = `${lastDay.getFullYear()}-${String(lastDay.getMonth()+1).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
-                    const DEFAULT_DATE_FROM = '2024-01-01';
-                    const DEFAULT_DATE_TO = new Date().toISOString().slice(0, 10);
-                    const isDefault = geralDateFrom === DEFAULT_DATE_FROM && geralDateTo === DEFAULT_DATE_TO;
-                    return (
-                      <Flex align="center" gap="8px" mt="3" style={{ flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(56,189,248,0.7)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>📅 Data Criação</span>
-                        <Flex align="center" gap="6px">
-                          <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>De</label>
-                          <input type="date" value={geralDateFrom} onChange={e => setGeralDateFrom(e.target.value)}
-                            style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
-                          <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>Até</label>
-                          <input type="date" value={geralDateTo} onChange={e => setGeralDateTo(e.target.value)}
-                            style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
-                        </Flex>
-                        {!isDefault && (
-                          <button type="button" onClick={() => { setGeralDateFrom(DEFAULT_DATE_FROM); setGeralDateTo(DEFAULT_DATE_TO); }}
-                            style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'transparent', color: '#38bdf8', cursor: 'pointer' }}>
-                            Mês atual
-                          </button>
-                        )}
-                        <button type="button" onClick={() => { setGeralDateFrom(''); setGeralDateTo(''); }}
-                          style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.35)', cursor: 'pointer' }}>
-                          Todos
-                        </button>
-                      </Flex>
-                    );
-                  })()}
-
-                  {/* Combobox filters + unified stacked bar */}
+                  {/* Single unified filter bar: date + all comboboxes */}
                   {(() => {
                     const COLORS = ['#38bdf8','#4ade80','#f97316','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15','#2dd4bf','#818cf8','#c084fc','#e879f9','#86efac','#fbbf24','#99f6e4','#bae6fd','#bbf7d0','#fde68a','#ddd6fe','#fca5a5','#6ee7b7','#67e8f9','#a5b4fc','#f9a8d4'];
                     const hashColor = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffff; return COLORS[h % COLORS.length]; };
@@ -1216,13 +1182,43 @@ const OperacaoHome = ({ userRole }) => {
                       { id: 'CPFL', nome: 'CPFL' },
                       { id: 'CPFL Prevista', nome: 'CPFL Prevista' },
                     ];
+                    // Status placeholder: show exclusion indicator when no manual filter
+                    const statusExcluded = geralStatusFilter.size === 0;
+                    const statusPlaceholder = statusExcluded
+                      ? `Excl. ${GERAL_STATUS_EXCLUIDOS.size} fechados`
+                      : `${geralStatusFilter.size} selecionado(s)`;
+                    const statusPlaceholderColor = statusExcluded ? '#f59e0b' : undefined;
+
+                    const DEFAULT_DATE_FROM = '2024-01-01';
+                    const DEFAULT_DATE_TO = new Date().toISOString().slice(0, 10);
+                    const isDefault2 = geralDateFrom === DEFAULT_DATE_FROM && geralDateTo === DEFAULT_DATE_TO;
+
                     const hasAnyFilter = geralStatusFilter.size > 0 || geralIssueTypeFilter.size > 0 ||
-                      geralEscopoFilter.size < 5 || geralFilaFilter.size > 0;
+                      geralEscopoFilter.size < 5 || geralFilaFilter.size > 0 || !isDefault2;
 
                     return (
                       <>
-                        {/* Filter row — merged into date filter bar */}
-                        <Flex gap="8px" mt="2" wrap="wrap" align="center">
+                        {/* Unified filter bar: date + comboboxes in one single row */}
+                        <Flex align="center" gap="8px" mt="3" style={{ flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(56,189,248,0.04)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8 }}>
+                          {/* Date group */}
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(56,189,248,0.7)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>📅</span>
+                          <Flex align="center" gap="6px" style={{ flexShrink: 0 }}>
+                            <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>De</label>
+                            <input type="date" value={geralDateFrom} onChange={e => setGeralDateFrom(e.target.value)}
+                              style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
+                            <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>Até</label>
+                            <input type="date" value={geralDateTo} onChange={e => setGeralDateTo(e.target.value)}
+                              style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
+                          </Flex>
+                          {!isDefault2 && (
+                            <button type="button" onClick={() => { setGeralDateFrom(DEFAULT_DATE_FROM); setGeralDateTo(DEFAULT_DATE_TO); }}
+                              style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'transparent', color: '#38bdf8', cursor: 'pointer', flexShrink: 0 }}>
+                              Padrão
+                            </button>
+                          )}
+                          {/* Separator */}
+                          <span style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', flexShrink: 0, alignSelf: 'center' }} />
+                          {/* Comboboxes */}
                           <Box style={{ flexShrink: 0 }}>
                             <OperacaoMultiCombobox
                               label=""
@@ -1233,15 +1229,20 @@ const OperacaoHome = ({ userRole }) => {
                               formatOption={(item) => item.nome}
                             />
                           </Box>
-                          <Box style={{ flexShrink: 0 }}>
+                          <Box style={{ flexShrink: 0, position: 'relative' }}>
                             <OperacaoMultiCombobox
                               label=""
-                              placeholder={geralStatusFilter.size === 0 ? 'Todos os status' : `${geralStatusFilter.size} status`}
+                              placeholder={statusPlaceholder}
                               options={allStatuses}
                               selected={geralStatusFilter}
                               onChange={setGeralStatusFilter}
                               formatOption={(item) => item.nome}
                             />
+                            {statusExcluded && (
+                              <span style={{ position: 'absolute', top: -5, right: -5, fontSize: 9, fontWeight: 800, background: '#f59e0b', color: '#000', borderRadius: 99, padding: '1px 4px', pointerEvents: 'none', lineHeight: 1.3 }}>
+                                {GERAL_STATUS_EXCLUIDOS.size}
+                              </span>
+                            )}
                           </Box>
                           {allIssueTypes.length > 0 && (
                             <Box style={{ flexShrink: 0 }}>
@@ -1267,8 +1268,8 @@ const OperacaoHome = ({ userRole }) => {
                           </Box>
                           {hasAnyFilter && (
                             <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); setGeralDateFrom('2024-01-01'); setGeralDateTo(new Date().toISOString().slice(0, 10)); }}
-                              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
-                              ✕ Limpar filtros
+                              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', flexShrink: 0 }}>
+                              ✕ Limpar
                             </button>
                           )}
                           {ticketsCacheLoading && <Loader2 size={14} color="#38bdf8" className="spin" style={{ flexShrink: 0 }} />}
