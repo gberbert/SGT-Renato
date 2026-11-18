@@ -1403,7 +1403,8 @@ const OperacaoHome = ({ userRole }) => {
                                       onClick={() => openDrillDirect(filteredTickets.filter(t => String(t.escopo || '').toUpperCase() === esc), `Escopo: ${ESCOPO_LABELS[esc]}`)}
                                       style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
                                       <Flex align="center" gap="3">
-                                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 90, flexShrink: 0 }}>{ESCOPO_LABELS[esc]}</span>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 44, textAlign: 'right', flexShrink: 0 }}>{formatNumber(total)}</span>
+                                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 100, flexShrink: 0 }}>{ESCOPO_LABELS[esc]}</span>
                                         <Box style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden', display: 'flex' }}>
                                           {FILA_ORDER.map(fila => {
                                             const count = filaCounts[fila] || 0;
@@ -1412,7 +1413,6 @@ const OperacaoHome = ({ userRole }) => {
                                             return <Box key={fila} style={{ height: '100%', width: `${segW}%`, background: FILA_COLORS[fila], flexShrink: 0 }} />;
                                           })}
                                         </Box>
-                                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 36, textAlign: 'right', flexShrink: 0 }}>{formatNumber(total)}</span>
                                       </Flex>
                                     </button>
                                   );
@@ -1486,11 +1486,11 @@ const OperacaoHome = ({ userRole }) => {
                                               )}
                                               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
                                               <Flex align="center" gap="3">
-                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 180, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 44, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
+                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 200, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
                                                 <Box style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                                                   <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 99, transition: 'width 0.5s ease', opacity: 0.9 }} />
                                                 </Box>
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 36, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
                                               </Flex>
                                             </button>
                                           );
