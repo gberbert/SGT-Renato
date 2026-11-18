@@ -178,6 +178,12 @@ const _buildFilaMap = (steps) => {
   steps.forEach((s) => { if (s.status && s.fila) m.set(s.status, s.fila); });
   return m;
 };
+/** Status excluídos permanentemente do filtro GERAL (terminais/fechados) */
+const GERAL_STATUS_EXCLUIDOS = new Set([
+  'Fechada', 'Resolvido', 'Cancelada', 'Concluída', 'Reprovado',
+  'Canceled', 'Fechado', 'Cancelado', 'Congelada',
+]);
+
 const STATUS_FILA_BY_ESCOPO = {
   'DEMANDA':      _buildFilaMap(WORKFLOW_STEPS_DEMANDAS),
   'DEMANDA FAST': _buildFilaMap(WORKFLOW_STEPS_FAST.filter(s => !s.separator)),
@@ -410,14 +416,9 @@ const OperacaoHome = ({ userRole }) => {
 
   const [selectedGeralEscopo, setSelectedGeralEscopo] = useState(null);
   const [geralEscopoLoading, setGeralEscopoLoading] = useState(false);
-  // GERAL tab date filter — defaults to current month
-  const [geralDateFrom, setGeralDateFrom] = useState(() => {
-    const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
-  });
-  const [geralDateTo, setGeralDateTo] = useState(() => {
-    const t = new Date(); const last = new Date(t.getFullYear(), t.getMonth()+1, 0);
-    return `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;
-  });
+  // GERAL tab date filter — defaults to 2024-01-01 → today
+  const [geralDateFrom, setGeralDateFrom] = useState('2024-01-01');
+  const [geralDateTo, setGeralDateTo] = useState(() => new Date().toISOString().slice(0, 10));
   // GERAL tab status multi-filter
   const [geralStatusFilter, setGeralStatusFilter] = useState(() => new Set());
   // GERAL tab issuetype + escopo filters
@@ -1114,7 +1115,9 @@ const OperacaoHome = ({ userRole }) => {
                     const curMonthStart = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
                     const lastDay = new Date(t.getFullYear(), t.getMonth()+1, 0);
                     const curMonthEnd = `${lastDay.getFullYear()}-${String(lastDay.getMonth()+1).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
-                    const isDefault = geralDateFrom === curMonthStart && geralDateTo === curMonthEnd;
+                    const DEFAULT_DATE_FROM = '2024-01-01';
+                    const DEFAULT_DATE_TO = new Date().toISOString().slice(0, 10);
+                    const isDefault = geralDateFrom === DEFAULT_DATE_FROM && geralDateTo === DEFAULT_DATE_TO;
                     return (
                       <Flex align="center" gap="8px" mt="3" style={{ flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(56,189,248,0.7)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>📅 Data Criação</span>
@@ -1127,7 +1130,7 @@ const OperacaoHome = ({ userRole }) => {
                             style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
                         </Flex>
                         {!isDefault && (
-                          <button type="button" onClick={() => { setGeralDateFrom(curMonthStart); setGeralDateTo(curMonthEnd); }}
+                          <button type="button" onClick={() => { setGeralDateFrom(DEFAULT_DATE_FROM); setGeralDateTo(DEFAULT_DATE_TO); }}
                             style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'transparent', color: '#38bdf8', cursor: 'pointer' }}>
                             Mês atual
                           </button>
@@ -1172,6 +1175,9 @@ const OperacaoHome = ({ userRole }) => {
                     const filteredTickets = hasTickets ? ticketsCache.filter(t => {
                       const esc = String(t.escopo || '').toUpperCase();
                       if (!geralEscopoFilter.has(esc === 'SOLICITACAO' ? 'SOLICITACAO' : esc)) return false;
+                      // Always exclude terminal/closed statuses (unless user explicitly selects them via status combobox)
+                      const sRaw = t.status ? String(t.status).trim() : '';
+                      if (geralStatusFilter.size === 0 && GERAL_STATUS_EXCLUIDOS.has(sRaw)) return false;
                       if (geralDateFrom || geralDateTo) {
                         const created = t.createdAt ? String(t.createdAt).slice(0, 10) : null;
                         if (!created) return false;
@@ -1260,7 +1266,7 @@ const OperacaoHome = ({ userRole }) => {
                             />
                           </Box>
                           {hasAnyFilter && (
-                            <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); }}
+                            <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); setGeralDateFrom('2024-01-01'); setGeralDateTo(new Date().toISOString().slice(0, 10)); }}
                               style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
                               ✕ Limpar filtros
                             </button>
