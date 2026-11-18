@@ -1263,8 +1263,8 @@ const OperacaoHome = ({ userRole }) => {
                         {/* Donut chart: Com quem está a bola (by fila) */}
                         {(() => {
                           const FILA_COLORS = {
-                            'NTT Data':     '#38bdf8',
-                            'CPFL':         '#22c55e',
+                            'NTT Data':     '#3b82f6',
+                            'CPFL':         '#f97316',
                             'CPFL Prevista':'#f59e0b',
                             'Sem fila':     'rgba(255,255,255,0.15)',
                           };
@@ -1362,7 +1362,7 @@ const OperacaoHome = ({ userRole }) => {
 
                         {/* Chart 1: Barras por Escopo segmentadas por Fila */}
                         {(() => {
-                          const FILA_COLORS = { 'NTT Data': '#38bdf8', 'CPFL': '#22c55e', 'CPFL Prevista': '#f59e0b' };
+                          const FILA_COLORS = { 'NTT Data': '#3b82f6', 'CPFL': '#f97316', 'CPFL Prevista': '#f59e0b' };
                           const FILA_ORDER = ['NTT Data', 'CPFL', 'CPFL Prevista'];
                           const ESCOPO_LABELS = { 'INCIDENTE': 'Incidente', 'PROBLEMAS': 'Problemas', 'DEMANDA': 'Demanda', 'DEMANDA FAST': 'Demanda Fast', 'SOLICITACAO': 'Solicitação' };
                           // Build: for each escopo, count per fila
@@ -1425,8 +1425,8 @@ const OperacaoHome = ({ userRole }) => {
                         {/* Chart 2: Por Status — raias por fila, mesma escala global */}
                         {(() => {
                           const FILA_DEFS2 = [
-                            { fila: 'NTT Data',      color: '#38bdf8', border: 'rgba(56,189,248,0.4)', bg: 'rgba(56,189,248,0.06)', label: 'Aguardando ação do time da operação' },
-                            { fila: 'CPFL',          color: '#22c55e', border: 'rgba(34,197,94,0.4)',  bg: 'rgba(34,197,94,0.06)',  label: 'Aguardando ação do cliente' },
+                            { fila: 'NTT Data',      color: '#3b82f6', border: 'rgba(59,130,246,0.4)', bg: 'rgba(59,130,246,0.06)', label: 'Aguardando ação do time da operação' },
+                            { fila: 'CPFL',          color: '#f97316', border: 'rgba(249,115,22,0.4)', bg: 'rgba(249,115,22,0.06)', label: 'Aguardando ação do cliente' },
                             { fila: 'CPFL Prevista', color: '#f59e0b', border: 'rgba(245,158,11,0.4)', bg: 'rgba(245,158,11,0.06)', label: 'Na fila de pré-análise CPFL' },
                           ];
                           // Build: for each fila → map of status → count
@@ -1487,7 +1487,7 @@ const OperacaoHome = ({ userRole }) => {
                                               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
                                               <Flex align="center" gap="3">
                                                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 44, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
-                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 200, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
+                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 100, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
                                                 <Box style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                                                   <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 99, transition: 'width 0.5s ease', opacity: 0.9 }} />
                                                 </Box>
