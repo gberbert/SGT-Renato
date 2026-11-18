@@ -417,6 +417,8 @@ const OperacaoHome = ({ userRole }) => {
     const t = new Date(); const last = new Date(t.getFullYear(), t.getMonth()+1, 0);
     return `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;
   });
+  // GERAL tab status multi-filter
+  const [geralStatusFilter, setGeralStatusFilter] = useState(() => new Set());
   const [computedRadar, setComputedRadar] = useState(null);
   const [drillEscopo, setDrillEscopo] = useState(null);
   const [drillLabel, setDrillLabel] = useState('');
@@ -1113,6 +1115,50 @@ const OperacaoHome = ({ userRole }) => {
                     );
                   })()}
 
+                  {/* Status multi-select filter */}
+                  {Array.isArray(ticketsCache) && ticketsCache.length > 0 && (() => {
+                    // Collect all unique statuses from GERAL escopos sorted by frequency
+                    const geralEscopoKeys = new Set(geralCards.map(c => c.key.toUpperCase()));
+                    const statusCounts = new Map();
+                    for (const t of ticketsCache) {
+                      if (!geralEscopoKeys.has(String(t.escopo || '').toUpperCase())) continue;
+                      const s = t.status ? String(t.status).trim() : '';
+                      if (!s) continue;
+                      statusCounts.set(s, (statusCounts.get(s) || 0) + 1);
+                    }
+                    const allStatuses = [...statusCounts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s);
+                    if (!allStatuses.length) return null;
+                    return (
+                      <Box mt="2" style={{ padding: '8px 12px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 8 }}>
+                        <Flex align="center" gap="8px" wrap="wrap">
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(99,102,241,0.8)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>🔖 Status</span>
+                          <Flex gap="4px" wrap="wrap" style={{ flex: 1 }}>
+                            {allStatuses.map(s => {
+                              const active = geralStatusFilter.has(s);
+                              return (
+                                <button key={s} type="button"
+                                  onClick={() => setGeralStatusFilter(prev => {
+                                    const next = new Set(prev);
+                                    next.has(s) ? next.delete(s) : next.add(s);
+                                    return next;
+                                  })}
+                                  style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: active ? 700 : 400, cursor: 'pointer', border: active ? '1px solid rgba(99,102,241,0.8)' : '1px solid rgba(255,255,255,0.1)', background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)', color: active ? '#a5b4fc' : 'rgba(255,255,255,0.45)', transition: 'all 0.12s', whiteSpace: 'nowrap' }}>
+                                  {s}
+                                </button>
+                              );
+                            })}
+                          </Flex>
+                          {geralStatusFilter.size > 0 && (
+                            <button type="button" onClick={() => setGeralStatusFilter(new Set())}
+                              style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', flexShrink: 0 }}>
+                              ✕ Limpar
+                            </button>
+                          )}
+                        </Flex>
+                      </Box>
+                    );
+                  })()}
+
                   {/* Stacked bar per escopo — each segment = one status (computed from ticketsCache) */}
                   {(() => {
                     const COLORS = ['#38bdf8','#4ade80','#f97316','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15','#2dd4bf','#818cf8','#c084fc','#e879f9','#86efac','#fbbf24','#99f6e4','#bae6fd','#bbf7d0','#fde68a','#ddd6fe','#fca5a5','#6ee7b7','#67e8f9','#a5b4fc','#f9a8d4'];
@@ -1133,6 +1179,10 @@ const OperacaoHome = ({ userRole }) => {
                                 if (!created) return false;
                                 if (geralDateFrom && created < geralDateFrom) return false;
                                 if (geralDateTo && created > geralDateTo) return false;
+                              }
+                              if (geralStatusFilter.size > 0) {
+                                const s = t.status ? String(t.status).trim() : '';
+                                if (!geralStatusFilter.has(s)) return false;
                               }
                               return true;
                             });
