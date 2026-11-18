@@ -1290,7 +1290,7 @@ const OperacaoHome = ({ userRole }) => {
                           if (totalFila === 0) return null;
                           return (
                             <Box mt="4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 20 }}>
-                              <Text style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-12)', display: 'block', marginBottom: 2 }}>Com quem está a bola</Text>
+                              <Text style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-12)', display: 'block', marginBottom: 2 }}>Distribuição por Fila Responsável</Text>
                               <Text size="1" color="gray" style={{ display: 'block', marginBottom: 20 }}>
                                 Do total filtrado, quanto está com cada fila responsável
                               </Text>
@@ -1422,43 +1422,81 @@ const OperacaoHome = ({ userRole }) => {
                           );
                         })()}
 
-                        {/* Chart 2: Barras por Status */}
+                        {/* Chart 2: Por Status — raias por fila, mesma escala global */}
                         {(() => {
-                          const statusData = {};
+                          const FILA_DEFS2 = [
+                            { fila: 'NTT Data',      color: '#38bdf8', border: 'rgba(56,189,248,0.4)', bg: 'rgba(56,189,248,0.06)', label: 'Aguardando ação do time da operação' },
+                            { fila: 'CPFL',          color: '#22c55e', border: 'rgba(34,197,94,0.4)',  bg: 'rgba(34,197,94,0.06)',  label: 'Aguardando ação do cliente' },
+                            { fila: 'CPFL Prevista', color: '#f59e0b', border: 'rgba(245,158,11,0.4)', bg: 'rgba(245,158,11,0.06)', label: 'Na fila de pré-análise CPFL' },
+                          ];
+                          // Build: for each fila → map of status → count
+                          const filaStatusData = {};
+                          let globalMax = 0;
                           for (const t of filteredTickets) {
+                            const esc = String(t.escopo || '').toUpperCase();
                             const s = t.status ? String(t.status).trim() : '(sem status)';
-                            statusData[s] = (statusData[s] || 0) + 1;
+                            const fm = STATUS_FILA_BY_ESCOPO[esc] || new Map();
+                            const fila = fm.get(s) || 'Sem fila';
+                            if (!filaStatusData[fila]) filaStatusData[fila] = {};
+                            filaStatusData[fila][s] = (filaStatusData[fila][s] || 0) + 1;
+                            if (filaStatusData[fila][s] > globalMax) globalMax = filaStatusData[fila][s];
                           }
-                          const statusEntries = Object.entries(statusData).sort((a, b) => b[1] - a[1]);
-                          if (statusEntries.length === 0) return null;
-                          const maxStatus = statusEntries[0][1] || 1;
-                          const statusTotal = statusEntries.reduce((acc, [, c]) => acc + c, 0);
+                          if (globalMax === 0) return null;
+                          const totalAll2 = filteredTickets.length || 1;
                           return (
-                            <Box mt="4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 20 }}>
+                            <Box mt="4">
                               <Flex align="center" justify="between" mb="3">
                                 <Text style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-12)' }}>Por Status</Text>
-                                <button type="button" disabled={drillLoading}
-                                  onClick={() => openDrillDirect(filteredTickets, 'Todos os status')}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, fontWeight: 900, color: 'var(--gray-12)' }}>
-                                  {formatNumber(statusTotal)}
-                                </button>
+                                <Text size="1" color="gray">Todas as barras usam a mesma escala, o tamanho é proporcional ao volume</Text>
                               </Flex>
-                              <Box style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {statusEntries.map(([status, count]) => {
-                                  const barW = (count / maxStatus) * 100;
-                                  const color = hashColor(status);
+                              <Box style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                {FILA_DEFS2.map(({ fila, color, border, bg, label }) => {
+                                  const statusMap = filaStatusData[fila] || {};
+                                  const statusEntries2 = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
+                                  if (statusEntries2.length === 0) return null;
+                                  const filaTotal2 = statusEntries2.reduce((acc, [, c]) => acc + c, 0);
+                                  const pctTotal2 = ((filaTotal2 / totalAll2) * 100).toFixed(0);
                                   return (
-                                    <button key={status} type="button" disabled={drillLoading}
-                                      onClick={() => openDrillDirect(filteredTickets.filter(t => (t.status || '').trim() === status), `Status: ${status}`)}
-                                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
-                                      <Flex align="center" gap="3">
-                                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 160, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
-                                        <Box style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-                                          <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 99, transition: 'width 0.5s ease' }} />
-                                        </Box>
-                                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 36, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
+                                    <Box key={fila} style={{ borderLeftWidth: 3, borderLeftStyle: 'solid', borderLeftColor: color, background: bg, borderRadius: '0 10px 10px 0', padding: '14px 20px' }}>
+                                      {/* Header */}
+                                      <Flex align="center" justify="between" mb="3">
+                                        <Flex align="center" gap="2">
+                                          <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 5, background: `${color}20`, color, border: `1px solid ${border}` }}>{fila}</span>
+                                          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{label}</span>
+                                        </Flex>
+                                        <button type="button" disabled={drillLoading}
+                                          onClick={() => openDrillDirect(
+                                            filteredTickets.filter(t => { const esc2 = String(t.escopo||'').toUpperCase(); const s2 = (t.status||'').trim(); const fm2 = STATUS_FILA_BY_ESCOPO[esc2]||new Map(); return (fm2.get(s2)||'') === fila; }),
+                                            `Fila: ${fila}`
+                                          )}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'right' }}>
+                                          <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--gray-12)' }}>{formatNumber(filaTotal2)}</span>
+                                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>tickets · {pctTotal2}% do total</span>
+                                        </button>
                                       </Flex>
-                                    </button>
+                                      {/* Status bars using global scale */}
+                                      <Box style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {statusEntries2.map(([status, count]) => {
+                                          const barW = (count / globalMax) * 100;
+                                          return (
+                                            <button key={status} type="button" disabled={drillLoading}
+                                              onClick={() => openDrillDirect(
+                                                filteredTickets.filter(t => { const esc2 = String(t.escopo||'').toUpperCase(); const s2 = (t.status||'').trim(); const fm2 = STATUS_FILA_BY_ESCOPO[esc2]||new Map(); return (fm2.get(s2)||'') === fila && s2 === status; }),
+                                                `${fila} · ${status}`
+                                              )}
+                                              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+                                              <Flex align="center" gap="3">
+                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 180, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
+                                                <Box style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                                                  <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 99, transition: 'width 0.5s ease', opacity: 0.9 }} />
+                                                </Box>
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 36, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
+                                              </Flex>
+                                            </button>
+                                          );
+                                        })}
+                                      </Box>
+                                    </Box>
                                   );
                                 })}
                               </Box>
