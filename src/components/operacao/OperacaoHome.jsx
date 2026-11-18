@@ -1073,129 +1073,53 @@ const OperacaoHome = ({ userRole }) => {
                     <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
                   </Box>
 
-                  <Box className="operacao-radar-lanes" mt="4" style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+                  {/* Fixed escopo grid with bar charts — no click needed */}
+                  <Box mt="4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
                     {geralCards.map((card) => {
-                      const isSelG = selectedGeralEscopo === card.key;
+                      const statusMap = statsRadar?.byStatusByEscopo?.[card.key] || {};
+                      const sortedStatuses = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
+                      const maxCount = sortedStatuses[0]?.[1] || 1;
+                      const top10 = sortedStatuses.slice(0, 10);
                       return (
-                        <button
-                          key={card.key}
-                          type="button"
-                          className="operacao-radar-summary-value"
-                          onClick={async () => {
-                            if (isSelG) { setSelectedGeralEscopo(null); return; }
-                            setSelectedGeralEscopo(card.key);
-                            if (!loadedEscopos.has(card.key)) {
-                              setGeralEscopoLoading(true);
-                              try { await loadTicketsData(card.key); } finally { setGeralEscopoLoading(false); }
-                            }
-                          }}
-                          disabled={drillLoading}
-                          style={{
-                            width: 210, height: 86, borderRadius: 16,
-                            border: isSelG ? `2px solid ${card.color || '#22d3ee'}` : '1px solid rgba(255,255,255,0.08)',
-                            background: isSelG ? `${(card.color || '#22d3ee')}18` : 'rgba(255,255,255,0.02)',
-                            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center',
-                            padding: 16, gap: 6, cursor: 'pointer',
-                            boxShadow: isSelG ? `0 0 0 3px ${(card.color || '#22d3ee')}22` : 'none',
-                            transition: 'border 0.15s, box-shadow 0.15s, background 0.15s',
-                          }}
-                          title={`Ver tickets de ${card.label}`}
-                        >
-                          <Text size="7" weight="bold" style={{ margin: 0, color: card.color, lineHeight: 1 }}>
-                            {formatNumber(card.total)}
-                          </Text>
-                          <Text size="2" color="gray" style={{ margin: 0, textTransform: 'uppercase' }}>
-                            {card.label}
-                          </Text>
-                        </button>
+                        <Box key={card.key} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${card.color}33`, borderRadius: 14, padding: '14px 16px' }}>
+                          {/* Header */}
+                          <Flex align="center" justify="between" mb="3">
+                            <Flex align="center" gap="2">
+                              <span style={{ fontSize: 28, fontWeight: 900, color: card.color, lineHeight: 1 }}>{formatNumber(card.total)}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: `${card.color}bb`, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{card.label}</span>
+                            </Flex>
+                            <button type="button" onClick={() => openDrill(card.key, card.label)} disabled={drillLoading}
+                              style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, border: `1px solid ${card.color}55`, background: `${card.color}15`, color: card.color, cursor: 'pointer' }}>
+                              Ver todos
+                            </button>
+                          </Flex>
+                          {/* Status bar chart */}
+                          {top10.length === 0 ? (
+                            <Text size="1" color="gray">Sem dados de status disponíveis</Text>
+                          ) : (
+                            <Box style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              {top10.map(([status, count]) => {
+                                const pct = Math.round((count / maxCount) * 100);
+                                return (
+                                  <button key={status} type="button" disabled={drillLoading}
+                                    onClick={() => openDrill(card.key, `${card.label} · ${status}`, null, status)}
+                                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+                                    <Flex align="center" gap="2" style={{ marginBottom: 2 }}>
+                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.8)', minWidth: 28, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
+                                    </Flex>
+                                    <Box style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                                      <Box style={{ height: '100%', width: `${pct}%`, background: `${card.color}cc`, borderRadius: 4, transition: 'width 0.5s ease' }} />
+                                    </Box>
+                                  </button>
+                                );
+                              })}
+                            </Box>
+                          )}
+                        </Box>
                       );
                     })}
                   </Box>
-
-                  {/* Status breakdown for selected GERAL escopo */}
-                  {selectedGeralEscopo && (() => {
-                    const selCard = geralCards.find(c => c.key === selectedGeralEscopo);
-                    if (geralEscopoLoading) return (
-                      <Flex align="center" gap="3" mt="3" style={{ padding: 16 }}>
-                        <Loader2 size={18} color="#38bdf8" className="spin" />
-                        <Text size="2" color="gray">Carregando dados de {selCard?.label}...</Text>
-                      </Flex>
-                    );
-                    if (!Array.isArray(ticketsCache)) return null;
-                    // Use pre-computed stats from statsRadar.byStatusByEscopo when available
-                    // (complete distribution, not limited by 5000-ticket fetch cap)
-                    const precomputedStats = statsRadar?.byStatusByEscopo?.[selectedGeralEscopo];
-                    let sCounts = {};
-                    if (precomputedStats && Object.keys(precomputedStats).length > 0) {
-                      sCounts = precomputedStats;
-                    } else if (Array.isArray(ticketsCache)) {
-                      const escopoT = ticketsCache.filter(t =>
-                        normalizeEscopoKey(t.escopo) === selectedGeralEscopo
-                      );
-                      for (const t of escopoT) {
-                        const s = t.status ? String(t.status).trim() : '(sem status)';
-                        sCounts[s] = (sCounts[s] || 0) + 1;
-                      }
-                    }
-                    if (!Object.keys(sCounts).length) return <Text size="2" color="gray" mt="3">Nenhum dado de status para {selCard?.label}.</Text>;
-                    const sortedS = Object.entries(sCounts).sort((a, b) => b[1] - a[1]);
-                    return (
-                      <Box mt="3" style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${(selCard?.color || '#22d3ee')}33`, borderRadius: 12, padding: '14px 16px' }}>
-                        <Flex align="center" justify="between" mb="3">
-                          <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: `${selCard?.color || '#22d3ee'}99` }}>
-                            {selCard?.label} · POR STATUS
-                          </Text>
-                          <button type="button" onClick={() => openDrill(selectedGeralEscopo, selCard?.label || selectedGeralEscopo)} disabled={drillLoading}
-                            style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, border: `1px solid ${(selCard?.color || '#22d3ee')}55`, background: `${(selCard?.color || '#22d3ee')}15`, color: selCard?.color || '#22d3ee', cursor: 'pointer' }}>
-                            Ver todos
-                          </button>
-                        </Flex>
-                        <Flex gap="2" wrap="wrap">
-                          {sortedS.map(([status, count]) => {
-                            const fila = (STATUS_FILA_BY_ESCOPO[selectedGeralEscopo] || new Map()).get(status);
-                            const filaStyle = fila === 'NTT Data'
-                              ? RESPONSIBLE_STYLE['NTT Data']
-                              : fila === 'CPFL'
-                              ? RESPONSIBLE_STYLE['CPFL']
-                              : fila === 'CPFL Prevista'
-                              ? { bg: 'rgba(255,180,50,0.15)', border: 'rgba(255,180,50,0.5)', color: '#ffd166' }
-                              : null;
-                            return (
-                              <button key={status} type="button"
-                                onClick={() => openDrill(selectedGeralEscopo, `${selCard?.label} · ${status}`, null, status)}
-                                disabled={drillLoading}
-                                style={{
-                                  background: 'rgba(255,255,255,0.02)',
-                                  border: count > 0 ? '1px solid rgba(56,213,169,0.3)' : '1px solid rgba(255,255,255,0.07)',
-                                  borderRadius: 10,
-                                  padding: '10px 14px',
-                                  textAlign: 'left',
-                                  width: 120,
-                                  flex: '0 0 120px',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: 4,
-                                  transition: 'border 0.15s, box-shadow 0.15s',
-                                }}>
-                                <span style={{ fontSize: 28, fontWeight: 900, lineHeight: 1, color: count > 0 ? '#f0f0f0' : 'rgba(255,255,255,0.25)' }}>
-                                  {formatNumber(count)}
-                                </span>
-                                <span style={{ fontSize: 11, lineHeight: 1.3, color: count > 0 ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.28)', whiteSpace: 'normal', wordBreak: 'break-word' }}>
-                                  {status}
-                                </span>
-                                {filaStyle && (
-                                  <span style={{ marginTop: 4, display: 'inline-block', padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: filaStyle.bg, color: filaStyle.color, border: `1px solid ${filaStyle.border}`, width: 'fit-content' }}>
-                                    {fila}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </Flex>
-                      </Box>
-                    );
-                  })()}
                 </>
               ) : activeEscopoTab === 'EFICIENCIA' ? (
                 ticketsCache === null ? (
