@@ -1094,21 +1094,6 @@ const OperacaoHome = ({ userRole }) => {
             <Box style={{ flex: 1, minWidth: 320 }}>
               {activeEscopoTab === 'GERAL' ? (
                 <>
-                  <Box mt="1" className="operacao-radar-summary">
-                    <Flex className="operacao-radar-summary-row" align="center" gap="3" wrap="wrap">
-                      <button
-                        type="button"
-                        className="operacao-radar-summary-value"
-                        title="Ver tickets"
-                        onClick={() => openDrill('', 'Todos os escopos')}
-                        disabled={drillLoading}
-                      >
-                        {formatNumber(radar.total)}
-                      </button>
-                    </Flex>
-                    <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
-                  </Box>
-
                   {/* Single unified filter bar: date + all comboboxes */}
                   {(() => {
                     const COLORS = ['#38bdf8','#4ade80','#f97316','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15','#2dd4bf','#818cf8','#c084fc','#e879f9','#86efac','#fbbf24','#99f6e4','#bae6fd','#bbf7d0','#fde68a','#ddd6fe','#fca5a5','#6ee7b7','#67e8f9','#a5b4fc','#f9a8d4'];
@@ -1274,6 +1259,106 @@ const OperacaoHome = ({ userRole }) => {
                           )}
                           {ticketsCacheLoading && <Loader2 size={14} color="#38bdf8" className="spin" style={{ flexShrink: 0 }} />}
                         </Flex>
+
+                        {/* Donut chart: Com quem está a bola (by fila) */}
+                        {(() => {
+                          const FILA_COLORS = {
+                            'NTT Data':     '#38bdf8',
+                            'CPFL':         '#22c55e',
+                            'CPFL Prevista':'#f59e0b',
+                            'Sem fila':     'rgba(255,255,255,0.15)',
+                          };
+                          const filaCounts = {};
+                          for (const t of filteredTickets) {
+                            const esc = String(t.escopo || '').toUpperCase();
+                            const s = t.status ? String(t.status).trim() : '';
+                            const filaMap = STATUS_FILA_BY_ESCOPO[esc] || new Map();
+                            const fila = filaMap.get(s) || 'Sem fila';
+                            filaCounts[fila] = (filaCounts[fila] || 0) + 1;
+                          }
+                          const totalFila = Object.values(filaCounts).reduce((a, b) => a + b, 0);
+                          const filaEntries = Object.entries(filaCounts).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]);
+                          const R = 70; const SW = 26; const CX = 100; const CY = 100;
+                          const CIRC = 2 * Math.PI * R;
+                          let accumulated = 0;
+                          const segments = filaEntries.map(([fila, count]) => {
+                            const dash = (count / (totalFila || 1)) * CIRC;
+                            const seg = { fila, count, dash, offset: CIRC / 4 - accumulated };
+                            accumulated += dash;
+                            return seg;
+                          });
+                          if (totalFila === 0) return null;
+                          return (
+                            <Box mt="4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 20 }}>
+                              <Text style={{ fontSize: 14, fontWeight: 700, color: 'var(--gray-12)', display: 'block', marginBottom: 2 }}>Com quem está a bola</Text>
+                              <Text size="1" color="gray" style={{ display: 'block', marginBottom: 20 }}>
+                                Do total filtrado, quanto está com cada fila responsável
+                              </Text>
+                              <Flex align="center" gap="8" justify="center" wrap="wrap">
+                                {/* SVG Donut */}
+                                <Box style={{ position: 'relative', width: 200, height: 200, flexShrink: 0 }}>
+                                  <svg width="200" height="200" viewBox="0 0 200 200">
+                                    <circle cx={CX} cy={CY} r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={SW} />
+                                    {segments.map(({ fila, dash, offset }) => (
+                                      <circle key={fila} cx={CX} cy={CY} r={R} fill="none"
+                                        stroke={FILA_COLORS[fila] || '#888'}
+                                        strokeWidth={SW}
+                                        strokeDasharray={`${dash} ${CIRC - dash}`}
+                                        strokeDashoffset={offset}
+                                        strokeLinecap="butt"
+                                        style={{ cursor: 'pointer', transition: 'stroke-opacity 0.2s' }}
+                                        onClick={() => openDrillDirect(
+                                          filteredTickets.filter(t => {
+                                            const esc2 = String(t.escopo || '').toUpperCase();
+                                            const s2 = t.status ? String(t.status).trim() : '';
+                                            const fm2 = STATUS_FILA_BY_ESCOPO[esc2] || new Map();
+                                            return (fm2.get(s2) || 'Sem fila') === fila;
+                                          }),
+                                          `Fila: ${fila}`
+                                        )}
+                                      />
+                                    ))}
+                                  </svg>
+                                  <Box style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                    <span style={{ fontSize: 28, fontWeight: 900, color: 'var(--gray-12)', lineHeight: 1 }}>{formatNumber(totalFila)}</span>
+                                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>filtrados</span>
+                                  </Box>
+                                </Box>
+                                {/* Legend */}
+                                <Box style={{ flex: 1, minWidth: 160 }}>
+                                  {filaEntries.map(([fila, count]) => {
+                                    const pct = ((count / (totalFila || 1)) * 100).toFixed(1);
+                                    const color = FILA_COLORS[fila] || '#888';
+                                    return (
+                                      <button key={fila} type="button" disabled={drillLoading}
+                                        onClick={() => openDrillDirect(
+                                          filteredTickets.filter(t => {
+                                            const esc2 = String(t.escopo || '').toUpperCase();
+                                            const s2 = t.status ? String(t.status).trim() : '';
+                                            const fm2 = STATUS_FILA_BY_ESCOPO[esc2] || new Map();
+                                            return (fm2.get(s2) || 'Sem fila') === fila;
+                                          }),
+                                          `Fila: ${fila}`
+                                        )}
+                                        style={{ width: '100%', background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <Flex align="center" gap="3" justify="between">
+                                          <Flex align="center" gap="2">
+                                            <span style={{ width: 12, height: 12, borderRadius: 3, background: color, flexShrink: 0, display: 'inline-block' }} />
+                                            <span style={{ fontSize: 13, color: 'var(--gray-11)', fontWeight: 500 }}>{fila}</span>
+                                          </Flex>
+                                          <Flex align="center" gap="3">
+                                            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--gray-12)', minWidth: 50, textAlign: 'right' }}>{formatNumber(count)}</span>
+                                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', minWidth: 40, textAlign: 'right' }}>{pct}%</span>
+                                          </Flex>
+                                        </Flex>
+                                      </button>
+                                    );
+                                  })}
+                                </Box>
+                              </Flex>
+                            </Box>
+                          );
+                        })()}
 
                         {/* Separate bars per status */}
                         <Box mt="4">
