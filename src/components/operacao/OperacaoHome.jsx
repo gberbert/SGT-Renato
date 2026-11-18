@@ -1190,9 +1190,9 @@ const OperacaoHome = ({ userRole }) => {
 
                     return (
                       <>
-                        {/* Filter row */}
-                        <Flex gap="2" mt="3" wrap="wrap" align="center">
-                          <Box style={{ minWidth: 180, flexShrink: 0 }}>
+                        {/* Filter row — merged into date filter bar */}
+                        <Flex gap="8px" mt="2" wrap="wrap" align="center">
+                          <Box style={{ flexShrink: 0 }}>
                             <OperacaoMultiCombobox
                               label=""
                               placeholder={geralEscopoFilter.size === 5 ? 'Todos os escopos' : `${geralEscopoFilter.size} escopo(s)`}
@@ -1202,7 +1202,7 @@ const OperacaoHome = ({ userRole }) => {
                               formatOption={(item) => item.nome}
                             />
                           </Box>
-                          <Box style={{ minWidth: 180, flexShrink: 0 }}>
+                          <Box style={{ flexShrink: 0 }}>
                             <OperacaoMultiCombobox
                               label=""
                               placeholder={geralStatusFilter.size === 0 ? 'Todos os status' : `${geralStatusFilter.size} status`}
@@ -1213,7 +1213,7 @@ const OperacaoHome = ({ userRole }) => {
                             />
                           </Box>
                           {allIssueTypes.length > 0 && (
-                            <Box style={{ minWidth: 180, flexShrink: 0 }}>
+                            <Box style={{ flexShrink: 0 }}>
                               <OperacaoMultiCombobox
                                 label=""
                                 placeholder={geralIssueTypeFilter.size === 0 ? 'Todos os tipos' : `${geralIssueTypeFilter.size} tipo(s)`}
