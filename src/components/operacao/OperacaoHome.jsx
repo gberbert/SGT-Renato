@@ -676,6 +676,19 @@ const OperacaoHome = ({ userRole }) => {
     setDrillError('');
   };
 
+  // Auto-populate geralStatusFilter with non-excluded statuses when tickets first load
+  useEffect(() => {
+    if (!Array.isArray(ticketsCache) || ticketsCache.length === 0) return;
+    if (geralStatusFilter.size > 0) return; // Already has a selection
+    const statuses = new Set();
+    for (const t of ticketsCache) {
+      const s = t.status ? String(t.status).trim() : '';
+      if (s && !GERAL_STATUS_EXCLUIDOS.has(s)) statuses.add(s);
+    }
+    if (statuses.size > 0) setGeralStatusFilter(statuses);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketsCache]);
+
   // Auto-bootstrap on mount so GERAL totals load immediately
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { ensureRadarBootstrap(); }, []);

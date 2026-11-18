@@ -126,7 +126,7 @@ const OperacaoMultiCombobox = ({
                     checked={allFilteredSelected}
                     onCheckedChange={toggleSelectAll}
                   />
-                  <Text size="2" weight="bold" color="gray">
+                  <Text size="2" weight="bold" style={{ color: '#3b82f6' }}>
                     {allFilteredSelected ? 'Desmarcar todos' : 'Selecionar todos'}
                     {searchQuery.trim() ? ` (${filteredOptions.length})` : ''}
                   </Text>
