@@ -1199,7 +1199,7 @@ const OperacaoHome = ({ userRole }) => {
                         {/* Unified filter bar: date pill + combobox pills */}
                         <Flex align="center" gap="8px" mt="3" style={{ flexWrap: 'wrap' }}>
                           {/* Date pill */}
-                          <Flex align="center" gap="6px" style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.12)', borderBottom: '2px solid #22d3ee', background: 'rgba(0,0,0,0.3)', minHeight: 36, flexShrink: 0 }}>
+                          <Flex align="center" gap="6px" style={{ padding: '9px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', minHeight: 38, flexShrink: 0 }}>
                             <span style={{ fontSize: 13, flexShrink: 0 }}>📅</span>
                             <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', flexShrink: 0 }}>De</label>
                             <input type="date" value={geralDateFrom} onChange={e => setGeralDateFrom(e.target.value)}
@@ -1258,7 +1258,7 @@ const OperacaoHome = ({ userRole }) => {
                           </Box>
                           {hasAnyFilter && (
                             <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); setGeralDateFrom('2024-01-01'); setGeralDateTo(new Date().toISOString().slice(0, 10)); }}
-                              style={{ fontSize: 11, padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(0,0,0,0.3)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', flexShrink: 0, minHeight: 36, borderBottom: '2px solid rgba(255,255,255,0.15)' }}>
+                              style={{ fontSize: 13, fontWeight: 500, padding: '9px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', flexShrink: 0, minHeight: 38, transition: 'background 0.15s' }}>
                               ✕ Limpar
                             </button>
                           )}
@@ -1492,7 +1492,7 @@ const OperacaoHome = ({ userRole }) => {
                                               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
                                               <Flex align="center" gap="3">
                                                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gray-12)', minWidth: 44, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
-                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 100, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
+                                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', minWidth: 220, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
                                                 <Box style={{ flex: 1, height: 10, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                                                   <Box style={{ height: '100%', width: `${barW}%`, background: color, borderRadius: 99, transition: 'width 0.5s ease', opacity: 0.9 }} />
                                                 </Box>
