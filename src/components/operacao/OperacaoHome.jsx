@@ -1073,53 +1073,77 @@ const OperacaoHome = ({ userRole }) => {
                     <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
                   </Box>
 
-                  {/* Fixed escopo grid with bar charts — no click needed */}
-                  <Box mt="4" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
-                    {geralCards.map((card) => {
-                      const statusMap = statsRadar?.byStatusByEscopo?.[card.key] || {};
-                      const sortedStatuses = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
-                      const maxCount = sortedStatuses[0]?.[1] || 1;
-                      const top10 = sortedStatuses.slice(0, 10);
-                      return (
-                        <Box key={card.key} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${card.color}33`, borderRadius: 14, padding: '14px 16px' }}>
-                          {/* Header */}
-                          <Flex align="center" justify="between" mb="3">
-                            <Flex align="center" gap="2">
-                              <span style={{ fontSize: 28, fontWeight: 900, color: card.color, lineHeight: 1 }}>{formatNumber(card.total)}</span>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: `${card.color}bb`, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{card.label}</span>
-                            </Flex>
-                            <button type="button" onClick={() => openDrill(card.key, card.label)} disabled={drillLoading}
-                              style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6, border: `1px solid ${card.color}55`, background: `${card.color}15`, color: card.color, cursor: 'pointer' }}>
-                              Ver todos
-                            </button>
-                          </Flex>
-                          {/* Status bar chart */}
-                          {top10.length === 0 ? (
-                            <Text size="1" color="gray">Sem dados de status disponíveis</Text>
-                          ) : (
-                            <Box style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                              {top10.map(([status, count]) => {
-                                const pct = Math.round((count / maxCount) * 100);
-                                return (
-                                  <button key={status} type="button" disabled={drillLoading}
-                                    onClick={() => openDrill(card.key, `${card.label} · ${status}`, null, status)}
-                                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
-                                    <Flex align="center" gap="2" style={{ marginBottom: 2 }}>
-                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={status}>{status}</span>
-                                      <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.8)', minWidth: 28, textAlign: 'right', flexShrink: 0 }}>{formatNumber(count)}</span>
-                                    </Flex>
-                                    <Box style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                                      <Box style={{ height: '100%', width: `${pct}%`, background: `${card.color}cc`, borderRadius: 4, transition: 'width 0.5s ease' }} />
-                                    </Box>
-                                  </button>
-                                );
-                              })}
+                  {/* Stacked bar per escopo — each segment = one status */}
+                  {(() => {
+                    const COLORS = ['#38bdf8','#4ade80','#f97316','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15','#2dd4bf','#818cf8','#c084fc','#e879f9','#86efac','#fbbf24','#99f6e4','#bae6fd','#bbf7d0','#fde68a','#ddd6fe','#fca5a5','#6ee7b7','#67e8f9','#a5b4fc','#f9a8d4'];
+                    const hashColor = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffff; return COLORS[h % COLORS.length]; };
+                    return (
+                      <Box mt="4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        {geralCards.map((card) => {
+                          const statusMap = statsRadar?.byStatusByEscopo?.[card.key] || {};
+                          const sortedStatuses = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
+                          const total = sortedStatuses.reduce((s, [, c]) => s + c, 0) || card.total || 1;
+                          if (sortedStatuses.length === 0) return (
+                            <Box key={card.key}>
+                              <Flex align="center" justify="between" mb="1">
+                                <span style={{ fontSize: 14, fontWeight: 700, color: card.color }}>{card.label}</span>
+                                <span style={{ fontSize: 14, fontWeight: 900, color: 'rgba(255,255,255,0.7)' }}>{formatNumber(card.total)}</span>
+                              </Flex>
+                              <Box style={{ height: 22, borderRadius: 6, background: `${card.color}33` }} />
+                              <Text size="1" color="gray" mt="1">Sem dados de status disponíveis</Text>
                             </Box>
-                          )}
-                        </Box>
-                      );
-                    })}
-                  </Box>
+                          );
+                          return (
+                            <Box key={card.key}>
+                              <Flex align="center" justify="between" mb="2">
+                                <button type="button" onClick={() => openDrill(card.key, card.label)} disabled={drillLoading}
+                                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: card.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                  {card.label}
+                                </button>
+                                <span style={{ fontSize: 16, fontWeight: 900, color: 'rgba(255,255,255,0.75)' }}>{formatNumber(total)}</span>
+                              </Flex>
+                              {/* Stacked bar */}
+                              <Box style={{ display: 'flex', height: 22, borderRadius: 6, overflow: 'hidden', gap: 1 }}>
+                                {sortedStatuses.map(([status, count]) => {
+                                  const pct = (count / total) * 100;
+                                  const color = hashColor(status);
+                                  return (
+                                    <button key={status} type="button" disabled={drillLoading}
+                                      onClick={() => openDrill(card.key, `${card.label} · ${status}`, null, status)}
+                                      title={`${status}: ${formatNumber(count)} (${pct.toFixed(1)}%)`}
+                                      style={{ width: `${pct}%`, minWidth: pct > 0 ? 2 : 0, background: color, border: 'none', padding: 0, cursor: 'pointer', transition: 'opacity 0.15s', flexShrink: 0 }}
+                                      onMouseEnter={e => { e.currentTarget.style.opacity = '0.75'; }}
+                                      onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+                                    />
+                                  );
+                                })}
+                              </Box>
+                              {/* Legend — top 8 statuses */}
+                              <Flex gap="2" wrap="wrap" mt="2">
+                                {sortedStatuses.slice(0, 8).map(([status, count]) => {
+                                  const pct = ((count / total) * 100).toFixed(1);
+                                  const color = hashColor(status);
+                                  return (
+                                    <button key={status} type="button" disabled={drillLoading}
+                                      onClick={() => openDrill(card.key, `${card.label} · ${status}`, null, status)}
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: '1px 0', cursor: 'pointer' }}>
+                                      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
+                                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>{status}</span>
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>{formatNumber(count)}</span>
+                                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>({pct}%)</span>
+                                    </button>
+                                  );
+                                })}
+                                {sortedStatuses.length > 8 && (
+                                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>+{sortedStatuses.length - 8} outros</span>
+                                )}
+                              </Flex>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    );
+                  })()}
                 </>
               ) : activeEscopoTab === 'EFICIENCIA' ? (
                 ticketsCache === null ? (
