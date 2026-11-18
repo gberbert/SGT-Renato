@@ -419,6 +419,9 @@ const OperacaoHome = ({ userRole }) => {
   });
   // GERAL tab status multi-filter
   const [geralStatusFilter, setGeralStatusFilter] = useState(() => new Set());
+  // GERAL tab issuetype + escopo filters
+  const [geralIssueTypeFilter, setGeralIssueTypeFilter] = useState(() => new Set());
+  const [geralEscopoFilter, setGeralEscopoFilter] = useState(() => new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO']));
   const [computedRadar, setComputedRadar] = useState(null);
   const [drillEscopo, setDrillEscopo] = useState(null);
   const [drillLabel, setDrillLabel] = useState('');
@@ -705,6 +708,15 @@ const OperacaoHome = ({ userRole }) => {
     loadTicketsData(activeEscopoTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEscopoTab]);
+
+  // Auto-carrega todos os escopos GERAL ao abrir a aba
+  useEffect(() => {
+    if (activeEscopoTab !== 'GERAL') return;
+    const KEY_GERAL = ['PROBLEMAS', 'DEMANDA', 'DEMANDA FAST', 'INCIDENTE', 'SOLICITACAO'];
+    const allLoaded = KEY_GERAL.every(e => loadedEscopos.has(e));
+    if (!allLoaded) loadTicketsData(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEscopoTab, loadedEscopos.size]);
 
   // Auto-carrega TODOS os escopos quando OBSERVABILIDADE ou EFICIENCIA ficam ativos e o cache está incompleto
   useEffect(() => {
@@ -1115,119 +1127,139 @@ const OperacaoHome = ({ userRole }) => {
                     );
                   })()}
 
-                  {/* Status multi-select filter */}
-                  {Array.isArray(ticketsCache) && ticketsCache.length > 0 && (() => {
-                    // Collect all unique statuses from GERAL escopos sorted by frequency
-                    const geralEscopoKeys = new Set(geralCards.map(c => c.key.toUpperCase()));
-                    const statusCounts = new Map();
-                    for (const t of ticketsCache) {
-                      if (!geralEscopoKeys.has(String(t.escopo || '').toUpperCase())) continue;
-                      const s = t.status ? String(t.status).trim() : '';
-                      if (!s) continue;
-                      statusCounts.set(s, (statusCounts.get(s) || 0) + 1);
-                    }
-                    const allStatuses = [...statusCounts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => s);
-                    if (!allStatuses.length) return null;
-                    return (
-                      <Box mt="2" style={{ padding: '8px 12px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 8 }}>
-                        <Flex align="center" gap="8px" wrap="wrap">
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(99,102,241,0.8)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>🔖 Status</span>
-                          <Flex gap="4px" wrap="wrap" style={{ flex: 1 }}>
-                            {allStatuses.map(s => {
-                              const active = geralStatusFilter.has(s);
-                              return (
-                                <button key={s} type="button"
-                                  onClick={() => setGeralStatusFilter(prev => {
-                                    const next = new Set(prev);
-                                    next.has(s) ? next.delete(s) : next.add(s);
-                                    return next;
-                                  })}
-                                  style={{ padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: active ? 700 : 400, cursor: 'pointer', border: active ? '1px solid rgba(99,102,241,0.8)' : '1px solid rgba(255,255,255,0.1)', background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)', color: active ? '#a5b4fc' : 'rgba(255,255,255,0.45)', transition: 'all 0.12s', whiteSpace: 'nowrap' }}>
-                                  {s}
-                                </button>
-                              );
-                            })}
-                          </Flex>
-                          {geralStatusFilter.size > 0 && (
-                            <button type="button" onClick={() => setGeralStatusFilter(new Set())}
-                              style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', flexShrink: 0 }}>
-                              ✕ Limpar
-                            </button>
-                          )}
-                        </Flex>
-                      </Box>
-                    );
-                  })()}
-
-                  {/* Stacked bar per escopo — each segment = one status (computed from ticketsCache) */}
+                  {/* Combobox filters + unified stacked bar */}
                   {(() => {
                     const COLORS = ['#38bdf8','#4ade80','#f97316','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15','#2dd4bf','#818cf8','#c084fc','#e879f9','#86efac','#fbbf24','#99f6e4','#bae6fd','#bbf7d0','#fde68a','#ddd6fe','#fca5a5','#6ee7b7','#67e8f9','#a5b4fc','#f9a8d4'];
                     const hashColor = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffff; return COLORS[h % COLORS.length]; };
+                    const GERAL_ESCOPOS = [
+                      { id: 'PROBLEMAS', nome: 'PROBLEMAS' },
+                      { id: 'DEMANDA FAST', nome: 'DEMANDA FAST' },
+                      { id: 'DEMANDA', nome: 'DEMANDA' },
+                      { id: 'INCIDENTE', nome: 'INCIDENTE' },
+                      { id: 'SOLICITACAO', nome: 'SOLICITACAO' },
+                    ];
+                    // Collect options from loaded tickets
+                    const hasTickets = Array.isArray(ticketsCache) && ticketsCache.length > 0;
+                    const geralKeys = new Set(GERAL_ESCOPOS.map(e => e.id.toUpperCase()));
+                    const statusCounts = new Map();
+                    const issueTypeCounts = new Map();
+                    if (hasTickets) {
+                      for (const t of ticketsCache) {
+                        if (!geralKeys.has(String(t.escopo || '').toUpperCase())) continue;
+                        const s = t.status ? String(t.status).trim() : '';
+                        if (s) statusCounts.set(s, (statusCounts.get(s) || 0) + 1);
+                        const it = t.issueType ? String(t.issueType).trim() : '';
+                        if (it) issueTypeCounts.set(it, (issueTypeCounts.get(it) || 0) + 1);
+                      }
+                    }
+                    const allStatuses = [...statusCounts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ id: s, nome: s }));
+                    const allIssueTypes = [...issueTypeCounts.entries()].sort((a, b) => b[1] - a[1]).map(([s]) => ({ id: s, nome: s }));
+
+                    // Build filtered ticket list
+                    const filteredTickets = hasTickets ? ticketsCache.filter(t => {
+                      const esc = String(t.escopo || '').toUpperCase();
+                      if (!geralEscopoFilter.has(esc === 'SOLICITACAO' ? 'SOLICITACAO' : esc)) return false;
+                      if (geralDateFrom || geralDateTo) {
+                        const created = t.createdAt ? String(t.createdAt).slice(0, 10) : null;
+                        if (!created) return false;
+                        if (geralDateFrom && created < geralDateFrom) return false;
+                        if (geralDateTo && created > geralDateTo) return false;
+                      }
+                      if (geralStatusFilter.size > 0) {
+                        const s = t.status ? String(t.status).trim() : '';
+                        if (!geralStatusFilter.has(s)) return false;
+                      }
+                      if (geralIssueTypeFilter.size > 0) {
+                        const it = t.issueType ? String(t.issueType).trim() : '';
+                        if (!geralIssueTypeFilter.has(it)) return false;
+                      }
+                      return true;
+                    }) : [];
+
+                    // Aggregate status counts for unified bar
+                    const unifiedStatusMap = {};
+                    for (const t of filteredTickets) {
+                      const s = t.status ? String(t.status).trim() : '(sem status)';
+                      unifiedStatusMap[s] = (unifiedStatusMap[s] || 0) + 1;
+                    }
+                    const unifiedSorted = Object.entries(unifiedStatusMap).sort((a, b) => b[1] - a[1]);
+                    const unifiedTotal = unifiedSorted.reduce((s, [, c]) => s + c, 0) || 1;
+
+                    const hasAnyFilter = geralStatusFilter.size > 0 || geralIssueTypeFilter.size > 0 ||
+                      geralEscopoFilter.size < 5;
+
                     return (
-                      <Box mt="4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        {geralCards.map((card) => {
-                          // Build status map: prefer precomputed, fallback to ticketsCache with date filter
-                          let statusMap = {};
-                          const precomputed = statsRadar?.byStatusByEscopo?.[card.key];
-                          if (precomputed && Object.keys(precomputed).length > 0 && !geralDateFrom && !geralDateTo) {
-                            statusMap = precomputed;
-                          } else if (Array.isArray(ticketsCache)) {
-                            const escopoTickets = ticketsCache.filter(t => {
-                              if (String(t.escopo || '').toUpperCase() !== card.key.toUpperCase()) return false;
-                              if (geralDateFrom || geralDateTo) {
-                                const created = t.createdAt ? String(t.createdAt).slice(0, 10) : null;
-                                if (!created) return false;
-                                if (geralDateFrom && created < geralDateFrom) return false;
-                                if (geralDateTo && created > geralDateTo) return false;
-                              }
-                              if (geralStatusFilter.size > 0) {
-                                const s = t.status ? String(t.status).trim() : '';
-                                if (!geralStatusFilter.has(s)) return false;
-                              }
-                              return true;
-                            });
-                            for (const t of escopoTickets) {
-                              const s = t.status ? String(t.status).trim() : '(sem status)';
-                              statusMap[s] = (statusMap[s] || 0) + 1;
-                            }
-                          }
-                          const sortedStatuses = Object.entries(statusMap).sort((a, b) => b[1] - a[1]);
-                          const total = sortedStatuses.reduce((s, [, c]) => s + c, 0) || card.total || 1;
-                          const isLoaded = loadedEscopos.has(card.key);
-                          if (sortedStatuses.length === 0) return (
-                            <Box key={card.key}>
-                              <Flex align="center" justify="between" mb="1">
-                                <span style={{ fontSize: 14, fontWeight: 700, color: card.color }}>{card.label}</span>
-                                <span style={{ fontSize: 14, fontWeight: 900, color: 'rgba(255,255,255,0.7)' }}>{formatNumber(card.total)}</span>
-                              </Flex>
-                              <Box style={{ height: 22, borderRadius: 6, background: `${card.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {isLoaded
-                                  ? <Text size="1" color="gray">Sem dados de status</Text>
-                                  : <button type="button" disabled={ticketsCacheLoading} onClick={() => loadTicketsData(card.key)}
-                                      style={{ background: `${card.color}22`, border: `1px solid ${card.color}55`, borderRadius: 5, padding: '2px 12px', fontSize: 11, fontWeight: 700, color: card.color, cursor: 'pointer' }}>
-                                      {ticketsCacheLoading ? 'Carregando…' : '⚡ Carregar dados'}
-                                    </button>
-                                }
-                              </Box>
+                      <>
+                        {/* Filter row */}
+                        <Flex gap="2" mt="3" wrap="wrap" align="center">
+                          <Box style={{ minWidth: 180, flexShrink: 0 }}>
+                            <OperacaoMultiCombobox
+                              label=""
+                              placeholder={geralEscopoFilter.size === 5 ? 'Todos os escopos' : `${geralEscopoFilter.size} escopo(s)`}
+                              options={GERAL_ESCOPOS}
+                              selected={geralEscopoFilter}
+                              onChange={setGeralEscopoFilter}
+                              formatOption={(item) => item.nome}
+                            />
+                          </Box>
+                          <Box style={{ minWidth: 180, flexShrink: 0 }}>
+                            <OperacaoMultiCombobox
+                              label=""
+                              placeholder={geralStatusFilter.size === 0 ? 'Todos os status' : `${geralStatusFilter.size} status`}
+                              options={allStatuses}
+                              selected={geralStatusFilter}
+                              onChange={setGeralStatusFilter}
+                              formatOption={(item) => item.nome}
+                            />
+                          </Box>
+                          {allIssueTypes.length > 0 && (
+                            <Box style={{ minWidth: 180, flexShrink: 0 }}>
+                              <OperacaoMultiCombobox
+                                label=""
+                                placeholder={geralIssueTypeFilter.size === 0 ? 'Todos os tipos' : `${geralIssueTypeFilter.size} tipo(s)`}
+                                options={allIssueTypes}
+                                selected={geralIssueTypeFilter}
+                                onChange={setGeralIssueTypeFilter}
+                                formatOption={(item) => item.nome}
+                              />
                             </Box>
-                          );
-                          return (
-                            <Box key={card.key}>
-                              <Flex align="center" justify="between" mb="2">
-                                <button type="button" onClick={() => openDrill(card.key, card.label)} disabled={drillLoading}
-                                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: card.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                  {card.label}
-                                </button>
-                                <span style={{ fontSize: 16, fontWeight: 900, color: 'rgba(255,255,255,0.75)' }}>{formatNumber(total)}</span>
-                              </Flex>
-                              {/* Stacked bar */}
-                              <Box style={{ display: 'flex', height: 22, borderRadius: 6, overflow: 'hidden', gap: 1 }}>
-                                {sortedStatuses.map(([status, count]) => {
-                                  const pct = (count / total) * 100;
+                          )}
+                          {hasAnyFilter && (
+                            <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); }}
+                              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+                              ✕ Limpar filtros
+                            </button>
+                          )}
+                          {ticketsCacheLoading && <Loader2 size={14} color="#38bdf8" className="spin" style={{ flexShrink: 0 }} />}
+                        </Flex>
+
+                        {/* Unified stacked bar */}
+                        <Box mt="4">
+                          <Flex align="center" justify="between" mb="2">
+                            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                              {[...geralEscopoFilter].join(', ')}
+                            </span>
+                            <button type="button" disabled={drillLoading}
+                              onClick={() => openDrill('', `Geral · ${[...geralEscopoFilter].join(', ')}`)}
+                              style={{ fontSize: 14, fontWeight: 900, color: '#38bdf8', background: 'none', border: 'none', cursor: 'pointer' }}>
+                              {formatNumber(unifiedTotal)}
+                            </button>
+                          </Flex>
+                          {unifiedSorted.length === 0 ? (
+                            <Box style={{ height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Text size="1" color="gray">
+                                {!hasTickets ? 'Carregando dados…' : 'Nenhum ticket encontrado com os filtros selecionados'}
+                              </Text>
+                            </Box>
+                          ) : (
+                            <>
+                              <Box style={{ display: 'flex', height: 28, borderRadius: 6, overflow: 'hidden', gap: 1 }}>
+                                {unifiedSorted.map(([status, count]) => {
+                                  const pct = (count / unifiedTotal) * 100;
                                   const color = hashColor(status);
                                   return (
                                     <button key={status} type="button" disabled={drillLoading}
-                                      onClick={() => openDrill(card.key, `${card.label} · ${status}`, null, status)}
+                                      onClick={() => openDrill('', `Status: ${status}`, null, status)}
                                       title={`${status}: ${formatNumber(count)} (${pct.toFixed(1)}%)`}
                                       style={{ width: `${pct}%`, minWidth: pct > 0 ? 2 : 0, background: color, border: 'none', padding: 0, cursor: 'pointer', transition: 'opacity 0.15s', flexShrink: 0 }}
                                       onMouseEnter={e => { e.currentTarget.style.opacity = '0.75'; }}
@@ -1236,14 +1268,13 @@ const OperacaoHome = ({ userRole }) => {
                                   );
                                 })}
                               </Box>
-                              {/* Legend — top 8 statuses */}
                               <Flex gap="2" wrap="wrap" mt="2">
-                                {sortedStatuses.slice(0, 8).map(([status, count]) => {
-                                  const pct = ((count / total) * 100).toFixed(1);
+                                {unifiedSorted.slice(0, 10).map(([status, count]) => {
+                                  const pct = ((count / unifiedTotal) * 100).toFixed(1);
                                   const color = hashColor(status);
                                   return (
                                     <button key={status} type="button" disabled={drillLoading}
-                                      onClick={() => openDrill(card.key, `${card.label} · ${status}`, null, status)}
+                                      onClick={() => openDrill('', `Status: ${status}`, null, status)}
                                       style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: '1px 0', cursor: 'pointer' }}>
                                       <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
                                       <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', whiteSpace: 'nowrap' }}>{status}</span>
@@ -1252,14 +1283,14 @@ const OperacaoHome = ({ userRole }) => {
                                     </button>
                                   );
                                 })}
-                                {sortedStatuses.length > 8 && (
-                                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>+{sortedStatuses.length - 8} outros</span>
+                                {unifiedSorted.length > 10 && (
+                                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>+{unifiedSorted.length - 10} outros</span>
                                 )}
                               </Flex>
-                            </Box>
-                          );
-                        })}
-                      </Box>
+                            </>
+                          )}
+                        </Box>
+                      </>
                     );
                   })()}
                 </>
