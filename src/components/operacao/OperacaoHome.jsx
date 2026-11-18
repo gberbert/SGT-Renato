@@ -409,6 +409,14 @@ const OperacaoHome = ({ userRole }) => {
 
   const [selectedGeralEscopo, setSelectedGeralEscopo] = useState(null);
   const [geralEscopoLoading, setGeralEscopoLoading] = useState(false);
+  // GERAL tab date filter — defaults to current month
+  const [geralDateFrom, setGeralDateFrom] = useState(() => {
+    const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
+  });
+  const [geralDateTo, setGeralDateTo] = useState(() => {
+    const t = new Date(); const last = new Date(t.getFullYear(), t.getMonth()+1, 0);
+    return `${last.getFullYear()}-${String(last.getMonth()+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;
+  });
   const [computedRadar, setComputedRadar] = useState(null);
   const [drillEscopo, setDrillEscopo] = useState(null);
   const [drillLabel, setDrillLabel] = useState('');
@@ -1073,6 +1081,38 @@ const OperacaoHome = ({ userRole }) => {
                     <Text className="operacao-radar-summary-label">Tickets em todos os escopos</Text>
                   </Box>
 
+                  {/* Date filter — data de criação */}
+                  {(() => {
+                    const t = new Date();
+                    const curMonthStart = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-01`;
+                    const lastDay = new Date(t.getFullYear(), t.getMonth()+1, 0);
+                    const curMonthEnd = `${lastDay.getFullYear()}-${String(lastDay.getMonth()+1).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
+                    const isDefault = geralDateFrom === curMonthStart && geralDateTo === curMonthEnd;
+                    return (
+                      <Flex align="center" gap="8px" mt="3" style={{ flexWrap: 'wrap', padding: '8px 12px', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(56,189,248,0.7)', textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>📅 Data Criação</span>
+                        <Flex align="center" gap="6px">
+                          <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>De</label>
+                          <input type="date" value={geralDateFrom} onChange={e => setGeralDateFrom(e.target.value)}
+                            style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
+                          <label style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>Até</label>
+                          <input type="date" value={geralDateTo} onChange={e => setGeralDateTo(e.target.value)}
+                            style={{ padding: '3px 8px', fontSize: 12, borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.07)', color: 'var(--gray-12)', outline: 'none', cursor: 'pointer', colorScheme: 'dark' }} />
+                        </Flex>
+                        {!isDefault && (
+                          <button type="button" onClick={() => { setGeralDateFrom(curMonthStart); setGeralDateTo(curMonthEnd); }}
+                            style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(56,189,248,0.3)', background: 'transparent', color: '#38bdf8', cursor: 'pointer' }}>
+                            Mês atual
+                          </button>
+                        )}
+                        <button type="button" onClick={() => { setGeralDateFrom(''); setGeralDateTo(''); }}
+                          style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, border: '1px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.35)', cursor: 'pointer' }}>
+                          Todos
+                        </button>
+                      </Flex>
+                    );
+                  })()}
+
                   {/* Stacked bar per escopo — each segment = one status (computed from ticketsCache) */}
                   {(() => {
                     const COLORS = ['#38bdf8','#4ade80','#f97316','#a78bfa','#fb923c','#34d399','#60a5fa','#f472b6','#facc15','#2dd4bf','#818cf8','#c084fc','#e879f9','#86efac','#fbbf24','#99f6e4','#bae6fd','#bbf7d0','#fde68a','#ddd6fe','#fca5a5','#6ee7b7','#67e8f9','#a5b4fc','#f9a8d4'];
@@ -1080,15 +1120,22 @@ const OperacaoHome = ({ userRole }) => {
                     return (
                       <Box mt="4" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         {geralCards.map((card) => {
-                          // Build status map: prefer precomputed, fallback to ticketsCache
+                          // Build status map: prefer precomputed, fallback to ticketsCache with date filter
                           let statusMap = {};
                           const precomputed = statsRadar?.byStatusByEscopo?.[card.key];
-                          if (precomputed && Object.keys(precomputed).length > 0) {
+                          if (precomputed && Object.keys(precomputed).length > 0 && !geralDateFrom && !geralDateTo) {
                             statusMap = precomputed;
                           } else if (Array.isArray(ticketsCache)) {
-                            const escopoTickets = ticketsCache.filter(t =>
-                              String(t.escopo || '').toUpperCase() === card.key.toUpperCase()
-                            );
+                            const escopoTickets = ticketsCache.filter(t => {
+                              if (String(t.escopo || '').toUpperCase() !== card.key.toUpperCase()) return false;
+                              if (geralDateFrom || geralDateTo) {
+                                const created = t.createdAt ? String(t.createdAt).slice(0, 10) : null;
+                                if (!created) return false;
+                                if (geralDateFrom && created < geralDateFrom) return false;
+                                if (geralDateTo && created > geralDateTo) return false;
+                              }
+                              return true;
+                            });
                             for (const t of escopoTickets) {
                               const s = t.status ? String(t.status).trim() : '(sem status)';
                               statusMap[s] = (statusMap[s] || 0) + 1;
