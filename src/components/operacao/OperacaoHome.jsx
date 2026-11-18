@@ -7,6 +7,7 @@ import {
   WORKFLOW_STEPS_FAST,
   WORKFLOW_STEPS_SERVICES,
   WORKFLOW_STEPS_PROBLEMAS,
+  WorkflowModal,
 } from '../../components/WorkflowReferenceModal';
 import * as XLSX from 'xlsx';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
@@ -422,6 +423,10 @@ const OperacaoHome = ({ userRole }) => {
   // GERAL tab issuetype + escopo filters
   const [geralIssueTypeFilter, setGeralIssueTypeFilter] = useState(() => new Set());
   const [geralEscopoFilter, setGeralEscopoFilter] = useState(() => new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO']));
+  // GERAL tab fila filter
+  const [geralFilaFilter, setGeralFilaFilter] = useState(() => new Set());
+  // Workflow modal
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
   const [computedRadar, setComputedRadar] = useState(null);
   const [drillEscopo, setDrillEscopo] = useState(null);
   const [drillLabel, setDrillLabel] = useState('');
@@ -1000,6 +1005,14 @@ const OperacaoHome = ({ userRole }) => {
           )}
           <button
             className="btn btn-ghost"
+            onClick={() => setShowWorkflowModal(true)}
+            type="button"
+            title="Ver filas responsáveis por Status/Escopo"
+          >
+            🔀 Workflows
+          </button>
+          <button
+            className="btn btn-ghost"
             onClick={refreshRadar}
             disabled={bootLoading}
             type="button"
@@ -1173,6 +1186,13 @@ const OperacaoHome = ({ userRole }) => {
                         const it = t.issueType ? String(t.issueType).trim() : '';
                         if (!geralIssueTypeFilter.has(it)) return false;
                       }
+                      if (geralFilaFilter.size > 0) {
+                        const esc = String(t.escopo || '').toUpperCase();
+                        const s = t.status ? String(t.status).trim() : '';
+                        const filaMap = STATUS_FILA_BY_ESCOPO[esc] || new Map();
+                        const fila = filaMap.get(s) || '';
+                        if (!geralFilaFilter.has(fila)) return false;
+                      }
                       return true;
                     }) : [];
 
@@ -1185,8 +1205,13 @@ const OperacaoHome = ({ userRole }) => {
                     const unifiedSorted = Object.entries(unifiedStatusMap).sort((a, b) => b[1] - a[1]);
                     const unifiedTotal = unifiedSorted.reduce((s, [, c]) => s + c, 0) || 1;
 
+                    const FILAS_OPTIONS = [
+                      { id: 'NTT Data', nome: 'NTT Data' },
+                      { id: 'CPFL', nome: 'CPFL' },
+                      { id: 'CPFL Prevista', nome: 'CPFL Prevista' },
+                    ];
                     const hasAnyFilter = geralStatusFilter.size > 0 || geralIssueTypeFilter.size > 0 ||
-                      geralEscopoFilter.size < 5;
+                      geralEscopoFilter.size < 5 || geralFilaFilter.size > 0;
 
                     return (
                       <>
@@ -1224,8 +1249,18 @@ const OperacaoHome = ({ userRole }) => {
                               />
                             </Box>
                           )}
+                          <Box style={{ flexShrink: 0 }}>
+                            <OperacaoMultiCombobox
+                              label=""
+                              placeholder={geralFilaFilter.size === 0 ? 'Todas as filas' : `${geralFilaFilter.size} fila(s)`}
+                              options={FILAS_OPTIONS}
+                              selected={geralFilaFilter}
+                              onChange={setGeralFilaFilter}
+                              formatOption={(item) => item.nome}
+                            />
+                          </Box>
                           {hasAnyFilter && (
-                            <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); }}
+                            <button type="button" onClick={() => { setGeralStatusFilter(new Set()); setGeralIssueTypeFilter(new Set()); setGeralEscopoFilter(new Set(['PROBLEMAS', 'DEMANDA FAST', 'DEMANDA', 'INCIDENTE', 'SOLICITACAO'])); setGeralFilaFilter(new Set()); }}
                               style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
                               ✕ Limpar filtros
                             </button>
@@ -2467,6 +2502,11 @@ const OperacaoHome = ({ userRole }) => {
           onClose={() => setEditModalTicket(null)}
           onSave={handleSaveTicketField}
         />
+      )}
+
+      {/* ── Workflow Modal ── */}
+      {showWorkflowModal && (
+        <WorkflowModal onClose={() => setShowWorkflowModal(false)} />
       )}
     </Box>
   );
